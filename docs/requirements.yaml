@@ -1,0 +1,22 @@
+name: docs_openadmet_models
+channels:
+
+  - conda-forge
+
+  - defaults
+dependencies:
+    # Base depends
+  - python
+  - pip
+  
+  - pydata-sphinx-theme
+  - sphinx-design
+  - sphinx-copybutton
+
+
+
+
+    # Pip-only installs
+  - pip:
+    - -e ../
+
