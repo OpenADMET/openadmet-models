@@ -9,7 +9,7 @@ A short description of the project (less than one line).
 
 ### Copyright
 
-Copyright (c) 2025, OpenADMET Contributors
+Copyright (c) 2025, OpenADMET Models Contributors
 
 
 #### Acknowledgements
