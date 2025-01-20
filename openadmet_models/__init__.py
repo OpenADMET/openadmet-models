@@ -1,7 +1,3 @@
-"""A short description of the project (less than one line)."""
+from importlib.metadata import version
 
-# Add imports here
-from .openadmet_models import *
-
-
-from ._version import __version__
+__version__ = version("openadmet_models")
