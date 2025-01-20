@@ -1,0 +1,35 @@
+ci:
+  autoupdate_schedule: "weekly"
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-yaml
+  - id: debug-statements
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+  - id: check-builtin-literals
+  - id: check-executables-have-shebangs
+  - id: check-json
+- repo: https://github.com/psf/black
+  rev: 24.10.0
+  hooks:
+  - id: black
+    files: ^openadmet_models
+- repo: https://github.com/PyCQA/isort
+  rev: 5.13.2
+  hooks:
+  - id: isort
+    files: ^openadmet_models
+- repo: https://github.com/PyCQA/flake8
+  rev: 7.1.1
+  hooks:
+  - id: flake8
+    files: ^openadmet_models
+    additional_dependencies: [Flake8-pyproject]
+- repo: https://github.com/asottile/pyupgrade
+  rev: 'v3.19.1'
+  hooks:
+  - id: pyupgrade
+    args:
+    - --py39-plus
