@@ -1,0 +1,34 @@
+from pydantic import BaseModel
+from abc import ABC, abstractmethod
+from typing import Any, Optional
+
+
+class ModelCard(BaseModel):
+    ...
+
+
+class ModelBase(BaseModel, ABC):
+    model_card: Optional[ModelCard] = None
+    _model: Any = None
+
+    
+    @property
+    def model(self):
+        return self._model
+
+    @abstractmethod
+    def train(self):
+        """
+        Train the model, abstract method to be implemented by subclasses
+        """
+
+    @abstractmethod
+    def predict(self, input: Any):
+        """
+        Predict using the model, abstract method to be implemented by subclasses
+        """
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self.predict(*args, **kwargs)
+    
