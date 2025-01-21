@@ -1,14 +1,14 @@
 import lightgbm as lgb
 import numpy as np
 from typing import ClassVar
-from openadmet_models.models.model_base import ModelBase
+from openadmet_models.models.sklearn import PickleableModelBase
 from openadmet_models.models.model_catalouge import register_model
 import logging
 
 logger = logging.getLogger(__name__)
 
 @register_model
-class LGBMRegressorModel(ModelBase):
+class LGBMRegressorModel(PickleableModelBase):
     """
     LightGBM regression model
     """
@@ -20,7 +20,10 @@ class LGBMRegressorModel(ModelBase):
         """
         Create a model from parameters
         """
-        return cls(model=lgb.LGBMRegressor(**model_params), **class_params, model_params=model_params)
+
+        instance =  cls(**class_params, model_params=model_params)
+        instance.build()
+        return instance
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """

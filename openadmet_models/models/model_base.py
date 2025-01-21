@@ -11,7 +11,7 @@ class ModelCard(BaseModel):
 class ModelBase(BaseModel, ABC):
     model_card: Optional[ModelCard] = None
     _model: Any = None
-
+    _built: bool = False
 
     @property
     def model(self):
