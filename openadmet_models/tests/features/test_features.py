@@ -5,6 +5,7 @@ from numpy.testing import assert_array_equal
 
 from openadmet_models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet_models.features.molfeat_fingerprint import FingerprintFeaturizer
+from openadmet_models.features.feature_catalouge import FEATURIZER_CLASSES
 
 
 @pytest.fixture()
@@ -14,6 +15,11 @@ def smiles():
 @pytest.fixture()
 def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
+
+def test_feature_registry():
+    assert "DescriptorFeaturizer" in FEATURIZER_CLASSES
+    assert "FingerprintFeaturizer" in FEATURIZER_CLASSES
+
 
 
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
@@ -50,6 +56,8 @@ def test_fingerprint_one_invalid(one_invalid_smi):
     assert X.shape == (3, 1, 2000)
     # index 2 is invalid, so the shape should be 3
     assert_array_equal(idx, np.asarray([0, 1, 3]))
+
+
 
 
 

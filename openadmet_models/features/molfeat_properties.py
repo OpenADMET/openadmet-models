@@ -1,18 +1,19 @@
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable, ClassVar
 import numpy as np
 import datamol as dm
 from pydantic import Field, field_validator
 from molfeat.trans import MoleculeTransformer
 from openadmet_models.features.base import MolfeatFeaturizer
+from openadmet_models.features.feature_catalouge import register_featurizer
 
 
 
-
+@register_featurizer
 class DescriptorFeaturizer(MolfeatFeaturizer):
     """
     Fingerprint featurizer for molecules, relies on molfeat backend
     """
-    type: Literal["DescriptorFeaturizer"] = "DescriptorFeaturizer"
+    type: ClassVar[str] = "DescriptorFeaturizer"
     descr_type: str = Field(..., title="Descriptor type", description="The type of descriptor to use, must be one of 'mordred', desc2d', 'desc3d'")
     dtype: Any = Field(np.float32, title="Data type", description="The data type to use for the fingerprint")
     n_jobs: int = Field(-1, title="Number of jobs", description="The number of jobs to use for featurization, -1 for maximum parallelism")
