@@ -14,7 +14,7 @@ class DescriptorFeaturizer(MolfeatFeaturizer):
     """
     type: Literal["DescriptorFeaturizer"] = "DescriptorFeaturizer"
     descr_type: str = Field(..., title="Descriptor type", description="The type of descriptor to use, must be one of 'mordred', desc2d', 'desc3d'")
-    dtype: Any = Field(..., title="Data type", description="The data type to use for the fingerprint")
+    dtype: Any = Field(np.float32, title="Data type", description="The data type to use for the fingerprint")
     n_jobs: int = Field(-1, title="Number of jobs", description="The number of jobs to use for featurization, -1 for maximum parallelism")
 
     @field_validator("descr_type")
@@ -33,7 +33,7 @@ class DescriptorFeaturizer(MolfeatFeaturizer):
         """
         Prepare the featurizer
         """
-        self._transformer = MoleculeTransformer(self.descr_type, n_jobs=self.n_jobs,  dtype=self.dtype, parallel_kwargs = {"progress": True}, verbose=True)
+        self._transformer = MoleculeTransformer(self.descr_type, n_jobs=self.n_jobs,  dtype=self.dtype, parallel_kwargs = {"progress": False}, verbose=True)
 
 
     def featurize(self, smiles: Iterable[str]) -> np.ndarray:

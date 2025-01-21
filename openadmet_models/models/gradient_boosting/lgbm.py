@@ -1,6 +1,8 @@
 import lightgbm as lgb
 from pydantic import BaseModel
+import numpy as np
 from openadmet_models.models.model_base import ModelBase
+
 
 class LGBMRegressorModel(ModelBase):
     """
@@ -8,6 +10,8 @@ class LGBMRegressorModel(ModelBase):
     """
 
     
+
+
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """

@@ -1,7 +1,7 @@
 from typing import Any, Iterable, Literal
 import numpy as np
 import datamol as dm
-from pydantic import Field, 
+from pydantic import Field
 from molfeat.trans import MoleculeTransformer
 from molfeat.trans.fp import FPVecTransformer
 from openadmet_models.features.base import MolfeatFeaturizer
@@ -13,7 +13,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
     """
     type: Literal["FingerprintFeaturizer"] = "FingerprintFeaturizer"
     fp_type: str = Field(..., title="Fingerprint type", description="The type of fingerprint to use")
-    dtype: Any = Field(..., title="Data type", description="The data type to use for the fingerprint")
+    dtype: Any = Field(np.float32, title="Data type", description="The data type to use for the fingerprint")
     n_jobs: int = Field(-1, title="Number of jobs", description="The number of jobs to use for featurization, -1 for maximum parallelism")
 
 
@@ -22,7 +22,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
         Prepare the featurizer
         """
         vec_featurizer = FPVecTransformer(self.fp_type, dtype=self.dtype)
-        self._transformer = MoleculeTransformer(vec_featurizer, n_jobs=self.n_jobs,  dtype=self.dtype, parallel_kwargs = {"progress": True}, verbose=True)
+        self._transformer = MoleculeTransformer(vec_featurizer, n_jobs=self.n_jobs,  dtype=self.dtype, parallel_kwargs = {"progress": False}, verbose=True)
 
 
     def featurize(self, smiles: Iterable[str]) -> np.ndarray:

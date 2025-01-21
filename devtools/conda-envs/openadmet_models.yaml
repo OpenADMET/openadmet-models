@@ -1,4 +1,4 @@
-name: test
+name: openadmet_models
 channels:
 
   - defaults
@@ -6,6 +6,13 @@ dependencies:
     # Base depends
   - python
   - pip
+  
+  - numpy
+  - pandas
+  - scikit-learn
+
+  - molfeat
+  - datamol
 
     # Testing
   - pytest
