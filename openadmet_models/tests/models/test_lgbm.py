@@ -11,10 +11,10 @@ def test_lgbm():
 
 
 def test_lgbm_from_params():
-    lgbm_model = LGBMRegressorModel.from_params(class_params={}, model_params={"n_estimators": 100})
+    lgbm_model = LGBMRegressorModel.from_params(class_params={}, model_params={"n_estimators": 100, "boosting_type":"rf"})
     assert lgbm_model.type == "LGBMRegressorModel"
-    assert lgbm_model.model_params == {"n_estimators": 100}
     assert lgbm_model.model.get_params()["n_estimators"] == 100
+    assert lgbm_model.model.get_params()["boosting_type"] == "rf"
 
 
 def test_lgbm_train_predict():
@@ -25,7 +25,7 @@ def test_lgbm_train_predict():
     preds = lgbm_model.predict(X)
     assert len(preds) == 2
     assert all(preds == 1.5)
-    
+
     # also test the __call__ behavior
     preds_call = lgbm_model(X)
     assert len(preds_call) == 2
