@@ -1,7 +1,7 @@
 import lightgbm as lgb
 import numpy as np
 from typing import ClassVar
-from openadmet_models.models.sklearn import PickleableModelBase
+from openadmet_models.models.model_base import PickleableModelBase
 from openadmet_models.models.model_catalouge import register_model
 import logging
 
@@ -16,7 +16,7 @@ class LGBMRegressorModel(PickleableModelBase):
     model_params: dict = {}
 
     @classmethod
-    def from_params(cls, class_params: dict, model_params: dict):
+    def from_params(cls, class_params: dict={}, model_params: dict={}):
         """
         Create a model from parameters
         """
