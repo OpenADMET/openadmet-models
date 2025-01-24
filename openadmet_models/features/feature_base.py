@@ -3,8 +3,17 @@ from typing import Iterable
 import numpy as np
 from pydantic import BaseModel
 from molfeat.trans import MoleculeTransformer
+from class_registry import ClassRegistry
+from class_registry import RegistryKeyError
 
+featurizers = ClassRegistry(unique=True)
 
+def get_featurizer_class(feat_type):
+    try:
+        feat_class = featurizers.get_class(feat_type)
+    except RegistryKeyError:
+        raise ValueError(f"Feature type {feat_type} not found in feature catalouge")
+    return feat_class
 
 
 class FeaturizerBase(BaseModel, ABC):

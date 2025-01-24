@@ -5,11 +5,9 @@ from pydantic import Field
 from molfeat.trans import MoleculeTransformer
 from molfeat.trans.fp import FPVecTransformer
 
-from openadmet_models.features.feature_base import MolfeatFeaturizer
-from openadmet_models.features.feature_catalouge import register_featurizer
+from openadmet_models.features.feature_base import MolfeatFeaturizer, featurizers
 
-
-@register_featurizer
+@featurizers.register("FingerprintFeaturizer")
 class FingerprintFeaturizer(MolfeatFeaturizer):
     """
     Fingerprint featurizer for molecules, relies on molfeat backend

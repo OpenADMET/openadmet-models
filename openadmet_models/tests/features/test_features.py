@@ -5,7 +5,6 @@ from numpy.testing import assert_array_equal
 
 from openadmet_models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet_models.features.molfeat_fingerprint import FingerprintFeaturizer
-from openadmet_models.features.feature_catalouge import FEATURIZER_CLASSES
 
 
 @pytest.fixture()
@@ -16,9 +15,6 @@ def smiles():
 def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
 
-def test_feature_registry():
-    assert "DescriptorFeaturizer" in FEATURIZER_CLASSES
-    assert "FingerprintFeaturizer" in FEATURIZER_CLASSES
 
 
 

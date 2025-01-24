@@ -3,7 +3,18 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, ClassVar
 from openadmet_models.util.types import Pathy
 import joblib
+from class_registry import ClassRegistry
+from class_registry import RegistryKeyError
 
+
+models = ClassRegistry(unique=True)
+
+def get_model_class(model_type):
+    try:
+        feat_class = models.get_class(model_type)
+    except RegistryKeyError:
+        raise ValueError(f"Model type {model_type} not found in model catalouge")
+    return feat_class
 
 
 class ModelBase(BaseModel, ABC):

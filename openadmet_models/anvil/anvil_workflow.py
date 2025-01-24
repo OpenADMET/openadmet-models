@@ -6,12 +6,9 @@ from loguru import logger
 
 from openadmet_models.util.types import Pathy
 from openadmet_models.anvil.metadata import Metadata
-from openadmet_models.models.model_base import ModelBase
-from openadmet_models.models.model_catalouge import get_model_class
-from openadmet_models.features.feature_base import FeaturizerBase
-from openadmet_models.features.feature_catalouge import get_featurizer_class
-from openadmet_models.eval.eval_base import EvalBase
-from openadmet_models.eval.eval_catalouge import get_eval_class
+from openadmet_models.models.model_base import ModelBase, get_model_class
+from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
+from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 
 
 

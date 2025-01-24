@@ -1,13 +1,10 @@
 import lightgbm as lgb
 import numpy as np
 from typing import ClassVar
-from openadmet_models.models.model_base import PickleableModelBase
-from openadmet_models.models.model_catalouge import register_model
-import logging
+from openadmet_models.models.model_base import PickleableModelBase, models
 
-logger = logging.getLogger(__name__)
 
-@register_model
+@models.register("LGBMRegressorModel")
 class LGBMRegressorModel(PickleableModelBase):
     """
     LightGBM regression model

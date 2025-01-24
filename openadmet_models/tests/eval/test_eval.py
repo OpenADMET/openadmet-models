@@ -1,11 +1,9 @@
 import pytest
 from openadmet_models.eval.regression_metrics import RegressionMetrics
-from openadmet_models.eval.eval_base import EVAL_CLASSES, get_eval_class
+from openadmet_models.eval.eval_base import get_eval_class
 
 
 
-def test_eval_classes():
-    assert EVAL_CLASSES["RegressionMetrics"]
 
 
 def test_get_eval_class():

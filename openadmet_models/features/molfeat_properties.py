@@ -3,12 +3,12 @@ import numpy as np
 import datamol as dm
 from pydantic import Field, field_validator
 from molfeat.trans import MoleculeTransformer
-from openadmet_models.features.feature_base import MolfeatFeaturizer
-from openadmet_models.features.feature_catalouge import register_featurizer
+from openadmet_models.features.feature_base import MolfeatFeaturizer, featurizers
 
 
 
-@register_featurizer
+
+@featurizers.register("DescriptorFeaturizer")
 class DescriptorFeaturizer(MolfeatFeaturizer):
     """
     Fingerprint featurizer for molecules, relies on molfeat backend
