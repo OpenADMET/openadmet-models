@@ -1,18 +1,26 @@
 from pydantic import BaseModel
 from typing import Any
-from openadmet_models.util.types import Pathy
-from abc import ABC, abstractmethod
 import yaml
 from loguru import logger
 
 
+from openadmet_models.util.types import Pathy
+from openadmet_models.anvil.metadata import Metadata
+from openadmet_models.models.model_base import ModelBase
+from openadmet_models.models.model_catalouge import get_model_class
+from openadmet_models.features.feature_base import FeaturizerBase
+from openadmet_models.features.feature_catalouge import get_featurizer_class
+
+
+
+
 class AnvilWorkflow(BaseModel):
-    metadata: Any
+    metadata: Metadata
     data: Any
     transform: Any
     split: Any
-    feat: Any
-    model: Any
+    feat: FeaturizerBase
+    model: ModelBase
     eval: Any
 
     @classmethod
@@ -22,7 +30,34 @@ class AnvilWorkflow(BaseModel):
         """
         with open(path, "r") as f:
             data = yaml.safe_load(f)
-        return cls(**data)
+        
+        metadata = Metadata(**data.pop("metadata"))
+
+        # load the featurizer(s)
+        featurizer_spec = data.pop("feat")
+        featurizer_type = featurizer_spec["type"]
+        featurizer_params = featurizer_spec["featurizer_params"]
+        featurizer_class = get_featurizer_class(featurizer_type)
+        featurizer = featurizer_class(**featurizer_params)
+
+
+
+
+
+        # load the model
+        model_spec = data.pop("model")
+        model_type = model_spec["type"]
+        model_params = model_spec["model_params"]
+        model_class = get_model_class(model_type)
+        model = model_class.from_params(model_params=model_params)
+
+        # make the complete instance
+        instance = cls(metadata=metadata, model=model, feat=featurizer, **data)
+        
+        logger.info("Workflow loaded")
+
+        return instance
+
         
 
     def save(self, path: Pathy):

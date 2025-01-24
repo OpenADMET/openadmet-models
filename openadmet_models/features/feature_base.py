@@ -14,6 +14,8 @@ class FeaturizerBase(BaseModel, ABC):
     """
 
 
+
+
     @abstractmethod
     def featurize(self, smiles: Iterable[str]) ->  np.ndarray:
         """

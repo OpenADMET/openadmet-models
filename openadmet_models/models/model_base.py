@@ -4,12 +4,9 @@ from typing import Any, Optional, ClassVar
 from openadmet_models.util.types import Pathy
 import joblib
 
-class ModelCard(BaseModel):
-    ...
 
 
 class ModelBase(BaseModel, ABC):
-    model_card: Optional[ModelCard] = None
     _model: Any = None
     _built: bool = False
 
