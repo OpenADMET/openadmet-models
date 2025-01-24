@@ -28,10 +28,10 @@ split:
 feat:
   type: FingerprintFeaturizer
   featurizer_params:
-    fp_type: "ecfp4"
+    fp_type: "ecfp:4"
 
 model:
-  type: LBGMRegressorModel
+  type: LGBMRegressorModel
   model_params:
     alpha: 0.15
     learning_rate: 0.1
