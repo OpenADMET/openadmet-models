@@ -10,7 +10,8 @@ from openadmet_models.models.model_base import ModelBase
 from openadmet_models.models.model_catalouge import get_model_class
 from openadmet_models.features.feature_base import FeaturizerBase
 from openadmet_models.features.feature_catalouge import get_featurizer_class
-
+from openadmet_models.evaluation.eval_base import EvaluationBase
+from openadmet_models.evaluation.eval_catalouge import get_eval_class
 
 
 
@@ -21,7 +22,7 @@ class AnvilWorkflow(BaseModel):
     split: Any
     feat: FeaturizerBase
     model: ModelBase
-    eval: Any
+    evals: list[EvaluationBase]
 
     @classmethod
     def from_yaml(cls, path: Pathy):
@@ -42,8 +43,6 @@ class AnvilWorkflow(BaseModel):
 
 
 
-
-
         # load the model
         model_spec = data.pop("model")
         model_type = model_spec["type"]
@@ -51,8 +50,17 @@ class AnvilWorkflow(BaseModel):
         model_class = get_model_class(model_type)
         model = model_class.from_params(model_params=model_params)
 
+
+        # load the evaluations we want to do
+        evals = []
+        eval_spec = data.pop("eval")
+        for eval_type, eval_params in eval_spec.items():
+            eval_class = get_eval_class(eval_type)
+            evals.append(eval_class(**eval_params))
+
+
         # make the complete instance
-        instance = cls(metadata=metadata, model=model, feat=featurizer, **data)
+        instance = cls(metadata=metadata, model=model, feat=featurizer, evals=evals, **data)
         
         logger.info("Workflow loaded")
 
@@ -67,7 +75,7 @@ class AnvilWorkflow(BaseModel):
         with open(path, "w") as f:
             yaml.dump(self.dict(), f)
 
-    def run(self):
+    def run(self) -> Any:
         """
         Run the workflow
         """
@@ -99,9 +107,9 @@ class AnvilWorkflow(BaseModel):
         logger.info("Predictions made")
         
         logger.info("Evaluating")
-        eval = self.eval.evaluate(y_test, preds)
+        report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
         logger.info("Evaluation done")
         
-        return eval
+        return report_data
 
         
