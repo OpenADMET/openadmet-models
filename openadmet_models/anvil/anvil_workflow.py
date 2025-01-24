@@ -10,8 +10,8 @@ from openadmet_models.models.model_base import ModelBase
 from openadmet_models.models.model_catalouge import get_model_class
 from openadmet_models.features.feature_base import FeaturizerBase
 from openadmet_models.features.feature_catalouge import get_featurizer_class
-from openadmet_models.evaluation.eval_base import EvaluationBase
-from openadmet_models.evaluation.eval_catalouge import get_eval_class
+from openadmet_models.eval.eval_base import EvalBase
+from openadmet_models.eval.eval_catalouge import get_eval_class
 
 
 
@@ -22,7 +22,7 @@ class AnvilWorkflow(BaseModel):
     split: Any
     feat: FeaturizerBase
     model: ModelBase
-    evals: list[EvaluationBase]
+    evals: list[EvalBase]
 
     @classmethod
     def from_yaml(cls, path: Pathy):
@@ -54,9 +54,9 @@ class AnvilWorkflow(BaseModel):
         # load the evaluations we want to do
         evals = []
         eval_spec = data.pop("eval")
-        for eval_type, eval_params in eval_spec.items():
+        for eval_type in eval_spec:
             eval_class = get_eval_class(eval_type)
-            evals.append(eval_class(**eval_params))
+            evals.append(eval_class())
 
 
         # make the complete instance

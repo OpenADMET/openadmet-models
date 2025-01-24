@@ -12,6 +12,6 @@ def get_eval_class(eval_type: str):
     try:
         eval_class = EVAL_CLASSES[eval_type]
     except KeyError:
-        raise ValueError(f"Evaluator type {eval_type} not found in featurizer catalouge")
+        raise ValueError(f"Featurizer type {eval_type} not found in featurizer catalouge")
     
     return eval_class
