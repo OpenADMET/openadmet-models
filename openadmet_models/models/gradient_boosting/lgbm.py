@@ -2,6 +2,7 @@ import lightgbm as lgb
 import numpy as np
 from typing import ClassVar
 from openadmet_models.models.model_base import PickleableModelBase, models
+from loguru import logger
 
 
 @models.register("LGBMRegressorModel")
@@ -36,7 +37,7 @@ class LGBMRegressorModel(PickleableModelBase):
         if not self.model:
             self.model = lgb.LGBMRegressor(**self.model_params)
         else:
-            logger.info("Model already exists, skipping build")
+            logger.warning("Model already exists, skipping build")
 
         
 
