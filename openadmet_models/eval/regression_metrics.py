@@ -1,9 +1,8 @@
-from scikit_learn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from openadmet_models.eval.eval_base import EvalBase
-from openadmet_models.eval.eval_catalouge import register_eval
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from openadmet_models.eval.eval_base import EvalBase, EVAL_CLASSES
 
 
-@register_eval
+@EVAL_CLASSES.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
 
     def evaluate(self, y_true, y_pred):
