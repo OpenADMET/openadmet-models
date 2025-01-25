@@ -9,7 +9,7 @@ openadmet_models
 
 [OpenADMET](https://openadmet.org/) implementations of machine learning architectures used in the OpenADMET project within a consistent framework. 
 
-Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable specifications.
+Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications
 
 ### Copyright
 
