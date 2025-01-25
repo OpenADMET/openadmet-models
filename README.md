@@ -7,7 +7,7 @@ openadmet_models
 [![Documentation Status](https://readthedocs.org/projects/openadmet-models/badge/?version=latest)](https://openadmet-models.readthedocs.io/en/latest/?badge=latest)
 
 
-[OpenADMET](https://openadmet.org/) toolkit implementations of machine learning architectures used in the OpenADMET project in a consistent framework. 
+[OpenADMET](https://openadmet.org/) implementations of machine learning architectures used in the OpenADMET project in a consistent framework. 
 
 Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable specifications.
 
