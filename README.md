@@ -11,6 +11,10 @@ openadmet_models
 
 Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications
 
+## Getting started
+
+See the documentation here: https://openadmet-models.readthedocs.io/en/latest/
+
 ### Copyright
 
 Copyright (c) 2025, OpenADMET Models Contributors
