@@ -20,21 +20,24 @@ data:
 transform:
 
 split:
-  type: VanillaSplit
-  split_params:
+  type: ShuffleSplitter
+  params:
     train_size: 0.8
+    test_size: 0.2
     random_state: 42
 
 feat:
   type: FingerprintFeaturizer
-  featurizer_params:
+  params:
     fp_type: "ecfp:4"
 
 model:
   type: LGBMRegressorModel
-  model_params:
-    alpha: 0.15
-    learning_rate: 0.1
+  params:
+    model_params:
+      alpha: 0.15
+      learning_rate: 0.1
+
 
 eval:
   - RegressionMetrics

@@ -27,6 +27,7 @@ class LGBMRegressorModel(PickleableModelBase):
         """
         Train the model
         """
+        self.build()
         self.model.fit(X, y)
 
 
@@ -45,5 +46,7 @@ class LGBMRegressorModel(PickleableModelBase):
         """
         Predict using the model
         """
+        if not self.model:
+            raise ValueError("Model not trained")
         return self.model.predict(X)
     

@@ -7,6 +7,7 @@ from openadmet_models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet_models.features.molfeat_fingerprint import FingerprintFeaturizer
 
 
+
 @pytest.fixture()
 def smiles():
     return ["CCO", "CCN", "CCO"]

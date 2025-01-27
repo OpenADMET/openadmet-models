@@ -6,17 +6,38 @@ from loguru import logger
 
 from openadmet_models.util.types import Pathy
 from openadmet_models.anvil.metadata import Metadata
-from openadmet_models.models.model_base import ModelBase, get_model_class
-from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
-from openadmet_models.eval.eval_base import EvalBase, get_eval_class
+from openadmet_models.models.model_base import ModelBase, get_model_class, models
+from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class, featurizers
+from openadmet_models.eval.eval_base import EvalBase, get_eval_class, evaluators
+from openadmet_models.split.split_base import SplitterBase, get_splitter_class, splitters
 
+
+_SECTION_CLASS_GETTERS = {
+
+    "feat": get_featurizer_class,
+    "model": get_model_class,
+    "split": get_splitter_class,
+    "eval": get_eval_class
+}
+
+
+def _load_section_from_type(data, section_name):
+    """
+    Load a section from the yaml data
+    """
+    section_spec = data.pop(section_name)
+    section_type = section_spec["type"]
+    section_params = section_spec["params"]
+    section_class = _SECTION_CLASS_GETTERS[section_name](section_type)
+    section_instance = section_class(**section_params)
+    return section_instance
 
 
 class AnvilWorkflow(BaseModel):
     metadata: Metadata
     data: Any
     transform: Any
-    split: Any
+    split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
     evals: list[EvalBase]
@@ -32,21 +53,13 @@ class AnvilWorkflow(BaseModel):
         metadata = Metadata(**data.pop("metadata"))
 
         # load the featurizer(s)
-        featurizer_spec = data.pop("feat")
-        featurizer_type = featurizer_spec["type"]
-        featurizer_params = featurizer_spec["featurizer_params"]
-        featurizer_class = get_featurizer_class(featurizer_type)
-        featurizer = featurizer_class(**featurizer_params)
+        featurizer = _load_section_from_type(data, "feat")
 
+        # model
+        model = _load_section_from_type(data, "model")
 
-
-        # load the model
-        model_spec = data.pop("model")
-        model_type = model_spec["type"]
-        model_params = model_spec["model_params"]
-        model_class = get_model_class(model_type)
-        model = model_class.from_params(model_params=model_params)
-
+        # split
+        split = _load_section_from_type(data, "split")
 
         # load the evaluations we want to do
         evals = []
@@ -57,7 +70,7 @@ class AnvilWorkflow(BaseModel):
 
 
         # make the complete instance
-        instance = cls(metadata=metadata, model=model, feat=featurizer, evals=evals, **data)
+        instance = cls(metadata=metadata, model=model, feat=featurizer, evals=evals, split=split, **data)
         
         logger.info("Workflow loaded")
 
@@ -83,8 +96,12 @@ class AnvilWorkflow(BaseModel):
         logger.info("Data loaded")
 
         logger.info("Transforming data")
-        transformed_X = self.transform.transform(X) # can be no-op
-        logger.info("Data transformed")
+        if self.transform:
+            transformed_X = self.transform.transform(X)
+            logger.info("Data transformed")
+        else:
+            transformed_X = X
+            logger.info("No transform specified, skipping")
 
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(transformed_X)
