@@ -1,0 +1,43 @@
+metadata:
+  version: v1
+  name: "example-workflow"
+  build_number: 0
+  description: "running a basic workflow"
+  tag: "openadmet-models-basic-test"
+  authors: "Hugo M-O"
+  email: "hugo@acme.com"
+  date-created: "2021-09-01"
+  biotargets:
+    - "CYP1234"
+  tags:
+    - "openadmet"
+    - "workflow"
+    - "test"
+
+data:
+  - {} # This is a placeholder for the data source, filled in test
+
+transform:
+
+split:
+  type: ShuffleSplitter
+  params:
+    train_size: 0.8
+    test_size: 0.2
+    random_state: 42
+
+feat:
+  type: FingerprintFeaturizer
+  params:
+    fp_type: "ecfp:4"
+
+model:
+  type: LGBMRegressorModel
+  params:
+    model_params:
+      alpha: 0.15
+      learning_rate: 0.1
+
+
+eval:
+  - RegressionMetrics
