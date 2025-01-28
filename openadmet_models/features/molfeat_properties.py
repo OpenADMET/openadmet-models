@@ -1,5 +1,5 @@
-from typing import Any, ClassVar
 from collections.abc import Iterable
+from typing import Any, ClassVar
 
 import datamol as dm
 import numpy as np

@@ -5,6 +5,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from openadmet_models.anvil.metadata import Metadata
+from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import (EvalBase, evaluators,
                                              get_eval_class)
 from openadmet_models.features.feature_base import (FeaturizerBase,
@@ -15,8 +16,6 @@ from openadmet_models.models.model_base import (ModelBase, get_model_class,
 from openadmet_models.split.split_base import (SplitterBase,
                                                get_splitter_class, splitters)
 from openadmet_models.util.types import Pathy
-from openadmet_models.data.data_spec import DataSpec
-
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -56,7 +55,7 @@ class AnvilWorkflow(BaseModel):
             data = yaml.safe_load(f)
 
         data_spec = DataSpec(**data.pop("data"))
-        
+
         metadata = Metadata(**data.pop("metadata"))
 
         # load the featurizer(s)
@@ -104,7 +103,7 @@ class AnvilWorkflow(BaseModel):
         logger.info("Running workflow")
 
         logger.info("Loading data")
-        X, y =  self.data_spec.read()
+        X, y = self.data_spec.read()
         logger.info("Data loaded")
 
         logger.info("Transforming data")

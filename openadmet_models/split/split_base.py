@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Tuple
+from collections.abc import Iterable
+from typing import Tuple
 from collections.abc import Iterable
 
 from class_registry import ClassRegistry, RegistryKeyError
@@ -25,9 +26,7 @@ class SplitterBase(BaseModel, ABC):
     train_size: float = 0.25
     random_state: int = 42
 
-
-
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_sizes(self):
         if self.test_size + self.train_size != 1.0:
             raise ValueError("Test and train sizes must sum to 1.0")
