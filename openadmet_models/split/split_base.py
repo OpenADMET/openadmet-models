@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Tuple
-from collections.abc import Iterable
 
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel, model_validator

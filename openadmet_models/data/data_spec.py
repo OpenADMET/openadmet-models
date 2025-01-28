@@ -1,9 +1,11 @@
 from enum import Enum
 from typing import Optional, Tuple
-import jinja2
+
 import intake
+import jinja2
 import pandas as pd
 from pydantic import BaseModel
+
 from openadmet_models.util.types import Pathy
 
 
@@ -27,14 +29,10 @@ class DataSpec(BaseModel):
     smiles_col: str
     anvil_dir: Pathy = None
 
-
-
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
         Read the data from the resource
         """
-
-
 
         # if YAML, parse as intake catalog
         if self.resource.endswith(".yaml") or self.resource.endswith(".yml"):

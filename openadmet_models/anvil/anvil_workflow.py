@@ -1,5 +1,6 @@
 from typing import Any
 
+import fsspec
 import yaml
 from loguru import logger
 from pydantic import BaseModel
@@ -16,7 +17,6 @@ from openadmet_models.models.model_base import (ModelBase, get_model_class,
 from openadmet_models.split.split_base import (SplitterBase,
                                                get_splitter_class, splitters)
 from openadmet_models.util.types import Pathy
-import fsspec
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -46,7 +46,7 @@ class AnvilWorkflow(BaseModel):
     feat: FeaturizerBase
     model: ModelBase
     evals: list[EvalBase]
-    _ANVIL_DIR: Pathy 
+    _ANVIL_DIR: Pathy
 
     @classmethod
     def from_yaml(cls, path: Pathy, **kwargs):
@@ -58,7 +58,7 @@ class AnvilWorkflow(BaseModel):
         storage_options = kwargs.pop("storage_options", kwargs)
         of = fsspec.open(path, **storage_options)
         with of as stream:
-            data=yaml.safe_load(stream)
+            data = yaml.safe_load(stream)
 
         # get parent path
         parent = of.fs.unstrip_protocol(of.fs._parent(path))
