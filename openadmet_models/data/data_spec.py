@@ -33,9 +33,8 @@ class DataSpec(BaseModel):
         elif self.resource.endswith('.csv'):
             data = intake.open_csv(self.resource).read()
 
-        print(data)
         # now read the target columns and smiles column
         target = data[self.target_cols]
         smiles = data[self.smiles_col]
 
-        return target, smiles
+        return smiles, target
