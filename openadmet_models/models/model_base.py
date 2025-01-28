@@ -1,13 +1,14 @@
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
-from typing import Any, Optional, ClassVar
-from openadmet_models.util.types import Pathy
-import joblib
-from class_registry import ClassRegistry
-from class_registry import RegistryKeyError
+from typing import Any, ClassVar, Optional
 
+import joblib
+from class_registry import ClassRegistry, RegistryKeyError
+from pydantic import BaseModel
+
+from openadmet_models.util.types import Pathy
 
 models = ClassRegistry(unique=True)
+
 
 def get_model_class(model_type):
     try:
@@ -24,11 +25,10 @@ class ModelBase(BaseModel, ABC):
     @property
     def model(self):
         return self._model
-    
+
     @model.setter
     def model(self, value):
         self._model = value
-
 
     @abstractmethod
     def from_params(cls, class_params: dict, model_params: dict):
@@ -44,7 +44,6 @@ class ModelBase(BaseModel, ABC):
         """
         pass
 
-
     @abstractmethod
     def save(self, path: Pathy):
         """
@@ -58,7 +57,6 @@ class ModelBase(BaseModel, ABC):
         Load the model, abstract method to be implemented by subclasses
         """
         pass
-
 
     @abstractmethod
     def train(self):
@@ -75,12 +73,11 @@ class ModelBase(BaseModel, ABC):
 
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)
-    
 
     def __eq__(self, value):
         # exclude model from comparison
         return self.dict(exclude={"model"}) == value.dict(exclude={"model"})
-    
+
 
 class PickleableModelBase(ModelBase):
 
@@ -91,13 +88,11 @@ class PickleableModelBase(ModelBase):
 
         if self.model is None:
             raise ValueError("Model is not built, cannot save")
-        
-        with open(path, 'wb') as f:
+
+        with open(path, "wb") as f:
             joblib.dump(self.model, f)
 
     def load(self, path: Pathy):
-        
-        with open(path, 'rb') as f:
+
+        with open(path, "rb") as f:
             self._model = joblib.load(f)
-
-

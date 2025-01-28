@@ -28,7 +28,7 @@ except ImportError:
         except (KeyError, ImportError, IndexError):
             raise ImportError("No YAML parser could be found in this or the conda environment. "
                               "Could not find PyYAML or Ruamel YAML in the current environment, "
-                              "AND could not find Ruamel YAML in the base conda environment through CONDA_EXE path. " 
+                              "AND could not find Ruamel YAML in the base conda environment through CONDA_EXE path. "
                               "Environment not created!")
     loader = yaml.YAML(typ="safe").load  # typ="safe" avoids odd typing on output
 
@@ -57,10 +57,10 @@ parser.add_argument('conda_file',
 args = parser.parse_args()
 
 # Open the base file
-with open(args.conda_file, "r") as handle:
+with open(args.conda_file) as handle:
     yaml_script = loader(handle.read())
 
-python_replacement_string = "python {}*".format(args.python)
+python_replacement_string = f"python {args.python}*"
 
 try:
     for dep_index, dep_value in enumerate(yaml_script['dependencies']):
@@ -82,14 +82,14 @@ else:
 if conda_path is None:
     raise RuntimeError("Could not find a conda binary in CONDA_EXE variable or in executable search path")
 
-print("CONDA ENV NAME  {}".format(args.name))
-print("PYTHON VERSION  {}".format(args.python))
-print("CONDA FILE NAME {}".format(args.conda_file))
-print("CONDA PATH      {}".format(conda_path))
+print(f"CONDA ENV NAME  {args.name}")
+print(f"PYTHON VERSION  {args.python}")
+print(f"CONDA FILE NAME {args.conda_file}")
+print(f"CONDA PATH      {conda_path}")
 
 # Write to a temp directory which will always be cleaned up
 with temp_cd():
     temp_file_name = "temp_script.yaml"
     with open(temp_file_name, 'w') as f:
         f.write(yaml.dump(yaml_script))
-    sp.call("{} env create -n {} -f {}".format(conda_path, args.name, temp_file_name), shell=True)
+    sp.call(f"{conda_path} env create -n {args.name} -f {temp_file_name}", shell=True)

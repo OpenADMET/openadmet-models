@@ -1,8 +1,10 @@
+from typing import ClassVar
+
 import lightgbm as lgb
 import numpy as np
-from typing import ClassVar
-from openadmet_models.models.model_base import PickleableModelBase, models
 from loguru import logger
+
+from openadmet_models.models.model_base import PickleableModelBase, models
 
 
 @models.register("LGBMRegressorModel")
@@ -10,16 +12,17 @@ class LGBMRegressorModel(PickleableModelBase):
     """
     LightGBM regression model
     """
+
     type: ClassVar[str] = "LGBMRegressorModel"
     model_params: dict = {}
 
     @classmethod
-    def from_params(cls, class_params: dict={}, model_params: dict={}):
+    def from_params(cls, class_params: dict = {}, model_params: dict = {}):
         """
         Create a model from parameters
         """
 
-        instance =  cls(**class_params, model_params=model_params)
+        instance = cls(**class_params, model_params=model_params)
         instance.build()
         return instance
 
@@ -30,7 +33,6 @@ class LGBMRegressorModel(PickleableModelBase):
         self.build()
         self.model.fit(X, y)
 
-
     def build(self):
         """
         Prepare the model
@@ -40,8 +42,6 @@ class LGBMRegressorModel(PickleableModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-        
-
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict using the model
@@ -49,4 +49,3 @@ class LGBMRegressorModel(PickleableModelBase):
         if not self.model:
             raise ValueError("Model not trained")
         return self.model.predict(X)
-    
