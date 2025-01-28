@@ -10,7 +10,7 @@ Welcome to openadmet_models's documentation!
 
     .. grid-item-card:: Getting Started
       :margin: 0 3 0 0
-      
+
       Learn the basics of using openadmet_models.
 
       .. button-link:: ./getting_started.html
@@ -20,11 +20,11 @@ Welcome to openadmet_models's documentation!
 
          To the Getting Started Guide
 
-      
+
 
     .. grid-item-card::  User Guide
       :margin: 0 3 0 0
-      
+
       An in-depth guide for users.
 
       .. button-link:: ./user_guide.html
@@ -33,12 +33,12 @@ Welcome to openadmet_models's documentation!
          :expand:
 
          To the User Guide
-      
-      
+
+
 
     .. grid-item-card:: API Reference
       :margin: 0 3 0 0
-      
+
       How to use the API of openadmet_models.
 
       .. button-link:: ./api.html
@@ -48,11 +48,11 @@ Welcome to openadmet_models's documentation!
 
          To the API Reference.
 
-      
+
 
     .. grid-item-card::  Developer Guide
       :margin: 0 3 0 0
-      
+
       How to contribute to openadmet_models.
 
       .. button-link:: ./developer_guide.html
@@ -72,4 +72,3 @@ Welcome to openadmet_models's documentation!
    user_guide
    api
    developer_guide
-

@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
+
 import numpy as np
-from pydantic import BaseModel
+from class_registry import ClassRegistry, RegistryKeyError
 from molfeat.trans import MoleculeTransformer
-from class_registry import ClassRegistry
-from class_registry import RegistryKeyError
+from pydantic import BaseModel
 
 featurizers = ClassRegistry(unique=True)
+
 
 def get_featurizer_class(feat_type):
     try:
@@ -22,11 +23,8 @@ class FeaturizerBase(BaseModel, ABC):
     withing the featurize method
     """
 
-
-
-
     @abstractmethod
-    def featurize(self, smiles: Iterable[str]) ->  np.ndarray:
+    def featurize(self, smiles: Iterable[str]) -> np.ndarray:
         """
         Featurize a list of SMILES strings
         """
@@ -36,13 +34,12 @@ class MolfeatFeaturizer(FeaturizerBase):
     """
     Featurizer using molfeat
     """
+
     _transformer: MoleculeTransformer = None
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._prepare()
-
-
 
     @abstractmethod
     def _prepare(self):
@@ -50,15 +47,9 @@ class MolfeatFeaturizer(FeaturizerBase):
         Prepare the featurizer
         """
 
-
-
     @property
     def transformer(self):
         """
         Return the transformer, for use in SkLearn pipelines etc
         """
         return self._transformer
-        
-
-
-    

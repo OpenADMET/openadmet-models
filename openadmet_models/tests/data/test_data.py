@@ -1,6 +1,7 @@
 import pytest
+
 from openadmet_models.data.data_spec import DataSpec
-from openadmet_models.tests.datafiles import test_csv, intake_cat
+from openadmet_models.tests.datafiles import intake_cat, test_csv
 
 
 def test_data_spec_from_csv():
@@ -9,7 +10,7 @@ def test_data_spec_from_csv():
         resource=test_csv,
         cat_entry="test_data",
         target_cols="data1",
-        smiles_col="SMILES"
+        smiles_col="SMILES",
     )
     target, smiles = data_spec.read()
     assert len(target) == 3
@@ -22,7 +23,7 @@ def test_data_spec_from_intake():
         resource=intake_cat,
         cat_entry="subsel",
         target_cols="data1",
-        smiles_col="SMILES"
+        smiles_col="SMILES",
     )
     target, smiles = data_spec.read()
     assert len(target) == 3

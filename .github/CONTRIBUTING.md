@@ -1,7 +1,7 @@
 # How to contribute
 
 We welcome contributions from external contributors, and this document
-describes how to merge code changes into this openadmet_models. 
+describes how to merge code changes into this openadmet_models.
 
 ## Getting Started
 

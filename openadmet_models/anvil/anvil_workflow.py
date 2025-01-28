@@ -1,23 +1,26 @@
-from pydantic import BaseModel
 from typing import Any
+
 import yaml
 from loguru import logger
+from pydantic import BaseModel
 
-
-from openadmet_models.util.types import Pathy
 from openadmet_models.anvil.metadata import Metadata
-from openadmet_models.models.model_base import ModelBase, get_model_class, models
-from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class, featurizers
-from openadmet_models.eval.eval_base import EvalBase, get_eval_class, evaluators
-from openadmet_models.split.split_base import SplitterBase, get_splitter_class, splitters
-
+from openadmet_models.eval.eval_base import (EvalBase, evaluators,
+                                             get_eval_class)
+from openadmet_models.features.feature_base import (FeaturizerBase,
+                                                    featurizers,
+                                                    get_featurizer_class)
+from openadmet_models.models.model_base import (ModelBase, get_model_class,
+                                                models)
+from openadmet_models.split.split_base import (SplitterBase,
+                                               get_splitter_class, splitters)
+from openadmet_models.util.types import Pathy
 
 _SECTION_CLASS_GETTERS = {
-
     "feat": get_featurizer_class,
     "model": get_model_class,
     "split": get_splitter_class,
-    "eval": get_eval_class
+    "eval": get_eval_class,
 }
 
 
@@ -47,11 +50,11 @@ class AnvilWorkflow(BaseModel):
         """
         Create a workflow from a yaml file
         """
-        with open(path, "r") as f:
+        with open(path) as f:
             data = yaml.safe_load(f)
 
         data = DataSpec(**data.pop("data"))
-        
+
         metadata = Metadata(**data.pop("metadata"))
 
         # load the featurizer(s)
@@ -70,15 +73,20 @@ class AnvilWorkflow(BaseModel):
             eval_class = get_eval_class(eval_type)
             evals.append(eval_class())
 
-
         # make the complete instance
-        instance = cls(metadata=metadata, data=data, model=model, feat=featurizer, evals=evals, split=split, **data)
-        
+        instance = cls(
+            metadata=metadata,
+            data=data,
+            model=model,
+            feat=featurizer,
+            evals=evals,
+            split=split,
+            **data,
+        )
+
         logger.info("Workflow loaded")
 
         return instance
-
-        
 
     def save(self, path: Pathy):
         """
@@ -92,9 +100,9 @@ class AnvilWorkflow(BaseModel):
         Run the workflow
         """
         logger.info("Running workflow")
-        
+
         logger.info("Loading data")
-        X, y =  self.data.read_data()
+        X, y = self.data.read_data()
         logger.info("Data loaded")
 
         logger.info("Transforming data")
@@ -120,11 +128,9 @@ class AnvilWorkflow(BaseModel):
         logger.info("Predicting")
         preds = model.predict(X_test)
         logger.info("Predictions made")
-        
+
         logger.info("Evaluating")
         report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
         logger.info("Evaluation done")
-        
-        return report_data
 
-        
+        return report_data

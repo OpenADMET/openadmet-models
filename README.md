@@ -7,7 +7,7 @@ openadmet_models
 [![Documentation Status](https://readthedocs.org/projects/openadmet-models/badge/?version=latest)](https://openadmet-models.readthedocs.io/en/latest/?badge=latest)
 
 
-[OpenADMET](https://openadmet.org/) implementations of machine learning architectures used in the OpenADMET project within a consistent framework. 
+[OpenADMET](https://openadmet.org/) implementations of machine learning architectures used in the OpenADMET project within a consistent framework.
 
 Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications
 
@@ -21,6 +21,6 @@ Copyright (c) 2025, OpenADMET Models Contributors
 
 
 #### Acknowledgements
- 
-Project based on the 
+
+Project based on the
 [Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.10.

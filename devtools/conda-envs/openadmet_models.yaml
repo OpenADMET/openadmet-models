@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  
+
   - numpy
   - pandas
   - scikit-learn
@@ -24,4 +24,3 @@ dependencies:
     # Pip-only installs
   #- pip:
   #  - codecov
-
