@@ -77,7 +77,7 @@ class AnvilWorkflow(BaseModel):
         # make the complete instance
         instance = cls(
             metadata=metadata,
-            data=data,
+            data_spec=data_spec,
             model=model,
             feat=featurizer,
             evals=evals,
