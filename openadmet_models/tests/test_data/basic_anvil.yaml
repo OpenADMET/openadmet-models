@@ -15,7 +15,13 @@ metadata:
     - "test"
 
 data:
-  - {} # This is a placeholder for the data source, filled in test
+  type: IntakeCatalog
+  params:
+    catalog_file: {{ }}
+    entry_name: "subset"
+    smiles_column: smiles
+    target_column: data1
+
 
 transform:
 
