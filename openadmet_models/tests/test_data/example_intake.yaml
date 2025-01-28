@@ -1,46 +1,6 @@
-aliases: {}
-data:
-  d21e303adede1ad3:
-    datatype: intake.readers.datatypes:CSV
-    kwargs:
-      storage_options: null
-      url: ./test_data.csv
-    metadata: {}
-    user_parameters: {}
-entries:
-  36eb8a745ae6ddd1:
-    kwargs:
-      args:
-      - '{data(d21e303adede1ad3)}'
-    metadata: {}
-    output_instance: pandas:DataFrame
-    reader: intake.readers.readers:PandasCSV
-    user_parameters: {}
-  full:
-    kwargs:
-      args:
-      - '{data(d21e303adede1ad3)}'
-    metadata: {}
-    output_instance: pandas:DataFrame
-    reader: intake.readers.readers:PandasCSV
-    user_parameters: {}
+sources:
   subsel:
-    kwargs:
-      out_instances:
-      - pandas:DataFrame
-      - pandas:DataFrame
-      steps:
-      - - '{data(36eb8a745ae6ddd1)}'
-        - []
-        - {}
-      - - '{func(intake.readers.transform:Method)}'
-        - []
-        - columns: data2
-          method_name: drop
-    metadata: {}
-    output_instance: pandas:DataFrame
-    reader: intake.readers.convert:Pipeline
-    user_parameters: {}
-metadata: {}
-user_parameters: {}
-version: 2
+    description: this is a sub-resource
+    driver: csv
+    args:
+      urlpath: "{{CATALOG_DIR}}/test_data.csv"

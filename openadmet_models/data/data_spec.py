@@ -1,11 +1,10 @@
 from pydantic import BaseModel
-from enum import StrEnum
 from typing import Optional, Tuple
-from enum import StrEnum
 import pandas as pd
 import intake
+from enum import Enum
 
-class DataSpecTypes(StrEnum):
+class DataSpecTypes(str, Enum):
     """
     Types of data specifications
     """
@@ -21,7 +20,7 @@ class DataSpec(BaseModel):
     target_cols: str
     smiles_col: str
 
-    def read_data(self) -> Tuple[pd.Series, pd.Series]:
+    def read(self) -> Tuple[pd.Series, pd.Series]:
         """
         Read the data from the resource
         """
@@ -34,6 +33,7 @@ class DataSpec(BaseModel):
         elif self.resource.endswith('.csv'):
             data = intake.open_csv(self.resource).read()
 
+        print(data)
         # now read the target columns and smiles column
         target = data[self.target_cols]
         smiles = data[self.smiles_col]
