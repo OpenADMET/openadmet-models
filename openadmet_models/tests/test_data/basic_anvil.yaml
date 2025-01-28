@@ -16,11 +16,10 @@ metadata:
 
 data:
   type: IntakeCatalog
-  params:
-    catalog_file: {{ }}
-    entry_name: "subset"
-    smiles_column: smiles
-    target_column: data1
+  resource: {}
+  cat_entry: "subsel"
+  smiles_col: "smiles"
+  target_col: "data1"
 
 
 transform:

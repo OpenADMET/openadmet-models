@@ -35,7 +35,7 @@ def _load_section_from_type(data, section_name):
 
 class AnvilWorkflow(BaseModel):
     metadata: Metadata
-    data: Any
+    data: DataSpec
     transform: Any
     split: SplitterBase
     feat: FeaturizerBase
@@ -49,6 +49,8 @@ class AnvilWorkflow(BaseModel):
         """
         with open(path, "r") as f:
             data = yaml.safe_load(f)
+
+        data = DataSpec(**data.pop("data"))
         
         metadata = Metadata(**data.pop("metadata"))
 
@@ -70,7 +72,7 @@ class AnvilWorkflow(BaseModel):
 
 
         # make the complete instance
-        instance = cls(metadata=metadata, model=model, feat=featurizer, evals=evals, split=split, **data)
+        instance = cls(metadata=metadata, data=data, model=model, feat=featurizer, evals=evals, split=split, **data)
         
         logger.info("Workflow loaded")
 
@@ -92,19 +94,18 @@ class AnvilWorkflow(BaseModel):
         logger.info("Running workflow")
         
         logger.info("Loading data")
-        X = self.data.load()
+        X, y =  self.data.read_data()
         logger.info("Data loaded")
 
         logger.info("Transforming data")
         if self.transform:
-            transformed_X = self.transform.transform(X)
+            X = self.transform.transform(X)
             logger.info("Data transformed")
         else:
-            transformed_X = X
             logger.info("No transform specified, skipping")
 
         logger.info("Splitting data")
-        X_train, X_test, y_train, y_test = self.split.split(transformed_X)
+        X_train, X_test, y_train, y_test = self.split.split(X, y)
         logger.info("Data split")
 
         logger.info("Featurizing data")

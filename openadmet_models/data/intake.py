@@ -2,6 +2,7 @@ import intake
 from pydantic import BaseModel
 
 
+
 def read_intake_data(resource: str, cat_entry: str,  target_cols: str, smiles_col: str) -> BaseModel:
     # if YAML, parse as intake catalog
 
