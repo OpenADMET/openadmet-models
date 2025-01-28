@@ -15,8 +15,8 @@ metadata:
     - "test"
 
 data:
-  type: IntakeCatalog
-  resource: {}
+  type: intake
+  resource: /Users/hugomacdermott/Desktop/openadmet/openadmet_models/openadmet_models/tests/test_data/example_intake.yaml
   cat_entry: "subsel"
   smiles_col: "smiles"
   target_col: "data1"

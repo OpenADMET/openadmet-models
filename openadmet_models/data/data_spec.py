@@ -17,7 +17,7 @@ class DataSpec(BaseModel):
     type: DataSpecTypes
     resource: str
     cat_entry: Optional[str] = None
-    target_cols: str
+    target_col: str
     smiles_col: str
 
     def read(self) -> Tuple[pd.Series, pd.Series]:
@@ -34,7 +34,7 @@ class DataSpec(BaseModel):
             data = intake.open_csv(self.resource).read()
 
         # now read the target columns and smiles column
-        target = data[self.target_cols]
+        target = data[self.target_col]
         smiles = data[self.smiles_col]
 
         return smiles, target

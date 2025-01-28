@@ -10,6 +10,7 @@ from openadmet_models.models.model_base import ModelBase, get_model_class, model
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class, featurizers
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class, evaluators
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class, splitters
+from openadmet_models.data.data_spec import DataSpec
 
 
 _SECTION_CLASS_GETTERS = {
@@ -35,7 +36,7 @@ def _load_section_from_type(data, section_name):
 
 class AnvilWorkflow(BaseModel):
     metadata: Metadata
-    data: DataSpec
+    data_spec: DataSpec
     transform: Any
     split: SplitterBase
     feat: FeaturizerBase
@@ -50,7 +51,7 @@ class AnvilWorkflow(BaseModel):
         with open(path, "r") as f:
             data = yaml.safe_load(f)
 
-        data = DataSpec(**data.pop("data"))
+        data_spec = DataSpec(**data.pop("data"))
         
         metadata = Metadata(**data.pop("metadata"))
 
@@ -94,7 +95,7 @@ class AnvilWorkflow(BaseModel):
         logger.info("Running workflow")
         
         logger.info("Loading data")
-        X, y =  self.data.read_data()
+        X, y =  self.data_spec.read()
         logger.info("Data loaded")
 
         logger.info("Transforming data")

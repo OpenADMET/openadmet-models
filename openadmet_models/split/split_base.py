@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Tuple, Self
+from typing import Iterable, Tuple
 from pydantic import BaseModel, model_validator
 from class_registry import ClassRegistry
 from class_registry import RegistryKeyError
@@ -25,7 +25,7 @@ class SplitterBase(BaseModel, ABC):
 
 
     @model_validator(mode='after')
-    def check_sizes(self) -> Self:
+    def check_sizes(self):
         if self.test_size + self.train_size != 1.0:
             raise ValueError("Test and train sizes must sum to 1.0")
         return self
