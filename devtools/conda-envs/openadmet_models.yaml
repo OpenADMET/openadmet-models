@@ -10,13 +10,16 @@ dependencies:
   - numpy
   - pandas
   - scikit-learn
+  - rich
+  - intake
+  - joblib
 
+  - rdkit
   - molfeat
   - datamol
 
   - lightgbm
 
-  - intake
 
     # Testing
   - pytest
