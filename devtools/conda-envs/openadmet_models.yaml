@@ -25,4 +25,4 @@ dependencies:
 
     # Pip-only installs
   - pip:
-   - phx-class-registry
+    - phx-class-registry
