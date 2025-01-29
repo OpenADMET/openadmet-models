@@ -4,6 +4,7 @@ import fsspec
 import yaml
 from loguru import logger
 from pydantic import BaseModel
+from pathlib import Path
 
 from openadmet_models.anvil.metadata import Metadata
 from openadmet_models.data.data_spec import DataSpec
@@ -97,9 +98,16 @@ class AnvilWorkflow(BaseModel):
         Save the workflow to a yaml file
         """
         with open(path, "w") as f:
-            yaml.dump(self.dict(), f)
+            f.write(self.model_dump_json(indent=2))
 
-    def run(self) -> Any:
+    @classmethod
+    def load(cls, path: Pathy):
+        import json
+        with open(path, "r") as f:
+            data = json.load(f)
+        return cls(**data)
+
+    def run(self, output_dir: Pathy) -> Any:
         """
         Run the workflow
         """
@@ -131,6 +139,11 @@ class AnvilWorkflow(BaseModel):
         self.model.train(X_train_feat, y_train)
         logger.info("Model trained")
 
+
+        logger.info("Saving model")
+        self.model.save(Path(output_dir) / "model.pkl")
+        logger.info("Model saved")
+
         logger.info("Predicting")
         preds = self.model.predict(X_test_feat)
         logger.info("Predictions made")
@@ -139,5 +152,4 @@ class AnvilWorkflow(BaseModel):
         report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
         logger.info("Evaluation done")
 
-        print("report_data", report_data)
         return report_data

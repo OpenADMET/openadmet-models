@@ -9,4 +9,6 @@ def test_anvil_workflow_create():
 
 def test_anvil_workflow_run():
     anvil_workflow = AnvilWorkflow.from_yaml(basic_anvil_yaml)
-    anvil_workflow.run()
+    anvil_workflow.run("./")
+
+

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
-
+import json
 import joblib
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ def get_model_class(model_type):
 
 class ModelBase(BaseModel, ABC):
     _model: Any = None
-    _built: bool = False
+
 
     @property
     def model(self):
@@ -96,3 +96,22 @@ class PickleableModelBase(ModelBase):
 
         with open(path, "rb") as f:
             self._model = joblib.load(f)
+
+    @classmethod
+    def from_model_json_and_pkl(cls, model_json_path: Pathy, pkl_path: Pathy):
+        """
+        Create a model from parameters and a pickled model
+        """
+        with open(model_json_path, "r") as f:
+            model_params = json.load(f)
+        instance = cls(**model_params)
+        instance.load(pkl_path)
+        return instance
+    
+    def to_model_json_and_pkl(self, model_json_path: Pathy, pkl_path: Pathy):
+        """
+        Save the model to a json file and a pickled file
+        """
+        with open(model_json_path, "w") as f:
+            f.write(self.model_dump_json(indent=2))
+        self.save(pkl_path)
