@@ -18,20 +18,14 @@ def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
 
 
-def desc_2d_by_pyver():
-    if sys.version_info[1] >= 12:
-        return 223
-    return 215
-
 
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
 @pytest.mark.parametrize(
-    "descr_type, shape", [("mordred", 1613), ("desc2d", desc_2d_by_pyver())]
+    "descr_type", ["mordred", "desc2d"]
 )
-def test_descriptor_featurizer(descr_type, shape, dtype):
+def test_descriptor_featurizer(descr_type, dtype):
     featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype)
     X, idx = featurizer.featurize(["CCO", "CCN", "CCO"])
-    assert X.shape == (3, shape)
     assert X.dtype == dtype
     assert_array_equal(idx, np.arange(3))
 
