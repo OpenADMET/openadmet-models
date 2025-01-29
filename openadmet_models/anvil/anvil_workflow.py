@@ -46,7 +46,6 @@ class AnvilWorkflow(BaseModel):
     feat: FeaturizerBase
     model: ModelBase
     evals: list[EvalBase]
-    _ANVIL_DIR: Pathy
 
     @classmethod
     def from_yaml(cls, path: Pathy, **kwargs):
@@ -124,23 +123,26 @@ class AnvilWorkflow(BaseModel):
 
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(X, y)
+
         logger.info("Data split")
 
         logger.info("Featurizing data")
-        X_train_feat = self.feat.featurize(X_train)
+        X_train_feat, _ = self.feat.featurize(X_train)
+        X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
 
         logger.info("Training model")
-        model = self.model.load()
-        model.train(X_train_feat, y_train)
+        self.model.build()
+        self.model.train(X_train_feat, y_train)
         logger.info("Model trained")
 
         logger.info("Predicting")
-        preds = model.predict(X_test)
+        preds = self.model.predict(X_test_feat)
         logger.info("Predictions made")
 
         logger.info("Evaluating")
         report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
         logger.info("Evaluation done")
 
+        print("report_data", report_data)
         return report_data

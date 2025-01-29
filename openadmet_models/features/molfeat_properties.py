@@ -63,5 +63,5 @@ class DescriptorFeaturizer(MolfeatFeaturizer):
         """
         with dm.without_rdkit_log():
             feat, indices = self._transformer(smiles, ignore_errors=True)
-
-        return feat, indices
+        # datamol returns with an extra dimension
+        return np.squeeze(feat), indices
