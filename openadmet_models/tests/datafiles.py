@@ -1,6 +1,6 @@
 from importlib import resources
 
-import openadmet_models.tests.test_data # noqa: F401
+import openadmet_models.tests.test_data  # noqa: F401
 
 _data_ref = resources.files("openadmet_models.tests.test_data")
 

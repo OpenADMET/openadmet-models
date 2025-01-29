@@ -7,16 +7,10 @@ from pydantic import BaseModel
 
 from openadmet_models.anvil.metadata import Metadata
 from openadmet_models.data.data_spec import DataSpec
-from openadmet_models.eval.eval_base import EvalBase, get_eval_class 
-from openadmet_models.features.feature_base import (
-    FeaturizerBase,
-    get_featurizer_class,
-)
+from openadmet_models.eval.eval_base import EvalBase, get_eval_class
+from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet_models.models.model_base import ModelBase, get_model_class
-from openadmet_models.split.split_base import (
-    SplitterBase,
-    get_splitter_class,
-)
+from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.util.types import Pathy
 
 _SECTION_CLASS_GETTERS = {
