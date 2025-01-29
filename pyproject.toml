@@ -60,7 +60,7 @@ namespaces = false
 where = ["."]
 
 [tool.setuptools.package-data]
-openadmet_modesl = ["tests/test_data/*"]
+openadmet_models = ["tests/test_data/*"]
 
 
 
