@@ -59,11 +59,16 @@ include-package-data = false
 namespaces = false
 where = ["."]
 
+[tool.setuptools.package-data]
+openadmet_modesl = ["tests/test_data/*"]
+
+
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
 openadmet_models = [
     "py.typed"
 ]
+
 
 [tool.versioningit]
 default-version = "1+unknown"
@@ -78,7 +83,7 @@ distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 method = "git"  # <- The method name
 # Parameters to pass to the method:
 match = ["*"]
-default-tag = "1.0.0"
+default-tag = "0.0.0"
 
 [tool.versioningit.write]
 file = "openadmet_models/_version.py"
