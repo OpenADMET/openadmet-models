@@ -17,7 +17,7 @@ dependencies:
   - rdkit
   - molfeat
   - datamol
-
+  - mordredcommunity
   - lightgbm
 
 
