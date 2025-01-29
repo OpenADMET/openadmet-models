@@ -1,6 +1,7 @@
+import sys
+
 import numpy as np
 import pytest
-import sys
 from numpy.testing import assert_array_equal
 
 from openadmet_models.features.molfeat_fingerprint import FingerprintFeaturizer
@@ -24,7 +25,9 @@ def desc_2d_by_pyver():
 
 
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
-@pytest.mark.parametrize("descr_type, shape", [("mordred", 1613), ("desc2d", desc_2d_by_pyver())])
+@pytest.mark.parametrize(
+    "descr_type, shape", [("mordred", 1613), ("desc2d", desc_2d_by_pyver())]
+)
 def test_descriptor_featurizer(descr_type, shape, dtype):
     featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype)
     X, idx = featurizer.featurize(["CCO", "CCN", "CCO"])
