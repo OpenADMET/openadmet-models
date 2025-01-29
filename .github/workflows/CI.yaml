@@ -20,9 +20,10 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
-        python-version: [3.9, "3.10", "3.11"]
+        os: [macOS-latest, ubuntu-latest]
+        python-version: ["3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
           condarc: |
             channels:
               - conda-forge
-          create-args: >- 
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Install package

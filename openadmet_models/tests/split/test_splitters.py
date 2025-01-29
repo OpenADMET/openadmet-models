@@ -1,14 +1,12 @@
-import pytest
 import numpy as np
-from numpy.testing import assert_array_equal
 
-
-from openadmet_models.split.vanilla import ShuffleSplitter
 from openadmet_models.split.split_base import splitters
+from openadmet_models.split.vanilla import ShuffleSplitter
 
 
 def test_in_splitters():
     assert "ShuffleSplitter" in splitters
+
 
 def test_simple_split():
     splitter = ShuffleSplitter(train_size=0.8, test_size=0.2, random_state=42)
@@ -19,6 +17,3 @@ def test_simple_split():
     assert X_test.shape[0] == 20
     assert y_train.shape[0] == 80
     assert y_test.shape[0] == 20
-
-
-

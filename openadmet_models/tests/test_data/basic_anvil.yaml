@@ -15,7 +15,12 @@ metadata:
     - "test"
 
 data:
-  - {} # This is a placeholder for the data source, filled in test
+  type: intake
+  resource: "{{ANVIL_DIR}}/example_intake.yaml"
+  cat_entry: "subsel"
+  smiles_col: "SMILES"
+  target_col: "data1"
+
 
 transform:
 

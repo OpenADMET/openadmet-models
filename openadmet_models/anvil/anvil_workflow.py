@@ -1,23 +1,23 @@
-from pydantic import BaseModel
 from typing import Any
+
+import fsspec
 import yaml
 from loguru import logger
+from pydantic import BaseModel
 
-
-from openadmet_models.util.types import Pathy
 from openadmet_models.anvil.metadata import Metadata
-from openadmet_models.models.model_base import ModelBase, get_model_class, models
-from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class, featurizers
-from openadmet_models.eval.eval_base import EvalBase, get_eval_class, evaluators
-from openadmet_models.split.split_base import SplitterBase, get_splitter_class, splitters
-
+from openadmet_models.data.data_spec import DataSpec
+from openadmet_models.eval.eval_base import EvalBase, get_eval_class
+from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
+from openadmet_models.models.model_base import ModelBase, get_model_class
+from openadmet_models.split.split_base import SplitterBase, get_splitter_class
+from openadmet_models.util.types import Pathy
 
 _SECTION_CLASS_GETTERS = {
-
     "feat": get_featurizer_class,
     "model": get_model_class,
     "split": get_splitter_class,
-    "eval": get_eval_class
+    "eval": get_eval_class,
 }
 
 
@@ -35,7 +35,7 @@ def _load_section_from_type(data, section_name):
 
 class AnvilWorkflow(BaseModel):
     metadata: Metadata
-    data: Any
+    data_spec: DataSpec
     transform: Any
     split: SplitterBase
     feat: FeaturizerBase
@@ -43,13 +43,22 @@ class AnvilWorkflow(BaseModel):
     evals: list[EvalBase]
 
     @classmethod
-    def from_yaml(cls, path: Pathy):
+    def from_yaml(cls, path: Pathy, **kwargs):
         """
         Create a workflow from a yaml file
         """
-        with open(path, "r") as f:
-            data = yaml.safe_load(f)
-        
+        logger.info("Loading workflow")
+
+        storage_options = kwargs.pop("storage_options", kwargs)
+        of = fsspec.open(path, **storage_options)
+        with of as stream:
+            data = yaml.safe_load(stream)
+
+        # get parent path
+        parent = of.fs.unstrip_protocol(of.fs._parent(path))
+
+        data_spec = DataSpec(**data.pop("data"), anvil_dir=parent)
+
         metadata = Metadata(**data.pop("metadata"))
 
         # load the featurizer(s)
@@ -68,15 +77,20 @@ class AnvilWorkflow(BaseModel):
             eval_class = get_eval_class(eval_type)
             evals.append(eval_class())
 
-
         # make the complete instance
-        instance = cls(metadata=metadata, model=model, feat=featurizer, evals=evals, split=split, **data)
-        
+        instance = cls(
+            metadata=metadata,
+            data_spec=data_spec,
+            model=model,
+            feat=featurizer,
+            evals=evals,
+            split=split,
+            **data,
+        )
+
         logger.info("Workflow loaded")
 
         return instance
-
-        
 
     def save(self, path: Pathy):
         """
@@ -90,40 +104,40 @@ class AnvilWorkflow(BaseModel):
         Run the workflow
         """
         logger.info("Running workflow")
-        
+
         logger.info("Loading data")
-        X = self.data.load()
+        X, y = self.data_spec.read()
         logger.info("Data loaded")
 
         logger.info("Transforming data")
         if self.transform:
-            transformed_X = self.transform.transform(X)
+            X = self.transform.transform(X)
             logger.info("Data transformed")
         else:
-            transformed_X = X
             logger.info("No transform specified, skipping")
 
         logger.info("Splitting data")
-        X_train, X_test, y_train, y_test = self.split.split(transformed_X)
+        X_train, X_test, y_train, y_test = self.split.split(X, y)
+
         logger.info("Data split")
 
         logger.info("Featurizing data")
-        X_train_feat = self.feat.featurize(X_train)
+        X_train_feat, _ = self.feat.featurize(X_train)
+        X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
 
         logger.info("Training model")
-        model = self.model.load()
-        model.train(X_train_feat, y_train)
+        self.model.build()
+        self.model.train(X_train_feat, y_train)
         logger.info("Model trained")
 
         logger.info("Predicting")
-        preds = model.predict(X_test)
+        preds = self.model.predict(X_test_feat)
         logger.info("Predictions made")
-        
+
         logger.info("Evaluating")
         report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
         logger.info("Evaluation done")
-        
-        return report_data
 
-        
+        print("report_data", report_data)
+        return report_data

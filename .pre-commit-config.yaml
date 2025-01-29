@@ -21,6 +21,8 @@ repos:
   hooks:
   - id: isort
     files: ^openadmet_models
+    args: ["--profile", "black"]
+
 - repo: https://github.com/PyCQA/flake8
   rev: 7.1.1
   hooks:
@@ -28,7 +30,7 @@ repos:
     files: ^openadmet_models
     additional_dependencies: [Flake8-pyproject]
 - repo: https://github.com/asottile/pyupgrade
-  rev: 'v3.19.1'
+  rev: 'v3.17.0'
   hooks:
   - id: pyupgrade
     args:

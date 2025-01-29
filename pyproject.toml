@@ -54,16 +54,15 @@ zip-safe = false
 # (instead of using 'find'). With 'find', the 'tests' subpackage is discovered
 # recursively because of its __init__.py file, but the data subdirectory is excluded
 # with include-package-data = false and namespaces = false.
-include-package-data = false
+include-package-data = true
 [tool.setuptools.packages.find]
 namespaces = false
 where = ["."]
 
-# Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
-openadmet_models = [
-    "py.typed"
-]
+openadmet_models = ["tests/test_data/*"]
+
+
 
 [tool.versioningit]
 default-version = "1+unknown"
@@ -78,7 +77,7 @@ distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 method = "git"  # <- The method name
 # Parameters to pass to the method:
 match = ["*"]
-default-tag = "1.0.0"
+default-tag = "0.0.0"
 
 [tool.versioningit.write]
 file = "openadmet_models/_version.py"

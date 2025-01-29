@@ -6,15 +6,20 @@ dependencies:
     # Base depends
   - python
   - pip
-  
+
   - numpy
   - pandas
   - scikit-learn
+  - rich
+  - intake
+  - joblib
 
+  - rdkit
   - molfeat
   - datamol
-
+  - mordredcommunity
   - lightgbm
+
 
     # Testing
   - pytest
@@ -22,6 +27,6 @@ dependencies:
   - codecov
 
     # Pip-only installs
-  #- pip:
-  #  - codecov
-
+  - pip:
+    - phx-class-registry
+    - email-validator
