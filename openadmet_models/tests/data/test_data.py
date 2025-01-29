@@ -1,5 +1,3 @@
-import pytest
-
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.tests.datafiles import intake_cat, test_csv
 

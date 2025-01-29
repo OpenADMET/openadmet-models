@@ -1,6 +1,4 @@
 import numpy as np
-import pytest
-from numpy.testing import assert_array_equal
 
 from openadmet_models.split.split_base import splitters
 from openadmet_models.split.vanilla import ShuffleSplitter

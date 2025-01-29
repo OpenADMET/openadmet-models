@@ -1,6 +1,5 @@
 import pytest
 
-from openadmet_models.models.gradient_boosting.lgbm import LGBMRegressorModel
 from openadmet_models.models.model_base import models
 
 

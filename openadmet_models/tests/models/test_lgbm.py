@@ -1,4 +1,3 @@
-import pytest
 from numpy.testing import assert_allclose
 
 from openadmet_models.models.gradient_boosting.lgbm import LGBMRegressorModel

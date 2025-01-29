@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Optional
 
 import intake
 import jinja2

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import joblib
 from class_registry import ClassRegistry, RegistryKeyError
