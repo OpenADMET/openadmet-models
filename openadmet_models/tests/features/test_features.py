@@ -18,11 +18,8 @@ def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
 
 
-
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
-@pytest.mark.parametrize(
-    "descr_type", ["mordred", "desc2d"]
-)
+@pytest.mark.parametrize("descr_type", ["mordred", "desc2d"])
 def test_descriptor_featurizer(descr_type, dtype):
     featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype)
     X, idx = featurizer.featurize(["CCO", "CCN", "CCO"])
