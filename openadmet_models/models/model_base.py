@@ -98,7 +98,7 @@ class PickleableModelBase(ModelBase):
             self._model = joblib.load(f)
 
     @classmethod
-    def from_model_json_and_pkl(cls, model_json_path: Pathy, pkl_path: Pathy):
+    def from_model_json_and_pkl(cls, model_json_path: Pathy="model.json", pkl_path: Pathy="model.pkl"):
         """
         Create a model from parameters and a pickled model
         """
@@ -108,7 +108,7 @@ class PickleableModelBase(ModelBase):
         instance.load(pkl_path)
         return instance
     
-    def to_model_json_and_pkl(self, model_json_path: Pathy, pkl_path: Pathy):
+    def to_model_json_and_pkl(self, model_json_path: Pathy="model.json", pkl_path: Pathy="model.pkl"):
         """
         Save the model to a json file and a pickled file
         """
