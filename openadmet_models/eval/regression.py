@@ -12,22 +12,32 @@ from openadmet_models.eval.eval_base import EvalBase, evaluators
 
 def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray,  statistic: Callable, confidence_level: float=0.95, is_scipy_statistic: bool=False):
     # calculate the metric and confidence intervals
-    metric = statistic(y_true, y_pred)
     if is_scipy_statistic:
-        metric = metric.statistic
-    conf_interval = bootstrap(
-        (y_true, y_pred),
-        statistic=statistic,
-        method="basic",
-        confidence_level=confidence_level,
-        paired=True,
-    ).confidence_interval
+        metric = statistic(y_true, y_pred).statistic
+        conf_interval = bootstrap(
+            (y_true, y_pred),
+            statistic= lambda y_true, y_pred: statistic(y_true, y_pred).statistic,
+            method="basic",
+            confidence_level=confidence_level,
+            paired=True,
+        ).confidence_interval  
+        
+    else:
+        metric = statistic(y_true, y_pred)
+        conf_interval = bootstrap(
+            (y_true, y_pred),
+            statistic=statistic,
+            method="basic",
+            confidence_level=confidence_level,
+            paired=True,
+        ).confidence_interval
 
     print(f"{metric_tag}: {metric} ({confidence_level*100}% CI: {conf_interval.low}, {conf_interval.high})")
 
     return metric, conf_interval.low, conf_interval.high,
 
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
+nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
@@ -42,8 +52,8 @@ class RegressionMetrics(EvalBase):
             "mse": (mean_squared_error, False),
             "mae": (mean_absolute_error, False),
             "r2": (r2_score, False),
-            "ktau": (nan_omit_ktau, False)
-            # "spearmanr": spearmanr,
+            "ktau": (nan_omit_ktau, True),
+            # "spearmanr": (nan_omit_spearmanr, True)
         }
 
         self.data = {}
@@ -77,7 +87,7 @@ class RegressionMetrics(EvalBase):
         with open(output_dir / "regression_metrics.json", "w") as f:
             json.dump(self.data, f, indent=2)
 
-
+@evaluators.register("RegressionPlots")
 class RegressionPlots(EvalBase):
     plots: dict = {}
 
