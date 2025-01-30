@@ -159,7 +159,7 @@ class AnvilWorkflow(BaseModel):
         logger.info("Predictions made")
 
         logger.info("Evaluating")
-        report_data = eval.evaluate(y_test, preds).report(output_dir)
+        report_data = [eval.evaluate(y_test, preds).report(output_dir) for eval in self.evals]
         logger.info("Evaluation done")
 
         return report_data
