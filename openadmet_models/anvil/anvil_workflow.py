@@ -115,7 +115,8 @@ class AnvilWorkflow(BaseModel):
         """
         if Path(output_dir).exists():
             # make truncated hashed uuid
-            output_dir = Path(output_dir) + f"_{hashlib.sha1(uuid.uuid4()).hexdigest()[:8]}"
+            hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:8]
+            output_dir = Path(output_dir + f"_{hsh}")
         else:
             output_dir = Path(output_dir)
         

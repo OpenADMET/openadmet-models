@@ -40,7 +40,7 @@ class RegressionMetrics(EvalBase):
         self.data = {}
 
         for metric_tag, metric in self.metrics.items():
-            value, lower_ci, upper_ci = do_stat_and_bootstrap(
+            value, lower_ci, upper_ci = stat_and_bootstrap(
                 metric_tag, y_pred, y_true, metric
             )
 
