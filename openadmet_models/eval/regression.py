@@ -1,25 +1,33 @@
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from typing import Callable
 from matplotlib import pyplot as plt
-from openadmet_models.eval.eval_base import EvalBase, evaluators
 import numpy as np
 from scipy.stats import bootstrap, kendalltau, spearmanr
+import json
+import seaborn as sns
+import scipy
+from functools import partial
+from openadmet_models.eval.eval_base import EvalBase, evaluators
 
 
-def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray,  statistic: Callable, n_resamples: int=10000, confidence_level: float=0.95):
-
+def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray,  statistic: Callable, confidence_level: float=0.95, is_scipy_statistic: bool=False):
     # calculate the metric and confidence intervals
     metric = statistic(y_true, y_pred)
+    if is_scipy_statistic:
+        metric = metric.statistic
     conf_interval = bootstrap(
         (y_true, y_pred),
         statistic=statistic,
+        method="basic",
         confidence_level=confidence_level,
         paired=True,
     ).confidence_interval
 
+    print(f"{metric_tag}: {metric} ({confidence_level*100}% CI: {conf_interval.low}, {conf_interval.high})")
+
     return metric, conf_interval.low, conf_interval.high,
 
-
+nan_omit_ktau = partial(kendalltau, nan_policy="omit")
 
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
@@ -31,21 +39,22 @@ class RegressionMetrics(EvalBase):
         """
 
         self.metrics = {
-            "mse": mean_squared_error,
-            "mae": mean_absolute_error,
-            "r2": r2_score,
-            "ktau": kendalltau,
-            "spearmanr": spearmanr,
+            "mse": (mean_squared_error, False),
+            "mae": (mean_absolute_error, False),
+            "r2": (r2_score, False),
+            "ktau": (nan_omit_ktau, False)
+            # "spearmanr": spearmanr,
         }
 
         self.data = {}
 
-        for metric_tag, metric in self.metrics.items():
+
+        for metric_tag, (metric, is_scipy) in self.metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
-                metric_tag, y_pred, y_true, metric
+                metric_tag, y_pred, y_true, metric, is_scipy_statistic=is_scipy
             )
 
-            self.data[f"{metric_tag}_{value}"] = value
+            self.data[f"{metric_tag}"] = value
             self.data[f"{metric_tag}_lower_ci"] = lower_ci
             self.data[f"{metric_tag}_upper_ci"] = upper_ci
 
@@ -66,7 +75,7 @@ class RegressionMetrics(EvalBase):
         """
         # write to JSON
         with open(output_dir / "regression_metrics.json", "w") as f:
-            json.dump(self.data, f)
+            json.dump(self.data, f, indent=2)
 
 
 class RegressionPlots(EvalBase):
@@ -94,7 +103,7 @@ class RegressionPlots(EvalBase):
         Create a regression plot
         """
         fig, ax = plt.subplots()
-        ax.set_title(f"Test set performance:\n {model_name}", fontsize=6)
+        ax.set_title(f"Test set performance:\n", fontsize=6)
         min_val = min(y_true.min(), y_pred.min())
         max_val = max(y_true.max(), y_pred.max())
         # set the limits to be the same for both axes
