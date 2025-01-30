@@ -3,6 +3,7 @@ from typing import Callable
 from matplotlib import pyplot as plt
 from openadmet_models.eval.eval_base import EvalBase, evaluators
 import numpy as np
+from scipy.stats import bootstrap, kendalltau, spearmanr
 
 
 def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray,  statistic: Callable, n_resamples: int=10000, confidence_level: float=0.95):
@@ -12,10 +13,8 @@ def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray, 
     conf_interval = bootstrap(
         (y_true, y_pred),
         statistic=statistic,
-        method="basic",
         confidence_level=confidence_level,
         paired=True,
-        n_bootstraps=n_bootstraps,
     ).confidence_interval
 
     return metric, conf_interval.low, conf_interval.high,
@@ -35,6 +34,8 @@ class RegressionMetrics(EvalBase):
             "mse": mean_squared_error,
             "mae": mean_absolute_error,
             "r2": r2_score,
+            "ktau": kendalltau,
+            "spearmanr": spearmanr,
         }
 
         self.data = {}
