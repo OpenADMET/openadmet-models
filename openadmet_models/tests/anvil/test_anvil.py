@@ -7,8 +7,9 @@ def test_anvil_workflow_create():
     assert anvil_workflow
 
 
-def test_anvil_workflow_run():
+def test_anvil_workflow_run(tmp_path):
     anvil_workflow = AnvilWorkflow.from_yaml(basic_anvil_yaml)
-    anvil_workflow.run("./")
+    anvil_workflow.run(output_dir="tst_output")
+    
 
 

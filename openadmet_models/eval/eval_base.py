@@ -23,3 +23,10 @@ class EvalBase(BaseModel):
         Evaluate the model
         """
         pass
+
+    @abstractmethod
+    def report(self):
+        """
+        Report the evaluation
+        """
+        pass

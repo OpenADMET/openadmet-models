@@ -5,6 +5,8 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel
 from pathlib import Path
+import uuid
+import hashlib
 
 from openadmet_models.anvil.metadata import Metadata
 from openadmet_models.data.data_spec import DataSpec
@@ -107,10 +109,18 @@ class AnvilWorkflow(BaseModel):
             data = json.load(f)
         return cls(**data)
 
-    def run(self, output_dir: Pathy) -> Any:
+    def run(self, output_dir: Pathy="anvil_run") -> Any:
         """
         Run the workflow
         """
+        if Path(output_dir).exists():
+            # make truncated hashed uuid
+            output_dir = Path(output_dir) + f"_{hashlib.sha1(uuid.uuid4()).hexdigest()[:8]}"
+        else:
+            output_dir = Path(output_dir)
+        
+        output_dir.mkdir(parents=True)
+
         logger.info("Running workflow")
 
         logger.info("Loading data")
@@ -141,7 +151,7 @@ class AnvilWorkflow(BaseModel):
 
 
         logger.info("Saving model")
-        self.model.save(Path(output_dir) / "model.pkl")
+        self.model.to_model_json_and_pkl(output_dir/"model.json", output_dir/"model.pkl")
         logger.info("Model saved")
 
         logger.info("Predicting")
@@ -149,7 +159,7 @@ class AnvilWorkflow(BaseModel):
         logger.info("Predictions made")
 
         logger.info("Evaluating")
-        report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
+        report_data = eval.evaluate(y_test, preds).report(output_dir)
         logger.info("Evaluation done")
 
         return report_data
