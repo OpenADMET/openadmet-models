@@ -1,23 +1,22 @@
+import hashlib
+import uuid
+from pathlib import Path
 from typing import Any
 
 import fsspec
 import yaml
 from loguru import logger
 from pydantic import BaseModel
-from pathlib import Path
-import uuid
-import hashlib
 
-from openadmet_models.registries import *
 from openadmet_models.anvil.metadata import Metadata
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet_models.models.model_base import ModelBase, get_model_class
+from openadmet_models.registries import *
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
-
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -120,11 +119,12 @@ class AnvilWorkflow(BaseModel):
     @classmethod
     def load(cls, path: Pathy):
         import json
-        with open(path, "r") as f:
+
+        with open(path) as f:
             data = json.load(f)
         return cls(**data)
 
-    def run(self, output_dir: Pathy="anvil_run") -> Any:
+    def run(self, output_dir: Pathy = "anvil_run") -> Any:
         """
         Run the workflow
         """
@@ -135,7 +135,7 @@ class AnvilWorkflow(BaseModel):
             output_dir = Path(output_dir + f"_{hsh}")
         else:
             output_dir = Path(output_dir)
-        
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Running workflow from directory {output_dir}")
@@ -173,9 +173,10 @@ class AnvilWorkflow(BaseModel):
         self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
 
-
         logger.info("Saving model")
-        self.model.to_model_json_and_pkl(output_dir/"model.json", output_dir/"model.pkl")
+        self.model.to_model_json_and_pkl(
+            output_dir / "model.json", output_dir / "model.pkl"
+        )
         logger.info("Model saved")
 
         logger.info("Predicting")

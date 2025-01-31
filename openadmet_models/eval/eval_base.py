@@ -20,7 +20,6 @@ class EvalBase(BaseModel):
     class Config:
         extra = "allow"
 
-
     @abstractmethod
     def evaluate(self, y_true, y_pred):
         """

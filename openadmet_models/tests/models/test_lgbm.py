@@ -4,12 +4,12 @@ from numpy.testing import assert_allclose
 from openadmet_models.models.gradient_boosting.lgbm import LGBMRegressorModel
 
 
-
 @pytest.fixture
 def X_y():
     X = [[1, 2, 3], [4, 5, 6]]
     y = [1, 2]
     return X, y
+
 
 def test_lgbm():
     lgbm_model = LGBMRegressorModel()
@@ -43,7 +43,7 @@ def test_lgbm_train_predict(X_y):
     assert_allclose(preds, preds_call)
 
 
-def test_lgbm_save_load(tmp_path, X_y   ):
+def test_lgbm_save_load(tmp_path, X_y):
     lgbm_model = LGBMRegressorModel.from_params(
         class_params={}, model_params={"n_estimators": 100}
     )
@@ -56,6 +56,7 @@ def test_lgbm_save_load(tmp_path, X_y   ):
     preds2 = lgbm_model.predict(X)
     assert_allclose(preds, preds2)
 
+
 def test_from_to_model_json_pkl(tmp_path, X_y):
     lgbm_model = LGBMRegressorModel.from_params(
         class_params={}, model_params={"n_estimators": 100}
@@ -63,7 +64,11 @@ def test_from_to_model_json_pkl(tmp_path, X_y):
     X, y = X_y
     lgbm_model.train(X, y)
     preds = lgbm_model.predict(X)
-    lgbm_model.to_model_json_and_pkl(tmp_path/"lgbm_model.json", tmp_path/"lgbm_model.pkl")
-    lgbm_model_loaded = LGBMRegressorModel.from_model_json_and_pkl(tmp_path/"lgbm_model.json", tmp_path/"lgbm_model.pkl")
+    lgbm_model.to_model_json_and_pkl(
+        tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
+    )
+    lgbm_model_loaded = LGBMRegressorModel.from_model_json_and_pkl(
+        tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
+    )
     preds_loaded = lgbm_model_loaded.predict(X)
     assert_allclose(preds, preds_loaded)

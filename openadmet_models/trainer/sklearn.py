@@ -1,13 +1,16 @@
 from typing import Any, ClassVar
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
-from openadmet_models.trainer.trainer_base import TrainerBase, trainers
+
 from loguru import logger
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+
+from openadmet_models.trainer.trainer_base import TrainerBase, trainers
+
 
 @trainers.register("SKLearnBasicTrainer")
 class SKlearnBasicTrainer(TrainerBase):
     """
     Basic trainer for sklearn models
-    """    
+    """
 
     def train(self, X: Any, y: Any):
         sklearn_model = self.model.model
@@ -20,12 +23,13 @@ class SKLearnSearchTrainer(TrainerBase):
     """
     Trainer for sklearn models with search
     """
+
     _search: Any
 
     @property
     def search(self):
         return self._search
-    
+
     @search.setter
     def search(self, value):
         self._search = value
