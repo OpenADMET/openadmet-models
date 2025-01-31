@@ -6,6 +6,8 @@ _data_ref = resources.files("openadmet_models.tests.test_data")
 
 
 basic_anvil_yaml = (_data_ref / "basic_anvil.yaml").as_posix()
+basic_anvil_yaml_gridsearch = (_data_ref / "basic_anvil_gridsearch.yaml").as_posix()
+
 
 intake_cat = (_data_ref / "example_intake.yaml").as_posix()
 

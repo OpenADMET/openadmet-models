@@ -8,21 +8,23 @@ from pathlib import Path
 import uuid
 import hashlib
 
+from openadmet_models.registries import *
 from openadmet_models.anvil.metadata import Metadata
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet_models.models.model_base import ModelBase, get_model_class
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
-from openadmet_models.models.trainer import TrainerBase, get_trainer_class
+from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
+
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
     "model": get_model_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
-    "trainer": get_trainer_class,
+    "train": get_trainer_class,
 }
 
 
@@ -82,7 +84,8 @@ class AnvilWorkflow(BaseModel):
         # split
         split = _load_section_from_type(data, "split")
 
-        # 
+        # trainer
+        trainer = _load_section_from_type(data, "train")
 
         # load the evaluations we want to do
         evals = []
@@ -99,6 +102,7 @@ class AnvilWorkflow(BaseModel):
             feat=featurizer,
             evals=evals,
             split=split,
+            trainer=trainer,
             **data,
         )
 
@@ -161,8 +165,12 @@ class AnvilWorkflow(BaseModel):
         self.model.build()
         logger.info("Model built")
 
+        logger.info("Setting model in trainer")
+        self.trainer.model = self.model
+        logger.info("Model set in trainer")
+
         logger.info("Training model")
-        self.model = self.trainer.train(self.model, X_train_feat, y_train)
+        self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
 
 

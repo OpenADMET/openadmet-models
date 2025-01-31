@@ -18,5 +18,3 @@ def test_anvil_workflow_run(tmp_path):
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
     assert Path(tmp_path / "tst" / "regplot.png").exists()
     
-
-
