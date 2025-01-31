@@ -33,16 +33,17 @@ def stat_and_bootstrap(metric_tag: str, y_pred: np.ndarray, y_true: np.ndarray, 
             paired=True,
         ).confidence_interval
 
-    print(f"{metric_tag}: {metric} ({confidence_level*100}% CI: {conf_interval.low}, {conf_interval.high})")
-
     return metric, conf_interval.low, conf_interval.high,
 
+# create partial functions for the scipy stats
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
 nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
     metrics: dict = {}
+    bootstrap_confidence_level: float = Field(0.95, description="Confidence level for the bootstrap")
+    _evaluated: bool = False
 
     def evaluate(self, y_true, y_pred):
         """
@@ -50,25 +51,43 @@ class RegressionMetrics(EvalBase):
         """
 
         self.metrics = {
-            "mse": (mean_squared_error, False),
-            "mae": (mean_absolute_error, False),
-            "r2": (r2_score, False),
-            "ktau": (nan_omit_ktau, True),
-            "spearmanr": (nan_omit_spearmanr, True)
+            "mse": (mean_squared_error, False, "MSE"),
+            "mae": (mean_absolute_error, False, "MAE"),
+            "r2": (r2_score, False, "$R^2$"),
+            "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
+            "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$")
         }
+
+
 
         self.data = {}
 
 
-        for metric_tag, (metric, is_scipy) in self.metrics.items():
+        for metric_tag, (metric, is_scipy, _) in self.metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
-                metric_tag, y_pred, y_true, metric, is_scipy_statistic=is_scipy
+                metric_tag, y_pred, y_true, metric, is_scipy_statistic=is_scipy, confidence_level=self.bootstrap_confidence_level
             )
 
-            self.data[f"{metric_tag}"] = value
-            self.data[f"{metric_tag}_lower_ci"] = lower_ci
-            self.data[f"{metric_tag}_upper_ci"] = upper_ci
+            metric_data = {}
+            metric_data["value"] = value
+            metric_data["lower_ci"] = lower_ci
+            metric_data["upper_ci"] = upper_ci
+            metric_data["confidence_level"] = self.bootstrap_confidence_level
 
+            self.data[f"{metric_tag}"] = metric_data
+
+        self._evaluated = True
+
+        return self.data
+
+
+    @property
+    def metric_names(self):
+        """
+        Return the metric names
+        """
+        return list(self.metrics.keys())
+            
         
 
     def report(self, write=False, output_dir=None):
@@ -88,11 +107,27 @@ class RegressionMetrics(EvalBase):
         with open(output_dir / "regression_metrics.json", "w") as f:
             json.dump(self.data, f, indent=2)
 
+    def make_stat_caption(self):
+        """
+        Make a caption for the statistics
+        """
+        if not self._evaluated:
+            raise ValueError("Must evaluate before making a caption")
+        stat_caption = ""
+        for metric in self.metric_names:
+            value = self.data[metric]["value"]
+            lower_ci = self.data[metric]["lower_ci"]
+            upper_ci = self.data[metric]["upper_ci"]
+            confidence_level = self.data[metric]["confidence_level"]
+            stat_caption += f"{self.metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
+        stat_caption += f"Confidence level: {confidence_level}"
+        return stat_caption
+
 @evaluators.register("RegressionPlots")
 class RegressionPlots(EvalBase):
     axes_labels: list[str] = Field(["Measured", "Predicted"], description="Labels for the axes")
     title: str = Field("Pred vs ", description="Title for the plot")
-
+    do_stats: bool = Field(True, description="Whether to do stats for the plot")
     plots: dict = {}
 
     def evaluate(self, y_true, y_pred):
@@ -106,25 +141,36 @@ class RegressionPlots(EvalBase):
 
 
         self.data = {}
+
+        if self.do_stats:
+            rm =  RegressionMetrics()
+            rm.evaluate(y_true, y_pred)
+            stat_caption = rm.make_stat_caption()
+
         # create the plots
         for plot_tag, plot in self.plots.items():
-            self.data[plot_tag] = plot(y_true, y_pred)
+            self.data[plot_tag] = plot(y_true, y_pred, xlabel=self.axes_labels[0], ylabel=self.axes_labels[1], title=self.title, stat_caption=stat_caption)
+
+
+
+
+
 
 
     @staticmethod
-    def regplot(y_true, y_pred, xlabel="Measured", ylabel="Predicted"):
+    def regplot(y_true, y_pred, xlabel="Measured", ylabel="Predicted", title="", stat_caption="", confidence_level=0.95):
         """
         Create a regression plot
         """
         fig, ax = plt.subplots()
-        ax.set_title(f"Test set performance:\n", fontsize=6)
+        ax.set_title(title, fontsize=10)
         min_val = min(y_true.min(), y_pred.min())
         max_val = max(y_true.max(), y_pred.max())
         # set the limits to be the same for both axes
-        p = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=None)
-        slope, intercept, r, p, sterr = scipy.stats.linregress(
-            x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
-        )
+        p = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level*100)
+        # slope, intercept, r, p, sterr = scipy.stats.linregress(
+        #     x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
+        # )
         ax.set_aspect("equal", "box")
         min_ax = min_val - 1
         max_ax = max_val + 1
@@ -133,8 +179,10 @@ class RegressionPlots(EvalBase):
         ax.set_ylim(min_ax, max_ax)
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
-        ax.set_xlabel(xlabel, fontsize=6)
-        ax.set_ylabel(ylabel, fontsize=6)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=6)
+
         return fig
 
     

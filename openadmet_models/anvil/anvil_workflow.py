@@ -24,13 +24,19 @@ _SECTION_CLASS_GETTERS = {
 }
 
 
-def _load_section_from_type(data, section_name):
+def _load_section_from_type(data, section_name, skip_pop=False):
     """
     Load a section from the yaml data
     """
-    section_spec = data.pop(section_name)
+    if skip_pop:
+        section_spec = data
+    else:
+        section_spec = data.pop(section_name)
     section_type = section_spec["type"]
-    section_params = section_spec["params"]
+    if "params" in section_spec:
+        section_params = section_spec["params"]
+    else:
+        section_params = {}
     section_class = _SECTION_CLASS_GETTERS[section_name](section_type)
     section_instance = section_class(**section_params)
     return section_instance
@@ -77,9 +83,8 @@ class AnvilWorkflow(BaseModel):
         evals = []
         eval_spec = data.pop("eval")
         for eval_subspec in eval_spec:
-            eval_instance = _load_section_from_type(eval_subspec, "eval")
+            eval_instance = _load_section_from_type(eval_subspec, "eval", skip_pop=True)
             evals.append(eval_instance)
-            
 
         # make the complete instance
         instance = cls(
