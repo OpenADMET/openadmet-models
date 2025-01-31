@@ -7,6 +7,7 @@ import json
 import seaborn as sns
 import scipy
 from functools import partial
+from pydantic import Field
 from openadmet_models.eval.eval_base import EvalBase, evaluators
 
 
@@ -53,7 +54,7 @@ class RegressionMetrics(EvalBase):
             "mae": (mean_absolute_error, False),
             "r2": (r2_score, False),
             "ktau": (nan_omit_ktau, True),
-            # "spearmanr": (nan_omit_spearmanr, True)
+            "spearmanr": (nan_omit_spearmanr, True)
         }
 
         self.data = {}
@@ -89,6 +90,9 @@ class RegressionMetrics(EvalBase):
 
 @evaluators.register("RegressionPlots")
 class RegressionPlots(EvalBase):
+    axes_labels: list[str] = Field(["Measured", "Predicted"], description="Labels for the axes")
+    title: str = Field("Pred vs ", description="Title for the plot")
+
     plots: dict = {}
 
     def evaluate(self, y_true, y_pred):
@@ -108,7 +112,7 @@ class RegressionPlots(EvalBase):
 
 
     @staticmethod
-    def regplot(y_true, y_pred):
+    def regplot(y_true, y_pred, xlabel="Measured", ylabel="Predicted"):
         """
         Create a regression plot
         """
@@ -129,6 +133,8 @@ class RegressionPlots(EvalBase):
         ax.set_ylim(min_ax, max_ax)
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
+        ax.set_xlabel(xlabel, fontsize=6)
+        ax.set_ylabel(ylabel, fontsize=6)
         return fig
 
     

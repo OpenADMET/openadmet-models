@@ -45,5 +45,10 @@ model:
 
 
 eval:
-  - RegressionMetrics
-  - RegressionPlots
+  - RegressionMetrics:
+    type: RegressionMetrics
+  - RegressionPlots:
+    type: RegressionPlots
+    params:
+      axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+      title: "True vs Predicted pChEMBL on test set"

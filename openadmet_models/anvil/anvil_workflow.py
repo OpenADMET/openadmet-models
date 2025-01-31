@@ -76,9 +76,10 @@ class AnvilWorkflow(BaseModel):
         # load the evaluations we want to do
         evals = []
         eval_spec = data.pop("eval")
-        for eval_type in eval_spec:
-            eval_class = get_eval_class(eval_type)
-            evals.append(eval_class())
+        for eval_subspec in eval_spec:
+            eval_instance = _load_section_from_type(eval_subspec, "eval")
+            evals.append(eval_instance)
+            
 
         # make the complete instance
         instance = cls(
@@ -122,7 +123,7 @@ class AnvilWorkflow(BaseModel):
         
         output_dir.mkdir(parents=True)
 
-        logger.info("Running workflow")
+        logger.info(f"Running workflow from directory {output_dir}")
 
         logger.info("Loading data")
         X, y = self.data_spec.read()
