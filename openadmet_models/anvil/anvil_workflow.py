@@ -14,6 +14,7 @@ from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet_models.models.model_base import ModelBase, get_model_class
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
+from openadmet_models.models.trainer import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
 
 _SECTION_CLASS_GETTERS = {
@@ -21,6 +22,7 @@ _SECTION_CLASS_GETTERS = {
     "model": get_model_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
+    "trainer": get_trainer_class,
 }
 
 
@@ -49,6 +51,7 @@ class AnvilWorkflow(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
+    trainer: TrainerBase
     evals: list[EvalBase]
 
     @classmethod
@@ -78,6 +81,8 @@ class AnvilWorkflow(BaseModel):
 
         # split
         split = _load_section_from_type(data, "split")
+
+        # 
 
         # load the evaluations we want to do
         evals = []
@@ -119,6 +124,7 @@ class AnvilWorkflow(BaseModel):
         """
         Run the workflow
         """
+        output_dir = str(output_dir)
         if Path(output_dir).exists():
             # make truncated hashed uuid
             hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:8]
@@ -126,7 +132,7 @@ class AnvilWorkflow(BaseModel):
         else:
             output_dir = Path(output_dir)
         
-        output_dir.mkdir(parents=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Running workflow from directory {output_dir}")
 
@@ -151,9 +157,12 @@ class AnvilWorkflow(BaseModel):
         X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
 
-        logger.info("Training model")
+        logger.info("Building model")
         self.model.build()
-        self.model.train(X_train_feat, y_train)
+        logger.info("Model built")
+
+        logger.info("Training model")
+        self.model = self.trainer.train(self.model, X_train_feat, y_train)
         logger.info("Model trained")
 
 

@@ -49,7 +49,8 @@ class RegressionMetrics(EvalBase):
         """
         Evaluate the regression model
         """
-
+        
+        # tuple of metric, whether it is a scipy statistic, and the name to use in the report
         self.metrics = {
             "mse": (mean_squared_error, False, "MSE"),
             "mae": (mean_absolute_error, False, "MAE"),
