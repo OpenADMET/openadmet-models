@@ -10,4 +10,3 @@ sources:
     driver: csv
     args:
       urlpath: "{{CATALOG_DIR}}/CYP3A4_chembl_pchembl.csv"
-
