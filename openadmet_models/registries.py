@@ -20,6 +20,6 @@ from openadmet_models.split.split_base import splitters  # noqa: F401 F403
 from openadmet_models.split.vanilla import *  # noqa: F401 F403
 
 # trainers
-from openadmet_models.trainer.sklearn import * # noqa: F401 F403 
+from openadmet_models.trainer.sklearn import *  # noqa: F401 F403
 from openadmet_models.trainer.trainer_base import trainers  # noqa: F401 F403
 from openadmet_models.util.log import logger  # noqa: F401 F403
