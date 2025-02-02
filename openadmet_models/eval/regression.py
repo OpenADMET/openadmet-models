@@ -3,7 +3,6 @@ from functools import partial
 from typing import Callable
 
 import numpy as np
-import scipy
 import seaborn as sns
 from matplotlib import pyplot as plt
 from pydantic import Field
