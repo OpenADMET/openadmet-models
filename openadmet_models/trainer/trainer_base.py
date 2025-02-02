@@ -14,7 +14,8 @@ def get_trainer_class(model_type):
         feat_class = trainers.get_class(model_type)
     except RegistryKeyError:
         raise ValueError(
-            f"Trainer type {model_type} not found in trainer catalouge, available trainers are {list(trainers.classes())}"
+            f"Trainer type {model_type} not found in trainer catalouge,"
+            f"available trainers are {list(trainers.classes())}"
         )
     return feat_class
 

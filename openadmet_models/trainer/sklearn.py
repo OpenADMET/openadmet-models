@@ -1,7 +1,7 @@
-from typing import Any, ClassVar
+from typing import Any
 
 from loguru import logger
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV 
 
 from openadmet_models.trainer.trainer_base import TrainerBase, trainers
 

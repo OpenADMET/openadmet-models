@@ -194,7 +194,7 @@ class RegressionPlots(EvalBase):
         min_val = min(y_true.min(), y_pred.min())
         max_val = max(y_true.max(), y_pred.max())
         # set the limits to be the same for both axes
-        p = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
+        _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
         # slope, intercept, r, p, sterr = scipy.stats.linregress(
         #     x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
         # )
