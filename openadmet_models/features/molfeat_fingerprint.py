@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Tuple
 
 import datamol as dm
 import numpy as np
@@ -44,7 +44,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
             verbose=True,
         )
 
-    def featurize(self, smiles: Iterable[str]) -> np.ndarray:
+    def featurize(self, smiles: Iterable[str]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Featurize a list of SMILES strings
         """
