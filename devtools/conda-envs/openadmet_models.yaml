@@ -19,7 +19,7 @@ dependencies:
   - datamol
   - mordredcommunity
   - lightgbm
-
+  - seaborn
 
     # Testing
   - pytest

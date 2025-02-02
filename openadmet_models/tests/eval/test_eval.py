@@ -1,7 +1,7 @@
 import pytest
 
 from openadmet_models.eval.eval_base import get_eval_class
-from openadmet_models.eval.regression_metrics import RegressionMetrics
+from openadmet_models.eval.regression import RegressionMetrics
 
 
 def test_get_eval_class():
@@ -15,6 +15,6 @@ def test_regression_metrics():
     y_pred = [2.5, 0.0, 2, 8]
     rm = RegressionMetrics()
     metrics = rm.evaluate(y_true, y_pred)
-    assert metrics["mse"] == 0.375
-    assert metrics["mae"] == 0.5
-    assert metrics["r2"] == 0.9486081370449679
+    assert metrics["mse"]["value"] == 0.375
+    assert metrics["mae"]["value"] == 0.5
+    assert metrics["r2"]["value"] == 0.9486081370449679

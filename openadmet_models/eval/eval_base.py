@@ -17,9 +17,19 @@ def get_eval_class(eval_type):
 
 class EvalBase(BaseModel):
 
+    class Config:
+        extra = "allow"
+
     @abstractmethod
     def evaluate(self, y_true, y_pred):
         """
         Evaluate the model
+        """
+        pass
+
+    @abstractmethod
+    def report(self):
+        """
+        Report the evaluation
         """
         pass

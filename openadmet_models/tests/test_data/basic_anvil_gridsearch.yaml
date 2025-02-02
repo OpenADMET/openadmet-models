@@ -44,7 +44,11 @@ model:
       learning_rate: 0.1
 
 train:
-  type: SKLearnBasicTrainer
+  type: SKLearnGridSearchTrainer
+  params:
+    param_grid:
+      alpha: [0.1, 0.15, 0.2]
+      learning_rate: [0.1, 0.2, 0.3]
 
 
 

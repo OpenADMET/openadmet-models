@@ -11,8 +11,8 @@ def test_data_spec_from_csv():
         smiles_col="SMILES",
     )
     target, smiles = data_spec.read()
-    assert len(target) == 11
-    assert len(smiles) == 11
+    assert len(target) == 30
+    assert len(smiles) == 30
 
 
 def test_data_spec_from_intake():
@@ -24,5 +24,5 @@ def test_data_spec_from_intake():
         smiles_col="SMILES",
     )
     target, smiles = data_spec.read()
-    assert len(target) == 11
-    assert len(smiles) == 11
+    assert len(target) == 30
+    assert len(smiles) == 30

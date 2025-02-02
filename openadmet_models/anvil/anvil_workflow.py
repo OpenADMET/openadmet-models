@@ -1,3 +1,6 @@
+import hashlib
+import uuid
+from pathlib import Path
 from typing import Any
 
 import fsspec
@@ -10,7 +13,9 @@ from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet_models.models.model_base import ModelBase, get_model_class
+from openadmet_models.registries import *  # noqa: F401, F403
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
+from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
 
 _SECTION_CLASS_GETTERS = {
@@ -18,16 +23,23 @@ _SECTION_CLASS_GETTERS = {
     "model": get_model_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
+    "train": get_trainer_class,
 }
 
 
-def _load_section_from_type(data, section_name):
+def _load_section_from_type(data, section_name, skip_pop=False):
     """
     Load a section from the yaml data
     """
-    section_spec = data.pop(section_name)
+    if skip_pop:
+        section_spec = data
+    else:
+        section_spec = data.pop(section_name)
     section_type = section_spec["type"]
-    section_params = section_spec["params"]
+    if "params" in section_spec:
+        section_params = section_spec["params"]
+    else:
+        section_params = {}
     section_class = _SECTION_CLASS_GETTERS[section_name](section_type)
     section_instance = section_class(**section_params)
     return section_instance
@@ -40,6 +52,7 @@ class AnvilWorkflow(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
+    trainer: TrainerBase
     evals: list[EvalBase]
 
     @classmethod
@@ -70,12 +83,15 @@ class AnvilWorkflow(BaseModel):
         # split
         split = _load_section_from_type(data, "split")
 
+        # trainer
+        trainer = _load_section_from_type(data, "train")
+
         # load the evaluations we want to do
         evals = []
         eval_spec = data.pop("eval")
-        for eval_type in eval_spec:
-            eval_class = get_eval_class(eval_type)
-            evals.append(eval_class())
+        for eval_subspec in eval_spec:
+            eval_instance = _load_section_from_type(eval_subspec, "eval", skip_pop=True)
+            evals.append(eval_instance)
 
         # make the complete instance
         instance = cls(
@@ -85,6 +101,7 @@ class AnvilWorkflow(BaseModel):
             feat=featurizer,
             evals=evals,
             split=split,
+            trainer=trainer,
             **data,
         )
 
@@ -97,13 +114,31 @@ class AnvilWorkflow(BaseModel):
         Save the workflow to a yaml file
         """
         with open(path, "w") as f:
-            yaml.dump(self.dict(), f)
+            f.write(self.model_dump_json(indent=2))
 
-    def run(self) -> Any:
+    @classmethod
+    def load(cls, path: Pathy):
+        import json
+
+        with open(path) as f:
+            data = json.load(f)
+        return cls(**data)
+
+    def run(self, output_dir: Pathy = "anvil_run") -> Any:
         """
         Run the workflow
         """
-        logger.info("Running workflow")
+        output_dir = str(output_dir)
+        if Path(output_dir).exists():
+            # make truncated hashed uuid
+            hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:8]
+            output_dir = Path(output_dir + f"_{hsh}")
+        else:
+            output_dir = Path(output_dir)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Running workflow from directory {output_dir}")
 
         logger.info("Loading data")
         X, y = self.data_spec.read()
@@ -126,18 +161,30 @@ class AnvilWorkflow(BaseModel):
         X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
 
-        logger.info("Training model")
+        logger.info("Building model")
         self.model.build()
-        self.model.train(X_train_feat, y_train)
+        logger.info("Model built")
+
+        logger.info("Setting model in trainer")
+        self.trainer.model = self.model
+        logger.info("Model set in trainer")
+
+        logger.info("Training model")
+        self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
+
+        logger.info("Saving model")
+        self.model.to_model_json_and_pkl(
+            output_dir / "model.json", output_dir / "model.pkl"
+        )
+        logger.info("Model saved")
 
         logger.info("Predicting")
         preds = self.model.predict(X_test_feat)
         logger.info("Predictions made")
 
         logger.info("Evaluating")
-        report_data = [eval.evaluate(y_test, preds) for eval in self.evals]
+        for eval in self.evals:
+            eval.evaluate(y_test, preds)
+            eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")
-
-        print("report_data", report_data)
-        return report_data
