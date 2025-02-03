@@ -1,16 +1,55 @@
 from functools import reduce
 
 import numpy as np
-import pandas as pd
 from numpy.typing import ArrayLike
-from pydantic import BaseModel
+from pydantic import Field, field_validator
+
+from openadmet_models.features.feature_base import (
+    FeaturizerBase,
+    featurizers,
+    get_featurizer_class,
+)
 
 
-class FeatureConcatenator(BaseModel):
+@featurizers.register("FeatureConcatenator")
+class FeatureConcatenator(FeaturizerBase):
 
-    def concatenate(
-        feats: list[ArrayLike], indices: list[np.ndarray], data: pd.DataFrame
-    ) -> np.ndarray:
+    featurizers: list[FeaturizerBase] = Field(
+        ..., description="List of featurizers to concatenate"
+    )
+
+    @field_validator("featurizers", mode="before")
+    @classmethod
+    def validate_featurizers(cls, value):
+        """
+        If passed a dictionary of parameters, construct the relevant featurizers
+        and pack them into the featurizers list
+        """
+        print(value)
+        if isinstance(value, dict):
+            featurizers = []
+            for feat_type, feat_params in value.items():
+                feat_class = get_featurizer_class(feat_type)
+                feat = feat_class(**feat_params)
+                featurizers.append(feat)
+            return featurizers
+        return value
+
+    def featurize(self, smiles: list[str]) -> np.ndarray:
+        """
+        Featurize a list of SMILES strings
+        """
+        features = []
+        indices = []
+        for feat in self.featurizers:
+            feat, idx = feat.featurize(smiles)
+            features.append(feat)
+            indices.append(idx)
+
+        return self.concatenate(features, indices)
+
+    @staticmethod
+    def concatenate(feats: list[ArrayLike], indices: list[np.ndarray]) -> np.ndarray:
         """
         Concatenate a list of features,
         """
@@ -18,7 +57,10 @@ class FeatureConcatenator(BaseModel):
         # use indices to mask out the features that are not present in all datasets
         common_indices = reduce(np.intersect1d, indices)
 
-        # mask out failed elements from original data
-        _ = data.iloc[common_indices]
+        # concatenate the features column wise
+        concat_feats = np.concatenate(feats, axis=1)
 
-        raise NotImplementedError("Implement me!")
+        return (
+            concat_feats,
+            common_indices,
+        )

@@ -24,9 +24,10 @@ class FeaturizerBase(BaseModel, ABC):
     """
 
     @abstractmethod
-    def featurize(self, smiles: Iterable[str]) -> np.ndarray:
+    def featurize(self, smiles: Iterable[str]) -> tuple[np.ndarray, np.ndarray]:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings, returns a numpy array of features,
+        and a list of indices that correspond to the original input and the input indexed by the indices
         """
 
 
