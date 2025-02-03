@@ -1,21 +1,25 @@
 from functools import reduce
-from typing import Iterable
+from collections.abc import Iterable
+
 import numpy as np
 from numpy.typing import ArrayLike
 from pydantic import Field, field_validator
-from openadmet_models.features.feature_base import FeaturizerBase
-from openadmet_models.features.feature_base import featurizers, get_featurizer_class
+
+from openadmet_models.features.feature_base import (
+    FeaturizerBase,
+    featurizers,
+    get_featurizer_class,
+)
 
 
 @featurizers.register("FeatureConcatenator")
 class FeatureConcatenator(FeaturizerBase):
-    
+
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"
     )
 
-
-    @field_validator("featurizers", mode='before')
+    @field_validator("featurizers", mode="before")
     @classmethod
     def validate_featurizers(cls, value):
         """
@@ -32,7 +36,6 @@ class FeatureConcatenator(FeaturizerBase):
             return featurizers
         return value
 
-
     def featurize(self, smiles: list[str]) -> np.ndarray:
         """
         Featurize a list of SMILES strings
@@ -46,7 +49,6 @@ class FeatureConcatenator(FeaturizerBase):
 
         return self.concatenate(features, indices, smiles)
 
-
     @staticmethod
     def concatenate(
         feats: list[ArrayLike], indices: list[np.ndarray], smiles: Iterable[str]
@@ -58,8 +60,10 @@ class FeatureConcatenator(FeaturizerBase):
         # use indices to mask out the features that are not present in all datasets
         common_indices = reduce(np.intersect1d, indices)
 
-
         # concatenate the features column wise
         concat_feats = np.concatenate(feats, axis=1)
-    
-        return concat_feats, common_indices, 
+
+        return (
+            concat_feats,
+            common_indices,
+        )

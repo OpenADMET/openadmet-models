@@ -39,7 +39,7 @@ feat:
         fp_type: "ecfp:4"
       DescriptorFeaturizer:
         descr_type: "mordred"
-        
+
 model:
   type: LGBMRegressorModel
   params:

@@ -157,10 +157,9 @@ class AnvilWorkflow(BaseModel):
         logger.info("Data split")
 
         logger.info("Featurizing data")
-        X_train_feat, _  = self.feat.featurize(X_train)
+        X_train_feat, _ = self.feat.featurize(X_train)
         X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
-
 
         logger.info("Building model")
         self.model.build()

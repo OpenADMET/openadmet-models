@@ -44,7 +44,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
             verbose=True,
         )
 
-    def featurize(self, smiles: Iterable[str]) -> Tuple[np.ndarray, np.ndarray]:
+    def featurize(self, smiles: Iterable[str]) -> tuple[np.ndarray, np.ndarray]:
         """
         Featurize a list of SMILES strings
         """
