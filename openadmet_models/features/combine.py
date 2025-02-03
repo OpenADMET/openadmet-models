@@ -47,11 +47,11 @@ class FeatureConcatenator(FeaturizerBase):
             features.append(feat)
             indices.append(idx)
 
-        return self.concatenate(features, indices, smiles)
+        return self.concatenate(features, indices)
 
     @staticmethod
     def concatenate(
-        feats: list[ArrayLike], indices: list[np.ndarray], smiles: Iterable[str]
+        feats: list[ArrayLike], indices: list[np.ndarray]
     ) -> np.ndarray:
         """
         Concatenate a list of features,

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Tuple
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
@@ -27,7 +26,7 @@ class FeaturizerBase(BaseModel, ABC):
     @abstractmethod
     def featurize(
         self, smiles: Iterable[str]
-    ) -> tuple[np.ndarray, np.ndarray, Iterable[str]]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Featurize a list of SMILES strings, returns a numpy array of features,
         and a list of indices that correspond to the original input and the input indexed by the indices
