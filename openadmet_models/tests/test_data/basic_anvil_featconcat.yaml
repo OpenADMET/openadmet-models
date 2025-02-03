@@ -32,15 +32,13 @@ split:
     random_state: 42
 
 feat:
-  type: FeatConcatenator
+  type: FeatureConcatenator
   params:
     featurizers:
-      - type: FingerprintFeaturizer
-        params:
-          fp_type: "ecfp:4"
-      - type: DescriptorFeaturizer
-        params:
-          descr_type: "mordred"
+      FingerprintFeaturizer:
+        fp_type: "ecfp:4"
+      DescriptorFeaturizer:
+        descr_type: "mordred"
         
 model:
   type: LGBMRegressorModel

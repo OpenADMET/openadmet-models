@@ -161,6 +161,7 @@ class AnvilWorkflow(BaseModel):
         X_test_feat, _ = self.feat.featurize(X_test)
         logger.info("Data featurized")
 
+
         logger.info("Building model")
         self.model.build()
         logger.info("Model built")

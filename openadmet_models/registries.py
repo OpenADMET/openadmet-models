@@ -10,6 +10,7 @@ from openadmet_models.features.feature_base import featurizers  # noqa: F401 F40
 # featurizers
 from openadmet_models.features.molfeat_fingerprint import *  # noqa: F401 F403
 from openadmet_models.features.molfeat_properties import *  # noqa: F401 F403
+from openadmet_models.features.combine import *  # noqa: F401 F403
 
 # models
 from openadmet_models.models.gradient_boosting.lgbm import *  # noqa: F401 F403
