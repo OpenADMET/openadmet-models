@@ -1,5 +1,5 @@
-from functools import reduce
 from collections.abc import Iterable
+from functools import reduce
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -50,9 +50,7 @@ class FeatureConcatenator(FeaturizerBase):
         return self.concatenate(features, indices)
 
     @staticmethod
-    def concatenate(
-        feats: list[ArrayLike], indices: list[np.ndarray]
-    ) -> np.ndarray:
+    def concatenate(feats: list[ArrayLike], indices: list[np.ndarray]) -> np.ndarray:
         """
         Concatenate a list of features,
         """
