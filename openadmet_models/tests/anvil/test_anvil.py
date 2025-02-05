@@ -46,8 +46,8 @@ def test_anvil_workflow_run(tmp_path, anvil_full_recipie):
 
 def test_anvil_multiyaml(tmp_path):
     anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml)
-    anvil_spec.to_multi_yaml(metadata_yaml=tmp_path/"metadata.yaml", procedure_yaml=tmp_path/"procedure.yaml", data_yaml=tmp_path/"data.yaml", eval_yaml=tmp_path/"eval.yaml")
-    anvil_spec2 = AnvilSpecification.from_multi_yaml(metadata_yaml=tmp_path/"metadata.yaml", procedure_yaml=tmp_path/"procedure.yaml", data_yaml=tmp_path/"data.yaml", eval_yaml=tmp_path/"eval.yaml")
+    anvil_spec.to_multi_yaml(metadata_yaml=tmp_path/"metadata.yaml", procedure_yaml=tmp_path/"procedure.yaml", data_yaml=tmp_path/"data.yaml", report_yaml=tmp_path/"eval.yaml")
+    anvil_spec2 = AnvilSpecification.from_multi_yaml(metadata_yaml=tmp_path/"metadata.yaml", procedure_yaml=tmp_path/"procedure.yaml", data_yaml=tmp_path/"data.yaml", report_yaml=tmp_path/"eval.yaml")
     assert anvil_spec.data.anvil_dir == anvil_spec2.data.anvil_dir
     assert anvil_spec.dict() == anvil_spec2.dict()
 
