@@ -1,7 +1,7 @@
 import hashlib
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import fsspec
 import yaml
@@ -27,6 +27,79 @@ _SECTION_CLASS_GETTERS = {
 }
 
 
+
+class SpecBase(BaseModel):
+
+    def to_yaml(self, path, **storage_options):
+        with fsspec.open(path, "w", **storage_options) as stream:
+            yaml.safe_dump(self.model_dump(), stream)
+    
+    @classmethod
+    def from_yaml(cls, path, **storage_options):
+        of = fsspec.open(path, 'r', **storage_options)
+        with of as stream:
+            data = yaml.safe_load(stream)
+        return cls(**data)
+
+
+
+
+class AnvilSection(SpecBase):
+    type: str
+    params: dict = {}
+    section_name: ClassVar[str] = "INVALID"
+
+
+
+class SplitSpec(AnvilSection):
+    section_name: ClassVar[str] = "split"
+    
+
+class FeatureSpec(AnvilSection):
+    section_name: ClassVar[str] = "feat"
+
+class ModelSpec(AnvilSection):
+    section_name: ClassVar[str] = "model"
+
+class TrainerSpec(AnvilSection):
+    section_name: ClassVar[str] = "train"
+
+class EvalSpec(AnvilSection):
+    section_name: ClassVar[str] = "eval"
+
+
+
+
+
+
+
+
+class AnvilSpecification(SpecBase):
+    metadata: Metadata
+    data: DataSpec
+    split: SplitSpec
+    feat: FeatureSpec
+    model: ModelSpec
+    train: TrainerSpec
+    eval: list[EvalSpec]
+
+
+    @classmethod
+    def from_recipie(cls, yaml_path: Pathy):
+        cls.from_yaml(yaml_path)
+    
+    def to_recipie(self, yaml_path: Pathy):
+        self.to_yaml(yaml_path)
+
+    
+    def from_specs(self, specs: dict):
+        pass
+
+
+    def to_workflow(self):
+        pass
+
+
 def _load_section_from_type(data, section_name, skip_pop=False):
     """
     Load a section from the yaml data
@@ -43,6 +116,7 @@ def _load_section_from_type(data, section_name, skip_pop=False):
     section_class = _SECTION_CLASS_GETTERS[section_name](section_type)
     section_instance = section_class(**section_params)
     return section_instance
+
 
 
 class AnvilWorkflow(BaseModel):
@@ -109,20 +183,7 @@ class AnvilWorkflow(BaseModel):
 
         return instance
 
-    def save(self, path: Pathy):
-        """
-        Save the workflow to a yaml file
-        """
-        with open(path, "w") as f:
-            f.write(self.model_dump_json(indent=2))
 
-    @classmethod
-    def load(cls, path: Pathy):
-        import json
-
-        with open(path) as f:
-            data = json.load(f)
-        return cls(**data)
 
     def run(self, output_dir: Pathy = "anvil_run") -> Any:
         """

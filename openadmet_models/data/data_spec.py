@@ -3,6 +3,7 @@ from typing import Optional
 
 import intake
 import jinja2
+import yaml
 import pandas as pd
 from pydantic import BaseModel
 
@@ -54,3 +55,12 @@ class DataSpec(BaseModel):
         smiles = data[self.smiles_col]
 
         return smiles, target
+
+
+    def to_yaml(self, stream):
+        yaml.dump(self.dict(), stream)
+    
+    @classmethod
+    def from_yaml(cls, stream):
+        data = yaml.safe_load(stream)
+        return cls(**data)
