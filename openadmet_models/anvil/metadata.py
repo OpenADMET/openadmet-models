@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
@@ -18,7 +18,7 @@ class Metadata(BaseModel):
     tag: str = Field(..., description="Primary tag for the workflow.")
     authors: str = Field(..., description="Name of the authors.")
     email: EmailStr = Field(..., description="Email address of the contact person.")
-    date_created: date = Field(
+    date_created: datetime = Field(
         ..., alias="date-created", description="Date when the workflow was created."
     )
     biotargets: list[str] = Field(

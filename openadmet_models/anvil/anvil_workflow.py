@@ -2,6 +2,7 @@ import hashlib
 import uuid
 from pathlib import Path
 from typing import Any, ClassVar
+from datetime import datetime
 
 import fsspec
 import yaml
@@ -18,12 +19,14 @@ from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
 
+
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
     "model": get_model_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
     "train": get_trainer_class,
+    "INVALID": lambda x: None,
 }
 
 
@@ -49,17 +52,23 @@ class AnvilSection(SpecBase):
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
 
+    def to_class(self):
+        return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
 
 
 class SplitSpec(AnvilSection):
     section_name: ClassVar[str] = "split"
+
     
 
 class FeatureSpec(AnvilSection):
     section_name: ClassVar[str] = "feat"
 
+
+
 class ModelSpec(AnvilSection):
     section_name: ClassVar[str] = "model"
+
 
 class TrainerSpec(AnvilSection):
     section_name: ClassVar[str] = "train"
@@ -72,9 +81,7 @@ class EvalSpec(AnvilSection):
 
 
 
-
-
-class AnvilSpecification(SpecBase):
+class AnvilSpecification(BaseModel):
     metadata: Metadata
     data: DataSpec
     split: SplitSpec
@@ -83,40 +90,49 @@ class AnvilSpecification(SpecBase):
     train: TrainerSpec
     eval: list[EvalSpec]
 
-
+    # need repetition of YAML loaders here to properly set anvil_dir
+    # and to not expose to_yaml and from_yaml to the user
     @classmethod
-    def from_recipie(cls, yaml_path: Pathy):
-        cls.from_yaml(yaml_path)
-    
-    def to_recipie(self, yaml_path: Pathy):
-        self.to_yaml(yaml_path)
+    def from_recipe(cls, yaml_path: Pathy, **storage_options):
+        of = fsspec.open(yaml_path, 'r', **storage_options)
+        with of as stream:
+            data = yaml.safe_load(stream)
+        parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
+        print(data)
+        instance = cls(**data)
+        instance.data.anvil_dir = parent
+        return instance
 
-    
-    def from_specs(self, specs: dict):
-        pass
+        
+    def to_recipe(self, path, **storage_options):
+        with fsspec.open(path, "w", **storage_options) as stream:
+            yaml.safe_dump(self.model_dump(), stream)
 
 
     def to_workflow(self):
-        pass
+        metadata = self.metadata
+        data_spec = self.data
+        transform = None
+        split = self.split.to_class()
+        feat = self.feat.to_class()
+        model = self.model.to_class()
+        trainer = self.train.to_class()
+        evals = [eval.to_class() for eval in self.eval]
 
+        logger.info("Making workflow from specification")
 
-def _load_section_from_type(data, section_name, skip_pop=False):
-    """
-    Load a section from the yaml data
-    """
-    if skip_pop:
-        section_spec = data
-    else:
-        section_spec = data.pop(section_name)
-    section_type = section_spec["type"]
-    if "params" in section_spec:
-        section_params = section_spec["params"]
-    else:
-        section_params = {}
-    section_class = _SECTION_CLASS_GETTERS[section_name](section_type)
-    section_instance = section_class(**section_params)
-    return section_instance
-
+        return AnvilWorkflow(
+            metadata=metadata,
+            data_spec=data_spec,
+            model=model,
+            transform=transform,
+            split=split,
+            feat=feat,
+            trainer=trainer,
+            evals=evals
+        )
+        
+        
 
 
 class AnvilWorkflow(BaseModel):
@@ -129,59 +145,6 @@ class AnvilWorkflow(BaseModel):
     trainer: TrainerBase
     evals: list[EvalBase]
 
-    @classmethod
-    def from_yaml(cls, path: Pathy, **kwargs):
-        """
-        Create a workflow from a yaml file
-        """
-        logger.info("Loading workflow")
-
-        storage_options = kwargs.pop("storage_options", kwargs)
-        of = fsspec.open(path, **storage_options)
-        with of as stream:
-            data = yaml.safe_load(stream)
-
-        # get parent path
-        parent = of.fs.unstrip_protocol(of.fs._parent(path))
-
-        data_spec = DataSpec(**data.pop("data"), anvil_dir=parent)
-
-        metadata = Metadata(**data.pop("metadata"))
-
-        # load the featurizer(s)
-        featurizer = _load_section_from_type(data, "feat")
-
-        # model
-        model = _load_section_from_type(data, "model")
-
-        # split
-        split = _load_section_from_type(data, "split")
-
-        # trainer
-        trainer = _load_section_from_type(data, "train")
-
-        # load the evaluations we want to do
-        evals = []
-        eval_spec = data.pop("eval")
-        for eval_subspec in eval_spec:
-            eval_instance = _load_section_from_type(eval_subspec, "eval", skip_pop=True)
-            evals.append(eval_instance)
-
-        # make the complete instance
-        instance = cls(
-            metadata=metadata,
-            data_spec=data_spec,
-            model=model,
-            feat=featurizer,
-            evals=evals,
-            split=split,
-            trainer=trainer,
-            **data,
-        )
-
-        logger.info("Workflow loaded")
-
-        return instance
 
 
 
@@ -193,7 +156,9 @@ class AnvilWorkflow(BaseModel):
         if Path(output_dir).exists():
             # make truncated hashed uuid
             hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:8]
-            output_dir = Path(output_dir + f"_{hsh}")
+            # get the date and time in short format
+            now = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = Path(output_dir + f"{now}_{hsh}")
         else:
             output_dir = Path(output_dir)
 

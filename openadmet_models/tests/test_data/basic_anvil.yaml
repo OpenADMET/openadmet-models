@@ -6,7 +6,7 @@ metadata:
   tag: "openadmet-models-basic-test"
   authors: "Hugo M-O"
   email: "hugo@acme.com"
-  date-created: "2021-09-01"
+  date-created: 2021-09-01
   biotargets:
     - "CYP1234"
   tags:

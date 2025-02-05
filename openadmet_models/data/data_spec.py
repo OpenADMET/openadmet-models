@@ -5,17 +5,10 @@ import intake
 import jinja2
 import yaml
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from openadmet_models.util.types import Pathy
 
-
-class DataSpecTypes(str, Enum):
-    """
-    Types of data specifications
-    """
-
-    INTAKE = "intake"
 
 
 class DataSpec(BaseModel):
@@ -23,7 +16,7 @@ class DataSpec(BaseModel):
     Data specification for the workflow
     """
 
-    type: DataSpecTypes
+    type: str
     resource: str
     cat_entry: Optional[str] = None
     target_col: str
@@ -41,7 +34,6 @@ class DataSpec(BaseModel):
             if self.anvil_dir:
                 template = jinja2.Template(self.resource)
                 self.resource = template.render(ANVIL_DIR=self.anvil_dir)
-                print(self.resource)
 
             catalog = intake.open_catalog(self.resource)
             data = catalog[self.cat_entry].read()
@@ -55,6 +47,8 @@ class DataSpec(BaseModel):
         smiles = data[self.smiles_col]
 
         return smiles, target
+
+
 
 
     def to_yaml(self, stream):
