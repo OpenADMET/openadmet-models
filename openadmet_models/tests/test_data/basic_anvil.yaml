@@ -21,30 +21,31 @@ data:
   smiles_col: "CANONICAL_SMILES"
   target_col: "pChEMBL mean"
 
+  transform:
 
-transform:
+procedure:
 
-split:
-  type: ShuffleSplitter
-  params:
-    train_size: 0.8
-    test_size: 0.2
-    random_state: 42
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.2
+      random_state: 42
 
-feat:
-  type: FingerprintFeaturizer
-  params:
-    fp_type: "ecfp:4"
+  feat:
+    type: FingerprintFeaturizer
+    params:
+      fp_type: "ecfp:4"
 
-model:
-  type: LGBMRegressorModel
-  params:
-    model_params:
-      alpha: 0.15
-      learning_rate: 0.1
+  model:
+    type: LGBMRegressorModel
+    params:
+      model_params:
+        alpha: 0.15
+        learning_rate: 0.1
 
-train:
-  type: SKLearnBasicTrainer
+  train:
+    type: SKLearnBasicTrainer
 
 
 

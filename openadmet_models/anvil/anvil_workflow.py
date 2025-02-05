@@ -77,6 +77,13 @@ class EvalSpec(AnvilSection):
     section_name: ClassVar[str] = "eval"
 
 
+class ProcedureSpec(SpecBase):
+    section_name: ClassVar[str] = "procedure"
+
+    split: SplitSpec
+    feat: FeatureSpec
+    model: ModelSpec
+    train: TrainerSpec
 
 
 
@@ -84,10 +91,7 @@ class EvalSpec(AnvilSection):
 class AnvilSpecification(BaseModel):
     metadata: Metadata
     data: DataSpec
-    split: SplitSpec
-    feat: FeatureSpec
-    model: ModelSpec
-    train: TrainerSpec
+    procedure: ProcedureSpec
     eval: list[EvalSpec]
 
     # need repetition of YAML loaders here to properly set anvil_dir
@@ -98,7 +102,6 @@ class AnvilSpecification(BaseModel):
         with of as stream:
             data = yaml.safe_load(stream)
         parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
-        print(data)
         instance = cls(**data)
         instance.data.anvil_dir = parent
         return instance
@@ -108,15 +111,29 @@ class AnvilSpecification(BaseModel):
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
 
+    def from_multi_yaml(cls, metadata_yaml="metadata.yaml", procedure_yaml="procedure.yaml", data_yaml="data.yaml", eval_yaml="eval.yaml", **storage_options):
+        metadata = Metadata.from_yaml(metadata_yaml, **storage_options)
+        data = DataSpec.from_yaml(data_yaml, **storage_options)
+        procedure = ProcedureSpec.from_yaml(procedure_yaml, **storage_options)
+        eval = EvalSpec.from_yaml(eval_yaml, **storage_options)
+        return cls(metadata=metadata, data=data, procedure=procedure, eval=eval)
+    
+    def to_multi_yaml(self, metadata_yaml="metadata.yaml", procedure_yaml="procedure.yaml", data_yaml="data.yaml", eval_yaml="eval.yaml", **storage_options):
+        self.metadata.to_yaml(metadata_yaml, **storage_options)
+        self.data.to_yaml(data_yaml, **storage_options)
+        self.procedure.to_yaml(procedure_yaml, **storage_options)
+        self.eval.to_yaml(eval_yaml, **storage_options)
+        
+
 
     def to_workflow(self):
         metadata = self.metadata
         data_spec = self.data
         transform = None
-        split = self.split.to_class()
-        feat = self.feat.to_class()
-        model = self.model.to_class()
-        trainer = self.train.to_class()
+        split = self.procedure.split.to_class()
+        feat = self.procedure.feat.to_class()
+        model = self.procedure.model.to_class()
+        trainer = self.procedure.train.to_class()
         evals = [eval.to_class() for eval in self.eval]
 
         logger.info("Making workflow from specification")
@@ -169,6 +186,7 @@ class AnvilWorkflow(BaseModel):
         logger.info("Loading data")
         X, y = self.data_spec.read()
         logger.info("Data loaded")
+
 
         logger.info("Transforming data")
         if self.transform:

@@ -22,33 +22,35 @@ data:
   target_col: "pChEMBL mean"
 
 
-transform:
+  transform:
 
-split:
-  type: ShuffleSplitter
-  params:
-    train_size: 0.8
-    test_size: 0.2
-    random_state: 42
+procedure:
 
-feat:
-  type: FingerprintFeaturizer
-  params:
-    fp_type: "ecfp:4"
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.2
+      random_state: 42
 
-model:
-  type: LGBMRegressorModel
-  params:
-    model_params:
-      alpha: 0.15
-      learning_rate: 0.1
+  feat:
+    type: FingerprintFeaturizer
+    params:
+      fp_type: "ecfp:4"
 
-train:
-  type: SKLearnGridSearchTrainer
-  params:
-    param_grid:
-      alpha: [0.1, 0.15, 0.2]
-      learning_rate: [0.1, 0.2, 0.3]
+  model:
+    type: LGBMRegressorModel
+    params:
+      model_params:
+        alpha: 0.15
+        learning_rate: 0.1
+
+  train:
+    type: SKLearnGridSearchTrainer
+    params:
+      param_grid:
+        alpha: [0.1, 0.15, 0.2]
+        learning_rate: [0.1, 0.2, 0.3]
 
 
 

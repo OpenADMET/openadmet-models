@@ -22,6 +22,7 @@ class DataSpec(BaseModel):
     target_col: str
     smiles_col: str
     anvil_dir: Pathy = None
+    _catalog: Optional[intake.catalog.Catalog] = None
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
@@ -35,8 +36,8 @@ class DataSpec(BaseModel):
                 template = jinja2.Template(self.resource)
                 self.resource = template.render(ANVIL_DIR=self.anvil_dir)
 
-            catalog = intake.open_catalog(self.resource)
-            data = catalog[self.cat_entry].read()
+            self._catalog = intake.open_catalog(self.resource)
+            data = self._catalog[self.cat_entry].read()
 
         # if CSV, parse using intake
         elif self.resource.endswith(".csv"):
@@ -49,6 +50,9 @@ class DataSpec(BaseModel):
         return smiles, target
 
 
+    @property
+    def catalog(self):
+        return self._catalog
 
 
     def to_yaml(self, stream):
