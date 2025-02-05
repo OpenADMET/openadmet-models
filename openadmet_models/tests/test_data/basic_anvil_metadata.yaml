@@ -1,0 +1,13 @@
+authors: Hugo M-O
+biotargets:
+- CYP1234
+build_number: 0
+description: running a basic workflow
+email: hugo@acme.com
+name: example-workflow
+tag: openadmet-models-basic-test
+tags:
+- openadmet
+- workflow
+- test
+version: v1

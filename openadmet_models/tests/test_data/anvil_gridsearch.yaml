@@ -6,7 +6,7 @@ metadata:
   tag: "openadmet-models-basic-test"
   authors: "Hugo M-O"
   email: "hugo@acme.com"
-  date-created: "2021-09-01"
+  date_created: "2021-09-01"
   biotargets:
     - "CYP1234"
   tags:
@@ -53,10 +53,11 @@ procedure:
         learning_rate: [0.1, 0.2, 0.3]
 
 
+report:
 
-eval:
-  - type: RegressionMetrics
-  - type: RegressionPlots
-    params:
-      axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
-      title: "True vs Predicted pChEMBL on test set"
+  eval:
+    - type: RegressionMetrics
+    - type: RegressionPlots
+      params:
+        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+        title: "True vs Predicted pChEMBL on test set"
