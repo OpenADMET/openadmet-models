@@ -1,16 +1,14 @@
 import hashlib
 import uuid
-from pathlib import Path
-from typing import Any, ClassVar
 from datetime import datetime
+from pathlib import Path
+from typing import Any, ClassVar, Literal
 
 import fsspec
 import yaml
 from loguru import logger
-from datetime import datetime
-from typing import Literal
-
 from pydantic import BaseModel, EmailStr, Field
+
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
@@ -19,7 +17,6 @@ from openadmet_models.registries import *  # noqa: F401, F403
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
-
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -31,16 +28,15 @@ _SECTION_CLASS_GETTERS = {
 }
 
 
-
 class SpecBase(BaseModel):
 
     def to_yaml(self, path, **storage_options):
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
-    
+
     @classmethod
     def from_yaml(cls, path, **storage_options):
-        of = fsspec.open(path, 'r', **storage_options)
+        of = fsspec.open(path, "r", **storage_options)
         with of as stream:
             data = yaml.safe_load(stream)
         return cls(**data)
@@ -69,8 +65,6 @@ class Metadata(SpecBase):
     tags: list[str] = Field(..., description="Additional tags for the workflow.")
 
 
-
-
 class AnvilSection(SpecBase):
     type: str
     params: dict = {}
@@ -83,11 +77,9 @@ class AnvilSection(SpecBase):
 class SplitSpec(AnvilSection):
     section_name: ClassVar[str] = "split"
 
-    
 
 class FeatureSpec(AnvilSection):
     section_name: ClassVar[str] = "feat"
-
 
 
 class ModelSpec(AnvilSection):
@@ -96,6 +88,7 @@ class ModelSpec(AnvilSection):
 
 class TrainerSpec(AnvilSection):
     section_name: ClassVar[str] = "train"
+
 
 class EvalSpec(AnvilSection):
     section_name: ClassVar[str] = "eval"
@@ -125,7 +118,7 @@ class AnvilSpecification(BaseModel):
     # and to not expose to_yaml and from_yaml to the user
     @classmethod
     def from_recipe(cls, yaml_path: Pathy, **storage_options):
-        of = fsspec.open(yaml_path, 'r', **storage_options)
+        of = fsspec.open(yaml_path, "r", **storage_options)
         with of as stream:
             data = yaml.safe_load(stream)
         parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
@@ -134,26 +127,37 @@ class AnvilSpecification(BaseModel):
         instance.data.template_anvil_dir(parent)
         return instance
 
-        
     def to_recipe(self, path, **storage_options):
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
 
     @classmethod
-    def from_multi_yaml(cls, metadata_yaml="metadata.yaml", procedure_yaml="procedure.yaml", data_yaml="data.yaml", report_yaml="eval.yaml", **storage_options):
+    def from_multi_yaml(
+        cls,
+        metadata_yaml="metadata.yaml",
+        procedure_yaml="procedure.yaml",
+        data_yaml="data.yaml",
+        report_yaml="eval.yaml",
+        **storage_options,
+    ):
         metadata = Metadata.from_yaml(metadata_yaml, **storage_options)
         data = DataSpec.from_yaml(data_yaml, **storage_options)
         procedure = ProcedureSpec.from_yaml(procedure_yaml, **storage_options)
         report = ReportSpec.from_yaml(report_yaml, **storage_options)
         return cls(metadata=metadata, data=data, procedure=procedure, report=report)
-    
-    def to_multi_yaml(self, metadata_yaml="metadata.yaml", procedure_yaml="procedure.yaml", data_yaml="data.yaml", report_yaml="eval.yaml", **storage_options):
+
+    def to_multi_yaml(
+        self,
+        metadata_yaml="metadata.yaml",
+        procedure_yaml="procedure.yaml",
+        data_yaml="data.yaml",
+        report_yaml="eval.yaml",
+        **storage_options,
+    ):
         self.metadata.to_yaml(metadata_yaml, **storage_options)
         self.data.to_yaml(data_yaml, **storage_options)
         self.procedure.to_yaml(procedure_yaml, **storage_options)
         self.report.to_yaml(report_yaml, **storage_options)
-
-
 
     def to_workflow(self):
         metadata = self.metadata
@@ -176,10 +180,8 @@ class AnvilSpecification(BaseModel):
             feat=feat,
             trainer=trainer,
             evals=evals,
-            parent_spec=self
+            parent_spec=self,
         )
-        
-        
 
 
 class AnvilWorkflow(BaseModel):
@@ -192,10 +194,6 @@ class AnvilWorkflow(BaseModel):
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
-
-
-
-
 
     def run(self, output_dir: Pathy = "anvil_run") -> Any:
         """
@@ -230,7 +228,6 @@ class AnvilWorkflow(BaseModel):
         logger.info("Loading data")
         X, y = self.data_spec.read()
         logger.info("Data loaded")
-
 
         logger.info("Transforming data")
         if self.transform:

@@ -1,17 +1,15 @@
-
+from pathlib import Path
 from typing import Optional
-from typing_extensions import Self
 
 import fsspec
 import intake
 import jinja2
-import yaml
 import pandas as pd
-from pydantic import BaseModel, model_validator, Field
-from pathlib import Path
+import yaml
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from openadmet_models.util.types import Pathy
-
 
 
 class DataSpec(BaseModel):
@@ -28,15 +26,13 @@ class DataSpec(BaseModel):
 
     _catalog: Optional[intake.catalog.Catalog] = None
 
-
     # validator to template the resource with ANVIL_DIR if present
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def template_resource(self):
         if self.anvil_dir:
             template = jinja2.Template(self.resource)
             self.resource = template.render(ANVIL_DIR=self.anvil_dir)
         return self
-        
 
     def template_anvil_dir(self, anvil_dir: Path):
         """
@@ -45,7 +41,6 @@ class DataSpec(BaseModel):
         self.anvil_dir = anvil_dir
         template = jinja2.Template(self.resource)
         self.resource = template.render(ANVIL_DIR=anvil_dir)
-
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
@@ -66,22 +61,18 @@ class DataSpec(BaseModel):
         smiles = data[self.smiles_col]
 
         return smiles, target
-    
-
-
 
     @property
     def catalog(self):
         return self._catalog
 
-
     def to_yaml(self, path, **storage_options):
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
-    
+
     @classmethod
     def from_yaml(cls, path, **storage_options):
-        of = fsspec.open(path, 'r', **storage_options)
+        of = fsspec.open(path, "r", **storage_options)
         with of as stream:
             data = yaml.safe_load(stream)
         return cls(**data)
