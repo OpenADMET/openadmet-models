@@ -204,9 +204,9 @@ class AnvilWorkflow(BaseModel):
         output_dir = str(output_dir)
         if Path(output_dir).exists():
             # make truncated hashed uuid
-            hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:8]
+            hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:6]
             # get the date and time in short format
-            now = datetime.now().strftime("%Y%m%d_%H%M%S")
+            now = datetime.now().strftime("%Y-%m-%d")
             output_dir = Path(output_dir + f"{now}_{hsh}")
         else:
             output_dir = Path(output_dir)
@@ -215,6 +215,15 @@ class AnvilWorkflow(BaseModel):
 
         # write recipe to output directory
         self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
+
+        recipe_components = Path(output_dir / "recipe_components")
+        recipe_components.mkdir(parents=True, exist_ok=True)
+        self.parent_spec.to_multi_yaml(
+            metadata_yaml=recipe_components / "metadata.yaml",
+            procedure_yaml=recipe_components / "procedure.yaml",
+            data_yaml=recipe_components / "data.yaml",
+            report_yaml=recipe_components / "eval.yaml",
+        )
 
         logger.info(f"Running workflow from directory {output_dir}")
 
