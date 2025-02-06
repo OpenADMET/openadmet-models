@@ -6,10 +6,16 @@ _data_ref = resources.files("openadmet_models.tests.test_data")
 
 
 basic_anvil_yaml = (_data_ref / "basic_anvil.yaml").as_posix()
-basic_anvil_yaml_gridsearch = (_data_ref / "basic_anvil_gridsearch.yaml").as_posix()
-basic_anvil_yaml_featconcat = (_data_ref / "basic_anvil_featconcat.yaml").as_posix()
+anvil_yaml_gridsearch = (_data_ref / "anvil_gridsearch.yaml").as_posix()
+anvil_yaml_featconcat = (_data_ref / "anvil_featconcat.yaml").as_posix()
+
+# individual sections for multi-yaml
+metadata_yaml = (_data_ref / "basic_anvil_metadata.yaml").as_posix()
+procedure_yaml = (_data_ref / "basic_anvil_procedure.yaml").as_posix()
+data_yaml = (_data_ref / "basic_anvil_data.yaml").as_posix()
+eval_yaml = (_data_ref / "basic_anvil_eval.yaml").as_posix()
 
 
+# data for testing
 intake_cat = (_data_ref / "example_intake.yaml").as_posix()
-
 test_csv = (_data_ref / "test_data.csv").as_posix()

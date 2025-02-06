@@ -6,7 +6,7 @@ metadata:
   tag: "openadmet-models-basic-test"
   authors: "Hugo M-O"
   email: "hugo@acme.com"
-  date_created: 2021-09-01
+  date_created: "2021-09-01"
   biotargets:
     - "CYP1234"
   tags:
@@ -33,9 +33,13 @@ procedure:
       random_state: 42
 
   feat:
-    type: FingerprintFeaturizer
+    type: FeatureConcatenator
     params:
-      fp_type: "ecfp:4"
+      featurizers:
+        FingerprintFeaturizer:
+          fp_type: "ecfp:4"
+        DescriptorFeaturizer:
+          descr_type: "mordred"
 
   model:
     type: LGBMRegressorModel

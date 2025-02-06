@@ -6,7 +6,7 @@ metadata:
   tag: "openadmet-models-basic-test"
   authors: "Hugo M-O"
   email: "hugo@acme.com"
-  date_created: 2021-09-01
+  date_created: "2021-09-01"
   biotargets:
     - "CYP1234"
   tags:
@@ -20,6 +20,7 @@ data:
   cat_entry: "CYP3A4_pchembl"
   smiles_col: "CANONICAL_SMILES"
   target_col: "pChEMBL mean"
+
 
   transform:
 
@@ -45,7 +46,11 @@ procedure:
         learning_rate: 0.1
 
   train:
-    type: SKLearnBasicTrainer
+    type: SKLearnGridSearchTrainer
+    params:
+      param_grid:
+        alpha: [0.1, 0.15, 0.2]
+        learning_rate: [0.1, 0.2, 0.3]
 
 
 report:

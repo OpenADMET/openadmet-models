@@ -1,0 +1,9 @@
+eval:
+- params: {}
+  type: RegressionMetrics
+- params:
+    axes_labels:
+    - True pChEMBL
+    - Predicted pChEMBL
+    title: True vs Predicted pChEMBL on test set
+  type: RegressionPlots

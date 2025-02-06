@@ -1,0 +1,19 @@
+feat:
+  params:
+    fp_type: ecfp:4
+  type: FingerprintFeaturizer
+model:
+  params:
+    model_params:
+      alpha: 0.15
+      learning_rate: 0.1
+  type: LGBMRegressorModel
+split:
+  params:
+    random_state: 42
+    test_size: 0.2
+    train_size: 0.8
+  type: ShuffleSplitter
+train:
+  params: {}
+  type: SKLearnBasicTrainer
