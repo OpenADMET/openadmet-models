@@ -19,3 +19,4 @@ eval_yaml = (_data_ref / "basic_anvil_eval.yaml").as_posix()
 # data for testing
 intake_cat = (_data_ref / "example_intake.yaml").as_posix()
 test_csv = (_data_ref / "test_data.csv").as_posix()
+CYP3A4_chembl_pchembl = (_data_ref / "CYP3A4_chembl_pchembl.csv").as_posix()
