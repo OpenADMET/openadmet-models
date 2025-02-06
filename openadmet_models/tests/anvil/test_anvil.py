@@ -4,8 +4,6 @@ import pytest
 
 from openadmet_models.anvil.anvil_workflow import (
     AnvilSpecification,
-    AnvilWorkflow,
-    EvalSpec,
 )
 from openadmet_models.tests.datafiles import (
     anvil_yaml_featconcat,

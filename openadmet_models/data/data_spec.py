@@ -6,10 +6,7 @@ import intake
 import jinja2
 import pandas as pd
 import yaml
-from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Self
-
-from openadmet_models.util.types import Pathy
+from pydantic import BaseModel, model_validator
 
 
 class DataSpec(BaseModel):
