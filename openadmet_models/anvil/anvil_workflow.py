@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal
-
+import zarr
 import fsspec
 import yaml
 from loguru import logger
@@ -194,11 +194,13 @@ class AnvilWorkflow(BaseModel):
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
+    debug: bool = False
 
-    def run(self, output_dir: Pathy = "anvil_run") -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug=False) -> Any:
         """
         Run the workflow
         """
+        self.debug = debug
         output_dir = str(output_dir)
         if Path(output_dir).exists():
             # make truncated hashed uuid
@@ -239,11 +241,23 @@ class AnvilWorkflow(BaseModel):
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(X, y)
 
+        if self.debug:
+            # save the split data to CSVs 
+            X_train.to_csv(output_dir / "X_train.csv", index=False)
+            X_test.to_csv(output_dir / "X_test.csv", index=False)
+            zarr.save(output_dir /"y_train.zarr", y_train)
+            zarr.save(output_dir / "y_test.zarr", y_test)
         logger.info("Data split")
 
         logger.info("Featurizing data")
         X_train_feat, _ = self.feat.featurize(X_train)
+        if self.debug:
+            # save the featurized data to CSVs 
+            zarr.save(output_dir /"X_train_feat.zarr", X_train_feat)
         X_test_feat, _ = self.feat.featurize(X_test)
+        if self.debug:
+            # save the featurized data to CSVs 
+            zarr.save(output_dir /"X_test_feat.zarr", X_test_feat)
         logger.info("Data featurized")
 
         logger.info("Building model")
