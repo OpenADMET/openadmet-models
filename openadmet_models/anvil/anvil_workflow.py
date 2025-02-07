@@ -196,7 +196,7 @@ class AnvilWorkflow(BaseModel):
     parent_spec: AnvilSpecification
     debug: bool = False
 
-    def run(self, output_dir: Pathy = "anvil_run", debug=False) -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool=False) -> Any:
         """
         Run the workflow
         """
