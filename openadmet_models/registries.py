@@ -15,11 +15,11 @@ from openadmet_models.features.molfeat_properties import *  # noqa: F401 F403
 # models
 from openadmet_models.models.gradient_boosting.lgbm import *  # noqa: F401 F403
 from openadmet_models.models.model_base import models  # noqa: F401  F403
+from openadmet_models.split.scaffold import *  # noqa: F401 F403
 from openadmet_models.split.split_base import splitters  # noqa: F401 F403
 
 # splitters
 from openadmet_models.split.vanilla import *  # noqa: F401 F403
-from openadmet_models.split.scaffold import *  # noqa: F401 F403
 
 # trainers
 from openadmet_models.trainer.sklearn import *  # noqa: F401 F403
