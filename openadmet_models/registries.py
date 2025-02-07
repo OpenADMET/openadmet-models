@@ -19,6 +19,7 @@ from openadmet_models.split.split_base import splitters  # noqa: F401 F403
 
 # splitters
 from openadmet_models.split.vanilla import *  # noqa: F401 F403
+from openadmet_models.split.scaffold import *  # noqa: F401 F403
 
 # trainers
 from openadmet_models.trainer.sklearn import *  # noqa: F401 F403
