@@ -13,7 +13,7 @@ dependencies:
   - rich
   - intake
   - joblib
-  - zarr
+  - zarr >=3.0.0
 
   - rdkit
   - molfeat
