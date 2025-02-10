@@ -213,6 +213,9 @@ class AnvilWorkflow(BaseModel):
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        data_dir = output_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+
         # write recipe to output directory
         self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
 
@@ -241,23 +244,22 @@ class AnvilWorkflow(BaseModel):
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(X, y)
 
-        if self.debug:
-            # save the split data to CSVs 
-            X_train.to_csv(output_dir / "X_train.csv", index=False)
-            X_test.to_csv(output_dir / "X_test.csv", index=False)
-            zarr.save(output_dir /"y_train.zarr", y_train)
-            zarr.save(output_dir / "y_test.zarr", y_test)
+
+        
+        X_train.to_csv(data_dir / "X_train.csv", index=False)
+        X_test.to_csv(data_dir / "X_test.csv", index=False)
+        y_train.to_csv(data_dir / "y_train.csv", index=False)
+        y_test.to_csv(data_dir / "y_test.csv", index=False)
+
+        
         logger.info("Data split")
 
         logger.info("Featurizing data")
         X_train_feat, _ = self.feat.featurize(X_train)
-        if self.debug:
-            # save the featurized data to CSVs 
-            zarr.save(output_dir /"X_train_feat.zarr", X_train_feat)
+        zarr.save(data_dir /"X_train_feat.zarr", X_train_feat)
+
         X_test_feat, _ = self.feat.featurize(X_test)
-        if self.debug:
-            # save the featurized data to CSVs 
-            zarr.save(output_dir /"X_test_feat.zarr", X_test_feat)
+        zarr.save(data_dir /"X_test_feat.zarr", X_test_feat)
         logger.info("Data featurized")
 
         logger.info("Building model")
