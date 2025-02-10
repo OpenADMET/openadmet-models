@@ -146,7 +146,10 @@ class RegressionPlots(EvalBase):
     )
     title: str = Field("Pred vs ", description="Title for the plot")
     do_stats: bool = Field(True, description="Whether to do stats for the plot")
-    pXC50: bool = Field(False, description="Whether to plot for pXC50, highlighting 0.3 and 1.0 log range unit")
+    pXC50: bool = Field(
+        False,
+        description="Whether to plot for pXC50, highlighting 0.3 and 1.0 log range unit",
+    )
     plots: dict = {}
 
     def evaluate(self, y_true, y_pred):
@@ -208,7 +211,7 @@ class RegressionPlots(EvalBase):
         ax.set_ylim(min_ax, max_ax)
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
-        
+
         # if pXC50 measure then plot the 0.3 and 1.0 log range unit
         if pXC50:
 
