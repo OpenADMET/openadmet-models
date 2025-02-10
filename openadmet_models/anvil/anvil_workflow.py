@@ -245,22 +245,19 @@ class AnvilWorkflow(BaseModel):
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(X, y)
 
-
-        
         X_train.to_csv(data_dir / "X_train.csv", index=False)
         X_test.to_csv(data_dir / "X_test.csv", index=False)
         y_train.to_csv(data_dir / "y_train.csv", index=False)
         y_test.to_csv(data_dir / "y_test.csv", index=False)
 
-        
         logger.info("Data split")
 
         logger.info("Featurizing data")
         X_train_feat, _ = self.feat.featurize(X_train)
-        zarr.save(data_dir /"X_train_feat.zarr", X_train_feat)
+        zarr.save(data_dir / "X_train_feat.zarr", X_train_feat)
 
         X_test_feat, _ = self.feat.featurize(X_test)
-        zarr.save(data_dir /"X_test_feat.zarr", X_test_feat)
+        zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
         logger.info("Data featurized")
 
         logger.info("Building model")
