@@ -54,7 +54,7 @@ class DataSpec(BaseModel):
             data = intake.open_csv(self.resource).read()
 
         # now read the target columns and smiles column
-        target = data[self.target_col].to_numpy()
+        target = data[self.target_col]
         smiles = data[self.smiles_col]
 
         return smiles, target

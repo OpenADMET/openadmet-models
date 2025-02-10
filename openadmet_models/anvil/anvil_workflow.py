@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Literal
 
 import fsspec
 import yaml
+import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
@@ -194,11 +195,13 @@ class AnvilWorkflow(BaseModel):
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
+    debug: bool = False
 
-    def run(self, output_dir: Pathy = "anvil_run") -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
         """
         Run the workflow
         """
+        self.debug = debug
         output_dir = str(output_dir)
         if Path(output_dir).exists():
             # make truncated hashed uuid
@@ -210,6 +213,9 @@ class AnvilWorkflow(BaseModel):
             output_dir = Path(output_dir)
 
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        data_dir = output_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
 
         # write recipe to output directory
         self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
@@ -239,11 +245,19 @@ class AnvilWorkflow(BaseModel):
         logger.info("Splitting data")
         X_train, X_test, y_train, y_test = self.split.split(X, y)
 
+        X_train.to_csv(data_dir / "X_train.csv", index=False)
+        X_test.to_csv(data_dir / "X_test.csv", index=False)
+        y_train.to_csv(data_dir / "y_train.csv", index=False)
+        y_test.to_csv(data_dir / "y_test.csv", index=False)
+
         logger.info("Data split")
 
         logger.info("Featurizing data")
         X_train_feat, _ = self.feat.featurize(X_train)
+        zarr.save(data_dir / "X_train_feat.zarr", X_train_feat)
+
         X_test_feat, _ = self.feat.featurize(X_test)
+        zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
         logger.info("Data featurized")
 
         logger.info("Building model")
