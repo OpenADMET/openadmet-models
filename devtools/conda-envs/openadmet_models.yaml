@@ -21,6 +21,7 @@ dependencies:
   - mordredcommunity
   - lightgbm
   - seaborn
+  - splito
 
     # Testing
   - pytest
