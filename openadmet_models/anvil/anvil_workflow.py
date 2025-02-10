@@ -3,9 +3,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal
-import zarr
+
 import fsspec
 import yaml
+import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
@@ -196,7 +197,7 @@ class AnvilWorkflow(BaseModel):
     parent_spec: AnvilSpecification
     debug: bool = False
 
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool=False) -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
         """
         Run the workflow
         """
