@@ -146,6 +146,10 @@ class RegressionPlots(EvalBase):
     )
     title: str = Field("Pred vs ", description="Title for the plot")
     do_stats: bool = Field(True, description="Whether to do stats for the plot")
+    pXC50: bool = Field(
+        False,
+        description="Whether to plot for pXC50, highlighting 0.3 and 1.0 log range unit",
+    )
     plots: dict = {}
 
     def evaluate(self, y_true, y_pred):
@@ -173,6 +177,7 @@ class RegressionPlots(EvalBase):
                 ylabel=self.axes_labels[1],
                 title=self.title,
                 stat_caption=stat_caption,
+                pXC50=self.pXC50,
             )
 
     @staticmethod
@@ -184,6 +189,7 @@ class RegressionPlots(EvalBase):
         title="",
         stat_caption="",
         confidence_level=0.95,
+        pXC50=False,
     ):
         """
         Create a regression plot
@@ -205,6 +211,24 @@ class RegressionPlots(EvalBase):
         ax.set_ylim(min_ax, max_ax)
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
+
+        # if pXC50 measure then plot the 0.3 and 1.0 log range unit
+        if pXC50:
+
+            ax.fill_between(
+                [min_ax, max_ax],
+                [min_ax - 0.3, max_ax - 0.3],
+                [min_ax + 0.3, max_ax + 0.3],
+                color="gray",
+                alpha=0.2,
+            )
+            ax.fill_between(
+                [min_ax, max_ax],
+                [min_ax - 1, max_ax - 1],
+                [min_ax + 1, max_ax + 1],
+                color="gray",
+                alpha=0.2,
+            )
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
         ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=6)

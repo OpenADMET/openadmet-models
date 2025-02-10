@@ -13,6 +13,7 @@ dependencies:
   - rich
   - intake
   - joblib
+  - zarr >=3.0.0
 
   - rdkit
   - molfeat
@@ -20,6 +21,7 @@ dependencies:
   - mordredcommunity
   - lightgbm
   - seaborn
+  - splito
 
     # Testing
   - pytest
