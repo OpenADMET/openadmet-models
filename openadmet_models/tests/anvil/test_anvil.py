@@ -9,6 +9,7 @@ from openadmet_models.tests.datafiles import (
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,
+    basic_anvil_yaml_cv,
 )
 
 
@@ -64,3 +65,10 @@ def test_anvil_multiyaml(tmp_path):
     )
     assert anvil_spec.data.anvil_dir == anvil_spec2.data.anvil_dir
     assert anvil_spec.dict() == anvil_spec2.dict()
+
+
+def test_anvil_cross_val_run(tmp_path):
+    anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml_cv)
+    anvil_workflow = anvil_spec.to_workflow()
+    anvil_workflow.run(output_dir=tmp_path / "tst")
+    

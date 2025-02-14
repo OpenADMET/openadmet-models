@@ -4,7 +4,7 @@ from openadmet_models.eval.eval_base import EvalBase, evaluators
 from openadmet_models.eval.regression import stat_and_bootstrap, nan_omit_ktau, nan_omit_spearmanr
 
 
-@evaluators.register("RegressionMetrics")
+@evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     metrics: dict = {}
     n_splits: int = 5
@@ -17,6 +17,8 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         """
         Evaluate the regression model
         """
+        if model is None or X is None or y is None:
+            raise ValueError("model, X, and y must be provided")
 
         # tuple of metric, whether it is a scipy statistic, and the name to use in the report
         self.metrics = {
