@@ -5,7 +5,7 @@ from openadmet_models.eval.eval_base import evaluators  # noqa: F401 F403
 
 # evaluators
 from openadmet_models.eval.regression import *  # noqa: F401 F403
-from openadmet_modesl.eval.cross_validate import *  # noqa: F401 F403
+from openadmet_models.eval.cross_validate import *  # noqa: F401 F403
 from openadmet_models.features.combine import *  # noqa: F401 F403
 from openadmet_models.features.feature_base import featurizers  # noqa: F401 F403
 

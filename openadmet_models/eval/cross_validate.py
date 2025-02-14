@@ -13,12 +13,12 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
     _evaluated: bool = False
 
-    def evaluate(self, model=None, X=None, y=None, **kwargs):
+    def evaluate(self, model=None, X_train=None, y_train=None, **kwargs):
         """
         Evaluate the regression model
         """
-        if model is None or X is None or y is None:
-            raise ValueError("model, X, and y must be provided")
+        if model is None or X_train is None or y_train is None:
+            raise ValueError("model, X_train, and y_train must be provided")
 
         # tuple of metric, whether it is a scipy statistic, and the name to use in the report
         self.metrics = {
@@ -31,6 +31,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
         # store the metric names and callables in dict suitable for sklearn cross_val_score
         self.metric_map = {k: v[0] for k, v in self.metrics.items()}
+        print(self.metric_map)
 
         # create a cross-validation object
         cv = RepeatedKFold(
@@ -39,7 +40,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
         estimator = model.model
         # evaluate the model,
-        scores = cross_val_score(estimator, X, y, cv=cv, n_jobs=-1, scoring = self.metric_map)
+        scores = cross_val_score(estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring = self.metric_map)
 
         print(scores)
         raise Exception("stop")
@@ -53,4 +54,18 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         return self.metrics
     
 
-    def write_
+    def report(self, write=False, output_dir=None):
+        """
+        Report the evaluation
+        """
+        if write:
+            self.write_report(output_dir)
+        return self.data
+
+    def write_report(self, output_dir):
+        """
+        Write the evaluation report
+        """
+        # write to JSON
+        with open(output_dir / "regression_metrics.json", "w") as f:
+            json.dump(self.data, f, indent=2)

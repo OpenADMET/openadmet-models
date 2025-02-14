@@ -154,10 +154,12 @@ class RegressionPlots(EvalBase):
     )
     plots: dict = {}
 
-    def evaluate(self, y_true, y_pred):
+    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
+        if y_true is None or y_pred is None:
+            raise ValueError("Must provide y_true and y_pred")
 
         self.plots = {
             "regplot": self.regplot,
