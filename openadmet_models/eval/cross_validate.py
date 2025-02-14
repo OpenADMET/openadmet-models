@@ -1,17 +1,30 @@
-from sklearn.model_selection import KFold, cross_validate, RepeatedKFold
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from openadmet_models.eval.eval_base import EvalBase, evaluators
-from openadmet_models.eval.regression import stat_and_bootstrap, nan_omit_ktau, nan_omit_spearmanr
-from scipy.stats import bootstrap, kendalltau, spearmanr
-from sklearn.metrics import make_scorer
 import json
+
 from loguru import logger
+from scipy.stats import bootstrap, kendalltau, spearmanr
+from sklearn.metrics import (
+    make_scorer,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.model_selection import KFold, RepeatedKFold, cross_validate
+
+from openadmet_models.eval.eval_base import EvalBase, evaluators
+from openadmet_models.eval.regression import (
+    nan_omit_ktau,
+    nan_omit_spearmanr,
+    stat_and_bootstrap,
+)
+
 
 def wrap_ktau(y_true, y_pred):
     return nan_omit_ktau(y_true, y_pred).statistic
 
+
 def wrap_spearmanr(y_true, y_pred):
     return nan_omit_spearmanr(y_true, y_pred).correlation
+
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(EvalBase):
@@ -39,18 +52,22 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         }
 
         logger.info("Starting cross-validation")
-        
+
         # run CV
         cv = RepeatedKFold(
-            n_splits=self.n_splits, n_repeats=self.n_repeats, random_state=self.random_state
+            n_splits=self.n_splits,
+            n_repeats=self.n_repeats,
+            random_state=self.random_state,
         )
 
         estimator = model.model
         # evaluate the model,
-        scores = cross_validate(estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring = self.metrics)
+        scores = cross_validate(
+            estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring=self.metrics
+        )
 
         logger.info("Cross-validation complete")
-        
+
         # remove the 'test_' prefix from the keys
         # also convert the numpy arrays to lists so they can be serialized to JSON
         clean_scores = {}
@@ -61,7 +78,6 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         self._evaluated = True
 
         return self.data
-    
 
     def report(self, write=False, output_dir=None):
         """

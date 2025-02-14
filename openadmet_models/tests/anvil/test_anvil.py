@@ -71,4 +71,3 @@ def test_anvil_cross_val_run(tmp_path):
     anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml_cv)
     anvil_workflow = anvil_spec.to_workflow()
     anvil_workflow.run(output_dir=tmp_path / "tst")
-    
