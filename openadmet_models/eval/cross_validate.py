@@ -7,6 +7,12 @@ from sklearn.metrics import make_scorer
 import json
 from loguru import logger
 
+def wrap_ktau(y_true, y_pred):
+    return nan_omit_ktau(y_true, y_pred).statistic
+
+def wrap_spearmanr(y_true, y_pred):
+    return nan_omit_spearmanr(y_true, y_pred).correlation
+
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     metrics: dict = {}
@@ -28,8 +34,8 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             "mse": make_scorer(mean_squared_error),
             "mae": make_scorer(mean_absolute_error),
             "r2": make_scorer(r2_score),
-            "ktau": make_scorer(kendalltau, nan_policy="omit"),
-            "spearmanr": make_scorer(spearmanr, nan_policy="omit")
+            "ktau": make_scorer(wrap_ktau),
+            "spearmanr": make_scorer(wrap_spearmanr),
         }
 
         logger.info("Starting cross-validation")
@@ -44,17 +50,17 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         scores = cross_validate(estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring = self.metrics)
 
         logger.info("Cross-validation complete")
+        
+        # remove the 'test_' prefix from the keys
+        # also convert the numpy arrays to lists so they can be serialized to JSON
+        clean_scores = {}
+        for k, v in scores.items():
+            clean_scores[k.replace("test_", "")] = v.tolist()
 
-        print(scores)
-        raise Exception("stop")
-        # store the results
-        self.metrics["mean_score"] = scores.mean()
-        self.metrics["std_score"] = scores.std()
-        self.metrics["scores"] = scores
-
+        self.data = clean_scores
         self._evaluated = True
 
-        return self.metrics
+        return self.data
     
 
     def report(self, write=False, output_dir=None):
@@ -70,5 +76,5 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         Write the evaluation report
         """
         # write to JSON
-        with open(output_dir / "regression_metrics.json", "w") as f:
+        with open(output_dir / "cross_validation_metrics.json", "w") as f:
             json.dump(self.data, f, indent=2)
