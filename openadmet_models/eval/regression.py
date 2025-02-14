@@ -61,10 +61,12 @@ class RegressionMetrics(EvalBase):
     )
     _evaluated: bool = False
 
-    def evaluate(self, y_true, y_pred):
+    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
+        if y_true is None or y_pred is None:
+            raise ValueError("Must provide y_true and y_pred")
 
         # tuple of metric, whether it is a scipy statistic, and the name to use in the report
         self.metrics = {
