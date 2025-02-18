@@ -279,11 +279,18 @@ class AnvilWorkflow(BaseModel):
         logger.info("Model saved")
 
         logger.info("Predicting")
-        preds = self.model.predict(X_test_feat)
+        y_pred = self.model.predict(X_test_feat)
         logger.info("Predictions made")
 
         logger.info("Evaluating")
         for eval in self.evals:
-            eval.evaluate(y_test, preds)
+            # here all the data is passed to the evaluator, but some evaluators may only need a subset
+            eval.evaluate(
+                y_true=y_test,
+                y_pred=y_pred,
+                model=self.model,
+                X_train=X_train_feat,
+                y_train=y_train,
+            )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")

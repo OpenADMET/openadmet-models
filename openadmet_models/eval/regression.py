@@ -55,29 +55,30 @@ nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
-    metrics: dict = {}
     bootstrap_confidence_level: float = Field(
         0.95, description="Confidence level for the bootstrap"
     )
     _evaluated: bool = False
 
-    def evaluate(self, y_true, y_pred):
+    # tuple of metric, whether it is a scipy statistic, and the name to use in the report
+    _metrics: dict = {
+        "mse": (mean_squared_error, False, "MSE"),
+        "mae": (mean_absolute_error, False, "MAE"),
+        "r2": (r2_score, False, "$R^2$"),
+        "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
+        "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
+    }
+
+    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
-
-        # tuple of metric, whether it is a scipy statistic, and the name to use in the report
-        self.metrics = {
-            "mse": (mean_squared_error, False, "MSE"),
-            "mae": (mean_absolute_error, False, "MAE"),
-            "r2": (r2_score, False, "$R^2$"),
-            "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
-            "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
-        }
+        if y_true is None or y_pred is None:
+            raise ValueError("Must provide y_true and y_pred")
 
         self.data = {}
 
-        for metric_tag, (metric, is_scipy, _) in self.metrics.items():
+        for metric_tag, (metric, is_scipy, _) in self._metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
                 metric_tag,
                 y_pred,
@@ -104,7 +105,7 @@ class RegressionMetrics(EvalBase):
         """
         Return the metric names
         """
-        return list(self.metrics.keys())
+        return list(self._metrics.keys())
 
     def report(self, write=False, output_dir=None):
         """
@@ -134,7 +135,7 @@ class RegressionMetrics(EvalBase):
             lower_ci = self.data[metric]["lower_ci"]
             upper_ci = self.data[metric]["upper_ci"]
             confidence_level = self.data[metric]["confidence_level"]
-            stat_caption += f"{self.metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
+            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
         stat_caption += f"Confidence level: {confidence_level}"
         return stat_caption
 
@@ -148,20 +149,22 @@ class RegressionPlots(EvalBase):
     do_stats: bool = Field(True, description="Whether to do stats for the plot")
     pXC50: bool = Field(
         False,
-        description="Whether to plot for pXC50, highlighting 0.3 and 1.0 log range unit",
+        description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
     )
     plots: dict = {}
 
-    def evaluate(self, y_true, y_pred):
+    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
+        if y_true is None or y_pred is None:
+            raise ValueError("Must provide y_true and y_pred")
 
         self.plots = {
             "regplot": self.regplot,
         }
 
-        self.data = {}
+        self.plot_data = {}
 
         if self.do_stats:
             rm = RegressionMetrics()
@@ -170,7 +173,7 @@ class RegressionPlots(EvalBase):
 
         # create the plots
         for plot_tag, plot in self.plots.items():
-            self.data[plot_tag] = plot(
+            self.plot_data[plot_tag] = plot(
                 y_true,
                 y_pred,
                 xlabel=self.axes_labels[0],
@@ -190,14 +193,18 @@ class RegressionPlots(EvalBase):
         stat_caption="",
         confidence_level=0.95,
         pXC50=False,
+        min_val=None,
+        max_val=None,
     ):
         """
         Create a regression plot
         """
         fig, ax = plt.subplots()
         ax.set_title(title, fontsize=10)
-        min_val = min(y_true.min(), y_pred.min())
-        max_val = max(y_true.max(), y_pred.max())
+        if min_val is None:
+            min_val = min(y_true.min(), y_pred.min())
+        if max_val is None:
+            max_val = max(y_true.max(), y_pred.max())
         # set the limits to be the same for both axes
         _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
         # slope, intercept, r, p, sterr = scipy.stats.linregress(
@@ -212,13 +219,13 @@ class RegressionPlots(EvalBase):
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
 
-        # if pXC50 measure then plot the 0.3 and 1.0 log range unit
+        # if pXC50 measure then plot the 0.5 and 1.0 log range unit
         if pXC50:
 
             ax.fill_between(
                 [min_ax, max_ax],
-                [min_ax - 0.3, max_ax - 0.3],
-                [min_ax + 0.3, max_ax + 0.3],
+                [min_ax - 0.5, max_ax - 0.5],
+                [min_ax + 0.5, max_ax + 0.5],
                 color="gray",
                 alpha=0.2,
             )
@@ -241,12 +248,12 @@ class RegressionPlots(EvalBase):
         """
         if write:
             self.write_report(output_dir)
-        return self.data
+        return self.plot_data
 
     def write_report(self, output_dir):
         """
         Write the evaluation report
         """
         # write each plot to a file
-        for plot_tag, plot in self.data.items():
+        for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png")

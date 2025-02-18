@@ -21,7 +21,9 @@ class EvalBase(BaseModel):
         extra = "allow"
 
     @abstractmethod
-    def evaluate(self, y_true, y_pred):
+    def evaluate(
+        self, y_true=None, y_pred=None, model=None, X_train=None, y_train=None
+    ):
         """
         Evaluate the model
         """
