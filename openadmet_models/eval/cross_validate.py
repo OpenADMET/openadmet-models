@@ -3,6 +3,7 @@ import json
 import numpy as np
 from loguru import logger
 from pydantic import Field
+from scipy.stats import norm
 from sklearn.metrics import (
     make_scorer,
     mean_absolute_error,
@@ -17,7 +18,6 @@ from openadmet_models.eval.regression import (
     nan_omit_ktau,
     nan_omit_spearmanr,
 )
-from scipy.stats import norm
 
 
 def wrap_ktau(y_true, y_pred):
@@ -96,14 +96,16 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         clean_scores = {}
         for k, v in scores.items():
             clean_scores[k.replace("test_", "")] = v
-            
+
         self.data = {}
         for k, v in clean_scores.items():
             # calculate the confidence interval, assuming normal distribution
             # TODO: check best practice??
             mean = v.mean()
             sigma = v.std(ddof=1)
-            lower_ci, upper_ci = norm.interval(self.confidence_level, loc=mean, scale=sigma)
+            lower_ci, upper_ci = norm.interval(
+                self.confidence_level, loc=mean, scale=sigma
+            )
             metric_data = {}
             metric_data["value"] = v.tolist()
             metric_data["mean"] = np.mean(v)
@@ -112,7 +114,6 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             metric_data["confidence_level"] = self.confidence_level
             self.data[k] = metric_data
 
-        
         self._evaluated = True
 
         self.plots = {
