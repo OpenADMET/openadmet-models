@@ -1,6 +1,7 @@
 # IMPORTANT: order matters here, make sure to import all the registered classes first
 # before importing the registry classes
 
+from openadmet_models.eval.cross_validate import *  # noqa: F401 F403
 from openadmet_models.eval.eval_base import evaluators  # noqa: F401 F403
 
 # evaluators
