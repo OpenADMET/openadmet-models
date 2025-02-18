@@ -15,6 +15,7 @@ from openadmet_models.eval.regression import (
     nan_omit_spearmanr,
     RegressionPlots,
 )
+from scipy.stats import norm
 
 from pydantic import Field
 
@@ -83,9 +84,24 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         # also convert the numpy arrays to lists so they can be serialized to JSON
         clean_scores = {}
         for k, v in scores.items():
-            clean_scores[k.replace("test_", "")] = v.tolist()
+            clean_scores[k.replace("test_", "")] = v
+            
+        self.data = {}
+        for k, v in clean_scores.items():
+            # calculate the confidence interval, assuming normal distribution
+            # TODO: check best practice??
+            mean = v.mean()
+            sigma = v.std(ddof=1)
+            lower_ci, upper_ci = norm.interval(self.confidence_level, loc=mean, scale=sigma)
+            metric_data = {}
+            metric_data["value"] = v.tolist()
+            metric_data["mean"] = np.mean(v)
+            metric_data["lower_ci"] = lower_ci
+            metric_data["upper_ci"] = upper_ci
+            metric_data["confidence_level"] = self.confidence_level
+            self.data[k] = metric_data
 
-        self.data = clean_scores
+        
         self._evaluated = True
 
         self.plots = {
@@ -121,7 +137,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         """
         return list(self._metrics.keys())
 
-    def make_stat_caption(self, agg_func="mean"):
+    def make_stat_caption(self):
         """
         Make a caption for the statistics
         """
@@ -129,9 +145,10 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             raise ValueError("Must evaluate before making a caption")
         stat_caption = ""
         for metric in self.metric_names:
-            value = np.asarray(self.data[metric]).mean()
-            stdev = np.asarray(self.data[metric]).std()
-            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{stdev:.2f}}}^{{{stdev:.2f}}}$\n"
+            value = self.data[metric]["mean"]
+            lower_ci = self.data[metric]["lower_ci"]
+            upper_ci = self.data[metric]["upper_ci"]
+            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
         return stat_caption
 
     def report(self, write=False, output_dir=None):
