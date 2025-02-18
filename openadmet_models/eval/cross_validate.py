@@ -1,6 +1,8 @@
 import json
+
 import numpy as np
 from loguru import logger
+from pydantic import Field
 from sklearn.metrics import (
     make_scorer,
     mean_absolute_error,
@@ -11,13 +13,12 @@ from sklearn.model_selection import RepeatedKFold, cross_validate
 
 from openadmet_models.eval.eval_base import EvalBase, evaluators
 from openadmet_models.eval.regression import (
+    RegressionPlots,
     nan_omit_ktau,
     nan_omit_spearmanr,
-    RegressionPlots,
 )
 from scipy.stats import norm
 
-from pydantic import Field
 
 def wrap_ktau(y_true, y_pred):
     return nan_omit_ktau(y_true, y_pred).statistic
@@ -43,23 +44,30 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     )
 
     _metrics: dict = {
-            "mse": (make_scorer(mean_squared_error), False, "MSE"),
-            "mae": (make_scorer(mean_absolute_error), False, "MAE"),
-            "r2": (make_scorer(r2_score), False, "$R^2$"),
-            "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
-            "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
-        }
+        "mse": (make_scorer(mean_squared_error), False, "MSE"),
+        "mae": (make_scorer(mean_absolute_error), False, "MAE"),
+        "r2": (make_scorer(r2_score), False, "$R^2$"),
+        "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
+        "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
+    }
 
-    def evaluate(self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs):
+    def evaluate(
+        self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs
+    ):
         """
         Evaluate the regression model
         """
-        if model is None or X_train is None or y_train is None or y_pred is None or y_true is None:
-            raise ValueError("model, X_train, y_train, y_pred, and y_true must be provided")
+        if (
+            model is None
+            or X_train is None
+            or y_train is None
+            or y_pred is None
+            or y_true is None
+        ):
+            raise ValueError(
+                "model, X_train, y_train, y_pred, and y_true must be provided"
+            )
 
-
-
-        
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
@@ -110,10 +118,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
         self.plot_data = {}
 
-
-
         stat_caption = self.make_stat_caption()
-
 
         # create the plots
         for plot_tag, plot in self.plots.items():
@@ -128,7 +133,6 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             )
 
         return self.data
-    
 
     @property
     def metric_names(self):
@@ -170,4 +174,3 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png")
-
