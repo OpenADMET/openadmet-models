@@ -1,23 +1,22 @@
 import json
 import numpy as np
 from loguru import logger
-from scipy.stats import bootstrap, kendalltau, spearmanr
 from sklearn.metrics import (
     make_scorer,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import KFold, RepeatedKFold, cross_validate
+from sklearn.model_selection import RepeatedKFold, cross_validate
 
 from openadmet_models.eval.eval_base import EvalBase, evaluators
 from openadmet_models.eval.regression import (
     nan_omit_ktau,
     nan_omit_spearmanr,
-    stat_and_bootstrap,
     RegressionPlots,
 )
 
+from pydantic import Field
 
 def wrap_ktau(y_true, y_pred):
     return nan_omit_ktau(y_true, y_pred).statistic
@@ -29,12 +28,26 @@ def wrap_spearmanr(y_true, y_pred):
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(EvalBase):
-    metrics: dict = {}
     n_splits: int = 5
     n_repeats: int = 5
     random_state: int = 42
-
     _evaluated: bool = False
+    axes_labels: list[str] = Field(
+        ["Measured", "Predicted"], description="Labels for the axes"
+    )
+    title: str = Field("Pred vs ", description="Title for the plot")
+    pXC50: bool = Field(
+        False,
+        description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
+    )
+
+    _metrics: dict = {
+            "mse": (make_scorer(mean_squared_error), False, "MSE"),
+            "mae": (make_scorer(mean_absolute_error), False, "MAE"),
+            "r2": (make_scorer(r2_score), False, "$R^2$"),
+            "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
+            "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
+        }
 
     def evaluate(self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs):
         """
@@ -43,18 +56,11 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         if model is None or X_train is None or y_train is None or y_pred is None or y_true is None:
             raise ValueError("model, X_train, y_train, y_pred, and y_true must be provided")
 
-        # store the metric names and callables in dict suitable for sklearn cross_validate
-        # NB: different to regression implementation
-        self.metrics = {
-            "mse": (make_scorer(mean_squared_error), False, "MSE"),
-            "mae": (make_scorer(mean_absolute_error), False, "MAE"),
-            "r2": (make_scorer(r2_score), False, "$R^2$"),
-            "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
-            "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
-        }
+
+
         
-        # store the sklearn metric part of the dict
-        self.sklearn_metrics = {k: v[0] for k, v in self.metrics.items()}
+        # store the metric names and callables in dict suitable for sklearn cross_validate
+        self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
         logger.info("Starting cross-validation")
 
@@ -113,7 +119,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         """
         Return the metric names
         """
-        return list(self.metrics.keys())
+        return list(self._metrics.keys())
 
     def make_stat_caption(self, agg_func="mean"):
         """
@@ -125,7 +131,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         for metric in self.metric_names:
             value = np.asarray(self.data[metric]).mean()
             stdev = np.asarray(self.data[metric]).std()
-            stat_caption += f"{self.metrics[metric][2]}: {value:.2f}$_{{{stdev:.2f}}}^{{{stdev:.2f}}}$\n"
+            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{stdev:.2f}}}^{{{stdev:.2f}}}$\n"
         return stat_caption
 
     def report(self, write=False, output_dir=None):
