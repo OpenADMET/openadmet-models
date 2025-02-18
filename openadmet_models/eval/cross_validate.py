@@ -42,6 +42,9 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         False,
         description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
     )
+    confidence_level: float = Field(
+        0.95, description="Confidence level for the confidence interval"
+    )
 
     _metrics: dict = {
         "mse": (make_scorer(mean_squared_error), False, "MSE"),
