@@ -194,14 +194,18 @@ class RegressionPlots(EvalBase):
         stat_caption="",
         confidence_level=0.95,
         pXC50=False,
+        min_val=None,
+        max_val=None,
     ):
         """
         Create a regression plot
         """
         fig, ax = plt.subplots()
         ax.set_title(title, fontsize=10)
-        min_val = min(y_true.min(), y_pred.min())
-        max_val = max(y_true.max(), y_pred.max())
+        if min_val is None:
+            min_val = min(y_true.min(), y_pred.min())
+        if max_val is None:
+            max_val = max(y_true.max(), y_pred.max())
         # set the limits to be the same for both axes
         _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
         # slope, intercept, r, p, sterr = scipy.stats.linregress(

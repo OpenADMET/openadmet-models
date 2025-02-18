@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 from loguru import logger
 from scipy.stats import bootstrap, kendalltau, spearmanr
 from sklearn.metrics import (
@@ -15,6 +15,7 @@ from openadmet_models.eval.regression import (
     nan_omit_ktau,
     nan_omit_spearmanr,
     stat_and_bootstrap,
+    RegressionPlots,
 )
 
 
@@ -35,21 +36,25 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
     _evaluated: bool = False
 
-    def evaluate(self, model=None, X_train=None, y_train=None, **kwargs):
+    def evaluate(self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs):
         """
         Evaluate the regression model
         """
-        if model is None or X_train is None or y_train is None:
-            raise ValueError("model, X_train, and y_train must be provided")
+        if model is None or X_train is None or y_train is None or y_pred is None or y_true is None:
+            raise ValueError("model, X_train, y_train, y_pred, and y_true must be provided")
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
+        # NB: different to regression implementation
         self.metrics = {
-            "mse": make_scorer(mean_squared_error),
-            "mae": make_scorer(mean_absolute_error),
-            "r2": make_scorer(r2_score),
-            "ktau": make_scorer(wrap_ktau),
-            "spearmanr": make_scorer(wrap_spearmanr),
+            "mse": (make_scorer(mean_squared_error), False, "MSE"),
+            "mae": (make_scorer(mean_absolute_error), False, "MAE"),
+            "r2": (make_scorer(r2_score), False, "$R^2$"),
+            "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
+            "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
         }
+        
+        # store the sklearn metric part of the dict
+        self.sklearn_metrics = {k: v[0] for k, v in self.metrics.items()}
 
         logger.info("Starting cross-validation")
 
@@ -63,7 +68,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         estimator = model.model
         # evaluate the model,
         scores = cross_validate(
-            estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring=self.metrics
+            estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring=self.sklearn_metrics
         )
 
         logger.info("Cross-validation complete")
@@ -77,7 +82,51 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         self.data = clean_scores
         self._evaluated = True
 
+        self.plots = {
+            "cross_validation_regplot": RegressionPlots.regplot,
+        }
+
+        self.plot_data = {}
+
+
+
+        stat_caption = self.make_stat_caption()
+
+
+        # create the plots
+        for plot_tag, plot in self.plots.items():
+            self.plot_data[plot_tag] = plot(
+                y_true,
+                y_pred,
+                xlabel=self.axes_labels[0],
+                ylabel=self.axes_labels[1],
+                title=self.title,
+                stat_caption=stat_caption,
+                pXC50=self.pXC50,
+            )
+
         return self.data
+    
+
+    @property
+    def metric_names(self):
+        """
+        Return the metric names
+        """
+        return list(self.metrics.keys())
+
+    def make_stat_caption(self, agg_func="mean"):
+        """
+        Make a caption for the statistics
+        """
+        if not self._evaluated:
+            raise ValueError("Must evaluate before making a caption")
+        stat_caption = ""
+        for metric in self.metric_names:
+            value = np.asarray(self.data[metric]).mean()
+            stdev = np.asarray(self.data[metric]).std()
+            stat_caption += f"{self.metrics[metric][2]}: {value:.2f}$_{{{stdev:.2f}}}^{{{stdev:.2f}}}$\n"
+        return stat_caption
 
     def report(self, write=False, output_dir=None):
         """
@@ -94,3 +143,8 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         # write to JSON
         with open(output_dir / "cross_validation_metrics.json", "w") as f:
             json.dump(self.data, f, indent=2)
+
+        # write each plot to a file
+        for plot_tag, plot in self.plot_data.items():
+            plot.savefig(output_dir / f"{plot_tag}.png")
+
