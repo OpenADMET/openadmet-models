@@ -97,10 +97,13 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         for k, v in scores.items():
             clean_scores[k.replace("test_", "")] = v
 
+        # exclude fit_time and score_time
+        exclude = ["fit_time", "score_time"]
+
         self.data = {}
-        for k, v in clean_scores.items():
+        for k, v in clean_scores.items() if k not in exclude else {}:
             # calculate the confidence interval, assuming normal distribution
-            # TODO: check best practice??
+            # TODO: check best practice???
             mean = v.mean()
             sigma = v.std(ddof=1)
             lower_ci, upper_ci = norm.interval(
@@ -157,6 +160,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             lower_ci = self.data[metric]["lower_ci"]
             upper_ci = self.data[metric]["upper_ci"]
             stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
+        stat_caption += f"Confidence level: {self.confidence_level}"
         return stat_caption
 
     def report(self, write=False, output_dir=None):
