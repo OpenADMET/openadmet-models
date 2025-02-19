@@ -152,6 +152,8 @@ class RegressionPlots(EvalBase):
         description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
     )
     plots: dict = {}
+    min_val: float = Field(None, description="Minimum value for the axes")
+    max_val: float = Field(None, description="Maximum value for the axes")
 
     def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
@@ -181,6 +183,8 @@ class RegressionPlots(EvalBase):
                 title=self.title,
                 stat_caption=stat_caption,
                 pXC50=self.pXC50,
+                min_val=self.min_val,
+                max_val=self.max_val,
             )
 
     @staticmethod
@@ -256,4 +260,4 @@ class RegressionPlots(EvalBase):
         """
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
-            plot.savefig(output_dir / f"{plot_tag}.png")
+            plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
