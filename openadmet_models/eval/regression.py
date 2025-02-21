@@ -207,16 +207,20 @@ class RegressionPlots(EvalBase):
         ax.set_title(title, fontsize=10)
         if min_val is None:
             min_val = min(y_true.min(), y_pred.min())
+            max_ax = max_val + 1
+        else:
+            min_ax = min_val
         if max_val is None:
             max_val = max(y_true.max(), y_pred.max())
+            min_ax = min_val - 1
+        else:
+            max_ax = max_val
         # set the limits to be the same for both axes
         _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
         # slope, intercept, r, p, sterr = scipy.stats.linregress(
         #     x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
         # )
         ax.set_aspect("equal", "box")
-        min_ax = min_val - 1
-        max_ax = max_val + 1
 
         ax.set_xlim(min_ax, max_ax)
         ax.set_ylim(min_ax, max_ax)
