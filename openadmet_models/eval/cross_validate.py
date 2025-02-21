@@ -56,7 +56,6 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
 
-
     def evaluate(
         self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs
     ):
@@ -143,7 +142,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
                 stat_caption=stat_caption,
                 pXC50=self.pXC50,
                 min_val=self.min_val,
-                max_val=self.max_val
+                max_val=self.max_val,
             )
 
         return self.data
