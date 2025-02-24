@@ -59,14 +59,14 @@ class ModelBase(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def serialize(self, param_path:Pathy, serial_path:Pathy):
+    def serialize(self, param_path: Pathy, serial_path: Pathy):
         """
         Serialize the model, abstract method to be implemented by subclasses
         """
         pass
 
     @abstractmethod
-    def deserialize(self, param_path:Pathy, serial_path:Pathy):
+    def deserialize(self, param_path: Pathy, serial_path: Pathy):
         """
         Deserialize the model, abstract method to be implemented by subclasses
         """

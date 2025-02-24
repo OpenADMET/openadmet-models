@@ -64,9 +64,7 @@ def test_serialization(tmp_path, X_y):
     X, y = X_y
     lgbm_model.train(X, y)
     preds = lgbm_model.predict(X)
-    lgbm_model.serialize(
-        tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
-    )
+    lgbm_model.serialize(tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl")
     lgbm_model_loaded = LGBMRegressorModel.deserialize(
         tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
     )
