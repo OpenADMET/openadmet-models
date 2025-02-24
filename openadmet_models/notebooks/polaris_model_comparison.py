@@ -85,7 +85,7 @@ def rm_tukey_hsd(df, metric, group_col, alpha=0.05, sort = False, direction_dict
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=RuntimeWarning,
                                 message='divide by zero encountered in scalar divide')
-        aov = pg.rm_anova(dv=metric, within=group_col, subject='cv_cycle', data=df, detailed=True)
+        aov = pg.rm_anova(dv=metric, within=group_col, subject='method', data=df, detailed=True)
     mse = aov.loc[1, 'MS']
     df_resid = aov.loc[1, 'DF']
 
@@ -293,13 +293,12 @@ def mcs_plot(pc, effect_size, means, labels=True, cmap=None, cbar_ax_bbox=None,
     significance[(pc < 0.05) & (pc >= 0.01)] = '*'
     significance[(pc >= 0.05)] = ''
 
-    np.fill_diagonal(significance.values, '')
+    np.fill_diagonal(significance, '')
 
     # Create a DataFrame for the annotations
-    if show_diff:
-        annotations = effect_size.round(3).astype(str) + significance
-    else:
-        annotations = significance
+    # if show_diff:
+    #     annotations = effect_size.round(3).astype(str) + significance
+    annotations = significance
 
     hax = sns.heatmap(effect_size, cmap=cmap, annot=annotations, fmt='', cbar=show_cbar, ax=ax,
                       annot_kws={"size": cell_text_size},
