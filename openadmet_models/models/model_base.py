@@ -59,6 +59,20 @@ class ModelBase(BaseModel, ABC):
         pass
 
     @abstractmethod
+    def serialize(self, param_path:Pathy, serial_path:Pathy):
+        """
+        Serialize the model, abstract method to be implemented by subclasses
+        """
+        pass
+
+    @abstractmethod
+    def deserialize(self, param_path:Pathy, serial_path:Pathy):
+        """
+        Deserialize the model, abstract method to be implemented by subclasses
+        """
+        pass
+
+    @abstractmethod
     def train(self):
         """
         Train the model, abstract method to be implemented by subclasses
@@ -98,24 +112,24 @@ class PickleableModelBase(ModelBase):
             self._model = joblib.load(f)
 
     @classmethod
-    def from_model_json_and_pkl(
-        cls, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"
+    def deserialize(
+        cls, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
     ):
         """
         Create a model from parameters and a pickled model
         """
-        with open(model_json_path) as f:
+        with open(param_path) as f:
             model_params = json.load(f)
         instance = cls(**model_params)
-        instance.load(pkl_path)
+        instance.load(serial_path)
         return instance
 
-    def to_model_json_and_pkl(
-        self, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"
+    def serialize(
+        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
     ):
         """
         Save the model to a json file and a pickled file
         """
-        with open(model_json_path, "w") as f:
+        with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
-        self.save(pkl_path)
+        self.save(serial_path)

@@ -57,17 +57,17 @@ def test_lgbm_save_load(tmp_path, X_y):
     assert_allclose(preds, preds2)
 
 
-def test_from_to_model_json_pkl(tmp_path, X_y):
+def test_serialization(tmp_path, X_y):
     lgbm_model = LGBMRegressorModel.from_params(
         class_params={}, model_params={"n_estimators": 100}
     )
     X, y = X_y
     lgbm_model.train(X, y)
     preds = lgbm_model.predict(X)
-    lgbm_model.to_model_json_and_pkl(
+    lgbm_model.serialize(
         tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
     )
-    lgbm_model_loaded = LGBMRegressorModel.from_model_json_and_pkl(
+    lgbm_model_loaded = LGBMRegressorModel.deserialize(
         tmp_path / "lgbm_model.json", tmp_path / "lgbm_model.pkl"
     )
     preds_loaded = lgbm_model_loaded.predict(X)
