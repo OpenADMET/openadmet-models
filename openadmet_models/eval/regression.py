@@ -207,12 +207,12 @@ class RegressionPlots(EvalBase):
         ax.set_title(title, fontsize=10)
         if min_val is None:
             min_val = min(y_true.min(), y_pred.min())
-            max_ax = max_val + 1
+            min_ax = max_val -1
         else:
             min_ax = min_val
         if max_val is None:
             max_val = max(y_true.max(), y_pred.max())
-            min_ax = min_val - 1
+            max_ax = max_val + 1
         else:
             max_ax = max_val
         # set the limits to be the same for both axes
