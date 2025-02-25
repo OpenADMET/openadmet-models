@@ -53,6 +53,11 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
         "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
     }
+<<<<<<< HEAD
+=======
+    min_val: float = Field(None, description="Minimum value for the axes")
+    max_val: float = Field(None, description="Maximum value for the axes")
+>>>>>>> origin/main
 
     def evaluate(
         self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs
@@ -84,9 +89,17 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         )
 
         estimator = model.model
+<<<<<<< HEAD
         # evaluate the model,
         scores = cross_validate(
             estimator, X_train, y_train, cv=cv, n_jobs=-1, scoring=self.sklearn_metrics
+=======
+        # evaluate the model, storing the results
+        # we do one job here to avoid issues with double parallelization
+        # we prefer to parallelize model training over cross-validation
+        scores = cross_validate(
+            estimator, X_train, y_train, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
+>>>>>>> origin/main
         )
 
         logger.info("Cross-validation complete")
@@ -137,6 +150,11 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
                 title=self.title,
                 stat_caption=stat_caption,
                 pXC50=self.pXC50,
+<<<<<<< HEAD
+=======
+                min_val=self.min_val,
+                max_val=self.max_val,
+>>>>>>> origin/main
             )
 
         return self.data
@@ -181,4 +199,8 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
 
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
+<<<<<<< HEAD
             plot.savefig(output_dir / f"{plot_tag}.png")
+=======
+            plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
+>>>>>>> origin/main

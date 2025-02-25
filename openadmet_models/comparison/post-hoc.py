@@ -6,15 +6,13 @@ from openadmet_models.comparison import ComparisonBase, comparisons
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
 
-    _metrics_df : pd.DataFrame = 
+    _metrics_df : pd.DataFrame = {}
 
 
     @property
     def methods(self):
         pass
 
-    @property
-    def 
 
     def levene_test():
         pass
