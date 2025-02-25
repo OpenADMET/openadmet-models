@@ -25,7 +25,6 @@ class FeatureConcatenator(FeaturizerBase):
         If passed a dictionary of parameters, construct the relevant featurizers
         and pack them into the featurizers list
         """
-        print(value)
         if isinstance(value, dict):
             featurizers = []
             for feat_type, feat_params in value.items():
