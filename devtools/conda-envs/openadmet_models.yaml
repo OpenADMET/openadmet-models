@@ -22,6 +22,8 @@ dependencies:
   - lightgbm
   - seaborn
   - splito
+  - umap-learn
+  - modal
 
     # Testing
   - pytest
