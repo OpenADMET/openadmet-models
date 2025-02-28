@@ -79,6 +79,7 @@ class RegressionMetrics(EvalBase):
         self.data = {}
 
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
+        for metric_tag, (metric, is_scipy, _) in self._metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
                 metric_tag,
                 y_pred,
@@ -105,6 +106,7 @@ class RegressionMetrics(EvalBase):
         """
         Return the metric names
         """
+        return list(self._metrics.keys())
         return list(self._metrics.keys())
 
     def report(self, write=False, output_dir=None):
@@ -136,6 +138,7 @@ class RegressionMetrics(EvalBase):
             upper_ci = self.data[metric]["upper_ci"]
             confidence_level = self.data[metric]["confidence_level"]
             stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
+            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
         stat_caption += f"Confidence level: {confidence_level}"
         return stat_caption
 
@@ -156,6 +159,7 @@ class RegressionPlots(EvalBase):
     max_val: float = Field(None, description="Maximum value for the axes")
 
     def evaluate(self, y_true=None, y_pred=None, **kwargs):
+    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
@@ -167,6 +171,7 @@ class RegressionPlots(EvalBase):
         }
 
         self.plot_data = {}
+        self.plot_data = {}
 
         if self.do_stats:
             rm = RegressionMetrics()
@@ -176,6 +181,7 @@ class RegressionPlots(EvalBase):
         # create the plots
         for plot_tag, plot in self.plots.items():
             self.plot_data[plot_tag] = plot(
+            self.plot_data[plot_tag] = plot(
                 y_true,
                 y_pred,
                 xlabel=self.axes_labels[0],
@@ -183,6 +189,8 @@ class RegressionPlots(EvalBase):
                 title=self.title,
                 stat_caption=stat_caption,
                 pXC50=self.pXC50,
+                min_val=self.min_val,
+                max_val=self.max_val,
             )
 
     @staticmethod
@@ -263,3 +271,6 @@ class RegressionPlots(EvalBase):
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
+=======
+            plot.savefig(output_dir / f"{plot_tag}.png")
+>>>>>>> f4da10b (Cross validation prototype (#46))
