@@ -1,5 +1,7 @@
 import click
+
 from openadmet_models.comparison.posthoc import PostHocComparison
+
 
 @click.command()
 @click.option(
@@ -31,7 +33,8 @@ def compare(model_stats, model_tag, output_dir, comparison="posthoc"):
     else:
         raise NotImplementedError
     comp.compare(model_stats, model_tag)
-    #comp.write_report(output_dir)
+    # comp.write_report(output_dir)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     compare()
