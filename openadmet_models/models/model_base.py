@@ -1,4 +1,4 @@
-import json
+openadmet_models/models/model_base.pyimport json
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 import torch
@@ -59,6 +59,20 @@ class ModelBase(BaseModel, ABC):
         pass
 
     @abstractmethod
+    def serialize(self, param_path: Pathy, serial_path: Pathy):
+        """
+        Serialize the model, abstract method to be implemented by subclasses
+        """
+        pass
+
+    @abstractmethod
+    def deserialize(self, param_path: Pathy, serial_path: Pathy):
+        """
+        Deserialize the model, abstract method to be implemented by subclasses
+        """
+        pass
+
+    @abstractmethod
     def train(self):
         """
         Train the model, abstract method to be implemented by subclasses
@@ -98,52 +112,24 @@ class PickleableModelBase(ModelBase):
             self._model = joblib.load(f)
 
     @classmethod
-    def from_model_json_and_pkl(
-        cls, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"
+    def deserialize(
+        cls, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
     ):
         """
         Create a model from parameters and a pickled model
         """
-        with open(model_json_path) as f:
+        with open(param_path) as f:
             model_params = json.load(f)
         instance = cls(**model_params)
-        instance.load(pkl_path)
+        instance.load(serial_path)
         return instance
 
-    def to_model_json_and_pkl(
-        self, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"
+    def serialize(
+        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
     ):
         """
         Save the model to a json file and a pickled file
         """
-        with open(model_json_path, "w") as f:
+        with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
-        self.save(pkl_path)
-
-    def serialize_model(self, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"):
-        return self.to_model_json_and_pkl(model_json_path, pkl_path)
-    
-    def deserialize_model(self, model_json_path: Pathy = "model.json", pkl_path: Pathy = "model.pkl"):
-        return self.from_model_json_and_pkl(model_json_path, pkl_path)
-
-
-class TorchModelBase(ModelBase):
-
-    def save(self: Any, path: Pathy):
-        """
-        Save the model
-        """
-        torch.save(self.model.state_dict(), path)
-
-    def load(self: Any, path: Pathy):
-        """
-        Load the model
-        """
-        self._model.load_state_dict(torch.load(path))
-
-
-    def serialize_model(self, path: Pathy):
-        return self.save(path)
-    
-    def deserialize_model(self, path: Pathy):
-        return self.load(path)
+        self.save(serial_path)

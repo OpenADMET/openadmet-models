@@ -294,9 +294,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
         logger.info("Saving model")
-        self.model.to_model_json_and_pkl(
-            output_dir / "model.json", output_dir / "model.pkl"
-        )
+        self.model.serialize(output_dir / "model.json", output_dir / "model.pkl")
         logger.info("Model saved")
 
         logger.info("Predicting")
