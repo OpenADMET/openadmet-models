@@ -54,3 +54,26 @@ class MolfeatFeaturizer(FeaturizerBase):
         Return the transformer, for use in SkLearn pipelines etc
         """
         return self._transformer
+
+
+
+
+class ChemPropFeaturizer(FeaturizerBase):
+    """
+    Featurizer using molfeat
+    """
+    normalize_targets: bool = True
+    n_jobs: int = 1
+    _featurizer: MoleculeTransformer = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._prepare()
+
+    @abstractmethod
+    def _prepare(self):
+        """
+        Prepare the featurizer
+        """
+
+
