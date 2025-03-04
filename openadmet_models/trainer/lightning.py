@@ -39,9 +39,9 @@ class LightningTrainer(TrainerBase):
         if self.use_wandb:
             self._logger = WandbLogger(log_model="all")
         else:
-            self._logger = None
+            self._logger = False
         self._trainer = pl.Trainer(
-        logger=logger,
+        logger=self._logger,
         enable_checkpointing=True, # Use `True` if you want to save model checkpoints. The checkpoints will be saved in the `checkpoints` folder.
         enable_progress_bar=True,
         accelerator="auto",

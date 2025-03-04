@@ -1,12 +1,17 @@
 from typing import ClassVar
 
 import chemprop
+import torch
+from lightning import pytorch as pl
 import numpy as np
 from loguru import logger
 from chemprop import  models
 from chemprop import nn
 from openadmet_models.models.model_base import PickleableModelBase
 from openadmet_models.models.model_base import models as model_registry
+
+_METRIC_TO_LOSS = {"mae": nn.metrics.MAE(), "rmse": nn.metrics.RMSE()}
+
 
 @model_registry.register("ChemPropSingleTaskRegressorModel")
 class ChemPropSingleTaskRegressorModel(PickleableModelBase):
@@ -16,7 +21,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
 
     type: ClassVar[str] = "ChemPropSingleTaskModel"
     batch_norm: bool = True
-    metric_list: list = [nn.metrics.MAE(), nn.metrics.RMSE()]
+    metric_list: list = ["mae"]
     model_params: dict = {}
 
     @classmethod
@@ -44,7 +49,9 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             else:
                 output_transform = None
-            mpnn = models.MPNN(nn.BondMessagePassing(), nn.MeanAggregation(), nn.RegressionFFN(output_transform=output_transform), self.batch_norm, self.metric_list)
+
+            metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
+            mpnn = models.MPNN(nn.BondMessagePassing(), nn.MeanAggregation(), nn.RegressionFFN(output_transform=output_transform), self.batch_norm, metric_list)
             self._model = mpnn
 
         else:
@@ -56,4 +63,13 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         if not self.model:
             raise ValueError("Model not trained")
-        return self.model.predict(X)
+        
+        with torch.inference_mode():
+            trainer = pl.Trainer(
+                logger=None,
+                enable_progress_bar=True,
+                accelerator="cpu",
+                devices=1
+            )
+            preds =  trainer.predict(self.model, X)
+        return preds
