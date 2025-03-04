@@ -27,6 +27,6 @@ class ChemPropFeaturizer():
         """
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(smi, y) for smi, y in zip(smis, ys)])
         if self.normalize_targets:
-            dataset.normalize_targets()
+            scaler = dataset.normalize_targets()
         dataloader = build_dataloader(dataset, num_workers=self.n_jobs)
-        return dataloader
+        return dataloader, scaler

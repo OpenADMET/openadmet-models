@@ -18,6 +18,7 @@ from openadmet_models.registries import *  # noqa: F401, F403
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
+import torch
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -49,16 +50,13 @@ class Drivers(StrEnum):
     PYTORCH = "pytorch"
     SKLEARN = "sklearn"
 
-_DRIVER_TO_CLASS = {
-    Drivers.PYTORCH.value: AnvilWorkflow,
-    Drivers.SKLEARN.value: AnvilDeepLearningWorkflow,
-}
+
 
 class Metadata(SpecBase):
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
     )
-    driver: str = Field(Drivers.SKLEARN, description="The driver for the workflow.")
+    driver: str = Field(Drivers.SKLEARN.value, description="The driver for the workflow.")
 
     name: str = Field(..., description="The name of the workflow.")
     build_number: int = Field(
@@ -187,7 +185,7 @@ class AnvilSpecification(BaseModel):
 
         logger.info("Making workflow from specification")
 
-        return _DRIVER_TO_CLASS[self.driver](
+        return _DRIVER_TO_CLASS[self.metadata.driver](
             metadata=metadata,
             data_spec=data_spec,
             model=model,
@@ -198,6 +196,9 @@ class AnvilSpecification(BaseModel):
             evals=evals,
             parent_spec=self,
         )
+    
+
+
 
 class AnvilWorkflowBase(BaseModel):
     metadata: Metadata
@@ -373,13 +374,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data split")
 
         logger.info("Featurizing data")
-        train_dataloader, _ = self.feat.featurize(X_train, y_train)
+        train_dataloader, train_scaler = self.feat.featurize(X_train, y_train)
+        torch.save(train_dataloader, 'train_dataloader.pth')
 
-        test_dataloader, _ = self.feat.featurize(X_test, y_test)
+        test_dataloader, test_scaler = self.feat.featurize(X_test, y_test)
+        torch.save(test_dataloader, 'test_dataloader.pth')
         logger.info("Data featurized")
 
         logger.info("Building model")
-        self.model.build()
+        self.model.build(scaler=train_scaler)
         logger.info("Model built")
 
         logger.info("Setting model in trainer")
@@ -391,8 +394,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
         logger.info("Saving model")
-        self.model.to_model_json_and_pkl(
-            output_dir / "model.json", output_dir / "model.pkl"
+        self.model.serialize(
+            output_dir / "model.json", output_dir / "model.pth"
         )
         logger.info("Model saved")
 
@@ -408,8 +411,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 y_true=y_test,
                 y_pred=y_pred,
                 model=self.model,
-                X_train=X_train_feat,
-                y_train=y_train,
+                X_train=train_dataloader,
+                y_train=train_dataloader,
             )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")
+
+_DRIVER_TO_CLASS = {
+    Drivers.PYTORCH: AnvilWorkflow,
+    Drivers.SKLEARN: AnvilDeepLearningWorkflow,
+}

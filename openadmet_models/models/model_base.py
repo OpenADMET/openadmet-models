@@ -1,8 +1,8 @@
-openadmet_models/models/model_base.pyimport json
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 import torch
 import joblib
+import json
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
 
@@ -133,3 +133,27 @@ class PickleableModelBase(ModelBase):
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
         self.save(serial_path)
+
+
+class TorchModelBase(ModelBase):
+    def save(self, path: Pathy):
+        torch.save(self.model.state_dict(), path)
+
+    def load(self, path: Pathy):
+        self.model.load_state_dict(torch.load(path))
+
+    def serialize(
+        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pth"
+    ):
+        with open(param_path, "w") as f:
+            f.write(self.model_dump_json(indent=2))
+        self.save(serial_path)
+
+    def deserialize(
+        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pth"
+    ):
+        with open(param_path) as f:
+            model_params = json.load(f)
+        instance = self.from_params(**model_params)
+        instance.load(serial_path)
+        return instance
