@@ -13,7 +13,7 @@ class ChemPropFeaturizer(FeaturizerBase):
     """
 
     normalize_targets: bool = True
-    n_jobs: int = -1
+    n_jobs: int = 8
 
     def _prepare(self):
         """

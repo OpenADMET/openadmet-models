@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
     # Base depends
-  - python
+  - python >= 3.12
   - pip
 
   - numpy
@@ -24,7 +24,7 @@ dependencies:
   - splito
   - umap-learn
   - modal
-  - chemprop
+  - chemprop >= 2.1.1
   - pytorch
   - pytorch-lightning
 

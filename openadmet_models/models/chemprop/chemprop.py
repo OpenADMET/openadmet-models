@@ -3,11 +3,12 @@ from typing import ClassVar
 import chemprop
 import numpy as np
 from loguru import logger
-from chemprop import  models, nn
-from openadmet_models.models.model_base import PickleableModelBase, models
+from chemprop import  models
+from chemprop import nn
+from openadmet_models.models.model_base import PickleableModelBase
+from openadmet_models.models.model_base import models as model_registry
 
-
-@models.register("ChemPropSingleTaskRegressorModel")
+@model_registry.register("ChemPropSingleTaskRegressorModel")
 class ChemPropSingleTaskRegressorModel(PickleableModelBase):
     """
     LightGBM regression model
@@ -32,8 +33,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         Train the model
         """
-        self.build(scaler=scaler)
-        self.model = self.model.fit(dataloader)
+        raise NotImplementedError("Training not implemented in model class, use a trainer")
 
     def build(self, scaler=None):
         """
@@ -44,9 +44,9 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             else:
                 output_transform = None
-            mpnn = models.MPNN(nn.BondMessagePassing(), nn.MeanAggregation(), nn.RegressionFFN(output_transform=output_transform), self.batch_norm, metric_list)
+            mpnn = models.MPNN(nn.BondMessagePassing(), nn.MeanAggregation(), nn.RegressionFFN(output_transform=output_transform), self.batch_norm, self.metric_list)
+            self._model = mpnn
 
-            self.model = mpnn
         else:
             logger.warning("Model already exists, skipping build")
 
