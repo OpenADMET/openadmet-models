@@ -12,6 +12,7 @@ from openadmet_models.features.feature_base import featurizers  # noqa: F401 F40
 # featurizers
 from openadmet_models.features.molfeat_fingerprint import *  # noqa: F401 F403
 from openadmet_models.features.molfeat_properties import *  # noqa: F401 F403
+from openadmet_models.features.chemprop import *  # noqa: F401 F403
 
 # models
 from openadmet_models.models.gradient_boosting.lgbm import *  # noqa: F401 F403
@@ -26,4 +27,5 @@ from openadmet_models.split.vanilla import *  # noqa: F401 F403
 # trainers
 from openadmet_models.trainer.sklearn import *  # noqa: F401 F403
 from openadmet_models.trainer.trainer_base import trainers  # noqa: F401 F403
+from openadmet_models.trainer.lightning import *  # noqa: F401 F403
 from openadmet_models.util.log import logger  # noqa: F401 F403

@@ -25,6 +25,8 @@ dependencies:
   - umap-learn
   - modal
   - chemprop
+  - pytorch
+  - pytorch-lightning
 
     # Testing
   - pytest
