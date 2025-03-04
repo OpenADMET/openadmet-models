@@ -375,10 +375,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         logger.info("Featurizing data")
         train_dataloader, train_scaler = self.feat.featurize(X_train, y_train)
-        torch.save(train_dataloader, 'train_dataloader.pth')
+        torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         test_dataloader, test_scaler = self.feat.featurize(X_test, y_test)
-        torch.save(test_dataloader, 'test_dataloader.pth')
+        torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 
         logger.info("Building model")
@@ -405,6 +405,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         logger.info("Evaluating")
     
+
         for eval in self.evals:
             # here all the data is passed to the evaluator, but some evaluators may only need a subset
             eval.evaluate(

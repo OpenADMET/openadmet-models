@@ -67,9 +67,10 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         with torch.inference_mode():
             trainer = pl.Trainer(
                 logger=None,
-                enable_progress_bar=True,
-                accelerator="cpu",
+                enable_progress_bar=False,
+                accelerator="auto",
                 devices=1
             )
             preds =  trainer.predict(self.model, X)
-        return preds
+        # concatenate the predictions which are in a list of tensors
+        return torch.cat(preds).numpy().ravel()

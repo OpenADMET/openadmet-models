@@ -78,6 +78,7 @@ class RegressionMetrics(EvalBase):
 
         self.data = {}
 
+
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
                 metric_tag,
@@ -97,7 +98,6 @@ class RegressionMetrics(EvalBase):
             self.data[f"{metric_tag}"] = metric_data
 
         self._evaluated = True
-
         return self.data
 
     @property

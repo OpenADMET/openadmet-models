@@ -27,6 +27,7 @@ dependencies:
   - chemprop >= 2.1.1
   - pytorch
   - pytorch-lightning
+  - wandb
 
     # Testing
   - pytest

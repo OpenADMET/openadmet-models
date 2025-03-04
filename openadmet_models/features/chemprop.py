@@ -13,7 +13,9 @@ class ChemPropFeaturizer(FeaturizerBase):
     """
 
     normalize_targets: bool = True
-    n_jobs: int = 8
+    n_jobs: int = 1
+    batch_size: int = 128
+    shuffle: bool = False
 
     def _prepare(self):
         """
@@ -29,5 +31,5 @@ class ChemPropFeaturizer(FeaturizerBase):
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(smi, y_) for smi, y_ in zip(smiles, y)])
         if self.normalize_targets:
             scaler = dataset.normalize_targets()
-        dataloader = build_dataloader(dataset, num_workers=self.n_jobs)
+        dataloader = build_dataloader(dataset, num_workers=self.n_jobs, shuffle=self.shuffle, batch_size=self.batch_size)
         return dataloader, scaler
