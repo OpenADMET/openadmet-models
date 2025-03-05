@@ -17,13 +17,12 @@ class LightningTrainer(TrainerBase):
     devices: int = -1
     use_wandb: bool = False
     output_dir: Path = None
+    wandb_project: str = "openadmet-testing"
 
     _logger: Any
     _trainer: Any
 
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
 
     def prepare(self):
@@ -41,7 +40,7 @@ class LightningTrainer(TrainerBase):
         )
         self._logger = []
         if self.use_wandb:
-            self._logger.append(WandbLogger(log_model="all"))
+            self._logger.append(WandbLogger(log_model=True, save_dir=self.output_dir, project=self.wandb_project))
         self._logger.append(CSVLogger(self.output_dir / "logs", name="model"))
         self._trainer = pl.Trainer(
         logger=self._logger,
