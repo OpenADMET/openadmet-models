@@ -219,6 +219,9 @@ class AnvilWorkflowBase(BaseModel):
 
 class AnvilWorkflow(AnvilWorkflowBase):
 
+    driver: Drivers = Drivers.SKLEARN
+
+
     def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
         """
         Run the workflow
@@ -230,7 +233,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:6]
             # get the date and time in short format
             now = datetime.now().strftime("%Y-%m-%d")
-            output_dir = Path(output_dir + f"{now}_{hsh}")
+            output_dir = Path(output_dir + f"_{now}_{hsh}")
         else:
             output_dir = Path(output_dir)
 
@@ -252,6 +255,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         )
 
         logger.info(f"Running workflow from directory {output_dir}")
+
+        logger.info(f"Running with driver {self.driver}")
+
 
         logger.info("Loading data")
         X, y = self.data_spec.read()
@@ -318,6 +324,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
+    driver: Drivers = Drivers.PYTORCH
+
     def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
         """
         Run the workflow
@@ -329,7 +337,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             hsh = hashlib.sha1(str(uuid.uuid4()).encode("utf8")).hexdigest()[:6]
             # get the date and time in short format
             now = datetime.now().strftime("%Y-%m-%d")
-            output_dir = Path(output_dir + f"{now}_{hsh}")
+            output_dir = Path(output_dir + f"_{now}_{hsh}")
         else:
             output_dir = Path(output_dir)
 
@@ -351,6 +359,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         )
 
         logger.info(f"Running workflow from directory {output_dir}")
+
+        logger.info(f"Running with driver {self.driver}")
 
         logger.info("Loading data")
         X, y = self.data_spec.read()
@@ -389,6 +399,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         self.trainer.model = self.model
         logger.info("Model set in trainer")
 
+        # check if there is a output dir
+        if not self.trainer.output_dir:
+            self.trainer.output_dir = output_dir
+
+        logger.info("Preparing trainer")
+        self.trainer.prepare()
+        logger.info("Trainer prepared")
+
         logger.info("Training model")
         self.model = self.trainer.train(train_dataloader)
         logger.info("Model trained")
@@ -419,6 +437,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Evaluation done")
 
 _DRIVER_TO_CLASS = {
-    Drivers.PYTORCH: AnvilWorkflow,
-    Drivers.SKLEARN: AnvilDeepLearningWorkflow,
+    Drivers.SKLEARN: AnvilWorkflow,
+    Drivers.PYTORCH: AnvilDeepLearningWorkflow,
 }

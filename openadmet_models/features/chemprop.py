@@ -13,7 +13,7 @@ class ChemPropFeaturizer(FeaturizerBase):
     """
 
     normalize_targets: bool = True
-    n_jobs: int = 1
+    n_jobs: int = 4
     batch_size: int = 128
     shuffle: bool = False
 
