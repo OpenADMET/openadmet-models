@@ -25,7 +25,7 @@ dependencies:
   - umap-learn
   - modal
   - chemprop >= 2.1.1
-  - pytorch
+  - pytorch-gpu
   - pytorch-lightning
   - cudatoolkit
   - wandb
