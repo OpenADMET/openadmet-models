@@ -19,6 +19,7 @@ from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
 import torch
+import wandb
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -423,6 +424,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         logger.info("Evaluating")
     
+        use_wandb = self.trainer.use_wandb
 
         for eval in self.evals:
             # here all the data is passed to the evaluator, but some evaluators may only need a subset
@@ -432,6 +434,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 model=self.model,
                 X_train=train_dataloader,
                 y_train=train_dataloader,
+                use_wandb=use_wandb,
             )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")

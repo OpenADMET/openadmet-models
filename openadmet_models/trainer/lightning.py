@@ -19,6 +19,7 @@ class LightningTrainer(TrainerBase):
     output_dir: Path = None
     wandb_project: str = "openadmet-testing"
 
+    wandb_logger: Any = None
     _logger: Any
     _trainer: Any
 
@@ -40,7 +41,8 @@ class LightningTrainer(TrainerBase):
         )
         self._logger = []
         if self.use_wandb:
-            self._logger.append(WandbLogger(log_model=True, save_dir=self.output_dir, project=self.wandb_project))
+            self.wandb_logger = WandbLogger(log_model=True, save_dir=self.output_dir, project=self.wandb_project)
+            self._logger.append(self.wandb_logger)
         self._logger.append(CSVLogger(self.output_dir / "logs", name="model"))
         self._trainer = pl.Trainer(
         logger=self._logger,
@@ -50,6 +52,8 @@ class LightningTrainer(TrainerBase):
         max_epochs=self.max_epochs, # number of epochs to train for
         callbacks=[checkpointing], # Use the configured checkpoint callback
         )
+
+
 
     
 
