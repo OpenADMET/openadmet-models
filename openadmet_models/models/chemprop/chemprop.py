@@ -1,6 +1,5 @@
 from typing import ClassVar
 
-import chemprop
 import numpy as np
 import torch
 from chemprop import models, nn

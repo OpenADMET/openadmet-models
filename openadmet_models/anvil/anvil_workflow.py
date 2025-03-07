@@ -8,11 +8,10 @@ from typing import Any, ClassVar, Literal
 
 import fsspec
 import torch
-import wandb
 import yaml
 import zarr
 from loguru import logger
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field
 
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
