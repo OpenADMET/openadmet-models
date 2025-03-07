@@ -1,12 +1,12 @@
 from typing import ClassVar
 
 import chemprop
-import torch
-from lightning import pytorch as pl
 import numpy as np
+import torch
+from chemprop import models, nn
+from lightning import pytorch as pl
 from loguru import logger
-from chemprop import  models
-from chemprop import nn
+
 from openadmet_models.models.model_base import PickleableModelBase
 from openadmet_models.models.model_base import models as model_registry
 
@@ -38,7 +38,9 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         Train the model
         """
-        raise NotImplementedError("Training not implemented in model class, use a trainer")
+        raise NotImplementedError(
+            "Training not implemented in model class, use a trainer"
+        )
 
     def build(self, scaler=None):
         """
@@ -51,7 +53,13 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
                 output_transform = None
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
-            mpnn = models.MPNN(nn.BondMessagePassing(), nn.MeanAggregation(), nn.RegressionFFN(output_transform=output_transform), self.batch_norm, metric_list)
+            mpnn = models.MPNN(
+                nn.BondMessagePassing(),
+                nn.MeanAggregation(),
+                nn.RegressionFFN(output_transform=output_transform),
+                self.batch_norm,
+                metric_list,
+            )
             self._model = mpnn
 
         else:
@@ -63,14 +71,11 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         if not self.model:
             raise ValueError("Model not trained")
-        
+
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None,
-                enable_progress_bar=False,
-                accelerator="auto",
-                devices=1
+                logger=None, enable_progress_bar=False, accelerator="auto", devices=1
             )
-            preds =  trainer.predict(self.model, X)
+            preds = trainer.predict(self.model, X)
         # concatenate the predictions which are in a list of tensors
         return torch.cat(preds).numpy().ravel()

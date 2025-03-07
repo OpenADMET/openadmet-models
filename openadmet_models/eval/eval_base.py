@@ -22,7 +22,13 @@ class EvalBase(BaseModel):
 
     @abstractmethod
     def evaluate(
-        self, y_true=None, y_pred=None, model=None, X_train=None, y_train=None, wandb_logger=None
+        self,
+        y_true=None,
+        y_pred=None,
+        model=None,
+        X_train=None,
+        y_train=None,
+        wandb_logger=None,
     ):
         """
         Evaluate the model

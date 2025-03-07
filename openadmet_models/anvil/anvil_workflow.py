@@ -1,15 +1,19 @@
 import hashlib
 import uuid
+from abc import abstractmethod
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal
-from enum import StrEnum
+
 import fsspec
+import torch
+import wandb
 import yaml
 import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from abc import abstractmethod
+
 from openadmet_models.data.data_spec import DataSpec
 from openadmet_models.eval.eval_base import EvalBase, get_eval_class
 from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
@@ -18,8 +22,6 @@ from openadmet_models.registries import *  # noqa: F401, F403
 from openadmet_models.split.split_base import SplitterBase, get_splitter_class
 from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
 from openadmet_models.util.types import Pathy
-import torch
-import wandb
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -44,20 +46,23 @@ class SpecBase(BaseModel):
             data = yaml.safe_load(stream)
         return cls(**data)
 
+
 class Drivers(StrEnum):
     """
     Enum for the drivers
     """
+
     PYTORCH = "pytorch"
     SKLEARN = "sklearn"
-
 
 
 class Metadata(SpecBase):
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
     )
-    driver: str = Field(Drivers.SKLEARN.value, description="The driver for the workflow.")
+    driver: str = Field(
+        Drivers.SKLEARN.value, description="The driver for the workflow."
+    )
 
     name: str = Field(..., description="The name of the workflow.")
     build_number: int = Field(
@@ -76,8 +81,6 @@ class Metadata(SpecBase):
         ..., description="List of biotargets associated with the workflow."
     )
     tags: list[str] = Field(..., description="Additional tags for the workflow.")
-
-
 
 
 class AnvilSection(SpecBase):
@@ -197,8 +200,6 @@ class AnvilSpecification(BaseModel):
             evals=evals,
             parent_spec=self,
         )
-    
-
 
 
 class AnvilWorkflowBase(BaseModel):
@@ -214,14 +215,12 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
-        ...
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any: ...
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.SKLEARN
-
 
     def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
         """
@@ -258,7 +257,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info(f"Running workflow from directory {output_dir}")
 
         logger.info(f"Running with driver {self.driver}")
-
 
         logger.info("Loading data")
         X, y = self.data_spec.read()
@@ -413,9 +411,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
         logger.info("Saving model")
-        self.model.serialize(
-            output_dir / "model.json", output_dir / "model.pth"
-        )
+        self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
         logger.info("Model saved")
 
         logger.info("Predicting")
@@ -423,7 +419,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Predictions made")
 
         logger.info("Evaluating")
-    
+
         use_wandb = self.trainer.use_wandb
 
         for eval in self.evals:
@@ -438,6 +434,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")
+
 
 _DRIVER_TO_CLASS = {
     Drivers.SKLEARN: AnvilWorkflow,

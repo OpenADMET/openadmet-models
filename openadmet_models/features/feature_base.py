@@ -54,8 +54,3 @@ class MolfeatFeaturizer(FeaturizerBase):
         Return the transformer, for use in SkLearn pipelines etc
         """
         return self._transformer
-
-
-
-
-

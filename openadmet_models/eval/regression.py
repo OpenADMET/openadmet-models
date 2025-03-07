@@ -4,11 +4,12 @@ from typing import Callable
 
 import numpy as np
 import seaborn as sns
+import wandb
 from matplotlib import pyplot as plt
 from pydantic import Field
 from scipy.stats import bootstrap, kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-import wandb
+
 from openadmet_models.eval.eval_base import EvalBase, evaluators
 
 
@@ -70,7 +71,6 @@ class RegressionMetrics(EvalBase):
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
     }
 
-
     def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
         """
         Evaluate the regression model
@@ -103,7 +103,9 @@ class RegressionMetrics(EvalBase):
 
         if self.use_wandb:
             # make a table for the metrics
-            table = wandb.Table(columns=["Metric", "Value", "Lower CI", "Upper CI", "Confidence Level"])
+            table = wandb.Table(
+                columns=["Metric", "Value", "Lower CI", "Upper CI", "Confidence Level"]
+            )
             for metric in self.metric_names:
                 table.add_data(
                     metric,
@@ -117,8 +119,6 @@ class RegressionMetrics(EvalBase):
             for metric in self.metric_names:
                 wandb.log({metric: self.data[metric]["value"]})
 
-
-        
         self._evaluated = True
         return self.data
 
@@ -146,14 +146,13 @@ class RegressionMetrics(EvalBase):
         with open(json_path, "w") as f:
             json.dump(self.data, f, indent=2)
 
-        #also log the json to wandb
+        # also log the json to wandb
         if self.use_wandb:
             artifact = wandb.Artifact(name="metrics_json", type="metric_json")
             # Add a file to the artifact
             artifact.add_file(json_path)
             # Log the artifact
             wandb.log_artifact(artifact)
-
 
     def make_stat_caption(self):
         """

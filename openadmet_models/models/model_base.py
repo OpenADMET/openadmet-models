@@ -1,8 +1,9 @@
+import json
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
-import torch
+
 import joblib
-import json
+import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
 
