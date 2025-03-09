@@ -15,7 +15,7 @@ _METRIC_TO_LOSS = {"mae": nn.metrics.MAE(), "rmse": nn.metrics.RMSE()}
 @model_registry.register("ChemPropSingleTaskRegressorModel")
 class ChemPropSingleTaskRegressorModel(PickleableModelBase):
     """
-    LightGBM regression model
+    ChemProp regression model
     """
 
     type: ClassVar[str] = "ChemPropSingleTaskModel"
@@ -69,7 +69,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         Predict using the model
         """
         if not self.model:
-            raise ValueError("Model not trained")
+            raise AttributeError("Model not trained")
 
         with torch.inference_mode():
             trainer = pl.Trainer(
