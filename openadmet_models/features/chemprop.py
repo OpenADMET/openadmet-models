@@ -33,6 +33,8 @@ class ChemPropFeaturizer(FeaturizerBase):
         )
         if self.normalize_targets:
             scaler = dataset.normalize_targets()
+        else:
+            scaler = None
         dataloader = build_dataloader(
             dataset,
             num_workers=self.n_jobs,
