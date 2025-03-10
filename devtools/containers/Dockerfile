@@ -15,11 +15,10 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet_models
 
 RUN micromamba install -y -n base git -f /tmp/env.yaml && \
     micromamba clean --all --yes
-    
+
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
 
 WORKDIR /home/mambauser
 
 RUN python -m pip install --no-deps -e openadmet_models
-
