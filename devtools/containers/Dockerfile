@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.description="OpenADMET models"
 LABEL org.opencontainers.image.licenses=MIT
 
 # set environment variables
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONUNBUFFERED=1
 
 RUN micromamba config append channels conda-forge
 
@@ -15,10 +15,11 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet_models
 
 RUN micromamba install -y -n base git -f /tmp/env.yaml && \
     micromamba clean --all --yes
-
+    
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
 
 WORKDIR /home/mambauser
 
 RUN python -m pip install --no-deps -e openadmet_models
+
