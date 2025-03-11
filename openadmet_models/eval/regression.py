@@ -79,7 +79,6 @@ class RegressionMetrics(EvalBase):
         self.data = {}
 
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
-        for metric_tag, (metric, is_scipy, _) in self._metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
                 metric_tag,
                 y_pred,
@@ -159,7 +158,6 @@ class RegressionPlots(EvalBase):
     max_val: float = Field(None, description="Maximum value for the axes")
 
     def evaluate(self, y_true=None, y_pred=None, **kwargs):
-    def evaluate(self, y_true=None, y_pred=None, **kwargs):
         """
         Evaluate the regression model
         """
@@ -180,7 +178,6 @@ class RegressionPlots(EvalBase):
 
         # create the plots
         for plot_tag, plot in self.plots.items():
-            self.plot_data[plot_tag] = plot(
             self.plot_data[plot_tag] = plot(
                 y_true,
                 y_pred,

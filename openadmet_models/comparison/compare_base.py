@@ -19,5 +19,10 @@ def get_comparison_class(compare_type):
 class ComparisonBase(BaseModel, ABC):
 
     @abstractmethod
-    def compare():
+    def compare(model_stats_fns, model_tags):
+        """
+        Compare two model runs 
+
+        
+        """
         pass
