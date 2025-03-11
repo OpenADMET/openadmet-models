@@ -149,7 +149,7 @@ class RegressionPlots(EvalBase):
     do_stats: bool = Field(True, description="Whether to do stats for the plot")
     pXC50: bool = Field(
         False,
-        description="Whether to plot for pXC50, highlighting 0.3 and 1.0 log range unit",
+        description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
     )
     plots: dict = {}
     min_val: float = Field(None, description="Minimum value for the axes")
@@ -195,6 +195,8 @@ class RegressionPlots(EvalBase):
         stat_caption="",
         confidence_level=0.95,
         pXC50=False,
+        min_val=None,
+        max_val=None,
     ):
         """
         Create a regression plot
@@ -223,13 +225,13 @@ class RegressionPlots(EvalBase):
         # plot y = x line in dashed grey
         ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
 
-        # if pXC50 measure then plot the 0.3 and 1.0 log range unit
+        # if pXC50 measure then plot the 0.5 and 1.0 log range unit
         if pXC50:
 
             ax.fill_between(
                 [min_ax, max_ax],
-                [min_ax - 0.3, max_ax - 0.3],
-                [min_ax + 0.3, max_ax + 0.3],
+                [min_ax - 0.5, max_ax - 0.5],
+                [min_ax + 0.5, max_ax + 0.5],
                 color="gray",
                 alpha=0.2,
             )

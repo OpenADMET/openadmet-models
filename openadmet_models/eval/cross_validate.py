@@ -113,7 +113,11 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         # exclude fit_time and score_time
         exclude = ["fit_time", "score_time"]
 
+<<<<<<< HEAD
         self.data = {"shape": [self.n_splits, self.n_repeats]}
+=======
+        self.data = {}
+>>>>>>> f4da10b (Cross validation prototype (#46))
         for k, v in clean_scores.items() if k not in exclude else {}:
             # calculate the confidence interval, assuming normal distribution
             # TODO: check best practice???
