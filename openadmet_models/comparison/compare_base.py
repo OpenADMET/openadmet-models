@@ -21,8 +21,8 @@ class ComparisonBase(BaseModel, ABC):
     @abstractmethod
     def compare(model_stats_fns, model_tags):
         """
-        Compare two model runs 
+        Compare two model runs
 
-        
+
         """
         pass
