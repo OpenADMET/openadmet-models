@@ -19,10 +19,17 @@ def get_comparison_class(compare_type):
 class ComparisonBase(BaseModel, ABC):
 
     @abstractmethod
-    def compare(model_stats_fns, model_tags):
+    def compare(model_stats_fns:list[str], model_tags:list[str]):
         """
         Compare two model runs
 
+        Parameters
+        ----------
+        model_stats_fns: list[str]
+            List of paths to model stats (probably anvil_run/cross_validation_metrics.json)
+        model_tags: list[str]
+            List of names for user to identify models, must be in the
+            same order as model_stats_fns
 
         """
         pass

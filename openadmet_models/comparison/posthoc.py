@@ -1,5 +1,4 @@
 import json
-import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,24 +17,44 @@ class PostHocComparison(ComparisonBase):
 
     _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
 
+    _direction_dict: dict = {
+                "mae": "minimize",
+                "mse": "minimize",
+                "r2": "maximize",
+                "ktau": "maximize",
+                "spearmanr": "maximize",
+                }
+    
+    _sig_levels: list = [0.05, 0.01, 0.001]
+
     @property
     def metrics(self):
         return self._metrics_names
+    
+    @property
+    def direction_dict(self):
+        return self._direction_dict
+    
+    @property
+    def sig_levels(self):
+        return self._sig_levels
 
     def compare(self, model_stats_fns, model_tags, save_dir=None):
         df = self.json_to_df(model_stats_fns, model_tags)
         levene = self.levene_test(df, model_tags)
-        tukeys = [
-            self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics
-        ]
-        tukeys_df = self.tukeys_to_df(tukeys)
-        self.to_json(levene, tukeys_df)
+        tukeys_df = self.get_tukeys_df(df, model_tags)
+        if save_dir:
+            self.stats_to_json(levene, tukeys_df, save_dir)
         self.normality_plots(df, save_dir)
         self.anova(df, model_tags, save_dir)
         self.mcs_plots(df, model_tags, save_dir)
         self.mean_diff_plots(df, model_tags, save_dir)
 
     def json_to_df(self, model_stats_fns, model_tags):
+        """
+        Takes the model statistics cross validation json from an anvil run,
+        will likely have the name (anvil_run/cross_validation_metrics.json)
+        """
         df = pd.DataFrame()
         for model, tag in zip(model_stats_fns, model_tags):
             data = pd.read_json(model)
@@ -105,43 +124,38 @@ class PostHocComparison(ComparisonBase):
 
     @staticmethod
     def tukey_hsd_by_metric(df, metric, model_tags):
-        return tukey_hsd(*[df[df["method"] == tag][metric] for tag in model_tags])
+        return tukey_hsd(*[np.array(df[df['method']==tag][metric]) for tag in model_tags])
 
-    def tukeys_to_df(tukeys, cl=0.95):
-        result = pd.DataFrame()
-        for i in range(len(hsd.statistic) - 1):
-            for j in range(i + 1, len(hsd.statistic)):
-                s = hsd.statistic[i, j]
-                method_compare.append(f"{model_tags[i]}-{model_tags[j]}")
-                stats.append(s)
-                errorbars.append(
-                    [
-                        s - hsd.confidence_interval(confidence_level=cl).low[i, j],
-                        hsd.confidence_interval(confidence_level=cl).high[i, j] - s,
-                    ]
-                )
-                stat_ind += 1
-                errorbars = np.transpose(errorbars)
-                tukeys.confidence_interval(confidence_level=cl).low[i, j]
+    def get_tukeys_df(self, df, model_tags, cl=0.95):
+        tukeys = [self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics]
+        method_compare = []
+        stats = []
+        errorbars = []
+        metric = []
+        pvalue = []
+        for metric_ind, hsd in enumerate(tukeys):
+            for i in range(len(hsd.statistic) - 1):
+                for j in range(i + 1, len(hsd.statistic)):
+                    s = hsd.statistic[i, j]
+                    method_compare.append(f"{model_tags[i]}-{model_tags[j]}")
+                    stats.append(s)
+                    errorbars.append(
+                        [
+                            s - hsd.confidence_interval(confidence_level=cl).low[i, j],
+                            hsd.confidence_interval(confidence_level=cl).high[i, j] - s,
+                        ]
+                    )
+                    metric.append(self.metrics[metric_ind])
+                    pvalue.append(hsd.pvalue[i,j])
+        hsd_df = pd.DataFrame({"method": method_compare, "metric_name":metric, "metric_val": stats, "errorbars":errorbars, "pvalue":pvalue})
+        return(hsd_df)
 
     def mcs_plots(
-        self, df, model_tags, direction_dict=None, sig_levels=None, save_dir=None
+        self, df, model_tags, save_dir=None
     ):
         figsize = (20, 10)
-        nrow = math.ceil(len(self.metrics) / 3)
+        nrow = -(-len(self.metrics) // 3)
         fig, ax = plt.subplots(nrow, 3, figsize=figsize)
-
-        if not direction_dict:
-            direction_dict = {
-                "mae": "minimize",
-                "mse": "minimize",
-                "r2": "maximize",
-                "ktau": "maximize",
-                "spearmanr": "maximize",
-            }
-
-        if not sig_levels:
-            sig_levels = [0.05, 0.01, 0.001]
 
         for i, metric in enumerate(self.metrics):
             metric = metric.lower()
@@ -150,7 +164,7 @@ class PostHocComparison(ComparisonBase):
             col = i % 3
 
             reverse_cmap = False
-            if direction_dict[metric] == "minimize":
+            if self.direction_dict[metric] == "minimize":
                 reverse_cmap = True
 
             hsd = self.tukey_hsd_by_metric(df, metric, model_tags)
@@ -160,14 +174,14 @@ class PostHocComparison(ComparisonBase):
                 cmap = cmap + "_r"
 
             significance = pd.DataFrame(hsd.pvalue)
-            significance[(hsd.pvalue < sig_levels[2]) & (hsd.pvalue >= 0)] = "***"
+            significance[(hsd.pvalue < self.sig_levels[2]) & (hsd.pvalue >= 0)] = "***"
             significance[
-                (hsd.pvalue < sig_levels[1]) & (hsd.pvalue >= sig_levels[2])
+                (hsd.pvalue < self.sig_levels[1]) & (hsd.pvalue >= self.sig_levels[2])
             ] = "**"
             significance[
-                (hsd.pvalue < sig_levels[0]) & (hsd.pvalue >= sig_levels[1])
+                (hsd.pvalue < self.sig_levels[0]) & (hsd.pvalue >= self.sig_levels[1])
             ] = "*"
-            significance[(hsd.pvalue >= sig_levels[0])] = ""
+            significance[(hsd.pvalue >= self.sig_levels[0])] = ""
 
             # Create a DataFrame for the annotations
             annotations = (
@@ -215,36 +229,24 @@ class PostHocComparison(ComparisonBase):
             plt.savefig(f"{save_dir}/mcs_plots.pdf")
 
     def mean_diff_plots(self, df, model_tags, cl=None, save_dir=None):
+
         figure, axes = plt.subplots(
             len(self.metrics), 1, figsize=(8, 2 * len(self.metrics)), sharex=False
         )
         ax_ind = 0
         if not cl:
             cl = 0.95
+        tukeys_df = self.get_tukeys_df(df, model_tags, cl=cl)
+
         for metric in self.metrics:
-            hsd = self.tukey_hsd_by_metric(df, metric, model_tags)
-            hsd_df = pd.DataFrame()
-            method_compare = []
-            stats = []
-            errorbars = []
-            stat_ind = 0
-            for i in range(len(hsd.statistic) - 1):
-                for j in range(i + 1, len(hsd.statistic)):
-                    s = hsd.statistic[i, j]
-                    method_compare.append(f"{model_tags[i]}-{model_tags[j]}")
-                    stats.append(s)
-                    errorbars.append(
-                        [
-                            s - hsd.confidence_interval(confidence_level=cl).low[i, j],
-                            hsd.confidence_interval(confidence_level=cl).high[i, j] - s,
-                        ]
-                    )
-                    stat_ind += 1
-            errorbars = np.transpose(errorbars)
-            hsd_df = pd.DataFrame({"method": method_compare, "stat": stats})
+            tukey_metric_df = tukeys_df[tukeys_df["metric_name"]==metric]
+            errorbars = np.transpose(np.array(tukey_metric_df["errorbars"]))
+            to_plot_df = pd.DataFrame({"method": tukey_metric_df['method'], "metric_val": tukey_metric_df['metric_val']})
+            print(to_plot_df)
+            print(errorbars)
             ax = axes[ax_ind]
             ax.errorbar(
-                data=hsd_df, x="stat", y="method", xerr=errorbars, fmt="o", capsize=5
+                data=to_plot_df, x="metric_val", y="method", xerr=errorbars, fmt="o", capsize=5
             )
             ax.axvline(0, ls="--", lw=3)
             ax.set_title(metric)
@@ -252,6 +254,7 @@ class PostHocComparison(ComparisonBase):
             ax.set_ylabel("")
             ax.set_xlim(-0.2, 0.2)
             ax_ind += 1
+            break
         figure.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
         plt.tight_layout()
         plt.show()
@@ -259,11 +262,12 @@ class PostHocComparison(ComparisonBase):
         if save_dir:
             plt.savefig(f"{save_dir}/mean_diffs.pdf")
 
-    def to_json(levene, tukeys):
-        pass
+    def stats_to_json(levene, tukeys, save_dir):
+        levene.to_json(f'{save_dir}/levene.json')
+        tukeys.to_json(f'{save_dir}/tukey_hsd.json')
 
     def report():
-        pass
+        raise NotImplementedError
 
     def write_report():
-        pass
+        raise NotImplementedError

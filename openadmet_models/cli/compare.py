@@ -7,12 +7,13 @@ from openadmet_models.comparison.posthoc import PostHocComparison
 @click.option(
     "--model-stats",
     multiple=True,
-    help="Path to YAML of model stats",
+    help="Path to JSON of model stats, needst to be in the same order as model-tag",
     required=True,
     type=click.Path(exists=True),
 )
 @click.option(
     "--model-tag",
+    help="Names to identify different models, user specified in same order as model-stats",
     multiple=True,
 )
 @click.option(
