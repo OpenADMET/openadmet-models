@@ -14,8 +14,6 @@ dependencies:
   - intake
   - joblib
   - zarr >=3.0.0
-  - ipython
-  - jupyterlab
 
   - rdkit
   - molfeat
@@ -27,8 +25,9 @@ dependencies:
   - umap-learn
   - modal
   - chemprop >= 2.1.1
-  - pytorch
+  - pytorch-gpu
   - pytorch-lightning
+  - cudatoolkit
   - wandb
 
     # Testing
