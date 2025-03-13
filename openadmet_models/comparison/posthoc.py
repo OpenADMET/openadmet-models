@@ -18,23 +18,23 @@ class PostHocComparison(ComparisonBase):
     _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
 
     _direction_dict: dict = {
-                "mae": "minimize",
-                "mse": "minimize",
-                "r2": "maximize",
-                "ktau": "maximize",
-                "spearmanr": "maximize",
-                }
-    
+        "mae": "minimize",
+        "mse": "minimize",
+        "r2": "maximize",
+        "ktau": "maximize",
+        "spearmanr": "maximize",
+    }
+
     _sig_levels: list = [0.05, 0.01, 0.001]
 
     @property
     def metrics(self):
         return self._metrics_names
-    
+
     @property
     def direction_dict(self):
         return self._direction_dict
-    
+
     @property
     def sig_levels(self):
         return self._sig_levels
@@ -124,10 +124,14 @@ class PostHocComparison(ComparisonBase):
 
     @staticmethod
     def tukey_hsd_by_metric(df, metric, model_tags):
-        return tukey_hsd(*[np.array(df[df['method']==tag][metric]) for tag in model_tags])
+        return tukey_hsd(
+            *[np.array(df[df["method"] == tag][metric]) for tag in model_tags]
+        )
 
     def get_tukeys_df(self, df, model_tags, cl=0.95):
-        tukeys = [self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics]
+        tukeys = [
+            self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics
+        ]
         method_compare = []
         stats = []
         errorbars = []
@@ -146,13 +150,19 @@ class PostHocComparison(ComparisonBase):
                         ]
                     )
                     metric.append(self.metrics[metric_ind])
-                    pvalue.append(hsd.pvalue[i,j])
-        hsd_df = pd.DataFrame({"method": method_compare, "metric_name":metric, "metric_val": stats, "errorbars":errorbars, "pvalue":pvalue})
-        return(hsd_df)
+                    pvalue.append(hsd.pvalue[i, j])
+        hsd_df = pd.DataFrame(
+            {
+                "method": method_compare,
+                "metric_name": metric,
+                "metric_val": stats,
+                "errorbars": errorbars,
+                "pvalue": pvalue,
+            }
+        )
+        return hsd_df
 
-    def mcs_plots(
-        self, df, model_tags, save_dir=None
-    ):
+    def mcs_plots(self, df, model_tags, save_dir=None):
         figsize = (20, 10)
         nrow = -(-len(self.metrics) // 3)
         fig, ax = plt.subplots(nrow, 3, figsize=figsize)
@@ -239,14 +249,24 @@ class PostHocComparison(ComparisonBase):
         tukeys_df = self.get_tukeys_df(df, model_tags, cl=cl)
 
         for metric in self.metrics:
-            tukey_metric_df = tukeys_df[tukeys_df["metric_name"]==metric]
+            tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
             errorbars = np.transpose(np.array(tukey_metric_df["errorbars"]))
-            to_plot_df = pd.DataFrame({"method": tukey_metric_df['method'], "metric_val": tukey_metric_df['metric_val']})
+            to_plot_df = pd.DataFrame(
+                {
+                    "method": tukey_metric_df["method"],
+                    "metric_val": tukey_metric_df["metric_val"],
+                }
+            )
             print(to_plot_df)
             print(errorbars)
             ax = axes[ax_ind]
             ax.errorbar(
-                data=to_plot_df, x="metric_val", y="method", xerr=errorbars, fmt="o", capsize=5
+                data=to_plot_df,
+                x="metric_val",
+                y="method",
+                xerr=errorbars,
+                fmt="o",
+                capsize=5,
             )
             ax.axvline(0, ls="--", lw=3)
             ax.set_title(metric)
@@ -263,8 +283,8 @@ class PostHocComparison(ComparisonBase):
             plt.savefig(f"{save_dir}/mean_diffs.pdf")
 
     def stats_to_json(levene, tukeys, save_dir):
-        levene.to_json(f'{save_dir}/levene.json')
-        tukeys.to_json(f'{save_dir}/tukey_hsd.json')
+        levene.to_json(f"{save_dir}/levene.json")
+        tukeys.to_json(f"{save_dir}/tukey_hsd.json")
 
     def report():
         raise NotImplementedError
