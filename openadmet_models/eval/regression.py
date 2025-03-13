@@ -59,6 +59,7 @@ class RegressionMetrics(EvalBase):
     bootstrap_confidence_level: float = Field(
         0.95, description="Confidence level for the bootstrap"
     )
+    use_wandb: bool = Field(False, description="Whether to use wandb")
     _evaluated: bool = False
 
     # tuple of metric, whether it is a scipy statistic, and the name to use in the report
@@ -70,7 +71,7 @@ class RegressionMetrics(EvalBase):
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
     }
 
-    def evaluate(self, y_true=None, y_pred=None, **kwargs):
+    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
         """
         Evaluate the regression model
         """
@@ -78,6 +79,9 @@ class RegressionMetrics(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         self.data = {}
+
+        if use_wandb:
+            self.use_wandb = use_wandb
 
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
             value, lower_ci, upper_ci = stat_and_bootstrap(
@@ -97,8 +101,25 @@ class RegressionMetrics(EvalBase):
 
             self.data[f"{metric_tag}"] = metric_data
 
-        self._evaluated = True
+        if self.use_wandb:
+            # make a table for the metrics
+            table = wandb.Table(
+                columns=["Metric", "Value", "Lower CI", "Upper CI", "Confidence Level"]
+            )
+            for metric in self.metric_names:
+                table.add_data(
+                    metric,
+                    self.data[metric]["value"],
+                    self.data[metric]["lower_ci"],
+                    self.data[metric]["upper_ci"],
+                    self.data[metric]["confidence_level"],
+                )
+            wandb.log({"metrics": table})
 
+            for metric in self.metric_names:
+                wandb.log({metric: self.data[metric]["value"]})
+
+        self._evaluated = True
         return self.data
 
     @property
@@ -121,8 +142,17 @@ class RegressionMetrics(EvalBase):
         Write the evaluation report
         """
         # write to JSON
-        with open(output_dir / "regression_metrics.json", "w") as f:
+        json_path = output_dir / "regression_metrics.json"
+        with open(json_path, "w") as f:
             json.dump(self.data, f, indent=2)
+
+        # also log the json to wandb
+        if self.use_wandb:
+            artifact = wandb.Artifact(name="metrics_json", type="metric_json")
+            # Add a file to the artifact
+            artifact.add_file(json_path)
+            # Log the artifact
+            wandb.log_artifact(artifact)
 
     def make_stat_caption(self):
         """
@@ -155,11 +185,16 @@ class RegressionPlots(EvalBase):
     plots: dict = {}
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
+    use_wandb: bool = Field(False, description="Whether to use wandb")
+    dpi: int = Field(300, description="DPI for the plot")
 
-    def evaluate(self, y_true=None, y_pred=None, **kwargs):
+    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
         """
         Evaluate the regression model
         """
+        if use_wandb:
+            self.use_wandb = use_wandb
+
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
@@ -263,7 +298,7 @@ class RegressionPlots(EvalBase):
         """
         Write the evaluation report
         """
-        # write each plot to a file
+
         for plot_tag, plot in self.plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)
