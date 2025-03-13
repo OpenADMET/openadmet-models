@@ -106,7 +106,6 @@ class RegressionMetrics(EvalBase):
         Return the metric names
         """
         return list(self._metrics.keys())
-        return list(self._metrics.keys())
 
     def report(self, write=False, output_dir=None):
         """
@@ -136,7 +135,6 @@ class RegressionMetrics(EvalBase):
             lower_ci = self.data[metric]["lower_ci"]
             upper_ci = self.data[metric]["upper_ci"]
             confidence_level = self.data[metric]["confidence_level"]
-            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
             stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
         stat_caption += f"Confidence level: {confidence_level}"
         return stat_caption
@@ -168,7 +166,6 @@ class RegressionPlots(EvalBase):
             "regplot": self.regplot,
         }
 
-        self.plot_data = {}
         self.plot_data = {}
 
         if self.do_stats:
@@ -268,6 +265,4 @@ class RegressionPlots(EvalBase):
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
-=======
-            plot.savefig(output_dir / f"{plot_tag}.png")
->>>>>>> f4da10b (Cross validation prototype (#46))
+
