@@ -49,6 +49,7 @@ class PostHocComparison(ComparisonBase):
         self.anova(df, model_tags, save_dir)
         self.mcs_plots(df, model_tags, save_dir)
         self.mean_diff_plots(df, model_tags, save_dir)
+        return(levene, tukeys_df)
 
     def json_to_df(self, model_stats_fns, model_tags):
         """
@@ -87,7 +88,6 @@ class PostHocComparison(ComparisonBase):
             ax.set_title("")
 
         plt.tight_layout()
-        plt.show()
 
         if save_dir:
             plt.savefig(f"{save_dir}/normality_plot.pdf")
@@ -117,7 +117,6 @@ class PostHocComparison(ComparisonBase):
             ax.set_xticks(list(range(0, len(x_tick_labels))))
             ax.set_xticklabels(new_xtick_labels)
         plt.tight_layout()
-        plt.show()
 
         if save_dir:
             plt.savefig(f"{save_dir}/anova.pdf")
@@ -233,7 +232,6 @@ class PostHocComparison(ComparisonBase):
                 ax[row, col].set_visible(False)
 
         plt.tight_layout()
-        plt.show()
 
         if save_dir:
             plt.savefig(f"{save_dir}/mcs_plots.pdf")
@@ -250,15 +248,13 @@ class PostHocComparison(ComparisonBase):
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
-            errorbars = np.transpose(np.array(tukey_metric_df["errorbars"]))
+            errorbars = [i[0] for i in np.transpose(tukey_metric_df["errorbars"])]
             to_plot_df = pd.DataFrame(
                 {
                     "method": tukey_metric_df["method"],
                     "metric_val": tukey_metric_df["metric_val"],
                 }
             )
-            print(to_plot_df)
-            print(errorbars)
             ax = axes[ax_ind]
             ax.errorbar(
                 data=to_plot_df,
@@ -274,10 +270,9 @@ class PostHocComparison(ComparisonBase):
             ax.set_ylabel("")
             ax.set_xlim(-0.2, 0.2)
             ax_ind += 1
-            break
+
         figure.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
         plt.tight_layout()
-        plt.show()
 
         if save_dir:
             plt.savefig(f"{save_dir}/mean_diffs.pdf")
