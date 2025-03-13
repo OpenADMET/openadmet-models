@@ -4,6 +4,7 @@ from typing import Callable
 
 import numpy as np
 import seaborn as sns
+import wandb
 from matplotlib import pyplot as plt
 from pydantic import Field
 from scipy.stats import bootstrap, kendalltau, spearmanr
@@ -264,5 +265,7 @@ class RegressionPlots(EvalBase):
         """
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
-            plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
-
+            plot_path = output_dir / f"{plot_tag}.png"
+            plot.savefig(plot_path, dpi=self.dpi)
+            if self.use_wandb:
+                wandb.log({plot_tag: wandb.Image(str(plot_path))})
