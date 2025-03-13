@@ -26,6 +26,6 @@ AChE_CHEMBL4078_Landrum_maxcur = (
 ).as_posix()
 
 # posthoc anvil outputs for testing
-descr_json = (_data_ref / "cross_validation_metrics_descr.json")
-fp_json = (_data_ref / "cross_validation_metrics_fp.json")
-combined_json = (_data_ref / "cross_validation_metrics_combined.json")
+descr_json = _data_ref / "cross_validation_metrics_descr.json"
+fp_json = _data_ref / "cross_validation_metrics_fp.json"
+combined_json = _data_ref / "cross_validation_metrics_combined.json"

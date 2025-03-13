@@ -49,7 +49,7 @@ class PostHocComparison(ComparisonBase):
         self.anova(df, model_tags, save_dir)
         self.mcs_plots(df, model_tags, save_dir)
         self.mean_diff_plots(df, model_tags, save_dir)
-        return(levene, tukeys_df)
+        return (levene, tukeys_df)
 
     def json_to_df(self, model_stats_fns, model_tags):
         """
