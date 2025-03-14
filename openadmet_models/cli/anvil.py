@@ -11,7 +11,12 @@ from openadmet_models.anvil.anvil_workflow import AnvilSpecification
     type=click.Path(exists=True),
 )
 @click.option("--debug", is_flag=True, help="Enable debug mode")
-@click.option('--output-dir', type=click.Path(file_okay=False, writable=True), required=False, help="Output directory path")
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, writable=True),
+    required=False,
+    help="Output directory path",
+)
 def anvil(recipe_path, debug, output_dir):
     """Run an Anvil workflow for model building from a recipe"""
     spec = AnvilSpecification.from_recipe(recipe_path)
