@@ -4,6 +4,7 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 from scipy.stats import f_oneway, levene, tukey_hsd
+from reportlab.pdfgen.canvas import Canvas
 
 from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
 
