@@ -2,16 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from scipy import stats
 from scipy.stats import f_oneway, levene, tukey_hsd
 
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-
 from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
+
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
@@ -41,7 +41,7 @@ class PostHocComparison(ComparisonBase):
     @property
     def sig_levels(self):
         return self._sig_levels
-    
+
     @property
     def cl(self):
         return self._confidence_level
@@ -53,16 +53,18 @@ class PostHocComparison(ComparisonBase):
         stats_dfs.append(self.get_tukeys_df(df, model_tags))
         if output_dir:
             self.stats_to_json(*stats_dfs, output_dir)
-        
+
         plot_data = {}
-        plot_data['normality'] = self.normality_plots(df, output_dir)
-        plot_data['anova'] = self.anova(df, model_tags, output_dir)
-        plot_data['mcs'] = self.mcs_plots(df, model_tags, output_dir)
-        plot_data['mean_diff'] = self.mean_diff_plots(df, model_tags, self.cl, output_dir)
+        plot_data["normality"] = self.normality_plots(df, output_dir)
+        plot_data["anova"] = self.anova(df, model_tags, output_dir)
+        plot_data["mcs"] = self.mcs_plots(df, model_tags, output_dir)
+        plot_data["mean_diff"] = self.mean_diff_plots(
+            df, model_tags, self.cl, output_dir
+        )
 
         self.report(stats_dfs, plot_data, report, output_dir)
 
-        return (stats_dfs)
+        return stats_dfs
 
     def json_to_df(self, model_stats_fns, model_tags):
         """
@@ -316,20 +318,23 @@ class PostHocComparison(ComparisonBase):
         for df in data_dfs:
             data = [df.columns.to_list()] + df.values.tolist()
             table = Table(data)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ]
+                )
+            )
             elements.append(table)
 
         for plot in plot_data:
-            elements.append(Spacer(1,0.2*inch))
+            elements.append(Spacer(1, 0.2 * inch))
             elements.append(plot)
 
         doc.build(elements)
-

@@ -33,13 +33,16 @@ from openadmet_models.comparison.posthoc import PostHocComparison
     help="Type of comparison to do",
     required=False,
 )
-def compare(model_stats, model_tag, report=False, output_dir=None, comparison="posthoc"):
+def compare(
+    model_stats, model_tag, report=False, output_dir=None, comparison="posthoc"
+):
     """Compare two or more models from summary statistics"""
     if comparison == "posthoc":
         comp = PostHocComparison()
     else:
         raise NotImplementedError
     comp.compare(model_stats, model_tag, report, output_dir)
+
 
 if __name__ == "__main__":
     compare()
