@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from reportlab.pdfgen.canvas import Canvas
 from scipy import stats
 from scipy.stats import f_oneway, levene, tukey_hsd
-from reportlab.pdfgen.canvas import Canvas
 
 from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
 
