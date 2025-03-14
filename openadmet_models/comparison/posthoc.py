@@ -6,8 +6,12 @@ from reportlab.pdfgen.canvas import Canvas
 from scipy import stats
 from scipy.stats import f_oneway, levene, tukey_hsd
 
-from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 
+from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
@@ -24,6 +28,8 @@ class PostHocComparison(ComparisonBase):
 
     _sig_levels: list = [0.05, 0.01, 0.001]
 
+    _confidence_level: float = 0.95
+
     @property
     def metrics(self):
         return self._metrics_names
@@ -35,18 +41,28 @@ class PostHocComparison(ComparisonBase):
     @property
     def sig_levels(self):
         return self._sig_levels
+    
+    @property
+    def cl(self):
+        return self._confidence_level
 
-    def compare(self, model_stats_fns, model_tags, save_dir=None):
+    def compare(self, model_stats_fns, model_tags, report=False, output_dir=None):
         df = self.json_to_df(model_stats_fns, model_tags)
-        levene = self.levene_test(df, model_tags)
-        tukeys_df = self.get_tukeys_df(df, model_tags)
-        if save_dir:
-            self.stats_to_json(levene, tukeys_df, save_dir)
-        self.normality_plots(df, save_dir)
-        self.anova(df, model_tags, save_dir)
-        self.mcs_plots(df, model_tags, save_dir)
-        self.mean_diff_plots(df, model_tags, save_dir)
-        return (levene, tukeys_df)
+        stats_dfs = []
+        stats_dfs.append(self.levene_test(df, model_tags))
+        stats_dfs.append(self.get_tukeys_df(df, model_tags))
+        if output_dir:
+            self.stats_to_json(*stats_dfs, output_dir)
+        
+        plot_data = {}
+        plot_data['normality'] = self.normality_plots(df, output_dir)
+        plot_data['anova'] = self.anova(df, model_tags, output_dir)
+        plot_data['mcs'] = self.mcs_plots(df, model_tags, output_dir)
+        plot_data['mean_diff'] = self.mean_diff_plots(df, model_tags, self.cl, output_dir)
+
+        self.report(stats_dfs, plot_data, report, output_dir)
+
+        return (stats_dfs)
 
     def json_to_df(self, model_stats_fns, model_tags):
         """
@@ -71,7 +87,7 @@ class PostHocComparison(ComparisonBase):
             result[m] = [levene(*[vec[m] for vec in lev_vecs])]
         return result
 
-    def normality_plots(self, df, save_dir=None):
+    def normality_plots(self, df, output_dir=None):
         fig, axes = plt.subplots(2, len(self.metrics), figsize=(20, 10))
 
         for i, metric in enumerate(self.metrics):
@@ -86,11 +102,13 @@ class PostHocComparison(ComparisonBase):
 
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/normality_plot.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/normality_plot.pdf")
 
-    def anova(self, df, model_tags, save_dir=None):
-        figure, axes = plt.subplots(
+        return fig
+
+    def anova(self, df, model_tags, output_dir=None):
+        fig, axes = plt.subplots(
             1, len(self.metrics), sharex=False, sharey=False, figsize=(28, 8)
         )
         for i, metric in enumerate(self.metrics):
@@ -115,8 +133,10 @@ class PostHocComparison(ComparisonBase):
             ax.set_xticklabels(new_xtick_labels)
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/anova.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/anova.pdf")
+
+        return fig
 
     @staticmethod
     def tukey_hsd_by_metric(df, metric, model_tags):
@@ -158,7 +178,7 @@ class PostHocComparison(ComparisonBase):
         )
         return hsd_df
 
-    def mcs_plots(self, df, model_tags, save_dir=None):
+    def mcs_plots(self, df, model_tags, output_dir=None):
         figsize = (20, 10)
         nrow = -(-len(self.metrics) // 3)
         fig, ax = plt.subplots(nrow, 3, figsize=figsize)
@@ -230,12 +250,14 @@ class PostHocComparison(ComparisonBase):
 
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/mcs_plots.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/mcs_plots.pdf")
 
-    def mean_diff_plots(self, df, model_tags, cl=None, save_dir=None):
+        return fig
 
-        figure, axes = plt.subplots(
+    def mean_diff_plots(self, df, model_tags, cl=None, output_dir=None):
+
+        fig, axes = plt.subplots(
             len(self.metrics), 1, figsize=(8, 2 * len(self.metrics)), sharex=False
         )
         ax_ind = 0
@@ -268,18 +290,46 @@ class PostHocComparison(ComparisonBase):
             ax.set_xlim(-0.2, 0.2)
             ax_ind += 1
 
-        figure.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
+        fig.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/mean_diffs.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/mean_diffs.pdf")
 
-    def stats_to_json(levene, tukeys, save_dir):
-        levene.to_json(f"{save_dir}/levene.json")
-        tukeys.to_json(f"{save_dir}/tukey_hsd.json")
+        return fig
 
-    def report():
-        raise NotImplementedError
+    def stats_to_json(self, levene, tukeys, output_dir):
+        levene.to_json(f"{output_dir}/levene.json")
+        tukeys.to_json(f"{output_dir}/tukey_hsd.json")
 
-    def write_report():
-        raise NotImplementedError
+    def report(self, data_dfs, plot_data, write=False, output_dir=None):
+        """
+        Report the analysis and save figures
+        """
+        if write:
+            self.write_report(data_dfs, plot_data, output_dir)
+
+    def write_report(self, data_dfs, plot_data, output_dir):
+        doc = SimpleDocTemplate(f"{output_dir}/posthoc.pdf", pagesize=letter)
+        elements = []
+
+        for df in data_dfs:
+            data = [df.columns.to_list()] + df.values.tolist()
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(table)
+
+        for plot in plot_data:
+            elements.append(Spacer(1,0.2*inch))
+            elements.append(plot)
+
+        doc.build(elements)
+
