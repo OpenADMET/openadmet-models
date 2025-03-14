@@ -54,8 +54,9 @@ class FeatureConcatenator(FeaturizerBase):
         """
 
         # if the input arrays are 1d, make them 2d
-        feats = [feat.reshape(1, -1) if len(feat.shape) == 1 else feat for feat
-                 in feats]
+        feats = [
+            feat.reshape(1, -1) if len(feat.shape) == 1 else feat for feat in feats
+        ]
 
         # use indices to mask out the features that are not present in all datasets
         common_indices = reduce(np.intersect1d, indices)
