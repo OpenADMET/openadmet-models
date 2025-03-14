@@ -9,7 +9,7 @@ from loguru import logger
 from openadmet_models.models.model_base import PickleableModelBase
 from openadmet_models.models.model_base import models as model_registry
 
-_METRIC_TO_LOSS = {"mae": nn.metrics.MAE(), "rmse": nn.metrics.RMSE()}
+_METRIC_TO_LOSS = {"mae": nn.metrics.MAEMetric(), "rmse": nn.metrics.RMSEMetric()}
 
 
 @model_registry.register("ChemPropSingleTaskRegressorModel")
