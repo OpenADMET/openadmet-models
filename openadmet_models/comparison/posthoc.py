@@ -4,9 +4,16 @@ import pandas as pd
 import seaborn as sns
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    Image,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from scipy import stats
 from scipy.stats import levene, tukey_hsd
 from statsmodels.stats.anova import AnovaRM
@@ -48,7 +55,7 @@ class PostHocComparison(ComparisonBase):
     @property
     def cl(self):
         return self._confidence_level
-    
+
     @property
     def stats_names(self):
         return self._stats_names
@@ -94,7 +101,7 @@ class PostHocComparison(ComparisonBase):
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
             l = levene(*[vec[m] for vec in lev_vecs])
-            result[m] = {"stat":l.statistic, "pvalue":l.pvalue}
+            result[m] = {"stat": l.statistic, "pvalue": l.pvalue}
         return result
 
     def normality_plots(self, df, output_dir=None):
@@ -187,7 +194,7 @@ class PostHocComparison(ComparisonBase):
                 "method": method_compare,
                 "metric_name": metric,
                 "metric_val": stats,
-                "errorbars": np.array(errorbars)[:,0],
+                "errorbars": np.array(errorbars)[:, 0],
                 "pvalue": pvalue,
             }
         )
@@ -325,23 +332,33 @@ class PostHocComparison(ComparisonBase):
             self.write_report(data_dfs, plot_data, output_dir)
 
     def write_report(self, data_dfs, plot_data, output_dir):
-        doc = SimpleDocTemplate(f"{output_dir}/posthoc.pdf", pagesize=letter, topMargin=0.5*inch, leftMargin=0.25*inch)
+        doc = SimpleDocTemplate(
+            f"{output_dir}/posthoc.pdf",
+            pagesize=letter,
+            topMargin=0.5 * inch,
+            leftMargin=0.25 * inch,
+        )
         elements = []
         styles = getSampleStyleSheet()
-        styleH = styles['Heading1']
+        styleH = styles["Heading1"]
 
         for df, name in zip(data_dfs, self.stats_names):
             elements.append(Paragraph(name, styleH))
             elements.append(Spacer(1, 0.25 * inch))
             data = [df.columns.to_list()] + df.values.tolist()
-            table = Table(data, hAlign='LEFT')
-            table.setStyle(TableStyle([
-                ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0,0), (-1,0), 9),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('ALIGN',(0, 0),(0,-1), 'LEFT'),
-                ('INNERGRID', (0, 0), (-1, -1), 0.50, colors.black),
-                ('BOX', (0,0), (-1,-1), 0.25, colors.black)]))
+            table = Table(data, hAlign="LEFT")
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 9),
+                        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                        ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
+                        ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+                    ]
+                )
+            )
             elements.append(table)
             elements.append(Spacer(1, 0.2 * inch))
 
