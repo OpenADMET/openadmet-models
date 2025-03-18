@@ -7,7 +7,6 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -100,8 +99,8 @@ class PostHocComparison(ComparisonBase):
         result = pd.DataFrame()
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
-            l = levene(*[vec[m] for vec in lev_vecs])
-            result[m] = {"stat": l.statistic, "pvalue": l.pvalue}
+            lev = levene(*[vec[m] for vec in lev_vecs])
+            result[m] = {"stat":lev.statistic, "pvalue":lev.pvalue}
         return result
 
     def normality_plots(self, df, output_dir=None):
