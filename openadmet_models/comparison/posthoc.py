@@ -5,7 +5,6 @@ import seaborn as sns
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from scipy import stats
 from scipy.stats import levene, tukey_hsd
