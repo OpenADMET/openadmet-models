@@ -57,7 +57,14 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     max_val: float = Field(None, description="Maximum value for the axes")
 
     def evaluate(
-        self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, tag=None, **kwargs
+        self,
+        model=None,
+        X_train=None,
+        y_train=None,
+        y_pred=None,
+        y_true=None,
+        tag=None,
+        **kwargs,
     ):
         """
         Evaluate the regression model

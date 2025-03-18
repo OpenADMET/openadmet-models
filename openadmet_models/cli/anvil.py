@@ -17,7 +17,9 @@ from openadmet_models.anvil.anvil_workflow import AnvilSpecification
     required=False,
     help="Output directory path",
 )
-@click.option("--tag", required=False, help="User-defined model tag to help ID this model")
+@click.option(
+    "--tag", required=False, help="User-defined model tag to help ID this model"
+)
 def anvil(recipe_path, tag, debug, output_dir):
     """Run an Anvil workflow for model building from a recipe"""
     spec = AnvilSpecification.from_recipe(recipe_path)

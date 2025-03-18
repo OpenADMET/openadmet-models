@@ -221,11 +221,13 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.SKLEARN
 
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None) -> Any:
+    def run(
+        self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None
+    ) -> Any:
         """
         Run the workflow
         """
-        #override the model tag from yaml if provided in cli
+        # override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
         else:
@@ -331,11 +333,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.PYTORCH
 
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None) -> Any:
+    def run(
+        self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None
+    ) -> Any:
         """
         Run the workflow
         """
-        #override the model tag from yaml if provided in cli
+        # override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
         else:
