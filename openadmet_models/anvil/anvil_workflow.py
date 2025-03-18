@@ -221,10 +221,16 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.SKLEARN
 
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None) -> Any:
         """
         Run the workflow
         """
+        #override the model tag from yaml if provided in cli
+        if tag is not None:
+            model_tag = tag
+        else:
+            model_tag = self.metadata.tag
+
         self.debug = debug
         output_dir = str(output_dir)
         if Path(output_dir).exists():
@@ -315,6 +321,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 model=self.model,
                 X_train=X_train_feat,
                 y_train=y_train,
+                tag=model_tag,
             )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")
@@ -324,10 +331,16 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.PYTORCH
 
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any:
+    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None) -> Any:
         """
         Run the workflow
         """
+        #override the model tag from yaml if provided in cli
+        if tag is not None:
+            model_tag = tag
+        else:
+            model_tag = self.metadata.tag
+
         self.debug = debug
         output_dir = str(output_dir)
         if Path(output_dir).exists():
@@ -430,6 +443,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 X_train=train_dataloader,
                 y_train=train_dataloader,
                 use_wandb=use_wandb,
+                tag=model_tag,
             )
             eval.report(write=True, output_dir=output_dir)
         logger.info("Evaluation done")
