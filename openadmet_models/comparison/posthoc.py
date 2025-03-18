@@ -100,7 +100,7 @@ class PostHocComparison(ComparisonBase):
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
             lev = levene(*[vec[m] for vec in lev_vecs])
-            result[m] = {"stat":lev.statistic, "pvalue":lev.pvalue}
+            result[m] = {"stat": lev.statistic, "pvalue": lev.pvalue}
         return result
 
     def normality_plots(self, df, output_dir=None):
