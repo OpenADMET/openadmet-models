@@ -5,7 +5,8 @@ import seaborn as sns
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
 from scipy import stats
 from scipy.stats import levene, tukey_hsd
 from statsmodels.stats.anova import AnovaRM
@@ -30,6 +31,8 @@ class PostHocComparison(ComparisonBase):
 
     _confidence_level: float = 0.95
 
+    _stats_names: list[str] = ["Levene", "Tukey_HSD"]
+
     @property
     def metrics(self):
         return self._metrics_names
@@ -45,6 +48,10 @@ class PostHocComparison(ComparisonBase):
     @property
     def cl(self):
         return self._confidence_level
+    
+    @property
+    def stats_names(self):
+        return self._stats_names
 
     def compare(self, model_stats_fns, model_tags, report=False, output_dir=None):
         df = self.json_to_df(model_stats_fns, model_tags)
@@ -52,7 +59,7 @@ class PostHocComparison(ComparisonBase):
         stats_dfs.append(self.levene_test(df, model_tags))
         stats_dfs.append(self.get_tukeys_df(df, model_tags))
         if output_dir:
-            self.stats_to_json(*stats_dfs, output_dir)
+            self.stats_to_json(stats_dfs, output_dir=output_dir)
 
         plot_data = {}
         plot_data["normality"] = self.normality_plots(df, output_dir)
@@ -86,7 +93,8 @@ class PostHocComparison(ComparisonBase):
         result = pd.DataFrame()
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
-            result[m] = [levene(*[vec[m] for vec in lev_vecs])]
+            l = levene(*[vec[m] for vec in lev_vecs])
+            result[m] = {"stat":l.statistic, "pvalue":l.pvalue}
         return result
 
     def normality_plots(self, df, output_dir=None):
@@ -179,7 +187,7 @@ class PostHocComparison(ComparisonBase):
                 "method": method_compare,
                 "metric_name": metric,
                 "metric_val": stats,
-                "errorbars": errorbars,
+                "errorbars": np.array(errorbars)[:,0],
                 "pvalue": pvalue,
             }
         )
@@ -274,7 +282,7 @@ class PostHocComparison(ComparisonBase):
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
-            errorbars = [i[0] for i in np.transpose(tukey_metric_df["errorbars"])]
+            errorbars = [i for i in np.transpose(tukey_metric_df["errorbars"])]
             to_plot_df = pd.DataFrame(
                 {
                     "method": tukey_metric_df["method"],
@@ -305,9 +313,9 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def stats_to_json(self, levene, tukeys, output_dir):
-        levene.to_json(f"{output_dir}/levene.json")
-        tukeys.to_json(f"{output_dir}/tukey_hsd.json")
+    def stats_to_json(self, stats_dfs, output_dir):
+        for stat_df, name in zip(stats_dfs, self.stats_names):
+            stat_df.to_json(f"{output_dir}/{name}.json")
 
     def report(self, data_dfs, plot_data, write=False, output_dir=None):
         """
@@ -317,29 +325,29 @@ class PostHocComparison(ComparisonBase):
             self.write_report(data_dfs, plot_data, output_dir)
 
     def write_report(self, data_dfs, plot_data, output_dir):
-        doc = SimpleDocTemplate(f"{output_dir}/posthoc.pdf", pagesize=letter)
+        doc = SimpleDocTemplate(f"{output_dir}/posthoc.pdf", pagesize=letter, topMargin=0.5*inch, leftMargin=0.25*inch)
         elements = []
+        styles = getSampleStyleSheet()
+        styleH = styles['Heading1']
 
-        for df in data_dfs:
+        for df, name in zip(data_dfs, self.stats_names):
+            elements.append(Paragraph(name, styleH))
+            elements.append(Spacer(1, 0.25 * inch))
             data = [df.columns.to_list()] + df.values.tolist()
-            table = Table(data)
-            table.setStyle(
-                TableStyle(
-                    [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ]
-                )
-            )
+            table = Table(data, hAlign='LEFT')
+            table.setStyle(TableStyle([
+                ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0,0), (-1,0), 9),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('ALIGN',(0, 0),(0,-1), 'LEFT'),
+                ('INNERGRID', (0, 0), (-1, -1), 0.50, colors.black),
+                ('BOX', (0,0), (-1,-1), 0.25, colors.black)]))
             elements.append(table)
-
-        for plot in plot_data:
             elements.append(Spacer(1, 0.2 * inch))
-            elements.append(plot)
+
+        # for plot in plot_data:
+        #     print(plot)
+        #     elements.append(Spacer(1, 0.2 * inch))
+        #     elements.append(Image(plot))
 
         doc.build(elements)
