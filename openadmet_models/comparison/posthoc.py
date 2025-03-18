@@ -8,7 +8,8 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from scipy import stats
-from scipy.stats import f_oneway, levene, tukey_hsd
+from scipy.stats import levene, tukey_hsd
+from statsmodels.stats.anova import AnovaRM
 
 from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
 
@@ -114,18 +115,21 @@ class PostHocComparison(ComparisonBase):
             1, len(self.metrics), sharex=False, sharey=False, figsize=(28, 8)
         )
         for i, metric in enumerate(self.metrics):
-            model = f_oneway(*[df[df["method"] == tag][metric] for tag in model_tags])
+            anova_df = pd.DataFrame({metric: df[metric]})
+            anova_df["cv_cycle"] = np.tile([i for i in range(1,26)], 3)
+            anova_df["method"] = df["method"]
+            model = AnovaRM(anova_df, depvar=metric, subject="cv_cycle", within=["method"]).fit()
             ax = sns.boxplot(
                 y=metric,
                 x="method",
                 hue="method",
                 ax=axes[i],
-                data=df,
+                data=anova_df,
                 palette="Set2",
                 legend=False,
             )
             title = metric.upper()
-            ax.set_title(f"p={model.pvalue:.1e}")
+            ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]}")
             ax.set_xlabel("")
             ax.set_ylabel(title)
             x_tick_labels = ax.get_xticklabels()
