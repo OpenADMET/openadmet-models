@@ -116,9 +116,11 @@ class PostHocComparison(ComparisonBase):
         )
         for i, metric in enumerate(self.metrics):
             anova_df = pd.DataFrame({metric: df[metric]})
-            anova_df["cv_cycle"] = np.tile([i for i in range(1,26)], 3)
+            anova_df["cv_cycle"] = np.tile([i for i in range(1, 26)], 3)
             anova_df["method"] = df["method"]
-            model = AnovaRM(anova_df, depvar=metric, subject="cv_cycle", within=["method"]).fit()
+            model = AnovaRM(
+                anova_df, depvar=metric, subject="cv_cycle", within=["method"]
+            ).fit()
             ax = sns.boxplot(
                 y=metric,
                 x="method",
