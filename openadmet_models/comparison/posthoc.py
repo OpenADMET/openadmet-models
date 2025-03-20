@@ -322,7 +322,6 @@ class PostHocComparison(ComparisonBase):
     def binary_class(self):
         pass
 
-
     def stats_to_json(self, stats_dfs, output_dir):
         for stat_df, name in zip(stats_dfs, self.stats_names):
             stat_df.to_json(f"{output_dir}/{name}.json")
