@@ -75,7 +75,7 @@ class PostHocComparison(ComparisonBase):
             df, model_tags, self.cl, output_dir
         )
 
-        self.report(stats_dfs, plot_data, report, output_dir)
+        self.report(stats_dfs, report, output_dir)
 
         return stats_dfs
 
@@ -323,51 +323,67 @@ class PostHocComparison(ComparisonBase):
         for stat_df, name in zip(stats_dfs, self.stats_names):
             stat_df.to_json(f"{output_dir}/{name}.json")
 
-    def report(self, data_dfs, plot_data, write=False, output_dir=None):
+    def convert_float_round(self, val):
+        try:
+            return str('{:0.3e}'.format(float(val)))
+        except ValueError:
+            return val
+
+    def report(self, data_dfs, write=False, output_dir=None):
         """
         Report the analysis and save figures
         """
         if write:
-            self.write_report(data_dfs, plot_data, output_dir)
+            self.write_report(data_dfs, output_dir)
 
-    def write_report(self, data_dfs, plot_data, output_dir):
+    def write_report(self, data_dfs, output_dir):
         doc = SimpleDocTemplate(
             f"{output_dir}/posthoc.pdf",
             pagesize=letter,
-            topMargin=0.5 * inch,
-            leftMargin=0.25 * inch,
         )
         elements = []
         styles = getSampleStyleSheet()
         styleH = styles["Heading1"]
-
-        # work on significant figures (maybe 3?)
-        # split out by metric to make it easier to read
-        # errorbars switch to percent coeff of variation
-
-        for df, name in zip(data_dfs, self.stats_names):
-            elements.append(Paragraph(name, styleH))
-            elements.append(Spacer(1, 0.25 * inch))
-            data = [df.columns.to_list()] + df.values.tolist()
-            table = Table(data, hAlign="LEFT")
-            table.setStyle(
-                TableStyle(
-                    [
-                        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("FONTSIZE", (0, 0), (-1, 0), 9),
-                        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-                        ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                        ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
-                        ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-                    ]
-                )
+        style = TableStyle(
+                [
+                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 9),
+                    ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
+                    ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+                ]
             )
-            elements.append(table)
-            elements.append(Spacer(1, 0.2 * inch))
 
-        # for plot in plot_data:
-        #     print(plot)
-        #     elements.append(Spacer(1, 0.2 * inch))
-        #     elements.append(Image(plot))
+        # Levene table
+        lev_df = data_dfs[0]
+        elements.append(Paragraph("Levene", styleH))
+        elements.append(Spacer(1, 0.25 * inch))
+        data = [lev_df.columns.to_list()] + lev_df.values.tolist()
+        data = [[self.convert_float_round(val) for val in row] for row in data]
+        data[0].insert(0, 'value')
+        data[1].insert(0, 'statistic')
+        data[2].insert(0, 'p-value')
+        table = Table(data, hAlign="LEFT")
+        table.setStyle(style)
+        elements.append(table)
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # Tukey HSD tables
+        tukey_df = data_dfs[1]
+        elements.append(Paragraph("Tukey HSD", styleH))
+        elements.append(Spacer(1, 0.25 * inch))
+
+        for m in self.metrics:
+            tukey_metric_df = tukey_df[tukey_df["metric_name"] == m]
+            errorbars = tukey_metric_df["errorbars"].values.tolist()
+            metric_val = tukey_metric_df["metric_val"].values.tolist()
+            tukey_metric_df.insert(4, "coeff of var", [i/j for i, j in zip(errorbars, metric_val)])
+            data = [tukey_metric_df.columns.to_list()] + tukey_metric_df.values.tolist()
+            data = [[self.convert_float_round(val) for val in row] for row in data]
+            table = Table(data, hAlign="LEFT")
+            table.setStyle(style)     
+            elements.append(table)
+            elements.append(Spacer(1, 0.2 * inch))   
 
         doc.build(elements)
