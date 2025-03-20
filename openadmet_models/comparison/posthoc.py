@@ -325,7 +325,7 @@ class PostHocComparison(ComparisonBase):
 
     def convert_float_round(self, val):
         try:
-            return str('{:0.3e}'.format(float(val)))
+            return str(f"{float(val):0.3e}")
         except ValueError:
             return val
 
@@ -345,15 +345,15 @@ class PostHocComparison(ComparisonBase):
         styles = getSampleStyleSheet()
         styleH = styles["Heading1"]
         style = TableStyle(
-                [
-                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 9),
-                    ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
-                    ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-                ]
-            )
+            [
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+            ]
+        )
 
         # Levene table
         lev_df = data_dfs[0]
@@ -361,9 +361,9 @@ class PostHocComparison(ComparisonBase):
         elements.append(Spacer(1, 0.25 * inch))
         data = [lev_df.columns.to_list()] + lev_df.values.tolist()
         data = [[self.convert_float_round(val) for val in row] for row in data]
-        data[0].insert(0, 'value')
-        data[1].insert(0, 'statistic')
-        data[2].insert(0, 'p-value')
+        data[0].insert(0, "value")
+        data[1].insert(0, "statistic")
+        data[2].insert(0, "p-value")
         table = Table(data, hAlign="LEFT")
         table.setStyle(style)
         elements.append(table)
@@ -378,12 +378,14 @@ class PostHocComparison(ComparisonBase):
             tukey_metric_df = tukey_df[tukey_df["metric_name"] == m]
             errorbars = tukey_metric_df["errorbars"].values.tolist()
             metric_val = tukey_metric_df["metric_val"].values.tolist()
-            tukey_metric_df.insert(4, "coeff of var", [i/j for i, j in zip(errorbars, metric_val)])
+            tukey_metric_df.insert(
+                4, "coeff of var", [i / j for i, j in zip(errorbars, metric_val)]
+            )
             data = [tukey_metric_df.columns.to_list()] + tukey_metric_df.values.tolist()
             data = [[self.convert_float_round(val) for val in row] for row in data]
             table = Table(data, hAlign="LEFT")
-            table.setStyle(style)     
+            table.setStyle(style)
             elements.append(table)
-            elements.append(Spacer(1, 0.2 * inch))   
+            elements.append(Spacer(1, 0.2 * inch))
 
         doc.build(elements)
