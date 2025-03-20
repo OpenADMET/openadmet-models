@@ -23,18 +23,25 @@ from openadmet_models.comparison.posthoc import PostHocComparison
     type=click.Path(exists=True),
 )
 @click.option(
+    "--report",
+    help="Whether to write summary pdf to output-dir",
+    required=False,
+    type=bool,
+)
+@click.option(
     "--comparison",
     help="Type of comparison to do",
     required=False,
 )
-def compare(model_stats, model_tag, output_dir, comparison="posthoc"):
+def compare(
+    model_stats, model_tag, report=False, output_dir=None, comparison="posthoc"
+):
     """Compare two or more models from summary statistics"""
     if comparison == "posthoc":
         comp = PostHocComparison()
     else:
         raise NotImplementedError
-    comp.compare(model_stats, model_tag)
-    # comp.write_report(output_dir)
+    comp.compare(model_stats, model_tag, report, output_dir)
 
 
 if __name__ == "__main__":

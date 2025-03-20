@@ -30,6 +30,7 @@ dependencies:
   - pytorch <2.4.0
   - pytorch-lightning
   - wandb
+  - statsmodels
 
     # Testing
   - pytest

@@ -2,8 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from scipy import stats
-from scipy.stats import f_oneway, levene, tukey_hsd
+from scipy.stats import levene, tukey_hsd
+from statsmodels.stats.anova import AnovaRM
 
 from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
 
@@ -23,6 +35,10 @@ class PostHocComparison(ComparisonBase):
 
     _sig_levels: list = [0.05, 0.01, 0.001]
 
+    _confidence_level: float = 0.95
+
+    _stats_names: list[str] = ["Levene", "Tukey_HSD"]
+
     @property
     def metrics(self):
         return self._metrics_names
@@ -35,17 +51,33 @@ class PostHocComparison(ComparisonBase):
     def sig_levels(self):
         return self._sig_levels
 
-    def compare(self, model_stats_fns, model_tags, save_dir=None):
+    @property
+    def cl(self):
+        return self._confidence_level
+
+    @property
+    def stats_names(self):
+        return self._stats_names
+
+    def compare(self, model_stats_fns, model_tags, report=False, output_dir=None):
         df = self.json_to_df(model_stats_fns, model_tags)
-        levene = self.levene_test(df, model_tags)
-        tukeys_df = self.get_tukeys_df(df, model_tags)
-        if save_dir:
-            self.stats_to_json(levene, tukeys_df, save_dir)
-        self.normality_plots(df, save_dir)
-        self.anova(df, model_tags, save_dir)
-        self.mcs_plots(df, model_tags, save_dir)
-        self.mean_diff_plots(df, model_tags, save_dir)
-        return (levene, tukeys_df)
+        stats_dfs = []
+        stats_dfs.append(self.levene_test(df, model_tags))
+        stats_dfs.append(self.get_tukeys_df(df, model_tags))
+        if output_dir:
+            self.stats_to_json(stats_dfs, output_dir=output_dir)
+
+        plot_data = {}
+        plot_data["normality"] = self.normality_plots(df, output_dir)
+        plot_data["anova"] = self.anova(df, model_tags, output_dir)
+        plot_data["mcs"] = self.mcs_plots(df, model_tags, output_dir)
+        plot_data["mean_diff"] = self.mean_diff_plots(
+            df, model_tags, self.cl, output_dir
+        )
+
+        self.report(stats_dfs, report, output_dir)
+
+        return stats_dfs
 
     def json_to_df(self, model_stats_fns, model_tags):
         """
@@ -67,10 +99,11 @@ class PostHocComparison(ComparisonBase):
         result = pd.DataFrame()
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
-            result[m] = [levene(*[vec[m] for vec in lev_vecs])]
+            lev = levene(*[vec[m] for vec in lev_vecs])
+            result[m] = {"stat": lev.statistic, "pvalue": lev.pvalue}
         return result
 
-    def normality_plots(self, df, save_dir=None):
+    def normality_plots(self, df, output_dir=None):
         fig, axes = plt.subplots(2, len(self.metrics), figsize=(20, 10))
 
         for i, metric in enumerate(self.metrics):
@@ -85,26 +118,33 @@ class PostHocComparison(ComparisonBase):
 
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/normality_plot.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/normality_plot.pdf")
 
-    def anova(self, df, model_tags, save_dir=None):
-        figure, axes = plt.subplots(
+        return fig
+
+    def anova(self, df, model_tags, output_dir=None):
+        fig, axes = plt.subplots(
             1, len(self.metrics), sharex=False, sharey=False, figsize=(28, 8)
         )
         for i, metric in enumerate(self.metrics):
-            model = f_oneway(*[df[df["method"] == tag][metric] for tag in model_tags])
+            anova_df = pd.DataFrame({metric: df[metric]})
+            anova_df["cv_cycle"] = np.tile([i for i in range(1, 26)], 3)
+            anova_df["method"] = df["method"]
+            model = AnovaRM(
+                anova_df, depvar=metric, subject="cv_cycle", within=["method"]
+            ).fit()
             ax = sns.boxplot(
                 y=metric,
                 x="method",
                 hue="method",
                 ax=axes[i],
-                data=df,
+                data=anova_df,
                 palette="Set2",
                 legend=False,
             )
             title = metric.upper()
-            ax.set_title(f"p={model.pvalue:.1e}")
+            ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]}")
             ax.set_xlabel("")
             ax.set_ylabel(title)
             x_tick_labels = ax.get_xticklabels()
@@ -114,8 +154,10 @@ class PostHocComparison(ComparisonBase):
             ax.set_xticklabels(new_xtick_labels)
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/anova.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/anova.pdf")
+
+        return fig
 
     @staticmethod
     def tukey_hsd_by_metric(df, metric, model_tags):
@@ -151,13 +193,13 @@ class PostHocComparison(ComparisonBase):
                 "method": method_compare,
                 "metric_name": metric,
                 "metric_val": stats,
-                "errorbars": errorbars,
+                "errorbars": np.array(errorbars)[:, 0],
                 "pvalue": pvalue,
             }
         )
         return hsd_df
 
-    def mcs_plots(self, df, model_tags, save_dir=None):
+    def mcs_plots(self, df, model_tags, output_dir=None):
         figsize = (20, 10)
         nrow = -(-len(self.metrics) // 3)
         fig, ax = plt.subplots(nrow, 3, figsize=figsize)
@@ -229,12 +271,14 @@ class PostHocComparison(ComparisonBase):
 
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/mcs_plots.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/mcs_plots.pdf")
 
-    def mean_diff_plots(self, df, model_tags, cl=None, save_dir=None):
+        return fig
 
-        figure, axes = plt.subplots(
+    def mean_diff_plots(self, df, model_tags, cl=None, output_dir=None):
+
+        fig, axes = plt.subplots(
             len(self.metrics), 1, figsize=(8, 2 * len(self.metrics)), sharex=False
         )
         ax_ind = 0
@@ -244,7 +288,7 @@ class PostHocComparison(ComparisonBase):
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
-            errorbars = [i[0] for i in np.transpose(tukey_metric_df["errorbars"])]
+            errorbars = [i for i in np.transpose(tukey_metric_df["errorbars"])]
             to_plot_df = pd.DataFrame(
                 {
                     "method": tukey_metric_df["method"],
@@ -267,18 +311,81 @@ class PostHocComparison(ComparisonBase):
             ax.set_xlim(-0.2, 0.2)
             ax_ind += 1
 
-        figure.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
+        fig.suptitle("Multiple Comparison of Means\nTukey HSD, FWER=0.05")
         plt.tight_layout()
 
-        if save_dir:
-            plt.savefig(f"{save_dir}/mean_diffs.pdf")
+        if output_dir:
+            plt.savefig(f"{output_dir}/mean_diffs.pdf")
 
-    def stats_to_json(levene, tukeys, save_dir):
-        levene.to_json(f"{save_dir}/levene.json")
-        tukeys.to_json(f"{save_dir}/tukey_hsd.json")
+        return fig
 
-    def report():
-        raise NotImplementedError
+    def stats_to_json(self, stats_dfs, output_dir):
+        for stat_df, name in zip(stats_dfs, self.stats_names):
+            stat_df.to_json(f"{output_dir}/{name}.json")
 
-    def write_report():
-        raise NotImplementedError
+    def convert_float_round(self, val):
+        try:
+            return str(f"{float(val):0.3e}")
+        except ValueError:
+            return val
+
+    def report(self, data_dfs, write=False, output_dir=None):
+        """
+        Report the analysis and save figures
+        """
+        if write:
+            self.write_report(data_dfs, output_dir)
+
+    def write_report(self, data_dfs, output_dir):
+        doc = SimpleDocTemplate(
+            f"{output_dir}/posthoc.pdf",
+            pagesize=letter,
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+        styleH = styles["Heading1"]
+        style = TableStyle(
+            [
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("INNERGRID", (0, 0), (-1, -1), 0.50, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+            ]
+        )
+
+        # Levene table
+        lev_df = data_dfs[0]
+        elements.append(Paragraph("Levene", styleH))
+        elements.append(Spacer(1, 0.25 * inch))
+        data = [lev_df.columns.to_list()] + lev_df.values.tolist()
+        data = [[self.convert_float_round(val) for val in row] for row in data]
+        data[0].insert(0, "value")
+        data[1].insert(0, "statistic")
+        data[2].insert(0, "p-value")
+        table = Table(data, hAlign="LEFT")
+        table.setStyle(style)
+        elements.append(table)
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # Tukey HSD tables
+        tukey_df = data_dfs[1]
+        elements.append(Paragraph("Tukey HSD", styleH))
+        elements.append(Spacer(1, 0.25 * inch))
+
+        for m in self.metrics:
+            tukey_metric_df = tukey_df[tukey_df["metric_name"] == m]
+            errorbars = tukey_metric_df["errorbars"].values.tolist()
+            metric_val = tukey_metric_df["metric_val"].values.tolist()
+            tukey_metric_df.insert(
+                4, "coeff of var", [i / j for i, j in zip(errorbars, metric_val)]
+            )
+            data = [tukey_metric_df.columns.to_list()] + tukey_metric_df.values.tolist()
+            data = [[self.convert_float_round(val) for val in row] for row in data]
+            table = Table(data, hAlign="LEFT")
+            table.setStyle(style)
+            elements.append(table)
+            elements.append(Spacer(1, 0.2 * inch))
+
+        doc.build(elements)
