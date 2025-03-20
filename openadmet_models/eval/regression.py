@@ -71,14 +71,14 @@ class RegressionMetrics(EvalBase):
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
     }
 
-    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
+    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, **kwargs):
         """
         Evaluate the regression model
         """
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
-        self.data = {}
+        self.data = {"tag": tag}
 
         if use_wandb:
             self.use_wandb = use_wandb

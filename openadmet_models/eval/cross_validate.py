@@ -57,7 +57,14 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
     max_val: float = Field(None, description="Maximum value for the axes")
 
     def evaluate(
-        self, model=None, X_train=None, y_train=None, y_pred=None, y_true=None, **kwargs
+        self,
+        model=None,
+        X_train=None,
+        y_train=None,
+        y_pred=None,
+        y_true=None,
+        tag=None,
+        **kwargs,
     ):
         """
         Evaluate the regression model
@@ -68,9 +75,10 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             or y_train is None
             or y_pred is None
             or y_true is None
+            or tag is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, and y_true must be provided"
+                "model, X_train, y_train, y_pred, y_true, and tag must be provided"
             )
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
@@ -104,7 +112,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
         # exclude fit_time and score_time
         exclude = ["fit_time", "score_time"]
 
-        self.data = {"shape": [self.n_splits, self.n_repeats]}
+        self.data = {"shape": [self.n_splits, self.n_repeats], "tag": tag}
         for k, v in clean_scores.items() if k not in exclude else {}:
             # calculate the confidence interval, assuming normal distribution
             # TODO: check best practice???
