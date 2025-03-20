@@ -344,7 +344,7 @@ class PostHocComparison(ComparisonBase):
         # work on significant figures (maybe 3?)
         # split out by metric to make it easier to read
         # errorbars switch to percent coeff of variation
-        # can try pdf kit 
+        # can try pdf kit
 
         for df, name in zip(data_dfs, self.stats_names):
             elements.append(Paragraph(name, styleH))
