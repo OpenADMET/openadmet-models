@@ -78,7 +78,7 @@ class PostHocComparison(ComparisonBase):
         self.report(stats_dfs, report, output_dir)
 
         return stats_dfs
-    
+
     def compare_as_classifier(self, cutoff, model_stats_fns, model_tags, report=False, output_dir=None):
         pass
 
