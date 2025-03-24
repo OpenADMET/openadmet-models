@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1
 RUN micromamba config append channels conda-forge
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER  devtools/conda-envs/openadmet_models.yaml /tmp/env.yaml
-COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet_models
+COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
 
 RUN micromamba install -y -n base git -f /tmp/env.yaml && \
     micromamba clean --all --yes
