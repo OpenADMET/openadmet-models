@@ -16,12 +16,12 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-import openadmet_models
+import openadmet.models
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'openadmet_models'
+project = 'openadmet-models'
 copyright = ("2025, OpenADMET Contributors. Project structure based on the "
              "Computational Molecular Science Python Cookiecutter version 1.10")
 author = 'OpenADMET Contributors'

@@ -1,4 +1,4 @@
-openadmet_models
+openadmet-models
 ==============================
 [//]: # (Badges)
 [![Logo](https://img.shields.io/badge/OSMF-OpenADMET-%23002f4a)](https://openadmet.org/)
@@ -10,6 +10,9 @@ openadmet_models
 [OpenADMET](https://openadmet.org/) implementations of machine learning architectures used in the OpenADMET project within a consistent framework.
 
 Also contains a set of workflows called `Anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications
+
+## NOTE:
+This repo is under very active development, we make no guarantees about stability or correctness.
 
 ## Getting started
 
