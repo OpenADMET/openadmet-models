@@ -1,4 +1,4 @@
-openadmet_models
+openadmet-models
 ==============================
 [//]: # (Badges)
 [![Logo](https://img.shields.io/badge/OSMF-OpenADMET-%23002f4a)](https://openadmet.org/)
