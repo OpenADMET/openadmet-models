@@ -13,6 +13,8 @@ class PosthocBinaryMetrics(EvalBase):
     """
     Intended to be used for regression-based models to calculate
     precision and recall metrics for user-input
+
+    Not intended for binary models
     """
 
     def evaluate(self, y_true=None, y_pred=None, cutoffs=None, report=False, output_dir=None, **kwargs):
