@@ -70,4 +70,3 @@ class PosthocBinaryMetrics(EvalBase):
         """
         if write and stats_dfs is not None:
             self.stats_to_json(stats_dfs, output_dir)
-

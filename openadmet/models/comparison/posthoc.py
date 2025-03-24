@@ -389,4 +389,3 @@ class PostHocComparison(ComparisonBase):
             elements.append(Spacer(1, 0.2 * inch))
 
         doc.build(elements)
-
