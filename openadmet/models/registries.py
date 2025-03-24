@@ -33,4 +33,4 @@ from openadmet.models.trainer.trainer_base import trainers  # noqa: F401 F403
 from openadmet.models.trainer.lightning import *  # noqa: F401 F403
 
 # util
-from openadmet.models.util.log import logger  # noqa: F401 F403
+from openadmet.models.log import logger  # noqa: F401 F403

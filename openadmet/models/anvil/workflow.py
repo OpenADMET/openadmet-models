@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal
-
+from os import PathLike
 import fsspec
 import torch
 import yaml
