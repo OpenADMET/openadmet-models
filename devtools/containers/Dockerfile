@@ -1,7 +1,7 @@
 # Use the conda-forge base image with Python
 FROM mambaorg/micromamba:jammy
 
-LABEL org.opencontainers.image.source=https://github.com/OpenADMET/openadmet_models
+LABEL org.opencontainers.image.source=https://github.com/OpenADMET/openadmet-models
 LABEL org.opencontainers.image.description="OpenADMET models"
 LABEL org.opencontainers.image.licenses=MIT
 
@@ -21,4 +21,4 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
 WORKDIR /home/mambauser
 
-RUN python -m pip install --no-deps -e openadmet_models
+RUN python -m pip install --no-deps -e openadmet-models
