@@ -30,3 +30,4 @@ def test_posthoc_eval_metrics():
     assert prs_df["Recall"][0][0] == 1.0
     assert prs_df["AUPR"][0] == 0.25
     assert baseline == 0.25
+    
