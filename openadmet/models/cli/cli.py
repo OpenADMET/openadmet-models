@@ -1,7 +1,7 @@
 import click
 
-from openadmet_models.cli.anvil import anvil
-from openadmet_models.cli.compare import compare
+from openadmet.models.cli.anvil import anvil
+from openadmet.models.cli.compare import compare
 
 
 @click.group()

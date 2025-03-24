@@ -4,7 +4,7 @@ from typing import Any
 from chemprop.data import MoleculeDatapoint, MoleculeDataset, build_dataloader
 from torch.utils.data import DataLoader
 
-from openadmet_models.features.feature_base import FeaturizerBase, featurizers
+from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
 @featurizers.register("ChemPropFeaturizer")

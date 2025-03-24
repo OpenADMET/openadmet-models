@@ -1,8 +1,8 @@
 import pytest
 
-from openadmet_models.comparison.compare_base import get_comparison_class
-from openadmet_models.comparison.posthoc import PostHocComparison
-from openadmet_models.tests.datafiles import combined_json, descr_json, fp_json
+from openadmet.models.comparison.compare_base import get_comparison_class
+from openadmet.models.comparison.posthoc import PostHocComparison
+from openadmet.models.tests.datafiles import combined_json, descr_json, fp_json
 
 
 def test_get_comparison_class():

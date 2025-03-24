@@ -13,14 +13,13 @@ import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
-from openadmet_models.data.data_spec import DataSpec
-from openadmet_models.eval.eval_base import EvalBase, get_eval_class
-from openadmet_models.features.feature_base import FeaturizerBase, get_featurizer_class
-from openadmet_models.models.model_base import ModelBase, get_model_class
-from openadmet_models.registries import *  # noqa: F401, F403
-from openadmet_models.split.split_base import SplitterBase, get_splitter_class
-from openadmet_models.trainer.trainer_base import TrainerBase, get_trainer_class
-from openadmet_models.util.types import Pathy
+from openadmet.models.anvil.data_spec import DataSpec
+from openadmet.models.eval.eval_base import EvalBase, get_eval_class
+from openadmet.models.features.feature_base import FeaturizerBase, get_featurizer_class
+from openadmet.models.architecture.model_base import ModelBase, get_model_class
+from openadmet.models.registries import *  # noqa: F401, F403
+from openadmet.models.split.split_base import SplitterBase, get_splitter_class
+from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -134,7 +133,7 @@ class AnvilSpecification(BaseModel):
     # need repetition of YAML loaders here to properly set anvil_dir
     # and to not expose to_yaml and from_yaml to the user
     @classmethod
-    def from_recipe(cls, yaml_path: Pathy, **storage_options):
+    def from_recipe(cls, yaml_path: PathLike, **storage_options):
         of = fsspec.open(yaml_path, "r", **storage_options)
         with of as stream:
             data = yaml.safe_load(stream)
@@ -214,7 +213,7 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(self, output_dir: Pathy = "anvil_run", debug: bool = False) -> Any: ...
+    def run(self, output_dir: PathLike = "anvil_run", debug: bool = False) -> Any: ...
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -222,7 +221,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.SKLEARN
 
     def run(
-        self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow
@@ -334,7 +333,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.PYTORCH
 
     def run(
-        self, output_dir: Pathy = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow

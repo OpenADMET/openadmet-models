@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from openadmet_models.features.combine import FeatureConcatenator
-from openadmet_models.features.molfeat_fingerprint import FingerprintFeaturizer
-from openadmet_models.features.molfeat_properties import DescriptorFeaturizer
+from openadmet.models.features.combine import FeatureConcatenator
+from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
+from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
 
 
 @pytest.fixture()

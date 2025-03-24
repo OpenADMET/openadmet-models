@@ -10,7 +10,7 @@ from pydantic import Field
 from scipy.stats import bootstrap, kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from openadmet_models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.eval_base import EvalBase, evaluators
 
 
 def stat_and_bootstrap(

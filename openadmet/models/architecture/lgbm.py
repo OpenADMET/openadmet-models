@@ -4,7 +4,7 @@ import lightgbm as lgb
 import numpy as np
 from loguru import logger
 
-from openadmet_models.models.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 @models.register("LGBMRegressorModel")

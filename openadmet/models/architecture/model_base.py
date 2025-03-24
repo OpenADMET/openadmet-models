@@ -6,8 +6,8 @@ import joblib
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
+from os import PathLike
 
-from openadmet_models.util.types import Pathy
 
 models = ClassRegistry(unique=True)
 
@@ -46,28 +46,28 @@ class ModelBase(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def save(self, path: Pathy):
+    def save(self, path: PathLike):
         """
         Save the model, abstract method to be implemented by subclasses
         """
         pass
 
     @abstractmethod
-    def load(self, path: Pathy):
+    def load(self, path: PathLike):
         """
         Load the model, abstract method to be implemented by subclasses
         """
         pass
 
     @abstractmethod
-    def serialize(self, param_path: Pathy, serial_path: Pathy):
+    def serialize(self, param_path: PathLike, serial_path: PathLike):
         """
         Serialize the model, abstract method to be implemented by subclasses
         """
         pass
 
     @abstractmethod
-    def deserialize(self, param_path: Pathy, serial_path: Pathy):
+    def deserialize(self, param_path: PathLike, serial_path: PathLike):
         """
         Deserialize the model, abstract method to be implemented by subclasses
         """
@@ -99,7 +99,7 @@ class PickleableModelBase(ModelBase):
     # classvar for pickleable model
     pickleable: ClassVar[bool] = True
 
-    def save(self, path: Pathy):
+    def save(self, path: PathLike):
 
         if self.model is None:
             raise ValueError("Model is not built, cannot save")
@@ -107,14 +107,14 @@ class PickleableModelBase(ModelBase):
         with open(path, "wb") as f:
             joblib.dump(self.model, f)
 
-    def load(self, path: Pathy):
+    def load(self, path: PathLike):
 
         with open(path, "rb") as f:
             self._model = joblib.load(f)
 
     @classmethod
     def deserialize(
-        cls, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
+        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
     ):
         """
         Create a model from parameters and a pickled model
@@ -126,7 +126,7 @@ class PickleableModelBase(ModelBase):
         return instance
 
     def serialize(
-        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pkl"
+        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
     ):
         """
         Save the model to a json file and a pickled file
@@ -137,21 +137,21 @@ class PickleableModelBase(ModelBase):
 
 
 class TorchModelBase(ModelBase):
-    def save(self, path: Pathy):
+    def save(self, path: PathLike):
         torch.save(self.model.state_dict(), path)
 
-    def load(self, path: Pathy):
+    def load(self, path: PathLike):
         self.model.load_state_dict(torch.load(path))
 
     def serialize(
-        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pth"
+        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
     ):
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
         self.save(serial_path)
 
     def deserialize(
-        self, param_path: Pathy = "model.json", serial_path: Pathy = "model.pth"
+        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
     ):
         with open(param_path) as f:
             model_params = json.load(f)

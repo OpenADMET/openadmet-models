@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 
-from openadmet_models.split.split_base import SplitterBase, splitters
+from openadmet.models.split.split_base import SplitterBase, splitters
 
 
 @splitters.register("ShuffleSplitter")

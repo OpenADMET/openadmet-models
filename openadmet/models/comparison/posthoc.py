@@ -17,7 +17,7 @@ from scipy import stats
 from scipy.stats import levene, tukey_hsd
 from statsmodels.stats.anova import AnovaRM
 
-from openadmet_models.comparison.compare_base import ComparisonBase, comparisons
+from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
 
 @comparisons.register("PostHoc")

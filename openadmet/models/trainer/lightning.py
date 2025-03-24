@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from loguru import logger
 
-from openadmet_models.trainer.trainer_base import TrainerBase, trainers
+from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 
 
 @trainers.register("LightningTrainer")

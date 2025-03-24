@@ -1,7 +1,7 @@
 import numpy as np
 
-from openadmet_models.split.split_base import splitters
-from openadmet_models.split.vanilla import ShuffleSplitter
+from openadmet.models.split.split_base import splitters
+from openadmet.models.split.sklearn import ShuffleSplitter
 
 
 def test_in_splitters():

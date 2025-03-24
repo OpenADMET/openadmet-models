@@ -12,8 +12,8 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import RepeatedKFold, cross_validate
 
-from openadmet_models.eval.eval_base import EvalBase, evaluators
-from openadmet_models.eval.regression import (
+from openadmet.models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.regression import (
     RegressionPlots,
     nan_omit_ktau,
     nan_omit_spearmanr,

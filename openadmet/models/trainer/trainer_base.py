@@ -4,7 +4,7 @@ from typing import Any
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
 
-from openadmet_models.models.model_base import ModelBase
+from openadmet.models.architecture.model_base import ModelBase
 
 trainers = ClassRegistry(unique=True)
 

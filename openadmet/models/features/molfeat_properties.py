@@ -6,7 +6,7 @@ import numpy as np
 from molfeat.trans import MoleculeTransformer
 from pydantic import Field, field_validator
 
-from openadmet_models.features.feature_base import MolfeatFeaturizer, featurizers
+from openadmet.models.features.feature_base import MolfeatFeaturizer, featurizers
 
 
 @featurizers.register("DescriptorFeaturizer")

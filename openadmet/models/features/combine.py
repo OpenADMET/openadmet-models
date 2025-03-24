@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from pydantic import Field, field_validator
 
-from openadmet_models.features.feature_base import (
+from openadmet.models.features.feature_base import (
     FeaturizerBase,
     featurizers,
     get_featurizer_class,

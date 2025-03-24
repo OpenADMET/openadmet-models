@@ -1,6 +1,6 @@
 import click
 
-from openadmet_models.comparison.posthoc import PostHocComparison
+from openadmet.models.comparison.posthoc import PostHocComparison
 
 
 @click.command()

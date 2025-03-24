@@ -7,7 +7,7 @@ from molfeat.trans import MoleculeTransformer
 from molfeat.trans.fp import FPVecTransformer
 from pydantic import Field
 
-from openadmet_models.features.feature_base import MolfeatFeaturizer, featurizers
+from openadmet.models.features.feature_base import MolfeatFeaturizer, featurizers
 
 
 @featurizers.register("FingerprintFeaturizer")

@@ -1,6 +1,6 @@
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 
-from openadmet_models.split.split_base import SplitterBase, splitters
+from openadmet.models.split.split_base import SplitterBase, splitters
 
 
 @splitters.register("ScaffoldSplitter")

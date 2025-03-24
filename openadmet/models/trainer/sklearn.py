@@ -3,7 +3,7 @@ from typing import Any
 from loguru import logger
 from sklearn.model_selection import GridSearchCV
 
-from openadmet_models.trainer.trainer_base import TrainerBase, trainers
+from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 
 
 @trainers.register("SKLearnBasicTrainer")

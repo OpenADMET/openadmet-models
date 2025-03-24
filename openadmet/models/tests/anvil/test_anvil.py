@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from openadmet_models.anvil.anvil_workflow import (
+from openadmet.models.anvil.workflow import (
     AnvilSpecification,
 )
-from openadmet_models.tests.datafiles import (
+from openadmet.models.tests.datafiles import (
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,

@@ -1,6 +1,6 @@
 import pytest
 
-from openadmet_models.models.model_base import models
+from openadmet.models.architecture.model_base import models
 
 
 @pytest.mark.parametrize("mclass", models.classes())

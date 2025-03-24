@@ -1,7 +1,7 @@
 import pytest
 
-from openadmet_models.eval.eval_base import get_eval_class
-from openadmet_models.eval.regression import RegressionMetrics
+from openadmet.models.eval.eval_base import get_eval_class
+from openadmet.models.eval.regression import RegressionMetrics
 
 
 def test_get_eval_class():
