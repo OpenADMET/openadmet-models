@@ -60,7 +60,7 @@ namespaces = true
 where = ["."]
 
 [tool.setuptools.package-data]
-#openadmet-models = ["openadmet/models/tests/test_data/*"]
+"openadmet.models.tests.test_data" = ["*.csv", "*.json", "*.yaml"]
 
 
 

@@ -126,5 +126,7 @@ ENV/
 
 # In-tree generated files
 */_version.py
+*/*/_version.py
+
 # Cookiecutter-CMS Test Artifacts
 /tests/CI_files
