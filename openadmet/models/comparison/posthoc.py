@@ -79,9 +79,6 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def compare_as_classifier(self, cutoff, model_stats_fns, model_tags, report=False, output_dir=None):
-        pass
-
     def json_to_df(self, model_stats_fns, model_tags):
         """
         Takes the model statistics cross validation json from an anvil run,
@@ -321,9 +318,6 @@ class PostHocComparison(ComparisonBase):
             plt.savefig(f"{output_dir}/mean_diffs.pdf")
 
         return fig
-
-    def binary_class(self):
-        pass
 
     def stats_to_json(self, stats_dfs, output_dir):
         for stat_df, name in zip(stats_dfs, self.stats_names):
