@@ -49,3 +49,46 @@ class LGBMRegressorModel(PickleableModelBase):
         if not self.model:
             raise ValueError("Model not trained")
         return self.model.predict(X)
+
+
+@models.register("LGBMClassifierModel")
+class LGBMClassifierModel(PickleableModelBase):
+    """
+    LightGBM classification model
+    """
+
+    type: ClassVar[str] = "LGBMClassifierModel"
+    model_params: dict = {}
+
+    @classmethod
+    def from_params(cls, class_params: dict = {}, model_params: dict = {}):
+        """
+        Create a model from parameters
+        """
+        instance = cls(**class_params, model_params=model_params)
+        instance.build()
+        return instance
+
+    def train(self, X: np.ndarray, y: np.ndarray):
+        """
+        Train the model
+        """
+        self.build()
+        self.model = self.model.fit(X, y)
+
+    def build(self):
+        """
+        Prepare the model
+        """
+        if not self.model:
+            self.model = lgb.LGBMClassifier(**self.model_params)
+        else:
+            logger.warning("Model already exists, skipping build")
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict using the model
+        """
+        if not self.model:
+            raise ValueError("Model not trained")
+        return self.model.predict(X)
