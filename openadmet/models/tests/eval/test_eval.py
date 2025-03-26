@@ -1,13 +1,10 @@
-import pytest
-
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.eval.regression import RegressionMetrics
 
 
 def test_get_eval_class():
     get_eval_class("RegressionMetrics")
-    with pytest.raises(ValueError):
-        get_eval_class("ClassificationMetrics")
+    get_eval_class("ClassificationMetrics")
 
 
 def test_regression_metrics():
