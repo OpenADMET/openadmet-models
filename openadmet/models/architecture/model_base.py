@@ -28,7 +28,7 @@ class ModelBase(BaseModel, ABC):
         return self._model
 
     @model.setter
-    def model(self, value):
+    def estimator(self, value):
         self._model = value
 
     @abstractmethod
