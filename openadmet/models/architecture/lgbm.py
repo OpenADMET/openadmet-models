@@ -14,7 +14,7 @@ class LGBMModelBase(PickleableModelBase):
 
     type: ClassVar[str]
     model_class: ClassVar[
-        Type
+        type
     ]  # To specify the LightGBM model class (e.g., LGBMRegressor or LGBMClassifier)
     model_params: dict = {}
 
@@ -59,7 +59,7 @@ class LGBMRegressorModel(LGBMModelBase):
     """
 
     type: ClassVar[str] = "LGBMRegressorModel"
-    model_class: ClassVar[Type] = lgb.LGBMRegressor
+    model_class: ClassVar[type] = lgb.LGBMRegressor
 
 
 @models.register("LGBMClassifierModel")
@@ -69,4 +69,4 @@ class LGBMClassifierModel(LGBMModelBase):
     """
 
     type: ClassVar[str] = "LGBMClassifierModel"
-    model_class: ClassVar[Type] = lgb.LGBMClassifier
+    model_class: ClassVar[type] = lgb.LGBMClassifier
