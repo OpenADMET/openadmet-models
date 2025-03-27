@@ -1,4 +1,4 @@
-from typing import ClassVar, Type
+from typing import ClassVar
 
 import lightgbm as lgb
 import numpy as np
@@ -70,3 +70,11 @@ class LGBMClassifierModel(LGBMModelBase):
 
     type: ClassVar[str] = "LGBMClassifierModel"
     model_class: ClassVar[type] = lgb.LGBMClassifier
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict using the model
+        """
+        if not self.model:
+            raise ValueError("Model not trained")
+        return self.model.predict_proba(X)
