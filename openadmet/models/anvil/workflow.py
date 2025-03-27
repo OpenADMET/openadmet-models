@@ -3,9 +3,10 @@ import uuid
 from abc import abstractmethod
 from datetime import datetime
 from enum import StrEnum
+from os import PathLike
 from pathlib import Path
 from typing import Any, ClassVar, Literal
-from os import PathLike
+
 import fsspec
 import torch
 import yaml
@@ -14,9 +15,9 @@ from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
 from openadmet.models.anvil.data_spec import DataSpec
+from openadmet.models.architecture.model_base import ModelBase, get_model_class
 from openadmet.models.eval.eval_base import EvalBase, get_eval_class
 from openadmet.models.features.feature_base import FeaturizerBase, get_featurizer_class
-from openadmet.models.architecture.model_base import ModelBase, get_model_class
 from openadmet.models.registries import *  # noqa: F401, F403
 from openadmet.models.split.split_base import SplitterBase, get_splitter_class
 from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
@@ -32,7 +33,6 @@ _SECTION_CLASS_GETTERS = {
 
 
 class SpecBase(BaseModel):
-
     def to_yaml(self, path, **storage_options):
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
@@ -217,7 +217,6 @@ class AnvilWorkflowBase(BaseModel):
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
-
     driver: Drivers = Drivers.SKLEARN
 
     def run(
@@ -329,7 +328,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
-
     driver: Drivers = Drivers.PYTORCH
 
     def run(
@@ -440,10 +438,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         for eval in self.evals:
             # here all the data is passed to the evaluator, but some evaluators may only need a subset
             eval.evaluate(
-                y_true=y_test,
+                y_true=y_test.values,  # Pass as array instead of series
                 y_pred=y_pred,
                 model=self.model,
-                X_train=train_dataloader,
+                X_train=train_dataloader,  # Why are we passing these?
                 y_train=train_dataloader,
                 use_wandb=use_wandb,
                 tag=model_tag,
