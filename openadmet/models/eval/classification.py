@@ -1,6 +1,7 @@
 import json
 from typing import Callable
 
+import matplotlib.pyplot as plt
 import numpy as np
 import wandb
 from pydantic import Field
@@ -35,14 +36,15 @@ class ClassificationMetrics(EvalBase):
     use_wandb: bool = Field(False, description="Whether to use wandb")
     _evaluated: bool = False
 
-    # tuple of metric, whether it is a scipy statistic, and the name to use in the report
+    # tuple of metric, whether it is a scipy statistic, whether it requires class predictions,
+    # and the name to use in the report
     _metrics: dict = {
-        "accuracy": (accuracy_score, False, "Accuracy"),
-        "precision": (precision_score, False, "Precision"),
-        "recall": (recall_score, False, "Recall"),
-        "f1": (f1_score, False, "F1 Score"),
-        "roc_auc": (roc_auc_score, False, "ROC AUC"),
-        "pr_auc": (pr_auc_score, False, "PR AUC"),
+        "accuracy": (accuracy_score, False, True, "Accuracy"),
+        "precision": (precision_score, False, True, "Precision"),
+        "recall": (recall_score, False, True, "Recall"),
+        "f1": (f1_score, False, True, "F1 Score"),
+        "roc_auc": (roc_auc_score, False, False, "ROC AUC"),
+        "pr_auc": (pr_auc_score, False, False, "PR AUC"),
     }
 
     def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, **kwargs):
@@ -57,11 +59,35 @@ class ClassificationMetrics(EvalBase):
         if use_wandb:
             self.use_wandb = use_wandb
 
-        for metric_tag, (metric, is_scipy, _) in self._metrics.items():
+        for metric_tag, (metric, is_scipy, is_class_pred, _) in self._metrics.items():
+            # Binary case
+            if y_true.values.ndim == 1:
+                # Cast to class predictions before calculating the metric
+                if is_class_pred is True:
+                    _y_pred = np.argmax(y_pred, axis=1).ravel()
+                    _y_true = y_true.values.ravel()
+
+                # Compare probabilities with labels
+                else:
+                    _y_pred = y_pred[:, 1].ravel()
+                    _y_true = y_true.values.ravel()
+
+            # Multiclass
+            else:
+                # Cast to class predictions before calculating the metric
+                if is_class_pred is True:
+                    _y_pred = np.argmax(y_pred, axis=1).ravel()
+                    _y_true = np.argmax(y_true.values, axis=1).ravel()
+
+                # Micro-averaged one-versus-rest
+                else:
+                    _y_pred = y_pred.ravel()
+                    _y_true = y_true.values.ravel()
+
             value, lower_ci, upper_ci = self.stat_and_bootstrap(
                 metric_tag,
-                y_pred,
-                y_true,
+                _y_pred,
+                _y_true,
                 metric,
                 is_scipy_statistic=is_scipy,
                 confidence_level=self.bootstrap_confidence_level,
@@ -166,29 +192,9 @@ class ClassificationMetrics(EvalBase):
             # Log the artifact
             wandb.log_artifact(artifact)
 
-    def make_stat_caption(self):
-        """
-        Make a caption for the statistics
-        """
-        if not self._evaluated:
-            raise ValueError("Must evaluate before making a caption")
-        stat_caption = ""
-        for metric in self.metric_names:
-            value = self.data[metric]["value"]
-            lower_ci = self.data[metric]["lower_ci"]
-            upper_ci = self.data[metric]["upper_ci"]
-            confidence_level = self.data[metric]["confidence_level"]
-            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-        stat_caption += f"Confidence level: {confidence_level}"
-        return stat_caption
-
 
 @evaluators.register("ClassificationPlots")
 class ClassificationPlots(EvalBase):
-    axes_labels: list[str] = Field(
-        ["Measured", "Predicted"], description="Labels for the axes"
-    )
-    title: str = Field("Pred vs ", description="Title for the plot")
     plots: dict = {}
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
@@ -210,48 +216,73 @@ class ClassificationPlots(EvalBase):
 
         self.plot_data = {}
 
-        # if self.do_stats:
-        #     rm = ClassificationMetrics()
-        #     rm.evaluate(y_true, y_pred)
-        #     stat_caption = rm.make_stat_caption()
-
-        # create the plots
+        # Create the plots
         for plot_tag, plot in self.plots.items():
             self.plot_data[plot_tag] = plot(
                 y_true,
                 y_pred,
-                xlabel=self.axes_labels[0],
-                ylabel=self.axes_labels[1],
-                title=self.title,
-                stat_caption=stat_caption,
-                pXC50=self.pXC50,
-                min_val=self.min_val,
-                max_val=self.max_val,
             )
 
-    @staticmethod
     def auroc(
+        self,
         y_true,
         y_pred,
-        xlabel="Measured",
-        ylabel="Predicted",
-        title="",
-        stat_caption="",
+        xlabel="False Positive Rate",
+        ylabel="True Positive Rate",
+        title="Receiver Operating Characteristic Curve",
     ):
-        fpr, tpr, _ = roc_curve(y_true, y_pred)
-        pass
+        # Binary
+        if y_true.values.ndim == 1:
+            fpr, tpr, _ = roc_curve(y_true.values.ravel(), y_pred[:, 1].ravel())
 
-    @staticmethod
+        # Micro-averaged one-versus-rest
+        else:
+            fpr, tpr, _ = roc_curve(y_true.values.ravel(), y_pred.ravel())
+
+        fig, ax = plt.subplots(dpi=self.dpi)
+        ax.set_title(title, fontsize=10)
+
+        ax.plot(fpr, tpr)
+        ax.plot([0, 1], [0, 1], linestyle="--", color="black")
+
+        ax.set_aspect("equal", "box")
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+
+        return fig
+
     def aupr(
+        self,
         y_true,
         y_pred,
-        xlabel="Measured",
-        ylabel="Predicted",
-        title="",
-        stat_caption="",
+        xlabel="Recall",
+        ylabel="Precision",
+        title="Precision-Recall Curve",
     ):
-        precision, recall, _ = precision_recall_curve(y_true, y_pred)
-        pass
+        # Binary
+        if y_true.values.ndim == 1:
+            precision, recall, _ = precision_recall_curve(
+                y_true.values.ravel(), y_pred[:, 1].ravel()
+            )
+
+        # Micro-averaged one-versus-rest
+        else:
+            precision, recall, _ = precision_recall_curve(
+                y_true.values.ravel(), y_pred.ravel()
+            )
+
+        fig, ax = plt.subplots(dpi=self.dpi)
+        ax.set_title(title, fontsize=10)
+
+        ax.plot(recall, precision)
+        ax.plot([0, 1], [1, 1], linestyle="--", color="black")
+        ax.plot([1, 1], [0, 1], linestyle="--", color="black")
+
+        ax.set_aspect("equal", "box")
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+
+        return fig
 
     def report(self, write=False, output_dir=None):
         """
