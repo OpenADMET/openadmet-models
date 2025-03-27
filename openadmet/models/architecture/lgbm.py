@@ -7,13 +7,15 @@ from loguru import logger
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-@models.register("LGBMRegressorModel")
-class LGBMRegressorModel(PickleableModelBase):
+class LGBMModelBase(PickleableModelBase):
     """
-    LightGBM regression model
+    Base class for LightGBM models
     """
 
-    type: ClassVar[str] = "LGBMRegressorModel"
+    type: ClassVar[str]
+    model_class: ClassVar[
+        type
+    ]  # To specify the LightGBM model class (e.g., LGBMRegressor or LGBMClassifier)
     model_params: dict = {}
 
     @classmethod
@@ -21,7 +23,6 @@ class LGBMRegressorModel(PickleableModelBase):
         """
         Create a model from parameters
         """
-
         instance = cls(**class_params, model_params=model_params)
         instance.build()
         return instance
@@ -38,7 +39,7 @@ class LGBMRegressorModel(PickleableModelBase):
         Prepare the model
         """
         if not self.model:
-            self.model = lgb.LGBMRegressor(**self.model_params)
+            self.model = self.model_class(**self.model_params)
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -49,3 +50,31 @@ class LGBMRegressorModel(PickleableModelBase):
         if not self.model:
             raise ValueError("Model not trained")
         return self.model.predict(X)
+
+
+@models.register("LGBMRegressorModel")
+class LGBMRegressorModel(LGBMModelBase):
+    """
+    LightGBM regression model
+    """
+
+    type: ClassVar[str] = "LGBMRegressorModel"
+    model_class: ClassVar[type] = lgb.LGBMRegressor
+
+
+@models.register("LGBMClassifierModel")
+class LGBMClassifierModel(LGBMModelBase):
+    """
+    LightGBM classification model
+    """
+
+    type: ClassVar[str] = "LGBMClassifierModel"
+    model_class: ClassVar[type] = lgb.LGBMClassifier
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict using the model
+        """
+        if not self.model:
+            raise ValueError("Model not trained")
+        return self.model.predict_proba(X)
