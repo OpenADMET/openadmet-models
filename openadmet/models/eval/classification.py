@@ -54,6 +54,10 @@ class ClassificationMetrics(EvalBase):
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
+        # Cast as numpy arrays
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+
         self.data = {"tag": tag}
 
         if use_wandb:
@@ -61,28 +65,28 @@ class ClassificationMetrics(EvalBase):
 
         for metric_tag, (metric, is_scipy, is_class_pred, _) in self._metrics.items():
             # Binary case
-            if y_true.values.ndim == 1:
+            if y_true.ndim == 1:
                 # Cast to class predictions before calculating the metric
                 if is_class_pred is True:
                     _y_pred = np.argmax(y_pred, axis=1).ravel()
-                    _y_true = y_true.values.ravel()
+                    _y_true = y_true.ravel()
 
                 # Compare probabilities with labels
                 else:
                     _y_pred = y_pred[:, 1].ravel()
-                    _y_true = y_true.values.ravel()
+                    _y_true = y_true.ravel()
 
             # Multiclass
             else:
                 # Cast to class predictions before calculating the metric
                 if is_class_pred is True:
                     _y_pred = np.argmax(y_pred, axis=1).ravel()
-                    _y_true = np.argmax(y_true.values, axis=1).ravel()
+                    _y_true = np.argmax(y_true, axis=1).ravel()
 
                 # Micro-averaged one-versus-rest
                 else:
                     _y_pred = y_pred.ravel()
-                    _y_true = y_true.values.ravel()
+                    _y_true = y_true.ravel()
 
             value, lower_ci, upper_ci = self.stat_and_bootstrap(
                 metric_tag,
@@ -203,6 +207,11 @@ class ClassificationPlots(EvalBase):
         """
         Evaluate the classification model
         """
+
+        # Cast as numpy arrays
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+
         if use_wandb:
             self.use_wandb = use_wandb
 
@@ -232,12 +241,12 @@ class ClassificationPlots(EvalBase):
         title="Receiver Operating Characteristic Curve",
     ):
         # Binary
-        if y_true.values.ndim == 1:
-            fpr, tpr, _ = roc_curve(y_true.values.ravel(), y_pred[:, 1].ravel())
+        if y_true.ndim == 1:
+            fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
 
         # Micro-averaged one-versus-rest
         else:
-            fpr, tpr, _ = roc_curve(y_true.values.ravel(), y_pred.ravel())
+            fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred.ravel())
 
         fig, ax = plt.subplots(dpi=self.dpi)
         ax.set_title(title, fontsize=10)
@@ -260,15 +269,15 @@ class ClassificationPlots(EvalBase):
         title="Precision-Recall Curve",
     ):
         # Binary
-        if y_true.values.ndim == 1:
+        if y_true.ndim == 1:
             precision, recall, _ = precision_recall_curve(
-                y_true.values.ravel(), y_pred[:, 1].ravel()
+                y_true.ravel(), y_pred[:, 1].ravel()
             )
 
         # Micro-averaged one-versus-rest
         else:
             precision, recall, _ = precision_recall_curve(
-                y_true.values.ravel(), y_pred.ravel()
+                y_true.ravel(), y_pred.ravel()
             )
 
         fig, ax = plt.subplots(dpi=self.dpi)
