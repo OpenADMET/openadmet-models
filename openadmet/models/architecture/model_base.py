@@ -29,7 +29,7 @@ class ModelBase(BaseModel, ABC):
 
     @model.setter
     def estimator(self, value):
-        self._model = value
+        self._estimator = value
 
     @abstractmethod
     def from_params(cls, class_params: dict, model_params: dict):
