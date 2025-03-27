@@ -219,8 +219,8 @@ class ClassificationPlots(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         self.plots = {
-            "roc_curve": self.auroc,
-            "pr_curve": self.aupr,
+            "roc_curve": self.roc_curve,
+            "pr_curve": self.pr_curve,
         }
 
         self.plot_data = {}
