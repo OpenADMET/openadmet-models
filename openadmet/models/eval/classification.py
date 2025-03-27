@@ -45,9 +45,7 @@ class ClassificationMetrics(EvalBase):
         "pr_auc": (pr_auc_score, False, "PR AUC"),
     }
 
-    def evaluate(
-        self, y_true=None, y_pred=None, y_prob=None, use_wandb=False, tag=None, **kwargs
-    ):
+    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, **kwargs):
         """
         Evaluate the classification model
         """
@@ -60,13 +58,9 @@ class ClassificationMetrics(EvalBase):
             self.use_wandb = use_wandb
 
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
-            if metric_tag == "roc_auc" and y_prob is None:
-                # Skip ROC AUC if probabilities are not provided
-                continue
-
             value, lower_ci, upper_ci = self.stat_and_bootstrap(
                 metric_tag,
-                y_pred if metric_tag != "roc_auc" else y_prob,
+                y_pred,
                 y_true,
                 metric,
                 is_scipy_statistic=is_scipy,
