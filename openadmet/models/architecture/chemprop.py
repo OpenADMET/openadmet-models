@@ -59,7 +59,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
                 self.batch_norm,
                 metric_list,
             )
-            self._model = mpnn
+            self.estimator = mpnn
 
         else:
             logger.warning("Model already exists, skipping build")
@@ -68,13 +68,13 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         Predict using the model
         """
-        if not self.model:
+        if not self.estimator:
             raise AttributeError("Model not trained")
 
         with torch.inference_mode():
             trainer = pl.Trainer(
                 logger=None, enable_progress_bar=False, accelerator="auto", devices=1
             )
-            preds = trainer.predict(self.model, X)
+            preds = trainer.predict(self.estimator, X)
         # concatenate the predictions which are in a list of tensors
         return torch.cat(preds).numpy().ravel()

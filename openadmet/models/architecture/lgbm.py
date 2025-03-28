@@ -31,7 +31,7 @@ class LGBMRegressorModel(PickleableModelBase):
         Train the model
         """
         self.build()
-        self.model = self.model.fit(X, y)
+        self.estimator = self.estimator.fit(X, y)
 
     def build(self):
         """
