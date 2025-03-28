@@ -21,15 +21,15 @@ def get_model_class(model_type):
 
 
 class ModelBase(BaseModel, ABC):
-    _model: Any = None
+    _estimator: Any = None
 
     @property
-    def model(self):
-        return self._model
+    def estimator(self):
+        return self._estimator
 
-    @model.setter
-    def model(self, value):
-        self._model = value
+    @estimator.setter
+    def estimator(self, value):
+        self._estimator = value
 
     @abstractmethod
     def from_params(cls, class_params: dict, model_params: dict):
@@ -101,16 +101,16 @@ class PickleableModelBase(ModelBase):
 
     def save(self, path: PathLike):
 
-        if self.model is None:
+        if self.estimator is None:
             raise ValueError("Model is not built, cannot save")
 
         with open(path, "wb") as f:
-            joblib.dump(self.model, f)
+            joblib.dump(self.estimator, f)
 
     def load(self, path: PathLike):
 
         with open(path, "rb") as f:
-            self._model = joblib.load(f)
+            self._estimator = joblib.load(f)
 
     @classmethod
     def deserialize(
@@ -138,10 +138,10 @@ class PickleableModelBase(ModelBase):
 
 class TorchModelBase(ModelBase):
     def save(self, path: PathLike):
-        torch.save(self.model.state_dict(), path)
+        torch.save(self.estimator.state_dict(), path)
 
     def load(self, path: PathLike):
-        self.model.load_state_dict(torch.load(path))
+        self.estimator.load_state_dict(torch.load(path))
 
     def serialize(
         self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
