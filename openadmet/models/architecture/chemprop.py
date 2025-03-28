@@ -45,7 +45,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         """
         Prepare the model
         """
-        if not self.model:
+        if not self.estimator:
             if scaler is not None:
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             else:

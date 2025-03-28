@@ -37,8 +37,8 @@ class LGBMRegressorModel(PickleableModelBase):
         """
         Prepare the model
         """
-        if not self.model:
-            self.model = lgb.LGBMRegressor(**self.model_params)
+        if not self.estimator:
+            self.estimator = lgb.LGBMRegressor(**self.model_params)
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -46,6 +46,6 @@ class LGBMRegressorModel(PickleableModelBase):
         """
         Predict using the model
         """
-        if not self.model:
+        if not self.estimator:
             raise ValueError("Model not trained")
-        return self.model.predict(X)
+        return self.estimator.predict(X)

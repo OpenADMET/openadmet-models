@@ -45,7 +45,8 @@ procedure:
         learning_rate: 0.1
 
   train:
-    type: SKLearnBasicTrainer
+    type: SKLearnGridSearchTrainer
+    #type: SKLearnBasicTrainer
 
 
 report:
