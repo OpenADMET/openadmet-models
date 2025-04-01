@@ -441,7 +441,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 y_true=y_test.values,  # Pass as array instead of series
                 y_pred=y_pred,
                 model=self.model,
-                X_train=train_dataloader,  # Why are we passing these?
+                X_train=train_dataloader,
                 y_train=train_dataloader,
                 use_wandb=use_wandb,
                 tag=model_tag,
