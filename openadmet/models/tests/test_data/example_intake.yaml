@@ -10,3 +10,9 @@ sources:
     driver: csv
     args:
       urlpath: "{{CATALOG_DIR}}/CYP3A4_chembl_pchembl.csv"
+
+  AChE_Landrum:
+    description: this is a sub-resource
+    driver: csv
+    args:
+      urlpath: "{{CATALOG_DIR}}/AChE_CHEMBL4078_Landrum_maxcur.csv"
