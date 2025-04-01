@@ -39,7 +39,7 @@ class LGBMModelBase(PickleableModelBase):
         Prepare the model
         """
         if not self.estimator:
-            self.estimator = lgb.LGBMRegressor(**self.model_params)
+            self.estimator = self.model_class(**self.model_params)
         else:
             logger.warning("Model already exists, skipping build")
 
