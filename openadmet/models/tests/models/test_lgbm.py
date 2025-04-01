@@ -22,8 +22,8 @@ def test_lgbm_from_params():
         class_params={}, model_params={"n_estimators": 100, "boosting_type": "rf"}
     )
     assert lgbm_model.type == "LGBMRegressorModel"
-    assert lgbm_model.model.get_params()["n_estimators"] == 100
-    assert lgbm_model.model.get_params()["boosting_type"] == "rf"
+    assert lgbm_model.estimator.get_params()["n_estimators"] == 100
+    assert lgbm_model.estimator.get_params()["boosting_type"] == "rf"
 
 
 def test_lgbm_train_predict(X_y):

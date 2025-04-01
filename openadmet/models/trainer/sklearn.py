@@ -13,9 +13,9 @@ class SKlearnBasicTrainer(TrainerBase):
     """
 
     def train(self, X: Any, y: Any):
-        sklearn_model = self.model.model
+        sklearn_model = self.model.estimator
         sklearn_model.fit(X, y)
-        self.model.model = sklearn_model
+        self.model.estimator = sklearn_model
         return self.model
 
 
@@ -47,11 +47,11 @@ class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
         """
         Train the model
         """
-        sklearn_model = self.model.model
+        sklearn_model = self.model.estimator
         self.search = GridSearchCV(sklearn_model, param_grid=self.param_grid)
         self.search.fit(X, y)
         # set the params and model to the best found
-        self.model.model = self.search.best_estimator_
-        self.model.model_params = self.model.model.get_params()
+        self.model.estimator = self.search.best_estimator_
+        self.model.model_params = self.model.estimator.get_params()
         logger.info(f"Best params: {self.model.model_params}")
         return self.model

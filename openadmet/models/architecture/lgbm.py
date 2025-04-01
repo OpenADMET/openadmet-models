@@ -32,14 +32,14 @@ class LGBMModelBase(PickleableModelBase):
         Train the model
         """
         self.build()
-        self.model = self.model.fit(X, y)
+        self.estimator = self.estimator.fit(X, y)
 
     def build(self):
         """
         Prepare the model
         """
-        if not self.model:
-            self.model = self.model_class(**self.model_params)
+        if not self.estimator:
+            self.estimator = lgb.LGBMRegressor(**self.model_params)
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -47,9 +47,9 @@ class LGBMModelBase(PickleableModelBase):
         """
         Predict using the model
         """
-        if not self.model:
+        if not self.estimator:
             raise ValueError("Model not trained")
-        return self.model.predict(X)
+        return self.estimator.predict(X)
 
 
 @models.register("LGBMRegressorModel")
@@ -75,6 +75,6 @@ class LGBMClassifierModel(LGBMModelBase):
         """
         Predict using the model
         """
-        if not self.model:
+        if not self.estimator:
             raise ValueError("Model not trained")
-        return self.model.predict_proba(X)
+        return self.estimator.predict_proba(X)

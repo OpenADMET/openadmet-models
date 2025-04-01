@@ -93,7 +93,7 @@ class SKLearnRepeatedKFoldCrossValidation(EvalBase):
             random_state=self.random_state,
         )
 
-        estimator = model.model
+        estimator = model.estimator
         # evaluate the model, storing the results
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation

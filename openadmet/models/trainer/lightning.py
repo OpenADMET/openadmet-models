@@ -60,6 +60,6 @@ class LightningTrainer(TrainerBase):
         """
         Train the model
         """
-        logger.info(f"Training model {self.model._model}")
-        self._trainer.fit(self.model._model, train_dataloader)
+        logger.info(f"Training model {self.model._estimator}")
+        self._trainer.fit(self.model._estimator, train_dataloader)
         return self.model
