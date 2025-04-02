@@ -1,11 +1,9 @@
 import json
-from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 import wandb
 from pydantic import Field
-from scipy.stats import bootstrap
 from sklearn.metrics import (
     accuracy_score,
     auc,
@@ -125,44 +123,6 @@ class ClassificationMetrics(EvalBase):
 
         self._evaluated = True
         return self.data
-
-    def stat_and_bootstrap(
-        self,
-        metric_tag: str,
-        y_pred: np.ndarray,
-        y_true: np.ndarray,
-        statistic: Callable,
-        confidence_level: float = 0.95,
-        is_scipy_statistic: bool = False,
-    ):
-        """
-        Calculate the metric and confidence intervals
-        """
-        if is_scipy_statistic:
-            metric = statistic(y_true, y_pred).statistic
-            conf_interval = bootstrap(
-                (y_true, y_pred),
-                statistic=lambda y_true, y_pred: statistic(y_true, y_pred).statistic,
-                method="basic",
-                confidence_level=confidence_level,
-                paired=True,
-            ).confidence_interval
-
-        else:
-            metric = statistic(y_true, y_pred)
-            conf_interval = bootstrap(
-                (y_true, y_pred),
-                statistic=statistic,
-                method="basic",
-                confidence_level=confidence_level,
-                paired=True,
-            ).confidence_interval
-
-        return (
-            metric,
-            conf_interval.low,
-            conf_interval.high,
-        )
 
     @property
     def metric_names(self):
