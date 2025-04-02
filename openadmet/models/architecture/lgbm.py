@@ -71,7 +71,7 @@ class LGBMClassifierModel(LGBMModelBase):
     type: ClassVar[str] = "LGBMClassifierModel"
     model_class: ClassVar[type] = lgb.LGBMClassifier
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
         Predict using the model
         """
