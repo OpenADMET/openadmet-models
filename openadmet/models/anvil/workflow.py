@@ -309,7 +309,13 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Model saved")
 
         logger.info("Predicting")
-        y_pred = self.model.predict(X_test_feat)
+        # Check if the model has predict_proba method (classification)
+        if hasattr(self.model, "predict_proba"):
+            y_pred = self.model.predict_proba(X_test_feat)
+
+        # Otherwise, regression
+        else:
+            y_pred = self.model.predict(X_test_feat)
         logger.info("Predictions made")
 
         logger.info("Evaluating")
