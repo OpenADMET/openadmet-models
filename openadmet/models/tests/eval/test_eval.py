@@ -23,10 +23,8 @@ def test_regression_metrics():
 def test_posthoc_eval_metrics():
     y_true = [3, -0.5, 2, 7]
     y_pred = [2.5, 0.0, 2, 8]
-    cutoffs = [1., 3.]
+    cutoff = 4.
     pem = PosthocBinaryMetrics()
-    prs_df, baseline = pem.get_precision_recall(y_pred, y_true, cutoffs)
-    assert prs_df["Precision"][0][0] == .75
-    assert prs_df["Recall"][0][0] == 1.0
-    assert prs_df["AUPR"][0] == 0.25
-    assert baseline == 0.25
+    precision, recall = pem.get_precision_recall(y_pred, y_true, cutoff)
+    assert precision == 1.0
+    assert recall == 1.0

@@ -1,4 +1,4 @@
-from sklearn.metrics import precision_recall_curve, auc
+from sklearn.metrics import precision_score, recall_score, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import numpy as np
 import wandb
@@ -17,7 +17,7 @@ class PosthocBinaryMetrics(EvalBase):
     Not intended for binary models
     """
 
-    def evaluate(self, y_true:list = None, y_pred:list = None, cutoffs:list = None, report:bool = False, output_dir:str = None):
+    def evaluate(self, y_true:list = None, y_pred:list = None, cutoff:float = None, report:bool = False, output_dir:str = None):
         """
         Evaluate the precision and recall metrics for model with user-input cutoffs.
 
@@ -34,62 +34,57 @@ class PosthocBinaryMetrics(EvalBase):
 
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
+        self.plot_confusion_matrix(y_true, y_pred, cutoff, output_dir)
+        self.plot_posthoc_classification(y_true, y_pred, cutoff, output_dir)
+        precision, recall = self.get_precision_recall(y_pred, y_true, cutoff)
+        self.report(report, output_dir, precision=precision, recall=recall)
 
-        prs_df, baseline = self.get_precision_recall(y_pred, y_true, cutoffs)
-        self.plot_precision_recall_curve(prs_df, baseline, output_dir)
-        self.plot_aupr(prs_df["AUPR"], cutoffs, output_dir)
-
-        self.report(report, output_dir, prs_df)
-
-    def get_precision_recall(self, y_pred:list, y_true:list, cutoffs:list):
+    def get_precision_recall(self, y_pred:list, y_true:list, cutoff:float):
         """
         Calculate precision and recall metrics for given cutoffs.
 
         Parameters:
         y_pred (array-like): Predicted values.
         y_true (array-like): True values.
-        cutoffs (list): List of cutoff values to calculate precision and recall.
+        cutoff (float): Cutoff to calculate precision and recall.
 
         Returns:
-        tuple: A tuple containing:
-            - prs_df (pd.DataFrame): DataFrame with precision, recall, cutoff, and AUPR values.
-            - baseline (float): Baseline value for the precision-recall curve.
+        Tuple: A tuple containing:
+            - precision (float): Precision value.
+            - recall (float): Recall value.
+        """  
+        pred_class = [y > cutoff for y in y_pred]
+        true_class = [y > cutoff for y in y_true]
+        precision = precision_score(true_class, pred_class)
+        recall = recall_score(true_class, pred_class)
+
+        return(precision, recall)
+
+    def plot_confusion_matrix(self, y_true:list, y_pred:list, cutoff:float, output_dir:str=None):
         """
-
-        prs_df = {'Precision':[], 'Recall':[], 'Cutoff':[], 'AUPR':[]}
-        for c in cutoffs:
-            pred_class = [y > c for y in y_pred]
-            true_class = [y > c for y in y_true]
-            precision, recall, _ = precision_recall_curve(true_class, pred_class)
-            prs_df['Precision'].append(precision)
-            prs_df['Recall'].append(recall)
-            prs_df['Cutoff'].append(c)
-            prs_df['AUPR'].append(auc(precision, recall))
-
-        prs_df = pd.DataFrame(prs_df)
-        baseline = np.sum(true_class)/len(true_class)
-
-        return(prs_df, baseline)
-
-    def plot_precision_recall_curve(self, prs_df, baseline, output_dir):
-        for index, row in prs_df.iterrows():
-            recall = row["Recall"]
-            precision = row["Precision"]
-            plt.step(recall, precision, alpha=0.5, where='post')
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.title('Precision-Recall Curve')
-        plt.plot((0,1), (baseline, baseline), 'r--', alpha=0.3, label='baseline')
+        Plot the confusion matrix for a given cutoff
+        """
+        pred_class = [y > cutoff for y in y_pred]
+        true_class = [y > cutoff for y in y_true]
+        cm = confusion_matrix(true_class, pred_class)
+        disp = ConfusionMatrixDisplay(cm)
+        disp.plot()
         if output_dir is not None:
-            plt.savefig(f"{output_dir}/pr_curve.pdf")
+            plt.savefig(f"{output_dir}/confusion_matrix.pdf")        
 
-    def plot_aupr(self, auprs, cutoffs, output_dir):
-        plt.plot(cutoffs, auprs)
-        plt.xlabel("Binary Cutoff")
-        plt.ylabel("AUPR")
-        plt.title("Area under the PR curve vs binary cutoff")
+    def plot_posthoc_classification(self, y_true:list, y_pred:list, cutoff:float, output_dir:str=None):
+        """
+        Plot the classification of the model with a given cutoff
+        """
+        fig, ax = plt.subplots()
+        plt.scatter(y_true, y_pred)
+        plt.axvline(cutoff, color='r', linestyle='--')
+        plt.axhline(cutoff, color='r', linestyle='--')
+        plt.xlabel("True Value")
+        plt.ylabel("Predicted Value")
+        plt.title("Classification of the model")
         if output_dir is not None:
-            plt.savefig(f"{output_dir}/aupr.pdf")
+            plt.savefig(f"{output_dir}/classification.pdf")
 
     def stats_to_json(self, data_df, output_dir):
         """
@@ -97,9 +92,10 @@ class PosthocBinaryMetrics(EvalBase):
         """
         data_df.to_json(f"{output_dir}/posthoc_binary_eval.json")
 
-    def report(self, write=False, output_dir=None, stats_dfs=None):
+    def report(self, write=False, output_dir=None, precision=None, recall=None):
         """
         Report the evaluation
         """
-        if write and stats_dfs is not None:
-            self.stats_to_json(stats_dfs, output_dir)
+        stats_df = pd.DataFrame({"precision": precision, "recall": recall}, index=[0])
+        if write and stats_df is not None:
+            self.stats_to_json(stats_df, output_dir)
