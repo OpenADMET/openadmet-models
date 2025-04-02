@@ -45,6 +45,7 @@ class EvalBase(BaseModel):
         pass
 
     def stat_and_bootstrap(
+        self,
         metric_tag: str,
         y_pred: np.ndarray,
         y_true: np.ndarray,
