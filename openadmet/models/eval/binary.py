@@ -91,7 +91,7 @@ class PosthocBinaryMetrics(EvalBase):
         disp = ConfusionMatrixDisplay(cm)
         disp.plot()
         if output_dir is not None:
-            plt.savefig(f"{output_dir}/confusion_matrix.png", dpi=300)        
+            plt.savefig(f"{output_dir}/confusion_matrix.png", dpi=300)
 
     def plot_posthoc_classification(self, y_true:list, y_pred:list, cutoff:float, output_dir:str=None):
         """
