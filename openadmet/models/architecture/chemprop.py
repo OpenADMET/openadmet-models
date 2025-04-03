@@ -41,7 +41,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         if value not in ["bond", "atom"]:
             raise ValueError("Messages must be either 'bond' or 'atom'")
         return value
-    
+
 
     @field_validator("model_params")
     @classmethod
@@ -88,7 +88,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
             aggregation_cls = nn.MeanAggregation if self.aggregation == "mean" else nn.NormAggregation
             message_cls = nn.BondMessagePassing if self.messages == "bond" else nn.AtomMessagePassing
 
-            # Create the model 
+            # Create the model
             mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth)
             aggr = aggregation_cls()
 
@@ -96,7 +96,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
             # Create the MPNN model
 
             mpnn = models.MPNN(mp, aggr, ffn, self.batch_norm, metric_list)
-                           
+
             self.estimator = mpnn
 
         else:
