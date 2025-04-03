@@ -6,6 +6,8 @@ from chemprop import models, nn
 from lightning import pytorch as pl
 from loguru import logger
 
+from pydantic import field_validator
+
 from openadmet.models.architecture.model_base import PickleableModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
@@ -22,6 +24,35 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
     batch_norm: bool = False
     metric_list: list = ["mse"]
     model_params: dict = {}
+    depth: int = 3
+    message_hidden_dim: int = 300
+    ffn_hidden_dim: int = 300
+    ffn_num_layers: int = 1
+    messages: str = "bond"
+    aggregation: str = "norm"
+
+
+    @field_validator("model_params")
+    @classmethod
+    def validate_messages(cls, value):
+        """
+        Validate the messages parameter
+        """
+        if value not in ["bond", "atom"]:
+            raise ValueError("Messages must be either 'bond' or 'atom'")
+        return value
+    
+
+    @field_validator("model_params")
+    @classmethod
+    def validate_aggregation(cls, value):
+        """
+        Validate the aggregation parameter
+        """
+        if value not in ["mean", "norm"]:
+            raise ValueError("Aggregation must be either 'mean' or 'norm'")
+        return value
+
 
     @classmethod
     def from_params(cls, class_params: dict = {}, model_params: dict = {}):
@@ -52,13 +83,20 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
                 output_transform = None
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
-            mpnn = models.MPNN(
-                nn.BondMessagePassing(),
-                nn.MeanAggregation(),
-                nn.RegressionFFN(output_transform=output_transform),
-                self.batch_norm,
-                metric_list,
-            )
+
+
+            aggregation_cls = nn.MeanAggregation if self.aggregation == "mean" else nn.NormAggregation
+            message_cls = nn.BondMessagePassing if self.messages == "bond" else nn.AtomMessagePassing
+
+            # Create the model 
+            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth)
+            aggr = aggregation_cls()
+
+            ffn = nn.RegressionFFN(input_dim=self.message_hidden_dim, hidden_dim=self.ffn_hidden_dim, n_layers=self.ffn_num_layers, output_transform=output_transform)
+            # Create the MPNN model
+
+            mpnn = models.MPNN(mp, aggr, ffn, self.batch_norm, metric_list)
+                           
             self.estimator = mpnn
 
         else:
