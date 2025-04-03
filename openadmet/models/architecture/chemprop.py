@@ -32,7 +32,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
     aggregation: str = "norm"
 
 
-    @field_validator("model_params")
+    @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
         """
