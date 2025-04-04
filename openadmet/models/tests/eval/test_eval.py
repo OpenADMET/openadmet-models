@@ -1,5 +1,6 @@
 import pytest
 
+from openadmet.models.eval.binary import PosthocBinaryMetrics
 from openadmet.models.eval.classification import (
     ClassificationMetrics,
     ClassificationPlots,
@@ -10,7 +11,9 @@ from openadmet.models.eval.regression import RegressionMetrics
 
 def test_get_eval_class():
     get_eval_class("RegressionMetrics")
-    get_eval_class("ClassificationMetrics")
+    get_eval_class("PosthocBinaryMetrics")
+    with pytest.raises(ValueError):
+        get_eval_class("ClassificationMetrics")
 
 
 def test_regression_metrics():
@@ -61,3 +64,13 @@ def test_classification_plots():
     cp.evaluate(y_true, y_pred)
 
     assert True
+
+
+def test_posthoc_eval_metrics():
+    y_true = [3, -0.5, 2, 7]
+    y_pred = [2.5, 0.0, 2, 8]
+    cutoff = 4.0
+    pem = PosthocBinaryMetrics()
+    precision, recall = pem.get_precision_recall(y_pred, y_true, cutoff)
+    assert precision == 1.0
+    assert recall == 1.0
