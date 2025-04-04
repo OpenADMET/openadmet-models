@@ -1,6 +1,7 @@
 import json
 from functools import partial
 
+import numpy as np
 import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
@@ -203,12 +204,12 @@ class RegressionPlots(EvalBase):
         fig, ax = plt.subplots()
         ax.set_title(title, fontsize=10)
         if min_val is None:
-            min_val = min(y_true.min(), y_pred.min())
+            min_val = min(np.min(y_true), np.min(y_pred))
             min_ax = min_val - 1
         else:
             min_ax = min_val
         if max_val is None:
-            max_val = max(y_true.max(), y_pred.max())
+            max_val = max(np.max(y_true), np.max(y_pred))
             max_ax = max_val + 1
         else:
             max_ax = max_val

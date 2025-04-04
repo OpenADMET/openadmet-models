@@ -6,14 +6,13 @@ from openadmet.models.eval.classification import (
     ClassificationPlots,
 )
 from openadmet.models.eval.eval_base import get_eval_class
-from openadmet.models.eval.regression import RegressionMetrics
+from openadmet.models.eval.regression import RegressionMetrics, RegressionPlots
 
 
 def test_get_eval_class():
     get_eval_class("RegressionMetrics")
     get_eval_class("PosthocBinaryMetrics")
-    with pytest.raises(ValueError):
-        get_eval_class("ClassificationMetrics")
+    get_eval_class("ClassificationMetrics")
 
 
 def test_regression_metrics():
@@ -32,7 +31,7 @@ def test_regression_plots():
     y_true = [3, -0.5, 2, 7]
     y_pred = [2.5, 0.0, 2, 8]
 
-    rm = RegressionMetrics()
+    rm = RegressionPlots()
     rm.evaluate(y_true, y_pred)
 
     assert True
