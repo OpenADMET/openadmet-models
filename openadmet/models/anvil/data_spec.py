@@ -18,7 +18,7 @@ class DataSpec(BaseModel):
     resource: str
     cat_entry: Optional[str] = None
     target_col: str
-    smiles_col: str
+    input_col: str
     anvil_dir: Optional[str] = None
 
     _catalog: Optional[intake.catalog.Catalog] = None
@@ -55,9 +55,9 @@ class DataSpec(BaseModel):
 
         # now read the target columns and smiles column
         target = data[self.target_col]
-        smiles = data[self.smiles_col]
+        input = data[self.input_col]
 
-        return smiles, target
+        return input, target
 
     @property
     def catalog(self):
