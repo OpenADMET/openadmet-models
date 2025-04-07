@@ -52,7 +52,7 @@ class MTENNDataset(Dataset):
             # error on empty ligand
             if ligand.n_atoms == 0:
                 raise ValueError(f"No ligand found in {complex}")
-            
+
             # error on more than one ligand
             if len(set(ligand.resids)) > 1:
                 raise ValueError(f"More than one ligand found in {complex}")
@@ -100,7 +100,7 @@ class MTENNDataset(Dataset):
 
     def __len__(self):
         return len(self.complexes)
-    
+
     def __getitem__(self, idx):
         pos = self.pos[idx]
         Z = self.Z[idx]
@@ -151,16 +151,3 @@ class MTENNFeaturizer(FeaturizerBase):
 
         self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs)
         return self._dataloader
-
-
-
-
-
-
-
-
-
-
-
-
-

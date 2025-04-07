@@ -19,7 +19,7 @@ def test_mtenn_dataset(cyp3a4_pose):
     # Check the length of the dataset
     assert len(dataset) == 2
     # Check the shape of the features
-    
+
     feats = next(iter(dataset))
 
     assert feats["Y"] == 42
@@ -27,7 +27,7 @@ def test_mtenn_dataset(cyp3a4_pose):
     assert feats["pos"].numpy().shape == (3695, 3)
     assert feats["Z"].numpy().shape == (3695,)
     assert feats["B"].numpy().shape == (3695,)
-   
+
     # check the ligand mask, 38 atoms in the ligand
     assert feats["lig_mask"].numpy().sum() == 38
 
@@ -52,4 +52,4 @@ def test_mtenn_featurizer(cyp3a4_pose):
     assert feats["B"].numpy().shape == (1, 3695)
     # check the ligand mask, 38 atoms in the ligand
     assert feats["lig_mask"].numpy().sum() == 38
-   
+
