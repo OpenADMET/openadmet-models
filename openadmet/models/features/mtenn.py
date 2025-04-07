@@ -123,6 +123,7 @@ class MTENNFeaturizer(FeaturizerBase):
     MTENNFeaturizer featurizer for molecules for downstream use in MTENN
     """
     ligand_resname: str = "LIG"
+    ignore_h: bool = True
     n_jobs: int = 4
     batch_size: int = 128
     shuffle: bool = False
@@ -144,7 +145,8 @@ class MTENNFeaturizer(FeaturizerBase):
         dataset = MTENNDataset(
             complexes=complexes,
             y=y,
-            ligand_resname=self.ligand_resname
+            ligand_resname=self.ligand_resname,
+            ignore_h=self.ignore_h,
         )
         self._dataset = dataset
 
