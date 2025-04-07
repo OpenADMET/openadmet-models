@@ -32,6 +32,10 @@ class MTENNDataset(Dataset):
     def _load_complexes(complexes: Iterable[Path], ignore_h: bool = True, ligand_resname: str = "LIG"):
         """
         Load the complexes into MDAnalysis"""
+        all_pos = []
+        all_Z = []
+        all_B = []
+        all_lig_mask = []
         for complex in complexes:
             u = mda.Universe(complex)
             # Assuming the first protein is the one of interest
@@ -42,7 +46,7 @@ class MTENNDataset(Dataset):
 
             protein_pos = protein.positions
             protein_Z = protein.atoms.masses
-            protein_B = protein.atoms.b_factors
+            protein_B = protein.atoms.bfactors
 
             ligand = u.select_atoms(f"resname {ligand_resname}")
             # error on empty ligand
@@ -50,12 +54,12 @@ class MTENNDataset(Dataset):
                 raise ValueError(f"No ligand found in {complex}")
             
             # error on more than one ligand
-            if len(set(ligand.resids) > 1):
+            if len(set(ligand.resids)) > 1:
                 raise ValueError(f"More than one ligand found in {complex}")
 
             ligand_pos = ligand.positions
             ligand_Z = ligand.atoms.masses
-            ligand_B = ligand.atoms.b_factors
+            ligand_B = ligand.atoms.bfactors
             # concatenate protein and ligand positions
             pos = np.concatenate((protein_pos, ligand_pos), axis=0)
             # concatenate protein and ligand Z
@@ -81,7 +85,17 @@ class MTENNDataset(Dataset):
                 B = B[~h_idx]
                 lig_mask = lig_mask[~h_idx]
 
-            return pos, Z, B, lig_mask
+            all_pos.append(pos)
+            all_Z.append(Z)
+            all_B.append(B)
+            all_lig_mask.append(lig_mask)
+        # stack the arrays
+        all_pos = torch.stack(all_pos, dim=0)
+        all_Z = torch.stack(all_Z, dim=0)
+        all_B = torch.stack(all_B, dim=0)
+        all_lig_mask = torch.stack(all_lig_mask, dim=0)
+
+        return all_pos, all_Z, all_B, all_lig_mask
 
 
     def __len__(self):
@@ -99,7 +113,7 @@ class MTENNDataset(Dataset):
             "Z": Z,
             "B": B,
             "lig_mask": lig_mask,
-            "y": y
+            "Y": y
         }
 
 

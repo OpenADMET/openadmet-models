@@ -2,6 +2,34 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 from openadmet.models.features.mtenn import MTENNFeaturizer, MTENNDataset
-from openadmet.models.tests.test_data
+from openadmet.models.tests.datafiles import ligand_pose
 
-def test_mtenn_dataset()
+@pytest.fixture()
+def cyp3a4_pose():
+    """Fixture for ligand pose"""
+    return ligand_pose
+
+def test_mtenn_dataset(cyp3a4_pose):
+    """Test MTENNDataset class for basic functionality"""
+    # Create a mock dataset, with two identical complexes and a single target value
+    complexes = [cyp3a4_pose, cyp3a4_pose]
+    y = np.asarray([42, 43])
+    dataset = MTENNDataset(complexes, y, ligand_resname="X5Y", ignore_h=True)
+
+    # Check the length of the dataset
+    assert len(dataset) == 2
+    # Check the shape of the features
+    
+    feats = next(iter(dataset))
+
+    assert feats["Y"] == 42
+    assert feats["lig_mask"].numpy().shape == (3695,)
+    assert feats["pos"].numpy().shape == (3695, 3)
+    assert feats["Z"].numpy().shape == (3695,)
+    assert feats["B"].numpy().shape == (3695,)
+   
+    # check the ligand mask, 38 atoms in the ligand
+    assert feats["lig_mask"].numpy().sum() == 38
+
+
+   
