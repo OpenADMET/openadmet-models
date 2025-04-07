@@ -29,6 +29,8 @@ dependencies:
   - pytorch-lightning
   - cudatoolkit
   - wandb
+  - statsmodels
+  - mdanalysis
 
     # Testing
   - pytest

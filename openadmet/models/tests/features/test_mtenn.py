@@ -32,4 +32,7 @@ def test_mtenn_dataset(cyp3a4_pose):
     assert feats["lig_mask"].numpy().sum() == 38
 
 
+
+def test_mtenn_featurizer(cyp3a4_pose):
+
    
