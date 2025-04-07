@@ -29,3 +29,6 @@ AChE_CHEMBL4078_Landrum_maxcur = (
 descr_json = _data_ref / "cross_validation_metrics_descr.json"
 fp_json = _data_ref / "cross_validation_metrics_fp.json"
 combined_json = _data_ref / "cross_validation_metrics_combined.json"
+
+# ligand pose for reading and featurizing in MTENN
+ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()
