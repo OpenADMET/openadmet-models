@@ -142,17 +142,15 @@ class MTENNFeaturizer(FeaturizerBase):
         """
         y = y.to_numpy().reshape(-1, 1)
 
-        dataset = MTENNDataset(
+        self._dataset = MTENNDataset(
             complexes=complexes,
             y=y,
             ligand_resname=self.ligand_resname,
             ignore_h=self.ignore_h,
         )
-        self._dataset = dataset
 
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs)
-        self._dataloader = dataloader
-        return dataloader
+        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs)
+        return self._dataloader
 
 
 
