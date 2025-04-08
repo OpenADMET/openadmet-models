@@ -52,4 +52,3 @@ def test_mtenn_featurizer(cyp3a4_pose):
     assert feats["B"].numpy().shape == (1, 3695)
     # check the ligand mask, 38 atoms in the ligand
     assert feats["lig_mask"].numpy().sum() == 38
-
