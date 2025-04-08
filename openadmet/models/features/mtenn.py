@@ -4,39 +4,47 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 import MDAnalysis as mda
 import torch
+from typing import Union
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 from torch.utils.data import Dataset
 import numpy as np
+import warnings
 
 class MTENNDataset(Dataset):
     """
     Custom dataset for MTENN models
     """
 
-    def __init__(self, complexes: Iterable[Path], y: Iterable[Any], ligand_resname: str = "LIG", ignore_h: bool = True):
+    def __init__(self, complexes: Iterable[Path], y: Iterable[Any], ligand_resname: Union[str, list[str]] = "LIG", ignore_h: bool = True):
         """
         """
         self.complexes = complexes
+        if isinstance(ligand_resname, str):
+            ligand_resname = [ligand_resname] * len(complexes)
+        elif len(ligand_resname) != len(complexes):
+            raise ValueError("ligand_resnames must be a string or a list of the same length as complexes")
+        if len(complexes) != len(y):
+            raise ValueError("complexes and y must be the same length")
         self.ligand_resname = ligand_resname
         self.y = y
         self.ignore_h = ignore_h
 
         # load and feauturize the complexes
-        pos, Z, B, lig_mask = self._load_complexes(complexes, ignore_h=self.ignore_h, ligand_resname=self.ligand_resname)
+        pos, Z, B, lig_mask = self._load_complexes(complexes, ligand_resname, ignore_h=self.ignore_h)
         self.pos = pos
         self.Z = Z
         self.B = B
         self.lig_mask = lig_mask
 
     @staticmethod
-    def _load_complexes(complexes: Iterable[Path], ignore_h: bool = True, ligand_resname: str = "LIG"):
+    def _load_complexes(complexes: Iterable[Path], ligand_resname, ignore_h: bool = True):
         """
         Load the complexes into MDAnalysis"""
         all_pos = []
         all_Z = []
         all_B = []
         all_lig_mask = []
-        for complex in complexes:
+        for complex, lig_resname in zip(complexes, ligand_resname):
             u = mda.Universe(complex)
             # Assuming the first protein is the one of interest
             protein = u.select_atoms("protein")
@@ -48,14 +56,14 @@ class MTENNDataset(Dataset):
             protein_Z = protein.atoms.masses
             protein_B = protein.atoms.bfactors
 
-            ligand = u.select_atoms(f"resname {ligand_resname}")
+            ligand = u.select_atoms(f"resname {lig_resname}")
             # error on empty ligand
             if ligand.n_atoms == 0:
                 raise ValueError(f"No ligand found in {complex}")
-
+            
             # error on more than one ligand
             if len(set(ligand.resids)) > 1:
-                raise ValueError(f"More than one ligand found in {complex}")
+                warnings.warn(f"More than one ligand found in {complex}")
 
             ligand_pos = ligand.positions
             ligand_Z = ligand.atoms.masses
@@ -89,18 +97,13 @@ class MTENNDataset(Dataset):
             all_Z.append(Z)
             all_B.append(B)
             all_lig_mask.append(lig_mask)
-        # stack the arrays
-        all_pos = torch.stack(all_pos, dim=0)
-        all_Z = torch.stack(all_Z, dim=0)
-        all_B = torch.stack(all_B, dim=0)
-        all_lig_mask = torch.stack(all_lig_mask, dim=0)
 
         return all_pos, all_Z, all_B, all_lig_mask
 
 
     def __len__(self):
         return len(self.complexes)
-
+    
     def __getitem__(self, idx):
         pos = self.pos[idx]
         Z = self.Z[idx]
@@ -122,7 +125,7 @@ class MTENNFeaturizer(FeaturizerBase):
     """
     MTENNFeaturizer featurizer for molecules for downstream use in MTENN
     """
-    ligand_resname: str = "LIG"
+    ligand_resname: Union[str, list[str]] = "LIG"
     ignore_h: bool = True
     n_jobs: int = 4
     batch_size: int = 128
@@ -151,3 +154,7 @@ class MTENNFeaturizer(FeaturizerBase):
 
         self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs)
         return self._dataloader
+
+
+
+
