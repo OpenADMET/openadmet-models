@@ -21,8 +21,8 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
     """
 
     type: ClassVar[str] = "ChemPropSingleTaskModel"
-    batch_norm: bool = False
-    metric_list: list = ["mse"]
+    batch_norm: bool = True
+    metric_list: list = ["mse", "mae", "rmse"]
     model_params: dict = {}
     depth: int = 3
     message_hidden_dim: int = 300
