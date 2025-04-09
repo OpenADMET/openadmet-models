@@ -21,7 +21,7 @@ def get_atomic_number(element: str) -> int:
         return ptable.GetAtomicNumber(element)
     except KeyError:
         raise ValueError(f"Element {element} not found in periodic table")
-    
+
 atomic_number_vfunc = np.vectorize(get_atomic_number)
 
 class MTENNDataset(Dataset):
