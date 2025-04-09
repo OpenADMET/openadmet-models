@@ -9,6 +9,20 @@ from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 from torch.utils.data import Dataset
 import numpy as np
 import warnings
+from rdkit.Chem import GetPeriodicTable
+
+ptable = GetPeriodicTable()
+
+def get_atomic_number(element: str) -> int:
+    """
+    Get the atomic number of an element
+    """
+    try:
+        return ptable.GetAtomicNumber(element)
+    except KeyError:
+        raise ValueError(f"Element {element} not found in periodic table")
+    
+atomic_number_vfunc = np.vectorize(get_atomic_number)
 
 class MTENNDataset(Dataset):
     """
@@ -53,7 +67,7 @@ class MTENNDataset(Dataset):
                 raise ValueError(f"No protein found in {complex}")
 
             protein_pos = protein.positions
-            protein_Z = protein.atoms.masses
+            protein_Z = atomic_number_vfunc(protein.atoms.elements)
             protein_B = protein.atoms.bfactors
 
             ligand = u.select_atoms(f"resname {lig_resname}")
@@ -66,7 +80,7 @@ class MTENNDataset(Dataset):
                 warnings.warn(f"More than one ligand found in {complex}")
 
             ligand_pos = ligand.positions
-            ligand_Z = ligand.atoms.masses
+            ligand_Z = atomic_number_vfunc(ligand.atoms.elements)
             ligand_B = ligand.atoms.bfactors
             # concatenate protein and ligand positions
             pos = np.concatenate((protein_pos, ligand_pos), axis=0)
@@ -82,6 +96,8 @@ class MTENNDataset(Dataset):
             pos = torch.tensor(pos, dtype=torch.float32)
             Z = torch.tensor(Z, dtype=torch.int32)
             B = torch.tensor(B, dtype=torch.float32)
+
+
             # cast the mask to torch tensor
             lig_mask = torch.tensor(lig_mask, dtype=torch.bool)
 
