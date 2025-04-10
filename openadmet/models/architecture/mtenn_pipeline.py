@@ -7,8 +7,8 @@ from openadmet.models.architecture.model_base import models as model_registry
 
 class MTENNLightningWrapper(pl.LightningModule):
     def __init__(self,
-                 model_config: SchNetModelConfig, 
-                 loss_fn = torch.nn.MSELoss(), 
+                 model_config: SchNetModelConfig,
+                 loss_fn = torch.nn.MSELoss(),
                  lr = 1e-4):
          super().__init__()
          self.model = model_config.build()
@@ -25,7 +25,7 @@ class MTENNLightningWrapper(pl.LightningModule):
              pred,_ = self.model(data)
              loss = self.loss_fn(pred, target.unsqueeze(0).to(self.device))
              batch_loss += loss
- 
+
          avg_loss = batch_loss / len(data_batch)
          self.log('train_loss', avg_loss)
          return avg_loss
@@ -44,10 +44,10 @@ class MTENNSchNetModel(TorchModelBase):
     #metric_list : list = ['mae']
     model_params: dict = {}
 
-    #from params? 
+    #from params?
     # train here?
-    
-    def build(self, scaler=None): #what is scaler? 
+
+    def build(self, scaler=None): #what is scaler?
         """
         Prepare the model
         """
@@ -56,10 +56,10 @@ class MTENNSchNetModel(TorchModelBase):
             model_config = SchNetModelConfig(**self.model_params)
             self.estimator = MTENNLightningWrapper(model_config)
         else:
-            logger.warning("Model already exists, skipping build.") 
+            logger.warning("Model already exists, skipping build.")
 
     def train(self, dataloader):
-        """ 
+        """
         Train the model
         """
         raise NotImplementedError(
@@ -78,4 +78,4 @@ class MTENNSchNetModel(TorchModelBase):
             )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds).numpy().ravel()
-        
+
