@@ -136,6 +136,26 @@ class MTENNDataset(Dataset):
         }
 
 
+def _mtenn_collate_fn(batch):
+    data_list = []
+    targets = []
+    
+    for item in batch:
+        data = {
+                'pos': item['pos'], 
+                 'z': item['Z'].long(), 
+                 'lig': item['lig_mask'].bool()
+                }
+
+        data_list.append(data)
+
+        targets.append(torch.tensor(item['Y'], dtype=torch.float32))
+    targets = torch.stack(targets, dim=0)
+
+    return data_list, targets
+
+
+
 @featurizers.register("MTENNFeaturizer")
 class MTENNFeaturizer(FeaturizerBase):
     """
@@ -144,7 +164,7 @@ class MTENNFeaturizer(FeaturizerBase):
     ligand_resname: Union[str, list[str]] = "LIG"
     ignore_h: bool = True
     n_jobs: int = 4
-    batch_size: int = 128
+    batch_size: int = 2
     shuffle: bool = False
 
     _dataset: MTENNDataset = None
@@ -168,5 +188,6 @@ class MTENNFeaturizer(FeaturizerBase):
             ignore_h=self.ignore_h,
         )
 
-        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs)
-        return self._dataloader
+        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs, collate_fn=_mtenn_collate_fn)
+        # return None for Scaler
+        return self._dataloader, None
