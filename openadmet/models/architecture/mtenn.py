@@ -1,5 +1,7 @@
 from lightning import pytorch as pl
-
+import torch
+from typing import ClassVar
+from loguru import logger
 from mtenn.config import SchNetModelConfig
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -15,23 +17,23 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.loss_fn = loss_fn
          self.lr = lr
 
-     def training_step(self, batch, batch_idx):
-         data_batch, target_batch = batch
-         batch_loss = 0
+    def training_step(self, batch, batch_idx):
+        data_batch, target_batch = batch
+        batch_loss = 0
 
-         for data, target in zip(data_batch, target_batch):
-             for k, v in data.items():
-                 data[k] = v.to(self.device)
-             pred,_ = self.model(data)
-             loss = self.loss_fn(pred, target.unsqueeze(0).to(self.device))
-             batch_loss += loss
+        for data, target in zip(data_batch, target_batch):
+            for k, v in data.items():
+                data[k] = v.to(self.device)
+            pred,_ = self.model(data)
+            loss = self.loss_fn(pred, target.unsqueeze(0).to(self.device))
+            batch_loss += loss
 
-         avg_loss = batch_loss / len(data_batch)
-         self.log('train_loss', avg_loss)
-         return avg_loss
+        avg_loss = batch_loss / len(data_batch)
+        self.log('train_loss', avg_loss)
+        return avg_loss
 
-      def configure_optimizers(self):
-          return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
 
 
 
@@ -51,12 +53,15 @@ class MTENNSchNetModel(TorchModelBase):
         """
         Prepare the model
         """
-        if not.self.estimator:
+        if not self.estimator:
            #i think scaler is chemprop specific, but if not i will add loop back in
             model_config = SchNetModelConfig(**self.model_params)
             self.estimator = MTENNLightningWrapper(model_config)
         else:
             logger.warning("Model already exists, skipping build.")
+
+    def from_params(self, params):
+        pass
 
     def train(self, dataloader):
         """
