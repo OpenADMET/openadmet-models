@@ -9,12 +9,17 @@ from openadmet.models.tests.datafiles import (
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,
+    basic_anvil_yaml_classification,
     basic_anvil_yaml_cv,
 )
 
 
 def all_anvil_full_recipes():
-    return [basic_anvil_yaml, anvil_yaml_featconcat, anvil_yaml_gridsearch]
+    return [
+        basic_anvil_yaml,
+        anvil_yaml_featconcat,
+        anvil_yaml_gridsearch,
+    ]
 
 
 def test_anvil_spec_create():
@@ -71,3 +76,15 @@ def test_anvil_cross_val_run(tmp_path):
     anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml_cv)
     anvil_workflow = anvil_spec.to_workflow()
     anvil_workflow.run(output_dir=tmp_path / "tst")
+
+
+def test_anvil_classification_run(tmp_path):
+    anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml_classification)
+    anvil_workflow = anvil_spec.to_workflow()
+    anvil_workflow.run(output_dir=tmp_path / "tst")
+
+    assert Path(tmp_path / "tst" / "anvil_recipe.yaml").exists()
+    assert Path(tmp_path / "tst" / "model.json").exists()
+    assert Path(tmp_path / "tst" / "classification_metrics.json").exists()
+    assert Path(tmp_path / "tst" / "pr_curve.png").exists()
+    assert Path(tmp_path / "tst" / "roc_curve.png").exists()

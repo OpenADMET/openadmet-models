@@ -1,7 +1,10 @@
 from abc import abstractmethod
+from typing import Callable
 
+import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
+from scipy.stats import bootstrap
 
 evaluators = ClassRegistry(unique=True)
 
@@ -16,7 +19,6 @@ def get_eval_class(eval_type):
 
 
 class EvalBase(BaseModel):
-
     class Config:
         extra = "allow"
 
@@ -41,3 +43,39 @@ class EvalBase(BaseModel):
         Report the evaluation
         """
         pass
+
+    def stat_and_bootstrap(
+        self,
+        metric_tag: str,
+        y_pred: np.ndarray,
+        y_true: np.ndarray,
+        statistic: Callable,
+        confidence_level: float = 0.95,
+        is_scipy_statistic: bool = False,
+    ):
+        # calculate the metric and confidence intervals
+        if is_scipy_statistic:
+            metric = statistic(y_true, y_pred).statistic
+            conf_interval = bootstrap(
+                (y_true, y_pred),
+                statistic=lambda y_true, y_pred: statistic(y_true, y_pred).statistic,
+                method="basic",
+                confidence_level=confidence_level,
+                paired=True,
+            ).confidence_interval
+
+        else:
+            metric = statistic(y_true, y_pred)
+            conf_interval = bootstrap(
+                (y_true, y_pred),
+                statistic=statistic,
+                method="basic",
+                confidence_level=confidence_level,
+                paired=True,
+            ).confidence_interval
+
+        return (
+            metric,
+            conf_interval.low,
+            conf_interval.high,
+        )

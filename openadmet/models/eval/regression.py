@@ -1,53 +1,15 @@
 import json
 from functools import partial
-from typing import Callable
 
 import numpy as np
 import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
 from pydantic import Field
-from scipy.stats import bootstrap, kendalltau, spearmanr
+from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators
-
-
-def stat_and_bootstrap(
-    metric_tag: str,
-    y_pred: np.ndarray,
-    y_true: np.ndarray,
-    statistic: Callable,
-    confidence_level: float = 0.95,
-    is_scipy_statistic: bool = False,
-):
-    # calculate the metric and confidence intervals
-    if is_scipy_statistic:
-        metric = statistic(y_true, y_pred).statistic
-        conf_interval = bootstrap(
-            (y_true, y_pred),
-            statistic=lambda y_true, y_pred: statistic(y_true, y_pred).statistic,
-            method="basic",
-            confidence_level=confidence_level,
-            paired=True,
-        ).confidence_interval
-
-    else:
-        metric = statistic(y_true, y_pred)
-        conf_interval = bootstrap(
-            (y_true, y_pred),
-            statistic=statistic,
-            method="basic",
-            confidence_level=confidence_level,
-            paired=True,
-        ).confidence_interval
-
-    return (
-        metric,
-        conf_interval.low,
-        conf_interval.high,
-    )
-
 
 # create partial functions for the scipy stats
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
@@ -84,7 +46,7 @@ class RegressionMetrics(EvalBase):
             self.use_wandb = use_wandb
 
         for metric_tag, (metric, is_scipy, _) in self._metrics.items():
-            value, lower_ci, upper_ci = stat_and_bootstrap(
+            value, lower_ci, upper_ci = self.stat_and_bootstrap(
                 metric_tag,
                 y_pred,
                 y_true,
@@ -242,12 +204,12 @@ class RegressionPlots(EvalBase):
         fig, ax = plt.subplots()
         ax.set_title(title, fontsize=10)
         if min_val is None:
-            min_val = min(y_true.min(), y_pred.min())
+            min_val = min(np.min(y_true), np.min(y_pred))
             min_ax = min_val - 1
         else:
             min_ax = min_val
         if max_val is None:
-            max_val = max(y_true.max(), y_pred.max())
+            max_val = max(np.max(y_true), np.max(y_pred))
             max_ax = max_val + 1
         else:
             max_ax = max_val
@@ -265,7 +227,6 @@ class RegressionPlots(EvalBase):
 
         # if pXC50 measure then plot the 0.5 and 1.0 log range unit
         if pXC50:
-
             ax.fill_between(
                 [min_ax, max_ax],
                 [min_ax - 0.5, max_ax - 0.5],
