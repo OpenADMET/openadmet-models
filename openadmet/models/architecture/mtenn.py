@@ -17,6 +17,9 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.loss_fn = loss_fn
          self.lr = lr
 
+    def forward(self, batch):
+        return self.model(batch)
+    
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch
         batch_loss = 0
