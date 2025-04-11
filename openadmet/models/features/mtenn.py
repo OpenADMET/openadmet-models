@@ -139,11 +139,11 @@ class MTENNDataset(Dataset):
 def _mtenn_collate_fn(batch):
     data_list = []
     targets = []
-    
+
     for item in batch:
         data = {
-                'pos': item['pos'], 
-                 'z': item['Z'].long(), 
+                'pos': item['pos'],
+                 'z': item['Z'].long(),
                  'lig': item['lig_mask'].bool()
                 }
 
