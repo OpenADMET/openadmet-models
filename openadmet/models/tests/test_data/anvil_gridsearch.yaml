@@ -18,7 +18,7 @@ data:
   type: intake
   resource: "{{ANVIL_DIR}}/example_intake.yaml"
   cat_entry: "CYP3A4_pchembl"
-  smiles_col: "CANONICAL_SMILES"
+  input_col: "CANONICAL_SMILES"
   target_col: "pChEMBL mean"
 
 
