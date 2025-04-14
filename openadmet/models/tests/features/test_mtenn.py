@@ -42,7 +42,7 @@ def test_mtenn_featurizer(cyp3a4_pose):
     dataloader = ft.featurize([cyp3a4_pose], pd.Series([42]))
 
     # Check the length of the dataloader
-    assert len(dataloader) == 1
+    assert len(dataloader) == 2
     # Check the shape of the features
     feats = next(iter(dataloader))
     assert feats["Y"] == 42

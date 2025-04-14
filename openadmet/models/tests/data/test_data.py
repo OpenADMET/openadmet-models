@@ -8,7 +8,7 @@ def test_data_spec_from_csv():
         resource=test_csv,
         cat_entry="test_data",
         target_col="data1",
-        smiles_col="SMILES",
+        input_col="SMILES"
     )
     target, smiles = data_spec.read()
     assert len(target) == 30
@@ -21,7 +21,7 @@ def test_data_spec_from_intake():
         resource=intake_cat,
         cat_entry="subsel",
         target_col="data1",
-        smiles_col="SMILES",
+        input_col="SMILES",
     )
     target, smiles = data_spec.read()
     assert len(target) == 30
