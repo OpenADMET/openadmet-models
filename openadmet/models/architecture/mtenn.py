@@ -30,7 +30,7 @@ class MTENNLightningWrapper(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch
         batch_loss = 0
-        
+
         for data, target in zip(data_batch, target_batch):
             for k, v in data.items():
                 data[k] = v.to(self.device)
