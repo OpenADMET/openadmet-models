@@ -18,12 +18,19 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.lr = lr
 
     def forward(self, batch):
-        return self.model(batch)
+        data_batch, _ = batch
+        preds = []
+        for data in data_batch:
+            for k,v in data.items():
+                data[k] = v.to(self.device)
+            pred, _ = self.model(data)
+            preds.append(pred)
+        return torch.stack(preds)
 
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch
         batch_loss = 0
-
+        
         for data, target in zip(data_batch, target_batch):
             for k, v in data.items():
                 data[k] = v.to(self.device)
@@ -34,6 +41,18 @@ class MTENNLightningWrapper(pl.LightningModule):
         avg_loss = batch_loss / len(data_batch)
         self.log('train_loss', avg_loss)
         return avg_loss
+
+    def predict_step(self, batch, batch_idx):
+        preds = []
+        data_batch, _  = batch
+        device = next(self.model.parameters()).device
+        for data in data_batch:
+            for k, v in data.items():
+                data[k] = v.to(self.device)
+            pred, _ = self.model(data)
+            preds.append(pred)
+
+        return torch.stack(preds)
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
@@ -81,8 +100,10 @@ class MTENNSchNetModel(TorchModelBase):
             raise AttributeError("Model not built or trained.")
 
         with torch.inference_mode():
+            acc = "cpu"
+            #acc = "auto"	#uncomment line and commet above for gpu usage; if auto doesnt work change string to gpu
             trainer = pl.Trainer(
-                logger=None, enable_progress_bar=False, accelerator="auto", devices=1
+                logger=None, enable_progress_bar=False, accelerator=acc, devices=1    #changed cpu from auto this can be made back in future workarounds
             )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds).numpy().ravel()
