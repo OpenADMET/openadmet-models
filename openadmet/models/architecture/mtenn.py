@@ -16,16 +16,16 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.model = model_config.build()
          self.loss_fn = loss_fn
          self.lr = lr
-
-    def forward(self, batch):
-        data_batch, _ = batch
-        preds = []
-        for data in data_batch:
-            for k,v in data.items():
-                data[k] = v.to(self.device)
-            pred, _ = self.model(data)
-            preds.append(pred)
-        return torch.stack(preds)
+    
+    #def forward(self, batch):
+    #    data_batch, _ = batch
+    #    preds = []
+    #    for data in data_batch:
+    #        for k,v in data.items():
+    #            data[k] = v.to(self.device)
+    #        pred, _ = self.model(data)
+    #        preds.append(pred)
+    #    return torch.stack(preds)
 
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch

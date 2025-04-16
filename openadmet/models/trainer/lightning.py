@@ -16,8 +16,10 @@ class LightningTrainer(TrainerBase):
     """
 
     max_epochs: int = 20
-    accelerator: str = "gpu"
-    devices: int = -1
+    #accelerator: str = "gpu"
+    #devices: int = -1
+    accelerator: str = "cpu"
+    devices: int = 1
     use_wandb: bool = False
     output_dir: Path = None
     wandb_project: str = "openadmet-testing"
@@ -50,8 +52,10 @@ class LightningTrainer(TrainerBase):
         self._trainer = pl.Trainer(
             logger=self._logger,
             enable_progress_bar=True,
-            accelerator=self.accelerator,
-            devices=self.devices,  # Use GPU if available
+            accelerator="cpu", 
+            devices=1,
+            #accelerator=self.accelerator,
+            #devices=self.devices,  # Use GPU if available
             max_epochs=self.max_epochs,  # number of epochs to train for
             callbacks=[checkpointing],  # Use the configured checkpoint callback
         )
