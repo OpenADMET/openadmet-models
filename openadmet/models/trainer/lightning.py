@@ -52,7 +52,7 @@ class LightningTrainer(TrainerBase):
         self._trainer = pl.Trainer(
             logger=self._logger,
             enable_progress_bar=True,
-            accelerator="cpu", 
+            accelerator="cpu",
             devices=1,
             #accelerator=self.accelerator,
             #devices=self.devices,  # Use GPU if available

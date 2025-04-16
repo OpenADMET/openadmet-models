@@ -16,7 +16,7 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.model = model_config.build()
          self.loss_fn = loss_fn
          self.lr = lr
-    
+
     #def forward(self, batch):
     #    data_batch, _ = batch
     #    preds = []
