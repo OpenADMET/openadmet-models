@@ -45,7 +45,7 @@ def test_mtenn_featurizer(cyp3a4_pose):
     assert len(dataloader) == 1
     # Check the shape of the features
     feats, y  = next(iter(dataloader))
-    
+
     assert y.item() == 42
     assert feats[0]["lig"].numpy().shape == (3695,)
     assert feats[0]["pos"].numpy().shape == (3695, 3)
