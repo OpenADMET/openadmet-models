@@ -22,7 +22,7 @@ class MTENNLightningWrapper(pl.LightningModule):
             data[k] = v.to(self.device)
         pred, _ = self.model(data)
         return pred
-        
+
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch
         batch_loss = 0.0
