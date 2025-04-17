@@ -60,7 +60,7 @@ jobs:
           pytest -v --cov=openadmet.models --cov-report=xml --color=yes openadmet/models/tests/
 
       - name: CodeCov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
