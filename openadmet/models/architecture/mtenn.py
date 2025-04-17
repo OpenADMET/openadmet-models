@@ -84,10 +84,9 @@ class MTENNSchNetModel(TorchModelBase):
             raise AttributeError("Model not built or trained.")
 
         with torch.inference_mode():
-            #acc = "cpu"
-            acc = "gpu"	#uncomment line and comment above for gpu usage; if auto doesnt work change string to gpu
+            acc = "cpu"
+            #acc = "gpu"	#uncomment line and comment above for gpu usage; if auto doesnt work change string to gpu
             trainer = pl.Trainer(
-                logger=None, enable_progress_bar=False, accelerator=acc, devices=1    #changed cpu from auto this can be made back in future workarounds
-            )
+                logger=None, enable_progress_bar=False, accelerator=acc, devices=1)
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds).numpy().ravel()
