@@ -9,4 +9,5 @@ def test_save_load_pickleable(mclass, tmp_path):
     model.build()
     model.save(tmp_path / "test_model.pkl")
     loaded_model = mclass()
+    loaded_model.build()
     loaded_model.load(tmp_path / "test_model.pkl")
