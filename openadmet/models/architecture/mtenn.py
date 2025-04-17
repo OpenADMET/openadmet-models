@@ -17,24 +17,18 @@ class MTENNLightningWrapper(pl.LightningModule):
          self.loss_fn = loss_fn
          self.lr = lr
 
-    #def forward(self, batch):
-    #    data_batch, _ = batch
-    #    preds = []
-    #    for data in data_batch:
-    #        for k,v in data.items():
-    #            data[k] = v.to(self.device)
-    #        pred, _ = self.model(data)
-    #        preds.append(pred)
-    #    return torch.stack(preds)
-
+    def forward(self, data):
+        for k,v in data.items():
+            data[k] = v.to(self.device)
+        pred, _ = self.model(data)
+        return pred
+        
     def training_step(self, batch, batch_idx):
         data_batch, target_batch = batch
-        batch_loss = 0
+        batch_loss = 0.0
 
         for data, target in zip(data_batch, target_batch):
-            for k, v in data.items():
-                data[k] = v.to(self.device)
-            pred,_ = self.model(data)
+            pred = self(data)
             loss = self.loss_fn(pred, target.unsqueeze(0).to(self.device))
             batch_loss += loss
 
@@ -43,15 +37,8 @@ class MTENNLightningWrapper(pl.LightningModule):
         return avg_loss
 
     def predict_step(self, batch, batch_idx):
-        preds = []
         data_batch, _  = batch
-        device = next(self.model.parameters()).device
-        for data in data_batch:
-            for k, v in data.items():
-                data[k] = v.to(self.device)
-            pred, _ = self.model(data)
-            preds.append(pred)
-
+        preds = [self(data) for data in data_batch]
         return torch.stack(preds)
 
     def configure_optimizers(self):
@@ -62,21 +49,17 @@ class MTENNLightningWrapper(pl.LightningModule):
 @model_registry.register("MTENNSchNetModel")
 class MTENNSchNetModel(TorchModelBase):
     """
+    MTENN SchNet Model Implementation
     """
 
     type:ClassVar[str] = "MTENNSchNetModel"
-    #metric_list : list = ['mae']
     model_params: dict = {}
 
-    #from params?
-    # train here?
-
-    def build(self, scaler=None): #what is scaler?
+    def build(self, scaler=None):
         """
         Prepare the model
         """
         if not self.estimator:
-           #i think scaler is chemprop specific, but if not i will add loop back in
             model_config = SchNetModelConfig(**self.model_params)
             self.estimator = MTENNLightningWrapper(model_config)
         else:
@@ -95,13 +78,14 @@ class MTENNSchNetModel(TorchModelBase):
 
     def predict(self, dataloader) -> torch.Tensor:
         """
+        Use model for prediction
         """
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
 
         with torch.inference_mode():
-            acc = "cpu"
-            #acc = "auto"	#uncomment line and commet above for gpu usage; if auto doesnt work change string to gpu
+            #acc = "cpu"
+            acc = "gpu"	#uncomment line and comment above for gpu usage; if auto doesnt work change string to gpu
             trainer = pl.Trainer(
                 logger=None, enable_progress_bar=False, accelerator=acc, devices=1    #changed cpu from auto this can be made back in future workarounds
             )
