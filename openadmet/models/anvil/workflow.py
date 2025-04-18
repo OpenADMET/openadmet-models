@@ -436,7 +436,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model saved")
 
         logger.info("Predicting")
-        y_pred = self.model.predict(test_dataloader)
+        accelerator = getattr(self.trainer, "accelerator", "gpu")
+        devices = getattr(self.trainer, "devices", 1)
+        y_pred = self.model.predict(test_dataloader, accelerator=accelerator, devices=devices)
         logger.info("Predictions made")
 
         logger.info("Evaluating")
