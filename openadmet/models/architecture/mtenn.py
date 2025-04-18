@@ -76,7 +76,7 @@ class MTENNSchNetModel(TorchModelBase):
            "Training not implemented in model class, use a trainer."
         )
 
-    def predict(self, dataloader) -> torch.Tensor:
+    def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
         Use model for prediction
         """
@@ -84,9 +84,7 @@ class MTENNSchNetModel(TorchModelBase):
             raise AttributeError("Model not built or trained.")
 
         with torch.inference_mode():
-            acc = "cpu"
-            #acc = "gpu"	#uncomment line and comment above for gpu usage; if auto doesnt work change string to gpu
             trainer = pl.Trainer(
-                logger=None, enable_progress_bar=False, accelerator=acc, devices=1)
+                logger=None, enable_progress_bar=False, accelerator=accelerator, devices=devices)
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds).numpy().ravel()
