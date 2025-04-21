@@ -102,7 +102,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray, accelerator="gpu", devices=1) -> np.ndarray:
         """
         Predict using the model
         """
@@ -111,7 +111,7 @@ class ChemPropSingleTaskRegressorModel(PickleableModelBase):
 
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None, enable_progress_bar=False, accelerator="auto", devices=1
+                logger=None, enable_progress_bar=False, accelerator=accelerator, devices=devices
             )
             preds = trainer.predict(self.estimator, X)
         # concatenate the predictions which are in a list of tensors
