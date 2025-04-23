@@ -12,15 +12,15 @@ def load_anvil_model_and_metadata(model_dir):
     # load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
     if not recipe_components_dir.exists():
-        raise ValueError(f"Model path {model_dir} does not contain recipe components")
+        raise FileNotFoundError(f"Model path {model_dir} does not contain recipe components")
     # load the specification
     procedure_spec = recipe_components_dir / "procedure.yaml"
     if not procedure_spec.exists():
-        raise ValueError(f"Model path {model_dir} does not contain procedure.yaml")
+        raise FileNotFoundError(f"Model path {model_dir} does not contain procedure.yaml")
 
     metadata_spec = recipe_components_dir / "metadata.yaml"
     if not metadata_spec.exists():
-        raise ValueError(f"Model path {model_dir} does not contain metadata.yaml")
+        raise FileNotFoundError(f"Model path {model_dir} does not contain metadata.yaml")
     # load the metadata
     metadata = Metadata.from_yaml(metadata_spec)
 
