@@ -43,7 +43,7 @@ def load_anvil_model_and_metadata(model_dir):
 
 @click.option(
     "--input-path",
-    help="Path to the input CSV file or SDF containing structureas",
+    help="Path to the input CSV file or SDF containing structures",
     required=True,
     type=click.Path(exists=True),
 )
