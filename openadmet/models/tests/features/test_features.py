@@ -75,8 +75,7 @@ def test_feature_concatenator_order_independence(smiles):
     
     desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
     fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
-    
-    # 顺序1: [desc_featurizer, fp_featurizer]
+
     concat1 = FeatureConcatenator(featurizers=[desc_featurizer, fp_featurizer])
     X1, idx1 = concat1.featurize(smiles)
     
