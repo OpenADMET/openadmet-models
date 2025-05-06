@@ -40,9 +40,11 @@ class FeatureConcatenator(FeaturizerBase):
         """
         features = []
         indices = []
-        for feat in self.featurizers:
-            feat, idx = feat.featurize(smiles)
-            features.append(feat)
+        sorted_featurizers = sorted(self.featurizers, key=lambda f: f.__class__.__name__)
+        #print("after sorting:", [f.__class__.__name__ for f in sorted_featurizers])
+        for feat in sorted_featurizers:
+            feat_res, idx = feat.featurize(smiles)
+            features.append(feat_res)
             indices.append(idx)
 
         return self.concatenate(features, indices)
