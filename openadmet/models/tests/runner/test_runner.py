@@ -42,7 +42,7 @@ def test_multiprocessing_feature_extraction(smiles_data, process_pool):
     for i in range(3):
         result = process_pool.apply_async(process_smiles, (smiles_data,))
         results.append(result)
-    
+
     for i, result in enumerate(results):
         try:
             shape = result.get(timeout=30)
