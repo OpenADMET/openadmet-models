@@ -1,0 +1,20 @@
+from pathlib import Path
+import pandas as pd
+
+import pytest
+
+from openadmet.models.inference.inference import predict
+
+def test_predict():
+    # Test the predict function with a sample input
+    input_path = "tests/test_data/test_input.csv"
+    input_col = "SMILES"
+    model_dir = ["tests/test_data/cyp3a4_anvil_lgbm_model_dir"]
+    write_csv = False
+    output_path = None
+    debug = False
+
+    result = predict(input_path, input_col, model_dir, write_csv, output_path, debug)
+
+    # Check if the result is a DataFrame
+    assert isinstance(result, pd.DataFrame)

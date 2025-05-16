@@ -5,11 +5,12 @@ from pathlib import Path
 from loguru import logger
 from openadmet.models.cli.predict import load_anvil_model_and_metadata
 
-def predict(input_path, input_col,  model_dir, output_path, debug):
+def predict(input_path, input_col,  model_dir, write_csv, output_path=None, debug=False):
     """Predict using a trained model"""
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
     logger.info(f"Model directories: {model_dir}")
+    logger.info(f"Write CSV: {write_csv}")
     logger.info(f"Output path: {output_path}")
     logger.info(f"Input column: {input_col}")
     # load input data
@@ -20,10 +21,6 @@ def predict(input_path, input_col,  model_dir, output_path, debug):
 
     if input_col not in data.columns:
         raise ValueError(f"Column {input_col} not found in input data")
-
-
-    if "predictions" in data.columns:
-        raise ValueError("Output file already contains a 'predictions' column")
 
     # Load the models
     for i, model_path in enumerate(model_dir):
@@ -38,7 +35,6 @@ def predict(input_path, input_col,  model_dir, output_path, debug):
         X_feat, _ = feat.featurize(data[input_col])
 
         predictions = model.predict(X_feat)
-
 
         # will need to change for multi-target models
         predictions_tag = f"OADMET_PRED_{metadata.tag}"
@@ -55,4 +51,8 @@ def predict(input_path, input_col,  model_dir, output_path, debug):
     # remove ID column if it exists
     if "ID" in data.columns:
         data.drop(columns=["ID"], inplace=True)
-    data.to_csv(output_path, index=False)
+
+    if write_csv:
+        data.to_csv(output_path, index=False)
+
+    return data
