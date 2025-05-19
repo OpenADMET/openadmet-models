@@ -57,7 +57,7 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest -v --color=yes openadmet/models/tests/
+          pytest -v -n auto --color=yes openadmet/models/tests/
 
       # - name: echo the coverage report
       #   shell: bash -l {0}

@@ -46,6 +46,7 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
+  - pytest-xdist
 
     # Pip-only installs
   - pip:
