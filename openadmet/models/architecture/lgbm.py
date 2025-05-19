@@ -13,7 +13,7 @@ class LGBMModelBase(PickleableModelBase):
     """
 
     type: ClassVar[str]
-    model_class: ClassVar[
+    mod_class: ClassVar[
         type
     ]  # To specify the LightGBM model class (e.g., LGBMRegressor or LGBMClassifier)
     mod_params: dict = {}
@@ -39,7 +39,7 @@ class LGBMModelBase(PickleableModelBase):
         Prepare the model
         """
         if not self.estimator:
-            self.estimator = self.model_class(**self.mod_params)
+            self.estimator = self.mod_class(**self.mod_params)
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -59,7 +59,7 @@ class LGBMRegressorModel(LGBMModelBase):
     """
 
     type: ClassVar[str] = "LGBMRegressorModel"
-    model_class: ClassVar[type] = lgb.LGBMRegressor
+    mod_class: ClassVar[type] = lgb.LGBMRegressor
 
 
 @models.register("LGBMClassifierModel")
@@ -69,7 +69,7 @@ class LGBMClassifierModel(LGBMModelBase):
     """
 
     type: ClassVar[str] = "LGBMClassifierModel"
-    model_class: ClassVar[type] = lgb.LGBMClassifier
+    mod_class: ClassVar[type] = lgb.LGBMClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

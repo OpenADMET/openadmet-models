@@ -12,7 +12,7 @@ from os import PathLike
 models = ClassRegistry(unique=True)
 
 
-def get_model_class(model_type):
+def get_mod_class(model_type):
     try:
         feat_class = models.get_class(model_type)
     except RegistryKeyError:
