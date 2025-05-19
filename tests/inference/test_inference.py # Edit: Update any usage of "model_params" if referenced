@@ -1,3 +1,0 @@
-def test_params_usage():
-    params = {"key": "value"}
-    assert params["key"] == "value"
