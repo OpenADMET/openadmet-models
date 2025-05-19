@@ -14,12 +14,12 @@ def X_y():
 def test_lgbm():
     lgbm_model = LGBMRegressorModel()
     assert lgbm_model.type == "LGBMRegressorModel"
-    assert lgbm_model.model_params == {}
+    assert lgbm_model.mod_params == {}
 
 
 def test_lgbm_from_params():
     lgbm_model = LGBMRegressorModel.from_params(
-        class_params={}, model_params={"n_estimators": 100, "boosting_type": "rf"}
+        class_params={}, mod_params={"n_estimators": 100, "boosting_type": "rf"}
     )
     assert lgbm_model.type == "LGBMRegressorModel"
     assert lgbm_model.estimator.get_params()["n_estimators"] == 100
@@ -28,7 +28,7 @@ def test_lgbm_from_params():
 
 def test_lgbm_train_predict(X_y):
     lgbm_model = LGBMRegressorModel.from_params(
-        class_params={}, model_params={"n_estimators": 100}
+        class_params={}, mod_params={"n_estimators": 100}
     )
     X, y = X_y
 
@@ -45,7 +45,7 @@ def test_lgbm_train_predict(X_y):
 
 def test_lgbm_save_load(tmp_path, X_y):
     lgbm_model = LGBMRegressorModel.from_params(
-        class_params={}, model_params={"n_estimators": 100}
+        class_params={}, mod_params={"n_estimators": 100}
     )
     X, y = X_y
     lgbm_model.train(X, y)
@@ -59,7 +59,7 @@ def test_lgbm_save_load(tmp_path, X_y):
 
 def test_serialization(tmp_path, X_y):
     lgbm_model = LGBMRegressorModel.from_params(
-        class_params={}, model_params={"n_estimators": 100}
+        class_params={}, mod_params={"n_estimators": 100}
     )
     X, y = X_y
     lgbm_model.train(X, y)
