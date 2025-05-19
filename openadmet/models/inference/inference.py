@@ -5,7 +5,12 @@ from pathlib import Path
 from loguru import logger
 from openadmet.models.cli.predict import load_anvil_model_and_metadata
 
-def predict(input_path, input_col,  model_dir, write_csv, output_path=None, debug=False):
+def predict(input_path:str, 
+            input_col:str,
+            model_dir:str,
+            write_csv:bool = False,
+            output_path:str = None,
+            debug:bool = False):
     """Predict using a trained model"""
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
