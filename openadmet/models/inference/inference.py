@@ -5,7 +5,7 @@ from pathlib import Path
 from loguru import logger
 from openadmet.models.cli.predict import load_anvil_model_and_metadata
 
-def predict(input_path:str, 
+def predict(input_path:str,
             input_col:str,
             model_dir:str,
             write_csv:bool = False,
