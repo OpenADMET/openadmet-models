@@ -16,14 +16,14 @@ class LGBMModelBase(PickleableModelBase):
     model_class: ClassVar[
         type
     ]  # To specify the LightGBM model class (e.g., LGBMRegressor or LGBMClassifier)
-    model_params: dict = {}
+    mod_params: dict = {}
 
     @classmethod
-    def from_params(cls, class_params: dict = {}, model_params: dict = {}):
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
         Create a model from parameters
         """
-        instance = cls(**class_params, model_params=model_params)
+        instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
@@ -39,7 +39,7 @@ class LGBMModelBase(PickleableModelBase):
         Prepare the model
         """
         if not self.estimator:
-            self.estimator = self.model_class(**self.model_params)
+            self.estimator = self.model_class(**self.mod_params)
         else:
             logger.warning("Model already exists, skipping build")
 

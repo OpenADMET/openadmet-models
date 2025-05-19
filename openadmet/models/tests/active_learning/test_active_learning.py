@@ -30,7 +30,7 @@ def models(train_data):
     X, y = train_data
 
     # Model parameters
-    model_params = {
+    mod_params = {
         "n_estimators": 5,
         "force_row_wise": True,
     }
@@ -39,7 +39,7 @@ def models(train_data):
     models = []
     for i in range(5):
         # Initialize model
-        model = LGBMRegressorModel.from_params(model_params=model_params)
+        model = LGBMRegressorModel.from_params(mod_params=mod_params)
 
         # Train
         bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
