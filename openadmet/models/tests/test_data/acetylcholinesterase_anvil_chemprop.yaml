@@ -46,7 +46,7 @@ procedure:
     params:
       max_epochs: 10 
       gpus: 1
-      use_wandb: true
+      use_wandb: false
       wandb_project: "openadmet-testing"
 
 
