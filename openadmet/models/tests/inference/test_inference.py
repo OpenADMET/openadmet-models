@@ -9,7 +9,7 @@ from openadmet.models.tests.datafiles import pred_test_data_csv, anvil_lgbm_trai
 def test_predict():
     # Test the predict function with a sample input
     input_path = pred_test_data_csv
-    input_col = "SMILES"
+    input_col = "MY_SMILES"
     model_dir = [anvil_lgbm_trained_model_dir]
     write_csv = False
     output_path = None
