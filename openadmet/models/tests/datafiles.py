@@ -28,6 +28,10 @@ AChE_CHEMBL4078_Landrum_maxcur = (
     _data_ref / "AChE_CHEMBL4078_Landrum_maxcur.csv"
 ).as_posix()
 
+ACEH_chembl_pchembl = (_data_ref / "ACEH_chembl_pchembl.csv").as_posix()
+acetylcholinesterase_anvil_chemprop_yaml = (_data_ref / "acetylcholinesterase_anvil_chemprop.yaml").as_posix()
+
+
 # posthoc anvil outputs for testing
 descr_json = _data_ref / "cross_validation_metrics_descr.json"
 fp_json = _data_ref / "cross_validation_metrics_fp.json"
