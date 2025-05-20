@@ -1,0 +1,7 @@
+{
+  "batch_norm": true,
+  "metric_list": [
+    "mae"
+  ],
+  "model_params": {}
+}
