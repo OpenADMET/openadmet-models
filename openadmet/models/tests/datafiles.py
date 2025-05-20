@@ -46,5 +46,3 @@ anvil_lgbm_trained_model_dir = (_data_ref / "cyp3a4_anvil_lgbm_model_dir").as_po
 anvil_chemprop_trained_model_dir = (_data_ref / "aceh_chemprop_anvil_model_dir").as_posix()
 # test data for prediction
 pred_test_data_csv = (_data_ref / "ligands.csv").as_posix()
-
-
