@@ -43,7 +43,7 @@ class LGBMModelBase(PickleableModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
         Predict using the model
         """

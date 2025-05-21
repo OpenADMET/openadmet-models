@@ -107,7 +107,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-    def predict(self, X: np.ndarray, accelerator="gpu", devices=1) -> np.ndarray:
+    def predict(self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs) -> np.ndarray:
         """
         Predict using the model
         """

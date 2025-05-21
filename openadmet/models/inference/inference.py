@@ -10,7 +10,8 @@ def predict(input_path:str,
             model_dir:str,
             write_csv:bool = False,
             output_path:str = None,
-            debug:bool = False):
+            debug:bool = False,
+            accelerator: str = "gpu"):
     """Predict using a trained model"""
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
@@ -39,7 +40,7 @@ def predict(input_path:str,
         logger.debug(f"Feature: {feat}")
         X_feat, _ = feat.featurize(data[input_col])
 
-        predictions = model.predict(X_feat)
+        predictions = model.predict(X_feat, accelerator=accelerator)
 
         # will need to change for multi-target models
         predictions_tag = f"OADMET_PRED_{metadata.tag}"

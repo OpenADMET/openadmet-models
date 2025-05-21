@@ -30,7 +30,7 @@ def test_predict(model_dir, request):
     output_path = None
     debug = False
 
-    result = predict(input_path, input_col, model_dir, write_csv, output_path, debug)
+    result = predict(input_path, input_col, model_dir, write_csv, output_path, debug=False, accelerator="cpu")
 
     # Check if the result is a DataFrame
     assert isinstance(result, pd.DataFrame)
