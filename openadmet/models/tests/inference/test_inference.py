@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-
+import os
 import pytest
 
 from openadmet.models.inference.inference import predict
@@ -15,7 +15,8 @@ def anvil_lgbm():
 def anvil_chemprop():
     return anvil_chemprop_trained_model_dir
 
-
+@pytest.mark.skipif(
+    os.getenv("RUNNER_OS") == "macOS", reason="MacOS runner not enough memory")
 @pytest.mark.parametrize("model_dir", ["anvil_lgbm", "anvil_chemprop"])
 def test_predict(model_dir, request):
 
