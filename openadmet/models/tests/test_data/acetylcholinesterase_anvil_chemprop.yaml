@@ -44,8 +44,8 @@ procedure:
   train:
     type: LightningTrainer
     params:
-      max_epochs: 10
-      gpus: 1
+      max_epochs: 1
+      accelerator: "cpu"
       use_wandb: false
       wandb_project: "openadmet-testing"
 
@@ -62,11 +62,3 @@ report:
         title: "Acetylcholinesterase True vs Predicted pChEMBL on test set"
         pXC50: true
 
-    # - type: SKLearnRepeatedKFoldCrossValidation
-    #   params:
-    #     n_splits: 5
-    #     n_repeats: 5
-    #     random_state: 42
-    #     axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
-    #     title: "Acetylcholinesterase True vs Predicted pChEMBL on test set"
-    #     pXC50: true
