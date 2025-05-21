@@ -1,7 +1,7 @@
 {
-  "os":  "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
-  "python":  "CPython 3.12.9",
-  "startedAt":  "2025-04-01T03:51:46.015498Z",
+  "os":  "Linux-6.8.0-59-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.12.10",
+  "startedAt":  "2025-05-21T09:58:16.630785Z",
   "args":  [
     "anvil",
     "--recipe-path",
@@ -9,11 +9,11 @@
     "--output-dir",
     "out"
   ],
-  "program":  "/home/hmacdope/mambaforge/envs/openadmet_models_3/bin/openadmet",
+  "program":  "/home/hmacdope/mambaforge/envs/openadmet_models4/bin/openadmet",
   "email":  "hugo.macdermott-opeskin@omsf.io",
-  "root":  "out_2025-04-01_f208c5",
+  "root":  "out",
   "host":  "athena",
-  "executable":  "/home/hmacdope/mambaforge/envs/openadmet_models_3/bin/python",
+  "executable":  "/home/hmacdope/mambaforge/envs/openadmet_models4/bin/python3.12",
   "cpu_count":  16,
   "cpu_count_logical":  32,
   "gpu":  "NVIDIA GeForce RTX 4090",
@@ -21,11 +21,11 @@
   "disk":  {
     "/":  {
       "total":  "1967845998592",
-      "used":  "1000790294528"
+      "used":  "1018653351936"
     }
   },
   "memory":  {
-    "total":  "134162268160"
+    "total":  "134162264064"
   },
   "cpu":  {
     "count":  16,
