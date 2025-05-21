@@ -61,4 +61,3 @@ report:
         axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
         title: "Acetylcholinesterase True vs Predicted pChEMBL on test set"
         pXC50: true
-
