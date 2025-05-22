@@ -155,7 +155,7 @@ msgpack==1.0.3
 h5py==3.13.0
 numba==0.61.2
 appdirs==1.4.4
-h11==0.14.0
+h11==0.16.0
 networkx==3.4.2
 webencodings==0.5.1
 overrides==7.4.0
