@@ -28,16 +28,17 @@ class ShuffleSplitter(SplitterBase):
             return X_train, None, X_val_test, y_train, None, y_val_test
 
         # If no test set is requested, return train and validation sets
-        if self.test_size == 0:
+        elif self.test_size == 0:
             return X_train, X_val_test, None, y_train, y_val_test, None
 
         # If both test and validation sets are requested, split the remaining data
-        X_val, X_test, y_val, y_test = train_test_split(
-            X_val_test,
-            y_val_test,
-            train_size=None,
-            test_size=int(self.test_size * X.shape[0]),
-            random_state=self.random_state,
-        )
+        else:
+            X_val, X_test, y_val, y_test = train_test_split(
+                X_val_test,
+                y_val_test,
+                train_size=None,
+                test_size=int(self.test_size * X.shape[0]),
+                random_state=self.random_state,
+            )
 
-        return X_train, X_val, X_test, y_train, y_val, y_test
+            return X_train, X_val, X_test, y_train, y_val, y_test
