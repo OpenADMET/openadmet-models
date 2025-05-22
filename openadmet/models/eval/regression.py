@@ -42,7 +42,8 @@ class RegressionMetrics(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         n_tasks = y_true.shape[1]
-        assert n_tasks == y_pred.shape[1]
+        if not(n_tasks == y_pred.shape[1]):
+            raise ValueError("y_true and y_pred must have the same number of tasks")
         if target_labels is None:
             target_labels = [f'task_{i}' for i in range(n_tasks)]
 
@@ -191,7 +192,8 @@ class RegressionPlots(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         n_tasks = y_true.shape[1]
-        assert n_tasks == y_pred.shape[1]
+        if not(n_tasks == y_pred.shape[1]):
+            raise ValueError("y_true and y_pred must have the same number of tasks")
         if target_labels is None:
             target_labels = [f'task_{i}' for i in range(n_tasks)]
 
