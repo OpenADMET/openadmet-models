@@ -12,7 +12,7 @@ from os import PathLike
 models = ClassRegistry(unique=True)
 
 
-def get_model_class(model_type):
+def get_mod_class(model_type):
     try:
         feat_class = models.get_class(model_type)
     except RegistryKeyError:
@@ -34,7 +34,7 @@ class ModelBase(BaseModel, ABC):
         self._estimator = value
 
     @abstractmethod
-    def from_params(cls, class_params: dict, model_params: dict):
+    def from_params(cls, class_params: dict, mod_params: dict):
         """
         Create a model from parameters, abstract method to be implemented by subclasses
         """
@@ -124,8 +124,8 @@ class PickleableModelBase(ModelBase):
         Create a model from parameters and a pickled model
         """
         with open(param_path) as f:
-            model_params = json.load(f)
-        instance = cls(**model_params)
+            mod_params = json.load(f)
+        instance = cls(**mod_params)
         instance.build()
         instance.load(serial_path)
         return instance
@@ -165,8 +165,8 @@ class TorchModelBase(ModelBase):
         cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
     ):
         with open(param_path) as f:
-            model_params = json.load(f)
-        instance = cls(**model_params)
+            mod_params = json.load(f)
+        instance = cls(**mod_params)
         instance.build()
         instance.load(serial_path)
         return instance

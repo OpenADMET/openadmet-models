@@ -53,14 +53,14 @@ class MTENNSchNetModel(TorchModelBase):
     """
 
     type:ClassVar[str] = "MTENNSchNetModel"
-    model_params: dict = {}
+    mod_params: dict = {}
 
     def build(self, scaler=None):
         """
         Prepare the model
         """
         if not self.estimator:
-            model_config = SchNetModelConfig(**self.model_params)
+            model_config = SchNetModelConfig(**self.mod_params)
             self.estimator = MTENNLightningWrapper(model_config)
         else:
             logger.warning("Model already exists, skipping build.")

@@ -28,6 +28,10 @@ AChE_CHEMBL4078_Landrum_maxcur = (
     _data_ref / "AChE_CHEMBL4078_Landrum_maxcur.csv"
 ).as_posix()
 
+ACEH_chembl_pchembl = (_data_ref / "ACEH_chembl_pchembl.csv").as_posix()
+acetylcholinesterase_anvil_chemprop_yaml = (_data_ref / "acetylcholinesterase_anvil_chemprop.yaml").as_posix()
+
+
 # posthoc anvil outputs for testing
 descr_json = _data_ref / "cross_validation_metrics_descr.json"
 fp_json = _data_ref / "cross_validation_metrics_fp.json"
@@ -39,6 +43,6 @@ ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()
 
 # stripped down anvil trained model directory for inference testing
 anvil_lgbm_trained_model_dir = (_data_ref / "cyp3a4_anvil_lgbm_model_dir").as_posix()
-
+anvil_chemprop_trained_model_dir = (_data_ref / "aceh_chemprop_anvil_model_dir").as_posix()
 # test data for prediction
 pred_test_data_csv = (_data_ref / "ligands.csv").as_posix()

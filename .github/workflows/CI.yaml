@@ -57,7 +57,8 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest -v --cov=openadmet.models --cov-report=xml --color=yes openadmet/models/tests/
+          pytest -v -n auto --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/
+
 
       - name: CodeCov
         uses: codecov/codecov-action@v5.4.2

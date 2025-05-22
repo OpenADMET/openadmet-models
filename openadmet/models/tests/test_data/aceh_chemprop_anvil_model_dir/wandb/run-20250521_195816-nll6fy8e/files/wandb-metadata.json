@@ -1,0 +1,43 @@
+{
+  "os":  "Linux-6.8.0-59-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.12.10",
+  "startedAt":  "2025-05-21T09:58:16.630785Z",
+  "args":  [
+    "anvil",
+    "--recipe-path",
+    "acetylcholinesterase_anvil_chemprop_cv.yaml",
+    "--output-dir",
+    "out"
+  ],
+  "program":  "/home/hmacdope/mambaforge/envs/openadmet_models4/bin/openadmet",
+  "email":  "hugo.macdermott-opeskin@omsf.io",
+  "root":  "out",
+  "host":  "athena",
+  "executable":  "/home/hmacdope/mambaforge/envs/openadmet_models4/bin/python3.12",
+  "cpu_count":  16,
+  "cpu_count_logical":  32,
+  "gpu":  "NVIDIA GeForce RTX 4090",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "1967845998592",
+      "used":  "1018653351936"
+    }
+  },
+  "memory":  {
+    "total":  "134162264064"
+  },
+  "cpu":  {
+    "count":  16,
+    "countLogical":  32
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 4090",
+      "memoryTotal":  "25757220864",
+      "cudaCores":  16384,
+      "architecture":  "Ada"
+    }
+  ],
+  "cudaVersion":  "12.6"
+}

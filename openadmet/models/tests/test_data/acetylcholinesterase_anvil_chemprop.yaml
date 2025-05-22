@@ -1,0 +1,63 @@
+metadata:
+  version: v1
+  name: "Acetylcholinesterase_pchembl_testing_chemprop"
+  build_number: 0
+  description: "basic regression with combined fingerprint and descriptor features using a ChemProp single task model"
+  tag: "openadmet-Acetylcholinesterase-pchembl-regression-testing-cv"
+  authors: "Hugo M-O"
+  email: "hugo.macdermott-opeskin@omsf.io"
+  date_created: "2025-03-04"
+  biotargets:
+    - "Acetylcholinesterase"
+  tags:
+    - "Acetylcholinesterase"
+    - "openadmet"
+    - "test"
+    - "pchembl"
+
+  driver: pytorch
+
+data:
+  type: intake
+  resource: "{{ANVIL_DIR}}/ACEH_chembl_pchembl.csv"
+  input_col: "OPENADMET_SMILES"
+  target_col: "pchembl_value_mean"
+
+  transform:
+
+procedure:
+
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.7
+      test_size: 0.3
+      random_state: 42
+
+  feat:
+    type: ChemPropFeaturizer
+
+
+  model:
+    type: ChemPropSingleTaskRegressorModel
+
+  train:
+    type: LightningTrainer
+    params:
+      max_epochs: 1
+      accelerator: "cpu"
+      use_wandb: false
+      wandb_project: "openadmet-testing"
+
+
+
+
+report:
+
+  eval:
+    - type: RegressionMetrics
+    - type: RegressionPlots
+      params:
+        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+        title: "Acetylcholinesterase True vs Predicted pChEMBL on test set"
+        pXC50: true

@@ -1,5 +1,5 @@
 {
-  "model_params": {
+  "mod_params": {
     "boosting_type": "gbdt",
     "class_weight": null,
     "colsample_bytree": 1.0,

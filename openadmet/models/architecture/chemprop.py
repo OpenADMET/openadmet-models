@@ -24,7 +24,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
     type: ClassVar[str] = "ChemPropSingleTaskModel"
     batch_norm: bool = True
     metric_list: list = ["mse", "mae", "rmse"]
-    model_params: dict = {}
+    mod_params: dict = {}
     depth: int = 3
     message_hidden_dim: int = 300
     ffn_hidden_dim: int = 300
@@ -57,12 +57,12 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
 
 
     @classmethod
-    def from_params(cls, class_params: dict = {}, model_params: dict = {}):
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
         Create a model from parameters
         """
 
-        instance = cls(**class_params, model_params=model_params)
+        instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
@@ -107,7 +107,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-    def predict(self, X: np.ndarray, accelerator="gpu", devices=1) -> np.ndarray:
+    def predict(self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs) -> np.ndarray:
         """
         Predict using the model
         """

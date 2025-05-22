@@ -15,7 +15,7 @@ from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from openadmet.models.anvil.data_spec import DataSpec
-from openadmet.models.architecture.model_base import ModelBase, get_model_class
+from openadmet.models.architecture.model_base import ModelBase, get_mod_class
 from openadmet.models.eval.eval_base import EvalBase, get_eval_class
 from openadmet.models.features.feature_base import FeaturizerBase, get_featurizer_class
 from openadmet.models.registries import *  # noqa: F401, F403
@@ -24,7 +24,7 @@ from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
-    "model": get_model_class,
+    "model": get_mod_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
     "train": get_trainer_class,
