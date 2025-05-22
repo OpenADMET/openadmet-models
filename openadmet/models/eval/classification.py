@@ -201,11 +201,7 @@ class ClassificationPlots(EvalBase):
         title="Receiver Operating Characteristic Curve",
     ):
         # Binary
-        if y_true.ndim == 1:
-            fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
-
-        # Also binary case
-        elif y_true.ndim == 2 and y_true.shape[1] == 1:
+        if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
 
         # Micro-averaged one-versus-rest
