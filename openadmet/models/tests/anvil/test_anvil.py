@@ -1,17 +1,17 @@
 from pathlib import Path
-import os
+
 import pytest
-import glob
+
 from openadmet.models.anvil.workflow import (
     AnvilSpecification,
 )
 from openadmet.models.tests.datafiles import (
+    acetylcholinesterase_anvil_chemprop_yaml,
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,
     basic_anvil_yaml_classification,
     basic_anvil_yaml_cv,
-    acetylcholinesterase_anvil_chemprop_yaml
 )
 
 
@@ -21,7 +21,6 @@ def all_anvil_full_recipes():
         anvil_yaml_featconcat,
         anvil_yaml_gridsearch,
     ]
-
 
 
 def test_anvil_spec_create():
@@ -94,9 +93,11 @@ def test_anvil_classification_run(tmp_path):
 
 # skip on MacOS runner?
 def test_anvil_chemprop_cpu_regression(tmp_path):
-    anvil_spec = AnvilSpecification.from_recipe(acetylcholinesterase_anvil_chemprop_yaml)
+    anvil_spec = AnvilSpecification.from_recipe(
+        acetylcholinesterase_anvil_chemprop_yaml
+    )
     anvil_workflow = anvil_spec.to_workflow()
     anvil_workflow.run(output_dir=tmp_path / "tst")
     assert Path(tmp_path / "tst" / "model.json").exists()
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
-    assert Path(tmp_path / "tst" / "regplot.png").exists()
+    assert any((tmp_path / "tst").glob("regplot*.png"))

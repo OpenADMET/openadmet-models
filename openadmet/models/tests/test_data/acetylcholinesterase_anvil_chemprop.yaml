@@ -21,7 +21,7 @@ data:
   type: intake
   resource: "{{ANVIL_DIR}}/ACEH_chembl_pchembl.csv"
   input_col: "OPENADMET_SMILES"
-  target_col: "pchembl_value_mean"
+  target_cols: ["pchembl_value_mean"]
 
   transform:
 
@@ -31,7 +31,8 @@ procedure:
     type: ShuffleSplitter
     params:
       train_size: 0.7
-      test_size: 0.3
+      val_size: 0.2
+      test_size: 0.1
       random_state: 42
 
   feat:
