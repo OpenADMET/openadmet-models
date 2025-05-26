@@ -296,21 +296,6 @@ class RegressionPlots(EvalBase):
 
         return fig
 
-    def make_stat_caption_from_data(self, data):
-        """
-        Can be used later for mulittask
-        Make a caption from the metrics data
-        """
-        metric_names = list(data.keys())
-        stat_caption = ""
-        for metric in metric_names:
-            value = data[metric]["value"]
-            lower_ci = data[metric]["lower_ci"]
-            upper_ci = data[metric]["upper_ci"]
-            confidence_level = data[metric]["confidence_level"]
-            stat_caption += f"{metric}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-        stat_caption += f"Confidence level: {confidence_level}"
-        return stat_caption
 
     def report(self, write=False, output_dir=None):
         """
