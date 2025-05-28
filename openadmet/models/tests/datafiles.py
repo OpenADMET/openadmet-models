@@ -36,6 +36,7 @@ acetylcholinesterase_anvil_chemprop_yaml = (_data_ref / "acetylcholinesterase_an
 descr_json = _data_ref / "cross_validation_metrics_descr.json"
 fp_json = _data_ref / "cross_validation_metrics_fp.json"
 combined_json = _data_ref / "cross_validation_metrics_combined.json"
+multi_task_json = _data_ref / "cross_validation_metrics_multitask.json"
 
 # ligand pose for reading and featurizing in MTENN
 ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()
