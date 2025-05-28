@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import json
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -59,8 +60,36 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self, model_stats_fns, model_tags, report=False, output_dir=None):
-        df = self.json_to_df(model_stats_fns, model_tags)
+    def compare(self, model_stats_fns, model_tags, task_tags=['task_0'], report=False, output_dir=None):
+        """
+        Perform post-hoc statistical comparison of model performance metrics.
+
+        This method loads cross-validation statistics from multiple models, performs Levene's test for equal variances,
+        Tukey's HSD for pairwise comparisons, and generates various plots and reports. Optionally, results can be saved
+        to disk.
+
+        Parameters
+        ----------
+        model_stats_fns : list of str or Path
+            List of file paths to JSON files containing cross-validation metrics for each model.
+        model_tags : list of str
+            List of model names or tags corresponding to each file in `model_stats_fns`.
+        task_tags : list of str, optional
+            List of task names from multi-task models.  List should be the same
+                length as model tags, this assumes that we take one task for comparison from
+                each cross_validation_metrics.json  Default is ['task_0'].
+        report : bool, optional
+            If True, generates and saves a PDF report of the statistical analysis. Default is False.
+        output_dir : str or Path, optional
+            Directory to save output files 
+
+        Returns
+        -------
+        stats_dfs : list of pandas.DataFrame
+            List of DataFrames containing the results of Levene's test and Tukey's HSD test.
+
+        """
+        df = self.json_to_df(model_stats_fns, model_tags, task_tags)
         stats_dfs = []
         stats_dfs.append(self.levene_test(df, model_tags))
         stats_dfs.append(self.get_tukeys_df(df, model_tags))
@@ -79,20 +108,25 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def json_to_df(self, model_stats_fns, model_tags):
+    def json_to_df(self, model_stats_fns, model_tags, task_tags):
         """
         Takes the model statistics cross validation json from an anvil run,
         will likely have the name (anvil_run/cross_validation_metrics.json)
         """
-        df = pd.DataFrame()
-        for model, tag in zip(model_stats_fns, model_tags):
-            data = pd.read_json(model)
-            method_data = pd.DataFrame()
+        rows = []
+        for model, tag, task in zip(model_stats_fns, model_tags, task_tags):
+            # Use json.load bc nested JSON
+            with open(model, "r") as f:
+                data = json.load(f)
             for m in self.metrics:
-                values = data[m].value
-                method_data[m] = values
-            method_data["method"] = tag
-            df = pd.concat([df, method_data])
+                if task not in data or m not in data[task]:
+                    raise ValueError(f"Task {task} or metric {m} not found in data.")
+                mean = data[task][m]["mean"]
+                rows.append({
+                    "method": f"{tag}-{task}",
+                    m: mean
+                })
+        df = pd.DataFrame(rows)
         return df
 
     def levene_test(self, df, model_tags):
