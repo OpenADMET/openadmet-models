@@ -1,5 +1,6 @@
 from typing import ClassVar
 
+import numpy as np
 from modAL import ActiveLearner, CommitteeRegressor
 from pydantic import Field, field_validator
 
@@ -9,7 +10,7 @@ from openadmet.models.active_learning.acquisition import (
     random_query,
     upper_confidence_bound_query,
 )
-from openadmet.models.architecture.model_base import PickleableModelBase
+from openadmet.models.architecture.model_base import ModelBase, PickleableModelBase
 
 _QUERY_STRATEGIES = {
     "max-uncertainty-reduction": max_uncertainty_reduction_query,
@@ -59,6 +60,61 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
         )
         instance.build()
         return instance
+
+    @classmethod
+    def train(
+        cls,
+        X,
+        y,
+        estimator: ModelBase = None,
+        estimator_params: dict = {},
+        n_models: int = 1,
+        query_strategy: str = None,
+    ):
+        """
+        Train committee regressor members on bootstrapped data subsets.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples to train on.
+        y : array-like of shape (n_samples,)
+            The target values.
+        estimator : ModelBase
+            The type of model to use for training.
+        estimator_params : dict
+            The parameters to pass to the model.
+        n_models : int
+            The number of models in the committee, by default 1.
+        query_strategy : str, optional
+            The query strategy to use.
+
+        Returns
+        -------
+        ActiveLearningCommitteeRegressor
+            An instance of the ActiveLearningCommitteeRegressor class.
+
+        """
+
+        # Verify estimator input
+        if estimator is None:
+            raise ValueError("Estimator must be provided.")
+
+        # Initialize set of models
+        models = []
+        for i in range(n_models):
+            # Initialize model
+            model = estimator.from_params(mod_params=estimator_params)
+
+            # Train
+            bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
+            model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
+
+            # Add to list
+            models.append(model)
+
+        # Instantiate the committee regressor
+        return cls.from_models(models, query_strategy=query_strategy)
 
     def build(self):
         """
@@ -115,9 +171,6 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
         """
 
         return self._committee.predict(X, **kwargs)
-
-    def train(self):
-        raise NotImplementedError
 
     def from_params(self):
         raise NotImplementedError
