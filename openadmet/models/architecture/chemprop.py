@@ -133,10 +133,3 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
             )
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
-
-
-    def featurizer(self):
-        """
-        Return the featurizer
-        """
-        return ChemPropFeaturizer

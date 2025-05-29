@@ -15,6 +15,7 @@ dependencies:
   - joblib
   - zarr >=3.0.0
   - intake-parquet
+  - loguru
 
   - rdkit
   - molfeat

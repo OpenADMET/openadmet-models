@@ -17,6 +17,7 @@ dependencies:
   - ipython
   - jupyterlab
   - intake-parquet
+  - loguru
 
   - rdkit
   - molfeat

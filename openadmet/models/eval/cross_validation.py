@@ -34,13 +34,11 @@ def wrap_spearmanr(y_true, y_pred):
     return nan_omit_spearmanr(y_true, y_pred).correlation
 
 
-class CVBase(EvalBase):
+class CrossValidationBase(EvalBase):
     """
     Base class for cross-validation
     """
-    n_splits: int = 5
-    n_repeats: int = 5
-    random_state: int = 42
+
     _evaluated: bool = False
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"
@@ -72,14 +70,20 @@ class CVBase(EvalBase):
         return list(self._metrics.keys())
 
 
-
-
-
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
-class SKLearnRepeatedKFoldCrossValidation(CVBase):
+class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     """
     Cross-validation evaluator for sklearn models, this is aimed at single task regression models currently
     """
+    n_splits: int = Field(
+        5, description="Number of splits for cross-validation"
+    )
+    n_repeats: int = Field(
+        5, description="Number of repeats for cross-validation"
+    )
+    random_state: int = Field(
+        42, description="Random state for reproducibility"
+    )
 
 
     def evaluate(
@@ -121,7 +125,6 @@ class SKLearnRepeatedKFoldCrossValidation(CVBase):
             raise ValueError(
                 f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
             )
-
 
         # run CV
         cv = RepeatedKFold(
@@ -206,7 +209,6 @@ class SKLearnRepeatedKFoldCrossValidation(CVBase):
             raise ValueError("Must evaluate before making a caption")
         stat_caption = ""
 
-
         stat_caption += f'## {task_name} ##\n'
         for metric in self.metric_names:
             value = self.data[task_name][metric]["mean"]
@@ -239,14 +241,17 @@ class SKLearnRepeatedKFoldCrossValidation(CVBase):
             plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
 
 
-
-
-
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
-class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
-    n_splits: int = 5
-    n_repeats: int = 5
-    random_state: int = 42
+class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
+    n_splits: int = Field(
+        5, description="Number of splits for cross-validation"
+    )
+    n_repeats: int = Field(
+        5, description="Number of repeats for cross-validation"
+    )
+    random_state: int = Field(
+        42, description="Random state for reproducibility"
+    )
     _evaluated: bool = False
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"
@@ -307,26 +312,21 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, and tag must be provided"
             )
-
-
-
         self.data = {"tag": tag}
 
         if use_wandb:
             self.use_wandb = use_wandb
 
-
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
         # run CV
+        print(self.n_splits, self.n_repeats, self.random_state)
         cv = RepeatedKFold(
             n_splits=self.n_splits,
             n_repeats=self.n_repeats,
             random_state=self.random_state,
         )
-
-
 
         self.data = {
             "shape": [self.n_splits, self.n_repeats],
@@ -335,11 +335,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
 
         self._metric_data = {}
 
-
         # cast to numpy arrays
         X_train_raw = X_train_raw.to_numpy()
         y_train_raw = y_train_raw.to_numpy()
-
 
         # prepare containers for metrics
         n_tasks = y_train_raw.shape[1]
@@ -350,7 +348,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
 
-
         for fold, (fold_train_ids, fold_val_ids) in enumerate(cv.split(X=X_train_raw, y=y_train_raw)):
             logger.info(f"Fold {fold}")
 
@@ -358,7 +355,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
             y_train = y_train_raw[fold_train_ids]
             X_val = X_train_raw[fold_val_ids]
             y_val = y_train_raw[fold_val_ids]
-
 
             # print shapes of matrices
             logger.debug(f"X_train shape: {X_train.shape}")
@@ -387,7 +383,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
                 wandb_project=trainer.wandb_project,
             )
 
-
             # Pass model to trainer
             fold_trainer.model = fold_model
             fold_trainer.prepare()
@@ -398,12 +393,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
             y_pred_fold = fold_model.predict(fold_val_dataloader, accelerator=trainer.accelerator,
             devices=trainer.devices)
 
-
-
-
             # calculate the mean and confidence interval for each metric
             # loop over tasks and calculate the statistics
-            n_tasks = y_val.shape[1]
             if not(n_tasks == y_pred_fold.shape[1]):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
@@ -420,11 +411,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
                     value = metric_func(t_true, t_pred)
                     self._metric_data[t_label][metric_name].append(value)
 
-
         logger.info(f"Fold {fold} complete")
 
-
-
+        # now we have the metric data for each task, calculate the mean and confidence interval
         for t_label in target_labels:
             task_data = self._metric_data[t_label]
             self.data[t_label] = {}
@@ -445,7 +434,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
                 metric_data["confidence_level"] = self.confidence_level
                 self.data[t_label][k] = metric_data
 
-
         self._evaluated = True
 
         self.plots = {
@@ -454,9 +442,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CVBase):
 
         self.plot_data = {}
 
-
         # now the plots
-
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]
             t_pred = y_pred[:, task_id]

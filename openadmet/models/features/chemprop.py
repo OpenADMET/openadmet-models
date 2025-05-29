@@ -6,11 +6,15 @@ from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
 from chemprop.data.collate import collate_batch, collate_multicomponent
 import logging
 from torch.utils.data import DataLoader
+from sklearn.preprocessing import StandardScaler
+from openadmet.models.features.chemprop import MoleculeDataset, ReactionDataset, MulticomponentDataset
 
-from openadmet.models.features.feature_base import FeaturizerBase, featurizers
+from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
+from typing import Union, Tuple
 
 
 # we vendor this from chemprop so that we can pass custom samplers
+# taken directly from https://github.com/chemprop/chemprop/blob/main/chemprop/data/dataloader.py
 def _vendor_build_dataloader(
     dataset: MoleculeDataset | ReactionDataset | MulticomponentDataset,
     batch_size: int = 64,
@@ -72,7 +76,7 @@ def _vendor_build_dataloader(
     )
 
 @featurizers.register("ChemPropFeaturizer")
-class ChemPropFeaturizer(FeaturizerBase):
+class ChemPropFeaturizer(DeepLearningFeaturizer):
     """
     ChemPropFeaturizer featurizer for molecules, relies on chemprop
     """
@@ -87,9 +91,11 @@ class ChemPropFeaturizer(FeaturizerBase):
         Prepare the featurizer
         """
 
-    def featurize(self, smiles: Iterable[str], y: Iterable[Any]=None) -> DataLoader:
+    def featurize(self, smiles: Iterable[str], y: Iterable[Any]=None) -> tuple[DataLoader, StandardScaler, Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]]:
         """
         Featurize a list of SMILES strings
+
+        #TODO: we likely want to separate the scaling from the featurization
         """
         if y is not None:
             # if a pandas dataframe or series

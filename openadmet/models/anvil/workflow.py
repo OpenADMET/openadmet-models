@@ -606,7 +606,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Commence model training
         logger.info("Training model")
-        self.model = self.trainer.train(train_dataloader, val_dataloader if val_dataloader else None)
+        self.model = self.trainer.train(train_dataloader, val_dataloader)
         logger.info("Model trained")
 
         # Save serialized model

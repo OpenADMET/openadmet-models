@@ -5,6 +5,7 @@ from lightning import pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from loguru import logger
+from pydantic import model_validator
 
 from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 
@@ -22,11 +23,28 @@ class LightningTrainer(TrainerBase):
     output_dir: Path = None
     wandb_project: str = "openadmet-testing"
     early_stopping: bool = False
+    early_stopping_patience: int = 10
+    early_stopping_mode: str = "min"
+    monitor_metric: str = "val_loss"
 
     wandb_logger: Any = None
     _logger: Any
     _trainer: Any
     _callbacks: Any = None
+
+
+    @model_validator(mode="after")
+    def check_monitor_metric(self):
+        """
+        Check if the monitor metric is valid
+        """
+        if self.monitor_metric not in ["val_loss", "train_loss"]:
+            raise ValueError(
+                f"Invalid monitor metric: {self.monitor_metric}"
+                ". Must be one of ['val_loss', 'train_loss']"
+            )
+        return self
+
 
     def prepare(self):
         """
@@ -40,12 +58,15 @@ class LightningTrainer(TrainerBase):
         # initialize the callbacks list
         self._callbacks = []
 
+
+        fmtstring = "best-{epoch}-{val_loss:.4f}" if self.monitor_metric == "val_loss" else "best-{epoch}-{train_loss:.4f}"
+
         # Configure checkpoint callbacks
         checkpointing = ModelCheckpoint(
             self.output_dir
             / "checkpoints",  # Directory where model checkpoints will be saved
-            "best-{epoch}-{val_loss:.4f}",  # Filename format for checkpoints, including epoch and validation loss
-            "val_loss",  # Metric used to select the best checkpoint (based on validation loss)
+            fmtstring,  # Filename format for checkpoints, including epoch and validation loss
+            self.monitor_metric,  # Metric used to select the best checkpoint (based on validation loss)
             mode="min",  # Save the checkpoint with the lowest validation loss (minimization objective)
             save_last=True,  # Always save the most recent checkpoint, even if it's not the best
             save_top_k=1,  # Keep the top 1 checkpoints
@@ -56,9 +77,9 @@ class LightningTrainer(TrainerBase):
 
             # Configure early stopping callback
             early_stopping_callback = EarlyStopping(
-                monitor="val_loss",  # Monitor validation loss for early stopping
-                patience=10,  # Number of epochs with no improvement after which training will be stopped
-                mode="min",  # Stop when validation loss stops decreasing
+                monitor=self.monitor_metric,  # Monitor validation loss for early stopping
+                patience=self.early_stopping_patience,  # Number of epochs with no improvement after which training will be stopped
+                mode=self.early_stopping_mode,  # Stop when validation loss stops decreasing
             )
             self._logger.append(early_stopping_callback)
 

@@ -38,9 +38,10 @@ def predict(input_path:str,
         logger.debug(metadata)
         logger.debug(f"Model: {model.estimator}")
         logger.debug(f"Feature: {feat}")
+        # returns a variable length tuple, first element is the featurized data or a dataloader
         feat_data  = feat.featurize(data[input_col])
         X_feat = feat_data[0]
-
+        # make the actual model predictions
         predictions = model.predict(X_feat, accelerator=accelerator)
 
         # will need to change for multi-target models

@@ -54,7 +54,7 @@ class DataSpec(BaseModel):
         elif self.resource.endswith(".csv"):
             data = intake.open_csv(self.resource).read()
 
-        elif self.resource.endswith(".parquet"):
+        elif self.resource.endswith(".parquet") or self.resource.endswith(".parq") or self.resource.endswith(".pq") or self.resource.endswith(".pqt"):
             data = intake.open_parquet(self.resource).read()
         else:
             raise ValueError(f"Unsupported resource type: {self.resource}")
