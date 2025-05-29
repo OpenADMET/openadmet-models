@@ -113,20 +113,18 @@ class PostHocComparison(ComparisonBase):
         Takes the model statistics cross validation json from an anvil run,
         will likely have the name (anvil_run/cross_validation_metrics.json)
         """
-        rows = []
+        df = pd.DataFrame()
         for model, tag, task in zip(model_stats_fns, model_tags, task_tags):
-            # Use json.load bc nested JSON
             with open(model, "r") as f:
                 data = json.load(f)
+            method_data = pd.DataFrame()
             for m in self.metrics:
                 if task not in data or m not in data[task]:
                     raise ValueError(f"Task {task} or metric {m} not found in data.")
-                mean = data[task][m]["mean"]
-                rows.append({
-                    "method": f"{tag}-{task}",
-                    m: mean
-                })
-        df = pd.DataFrame(rows)
+                values = data[task][m]["value"]
+                method_data[m] = values
+            method_data["method"] = tag
+            df = pd.concat([df, method_data])
         return df
 
     def levene_test(self, df, model_tags):
