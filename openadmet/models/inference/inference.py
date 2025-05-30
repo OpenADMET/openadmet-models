@@ -3,14 +3,52 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
+from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+from typing import Union, List
 
-from openadmet.models.cli.predict import load_anvil_model_and_metadata
+def load_anvil_model_and_metadata(model_dir):
+    """Load the Anvil model from the specified path"""
+    logger.info(f"Loading model from {model_dir}")
+    # load from recipe directory
+    recipe_components_dir = model_dir / "recipe_components"
+    if not recipe_components_dir.exists():
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain recipe components"
+        )
+    # load the specification
+    procedure_spec = recipe_components_dir / "procedure.yaml"
+    if not procedure_spec.exists():
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain procedure.yaml"
+        )
+
+    metadata_spec = recipe_components_dir / "metadata.yaml"
+    if not metadata_spec.exists():
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain metadata.yaml"
+        )
+    # load the metadata
+    metadata = Metadata.from_yaml(metadata_spec)
+
+    # load the procedure specification
+    procedure_spec = ProcedureSpec.from_yaml(procedure_spec)
+    feat = procedure_spec.feat.to_class()
+    model = procedure_spec.model.to_class()
+
+    # deserialize the model
+    loaded_model = model.deserialize(
+        param_path=model_dir / model._model_json_name,
+        serial_path=model_dir / model._model_save_name,
+    )
+
+    return loaded_model, feat, metadata
+
 
 
 def predict(
     input_path: str,
     input_col: str,
-    model_dir: str,
+    model_dir: Union[str, Path, List[Union[str, Path]]],
     write_csv: bool = False,
     output_path: str = None,
     debug: bool = False,
@@ -39,6 +77,10 @@ def predict(
 
     if input_col not in data.columns:
         raise ValueError(f"Column {input_col} not found in input data")
+
+
+    if not isinstance(model_dir, list):
+        model_dir = [model_dir]
 
     # Load the models
     for i, model_path in enumerate(model_dir):
