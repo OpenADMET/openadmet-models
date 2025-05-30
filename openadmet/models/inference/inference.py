@@ -105,6 +105,8 @@ def predict(
                 f"Output file already contains a '{predictions_tag}' column"
             )
 
+        # Add the predictions to the data DataFrame
+        # ISSUE: if the model is multi-target or if the predictions are not valid for every row this will fail
         data[predictions_tag] = predictions
 
     logger.info("Finished prediction")
