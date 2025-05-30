@@ -81,7 +81,7 @@ class LightningTrainer(TrainerBase):
                 patience=self.early_stopping_patience,  # Number of epochs with no improvement after which training will be stopped
                 mode=self.early_stopping_mode,  # Stop when validation loss stops decreasing
             )
-            self._logger.append(early_stopping_callback)
+            self._callbacks.append(early_stopping_callback)
 
         # Append the checkpointing callback to the callbacks list
         self._callbacks.append(checkpointing)
