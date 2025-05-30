@@ -48,7 +48,7 @@ def load_anvil_model_and_metadata(model_dir):
 def predict(
     input_path: str,
     input_col: str,
-    model_dir: Union[str, Path, List[Union[str, Path]]],
+    model_dir: Union[str, Path, list[Union[str, Path]]],
     write_csv: bool = False,
     output_path: str = None,
     debug: bool = False,
