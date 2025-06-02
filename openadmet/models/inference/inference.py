@@ -93,8 +93,12 @@ def predict(
         logger.debug(f"Model: {model.estimator}")
         logger.debug(f"Feature: {feat}")
         # returns a variable length tuple, first element is the featurized data or a dataloader
+        # second element is the indices of the original input that were featurized
         feat_data = feat.featurize(data[input_col])
+        # features or dataloader,
         X_feat = feat_data[0]
+        # indices of the original input that were featurized
+        X_indices = feat_data[1]
         # make the actual model predictions
         predictions = model.predict(X_feat, accelerator=accelerator)
 
@@ -106,8 +110,8 @@ def predict(
             )
 
         # Add the predictions to the data DataFrame
-        # ISSUE: if the model is multi-target or if the predictions are not valid for every row this will fail
-        data[predictions_tag] = predictions
+        data[predictions_tag] = pd.Series(predictions, index=X_indices)
+        logger.info(f"Predictions for model {i} saved to column '{predictions_tag}'")
 
     logger.info("Finished prediction")
     logger.info(f"Predictions saved to {output_path}")

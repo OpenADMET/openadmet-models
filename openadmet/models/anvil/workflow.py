@@ -579,7 +579,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             val_dataset = None
             logger.warning("Validation set is None, skipping validation dataloader")
 
-        test_dataloader, _, test_dataset = self.feat.featurize(X_test, y_test)
+        # dataloader, indices, scaler, dataset
+        test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 

@@ -103,6 +103,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         self, smiles: Iterable[str], y: Iterable[Any] = None
     ) -> tuple[
         DataLoader,
+        np.ndarray,
         StandardScaler,
         Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
     ]:
@@ -136,7 +137,11 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             shuffle=self.shuffle,
             batch_size=self.batch_size,
         )
-        return dataloader, scaler, dataset
+
+        # need to also return an index of the original input for which the features were computed
+        indices = np.arange(len(smiles))
+
+        return dataloader, indices, scaler, dataset
 
     @staticmethod
     def dataset_to_dataloader(
