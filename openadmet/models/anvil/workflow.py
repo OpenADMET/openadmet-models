@@ -566,13 +566,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Featurize splits
         logger.info("Featurizing data")
-        train_dataloader, train_scaler, train_dataset = self.feat.featurize(
+        train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
             X_train, y_train
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         if X_val is not None and y_val is not None:
-            val_dataloader, _, val_dataset = self.feat.featurize(X_val, y_val)
+            val_dataloader, _, _, val_dataset = self.feat.featurize(X_val, y_val)
             torch.save(val_dataloader, output_dir / "val_dataloader.pth")
         else:
             val_dataloader = None
