@@ -15,13 +15,13 @@ from openadmet.models.architecture.model_base import models as model_registry
 _METRIC_TO_LOSS = {"mse": nn.metrics.MSE(), "mae": nn.metrics.MAE(), "rmse": nn.metrics.RMSE()}
 
 
-@model_registry.register("ChemPropSingleTaskRegressorModel")
-class ChemPropSingleTaskRegressorModel(TorchModelBase):
+@model_registry.register("ChemPropMultiRegressorModel")
+class ChemPropMultiRegressorModel(TorchModelBase):
     """
     ChemProp regression model
     """
 
-    type: ClassVar[str] = "ChemPropSingleTaskModel"
+    type: ClassVar[str] = "ChemPropModel"
     batch_norm: bool = True
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
