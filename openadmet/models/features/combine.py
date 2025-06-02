@@ -13,7 +13,6 @@ from openadmet.models.features.feature_base import (
 
 @featurizers.register("FeatureConcatenator")
 class FeatureConcatenator(FeaturizerBase):
-
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"
     )
@@ -25,14 +24,20 @@ class FeatureConcatenator(FeaturizerBase):
         If passed a dictionary of parameters, construct the relevant featurizers
         and pack them into the featurizers list
         """
+        processed_featurizers = []
         if isinstance(value, dict):
-            featurizers = []
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
                 feat = feat_class(**feat_params)
-                featurizers.append(feat)
-            return featurizers
-        return value
+                processed_featurizers.append(feat)
+        elif isinstance(value, list):
+            processed_featurizers = value
+        else:
+            # Or raise an error if the type is unexpected
+            return value
+
+        # Sort the featurizers by class name
+        return sorted(processed_featurizers, key=lambda f: f.__class__.__name__)
 
     def featurize(self, smiles: list[str]) -> np.ndarray:
         """
@@ -41,8 +46,8 @@ class FeatureConcatenator(FeaturizerBase):
         features = []
         indices = []
         for feat in self.featurizers:
-            feat, idx = feat.featurize(smiles)
-            features.append(feat)
+            feat_res, idx = feat.featurize(smiles)
+            features.append(feat_res)
             indices.append(idx)
 
         return self.concatenate(features, indices)

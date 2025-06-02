@@ -1,10 +1,11 @@
+from pathlib import Path
+
 import click
 import pandas as pd
-from rdkit.Chem import PandasTools
-from openadmet.models.anvil.workflow import ProcedureSpec, Metadata
-from pathlib import Path
 from loguru import logger
+from rdkit.Chem import PandasTools
 
+from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
 
 
 def load_anvil_model_and_metadata(model_dir):
@@ -12,15 +13,21 @@ def load_anvil_model_and_metadata(model_dir):
     # load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
     if not recipe_components_dir.exists():
-        raise FileNotFoundError(f"Model path {model_dir} does not contain recipe components")
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain recipe components"
+        )
     # load the specification
     procedure_spec = recipe_components_dir / "procedure.yaml"
     if not procedure_spec.exists():
-        raise FileNotFoundError(f"Model path {model_dir} does not contain procedure.yaml")
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain procedure.yaml"
+        )
 
     metadata_spec = recipe_components_dir / "metadata.yaml"
     if not metadata_spec.exists():
-        raise FileNotFoundError(f"Model path {model_dir} does not contain metadata.yaml")
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain metadata.yaml"
+        )
     # load the metadata
     metadata = Metadata.from_yaml(metadata_spec)
 
@@ -38,9 +45,7 @@ def load_anvil_model_and_metadata(model_dir):
     return loaded_model, feat, metadata
 
 
-
 @click.command()
-
 @click.option(
     "--input-path",
     help="Path to the input CSV file or SDF containing structures",
@@ -68,10 +73,8 @@ def load_anvil_model_and_metadata(model_dir):
     required=True,
     type=click.Path(exists=False, writable=True),
 )
-@click.option(
-    "--debug", is_flag=True, help="Enable debug mode"
-)
-def predict(input_path, input_col,  model_dir, output_path, debug):
+@click.option("--debug", is_flag=True, help="Enable debug mode")
+def predict(input_path, input_col, model_dir, output_path, debug):
     """Predict using a trained model"""
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
@@ -86,7 +89,6 @@ def predict(input_path, input_col,  model_dir, output_path, debug):
 
     if input_col not in data.columns:
         raise ValueError(f"Column {input_col} not found in input data")
-
 
     if "predictions" in data.columns:
         raise ValueError("Output file already contains a 'predictions' column")
@@ -105,11 +107,12 @@ def predict(input_path, input_col,  model_dir, output_path, debug):
 
         predictions = model.predict(X_feat)
 
-
         # will need to change for multi-target models
         predictions_tag = f"OADMET_PRED_{metadata.tag}"
         if predictions_tag in data.columns:
-            raise ValueError(f"Output file already contains a '{predictions_tag}' column")
+            raise ValueError(
+                f"Output file already contains a '{predictions_tag}' column"
+            )
 
         data[predictions_tag] = predictions
 

@@ -69,3 +69,18 @@ def test_feature_concatenator_failed_diff_positions(one_invalid_smi):
     assert X.shape == (3, 3613)
     # index 2 is invalid, so the shape should be 3
     assert_array_equal(idx, np.asarray([0, 1, 3]))
+
+
+def test_feature_concatenator_order_independence(smiles):
+
+    desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
+    fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
+
+    concat1 = FeatureConcatenator(featurizers=[desc_featurizer, fp_featurizer])
+    X1, idx1 = concat1.featurize(smiles)
+
+    concat2 = FeatureConcatenator(featurizers=[fp_featurizer, desc_featurizer])
+    X2, idx2 = concat2.featurize(smiles)
+
+    assert_array_equal(X1, X2)
+    assert_array_equal(idx1, idx2)

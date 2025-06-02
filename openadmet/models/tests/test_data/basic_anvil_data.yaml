@@ -1,5 +1,5 @@
 cat_entry: CYP3A4_pchembl
 resource: '{{ANVIL_DIR}}/example_intake.yaml'
 input_col: CANONICAL_SMILES
-target_col: pChEMBL mean
+target_cols: ["pChEMBL mean"]
 type: intake

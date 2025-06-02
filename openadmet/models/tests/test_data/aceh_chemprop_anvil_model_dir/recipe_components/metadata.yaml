@@ -1,0 +1,16 @@
+authors: Hugo M-O
+biotargets:
+- Acetylcholinesterase
+build_number: 0
+description: basic regression with combined fingerprint and descriptor features using
+  a ChemProp single task model
+driver: pytorch
+email: hugo.macdermott-opeskin@omsf.io
+name: Acetylcholinesterase_pchembl_testing_chemprop
+tag: openadmet-Acetylcholinesterase-pchembl-regression-testing-cv
+tags:
+- Acetylcholinesterase
+- openadmet
+- test
+- pchembl
+version: v1

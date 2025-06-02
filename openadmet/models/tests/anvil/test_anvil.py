@@ -1,11 +1,12 @@
 from pathlib import Path
 
 import pytest
-
+import glob
 from openadmet.models.anvil.workflow import (
     AnvilSpecification,
 )
 from openadmet.models.tests.datafiles import (
+    acetylcholinesterase_anvil_chemprop_yaml,
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,
@@ -51,7 +52,7 @@ def test_anvil_workflow_run(tmp_path, anvil_full_recipie):
     anvil_workflow.run(output_dir=tmp_path / "tst")
     assert Path(tmp_path / "tst" / "model.json").exists()
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
-    assert Path(tmp_path / "tst" / "regplot.png").exists()
+    assert any((tmp_path / "tst").glob("regplot*.png"))
 
 
 def test_anvil_multiyaml(tmp_path):
@@ -88,3 +89,15 @@ def test_anvil_classification_run(tmp_path):
     assert Path(tmp_path / "tst" / "classification_metrics.json").exists()
     assert Path(tmp_path / "tst" / "pr_curve.png").exists()
     assert Path(tmp_path / "tst" / "roc_curve.png").exists()
+
+
+# skip on MacOS runner?
+def test_anvil_chemprop_cpu_regression(tmp_path):
+    anvil_spec = AnvilSpecification.from_recipe(
+        acetylcholinesterase_anvil_chemprop_yaml
+    )
+    anvil_workflow = anvil_spec.to_workflow()
+    anvil_workflow.run(output_dir=tmp_path / "tst")
+    assert Path(tmp_path / "tst" / "model.json").exists()
+    assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
+    assert any((tmp_path / "tst").glob("regplot*.png"))

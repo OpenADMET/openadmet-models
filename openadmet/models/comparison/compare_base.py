@@ -17,7 +17,6 @@ def get_comparison_class(compare_type):
 
 
 class ComparisonBase(BaseModel, ABC):
-
     @abstractmethod
     def compare(model_stats_fns: list[str], model_tags: list[str]):
         """

@@ -1,0 +1,10 @@
+eval:
+- params: {}
+  type: RegressionMetrics
+- params:
+    axes_labels:
+    - True pChEMBL
+    - Predicted pChEMBL
+    pXC50: true
+    title: Acetylcholinesterase True vs Predicted pChEMBL on test set
+  type: RegressionPlots

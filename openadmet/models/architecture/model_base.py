@@ -1,13 +1,12 @@
 import json
 from abc import ABC, abstractmethod
+from os import PathLike
 from typing import Any, ClassVar
 
 import joblib
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
-from os import PathLike
-
 
 models = ClassRegistry(unique=True)
 
@@ -97,14 +96,12 @@ class ModelBase(BaseModel, ABC):
 
 
 class PickleableModelBase(ModelBase):
-
     # classvar for pickleable model
     pickleable: ClassVar[bool] = True
 
     _model_save_name: ClassVar[str] = "model.pkl"
 
     def save(self, path: PathLike):
-
         if self.estimator is None:
             raise ValueError("Model is not built, cannot save")
 
@@ -112,7 +109,6 @@ class PickleableModelBase(ModelBase):
             joblib.dump(self.estimator, f)
 
     def load(self, path: PathLike):
-
         with open(path, "rb") as f:
             self._estimator = joblib.load(f)
 
@@ -141,10 +137,7 @@ class PickleableModelBase(ModelBase):
         self.save(serial_path)
 
 
-
-
 class TorchModelBase(ModelBase):
-
     _model_save_name: ClassVar[str] = "model.pth"
 
     def save(self, path: PathLike):

@@ -1,5 +1,6 @@
 import pytest
 
+import numpy as np
 from openadmet.models.eval.binary import PosthocBinaryMetrics
 from openadmet.models.eval.classification import (
     ClassificationMetrics,
@@ -16,20 +17,20 @@ def test_get_eval_class():
 
 
 def test_regression_metrics():
-    y_true = [3, -0.5, 2, 7]
-    y_pred = [2.5, 0.0, 2, 8]
+    y_true = np.array([3, -0.5, 2, 7]).reshape(-1, 1)
+    y_pred = np.array([2.5, 0.0, 2, 8]).reshape(-1, 1)
 
     rm = RegressionMetrics()
     metrics = rm.evaluate(y_true, y_pred)
 
-    assert metrics["mse"]["value"] == 0.375
-    assert metrics["mae"]["value"] == 0.5
-    assert metrics["r2"]["value"] == 0.9486081370449679
+    assert metrics["task_0"]["mse"]["value"] == 0.375
+    assert metrics["task_0"]["mae"]["value"] == 0.5
+    assert metrics["task_0"]["r2"]["value"] == 0.9486081370449679
 
 
 def test_regression_plots():
-    y_true = [3, -0.5, 2, 7]
-    y_pred = [2.5, 0.0, 2, 8]
+    y_true = np.array([3, -0.5, 2, 7]).reshape(-1, 1)
+    y_pred = np.array([2.5, 0.0, 2, 8]).reshape(-1, 1)
 
     rm = RegressionPlots()
     rm.evaluate(y_true, y_pred)

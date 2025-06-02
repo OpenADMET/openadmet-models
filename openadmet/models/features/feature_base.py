@@ -5,6 +5,8 @@ import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from molfeat.trans import MoleculeTransformer
 from pydantic import BaseModel
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader, Dataset
 
 featurizers = ClassRegistry(unique=True)
 
@@ -28,6 +30,21 @@ class FeaturizerBase(BaseModel, ABC):
         """
         Featurize a list of SMILES strings, returns a numpy array of features,
         and a list of indices that correspond to the original input and the input indexed by the indices
+        """
+
+
+class DeepLearningFeaturizer(FeaturizerBase):
+    """
+    Base class for deep learning featurizers, allows for arbitrary featurization of molecules
+    withing the featurize method
+    """
+
+    @abstractmethod
+    def featurize(
+        self, smiles: Iterable[str], y: Iterable[float] = None
+    ) -> tuple[DataLoader, StandardScaler, Dataset]:
+        """
+        Featurize a list of SMILES strings, returns a DataLoader, StandardScaler if any scaling done by featurization and a Pytorch Dataset
         """
 
 

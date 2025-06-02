@@ -43,13 +43,13 @@ class LGBMModelBase(PickleableModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
         Predict using the model
         """
         if not self.estimator:
             raise ValueError("Model not trained")
-        return self.estimator.predict(X)
+        return np.expand_dims(self.estimator.predict(X), axis=1)
 
 
 @models.register("LGBMRegressorModel")
