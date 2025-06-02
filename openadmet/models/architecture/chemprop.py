@@ -67,7 +67,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
         instance.build()
         return instance
 
-    def make_new(self) -> "ChemPropSingleTaskRegressorModel":
+    def make_new(self) -> "ChemPropMultiRegressorModel":
         """
         Copy parameters to a new model instance without copying the estimator
         """
