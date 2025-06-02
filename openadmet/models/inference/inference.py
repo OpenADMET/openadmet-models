@@ -46,6 +46,7 @@ def load_anvil_model_and_metadata(model_dir):
     feat = procedure_spec.feat.to_class()
     model = procedure_spec.model.to_class()
 
+
     # deserialize the model
     loaded_model = model.deserialize(
         param_path=model_dir / model._model_json_name,

@@ -90,7 +90,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             elif self.normalized_targets:
                 # expects the targets to be normalized, likely to be loaded from state dict
-                output_transform = nn.UnscaleTransform([1], [0])
+                output_transform = nn.UnscaleTransform([1]*self.n_tasks, [0]*self.n_tasks)
             else:
                 output_transform = Identity()
 
@@ -147,3 +147,4 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
             )
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
+
