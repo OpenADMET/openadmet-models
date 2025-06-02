@@ -5,7 +5,7 @@ import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
 
-from openadmet.models.inference import predict
+from openadmet.models.inference.inference import predict
 
 
 @click.command()

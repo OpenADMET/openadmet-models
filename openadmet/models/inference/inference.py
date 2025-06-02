@@ -4,6 +4,8 @@ import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
 from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+from openadmet.models.anvil.data_spec import DataSpec
+
 from typing import Union, List
 
 def load_anvil_model_and_metadata(model_dir):
@@ -30,6 +32,15 @@ def load_anvil_model_and_metadata(model_dir):
     # load the metadata
     metadata = Metadata.from_yaml(metadata_spec)
 
+
+    data_spec = recipe_components_dir / "data.yaml"
+    if not data_spec.exists():
+        raise FileNotFoundError(
+            f"Model path {model_dir} does not contain data.yaml"
+        )
+    # load the data specification
+    data = DataSpec.from_yaml(data_spec)
+
     # load the procedure specification
     procedure_spec = ProcedureSpec.from_yaml(procedure_spec)
     feat = procedure_spec.feat.to_class()
@@ -41,7 +52,7 @@ def load_anvil_model_and_metadata(model_dir):
         serial_path=model_dir / model._model_save_name,
     )
 
-    return loaded_model, feat, metadata
+    return loaded_model, feat, metadata, data
 
 
 
@@ -86,7 +97,10 @@ def predict(
     for i, model_path in enumerate(model_dir):
         logger.info(f"Loading model {i} from {model_path}")
         # load the model and metadata
-        model, feat, metadata = load_anvil_model_and_metadata(Path(model_path))
+        model, feat, metadata, data_spec = load_anvil_model_and_metadata(Path(model_path))
+
+        tasknames = data_spec.target_cols
+        logger.info(f"Model {i} has tasks: {tasknames}")
 
         logger.debug("Model metadata:")
         logger.debug(metadata)
@@ -102,16 +116,16 @@ def predict(
         # make the actual model predictions
         predictions = model.predict(X_feat, accelerator=accelerator)
 
-        # will need to change for multi-target models
-        predictions_tag = f"OADMET_PRED_{metadata.tag}"
-        if predictions_tag in data.columns:
-            raise ValueError(
-                f"Output file already contains a '{predictions_tag}' column"
-            )
+        for j, taskname in enumerate(tasknames):
+            predictions_tag = f"OADMET_PRED_{metadata.tag}_{taskname}"
+            if predictions_tag in data.columns:
+                raise ValueError(
+                    f"Output file already contains a '{predictions_tag}' column"
+                )
 
-        # Add the predictions to the data DataFrame
-        data[predictions_tag] = pd.Series(predictions, index=X_indices)
-        logger.info(f"Predictions for model {i} saved to column '{predictions_tag}'")
+            # Add the predictions to the data DataFrame
+            data[predictions_tag] = pd.Series(predictions[:,j], index=X_indices)
+            logger.info(f"Predictions for model {i} task {j} saved to column '{predictions_tag}'")
 
     logger.info("Finished prediction")
     logger.info(f"Predictions saved to {output_path}")
