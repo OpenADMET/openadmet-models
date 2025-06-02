@@ -64,8 +64,15 @@ def predict(
     output_path: str = None,
     debug: bool = False,
     accelerator: str = "gpu",
+    log: bool = True
 ):
     """Predict using a trained model"""
+
+
+    if not log:
+        logger.remove()
+        logger.add(lambda msg: None)
+
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
     logger.info(f"Model directories: {model_dir}")
@@ -93,9 +100,15 @@ def predict(
     if not isinstance(model_dir, list):
         model_dir = [model_dir]
 
+    # mute output from FutureWarning and DeprecationWarning
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+
     # Load the models
     for i, model_path in enumerate(model_dir):
         logger.info(f"Loading model {i} from {model_path}")
+
         # load the model and metadata
         model, feat, metadata, data_spec = load_anvil_model_and_metadata(Path(model_path))
 
