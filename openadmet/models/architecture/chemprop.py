@@ -25,7 +25,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
     """
 
     type: ClassVar[str] = "ChemPropSingleTaskModel"
-    batch_norm: bool = True
+    batch_norm: bool = False
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
     depth: int = 3
@@ -35,6 +35,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
     messages: str = "bond"
     aggregation: str = "norm"
     normalized_targets: bool = True
+    dropout: float = 0.0
     n_tasks: int = 1
 
     @field_validator("messages")
@@ -106,7 +107,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
             )
 
             # Create the model
-            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth)
+            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout)
             aggr = aggregation_cls()
 
             ffn = nn.RegressionFFN(
@@ -115,6 +116,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
                 hidden_dim=self.ffn_hidden_dim,
                 n_layers=self.ffn_num_layers,
                 output_transform=output_transform,
+                dropout=self.dropout,
             )
             # Create the MPNN model
 
