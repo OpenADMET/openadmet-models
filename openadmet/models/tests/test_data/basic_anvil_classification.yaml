@@ -19,7 +19,7 @@ data:
   resource: "{{ANVIL_DIR}}/example_intake.yaml"
   cat_entry: "AChE_Landrum"
   input_col: "canonical_smiles"
-  target_cols: ["pchembl_active"]
+  target_cols: "pchembl_active"
   transform: None
 
 procedure:
