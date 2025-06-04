@@ -354,11 +354,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             # create a new featurizer and model for each fold
             fold_featurizer = featurizer.make_new()
 
-            fold_train_dataloader, fold_train_scaler, _ = fold_featurizer.featurize(
+            fold_train_dataloader, _, fold_train_scaler, _ = fold_featurizer.featurize(
                 X_train, y_train
             )
 
-            fold_val_dataloader, _, _ = fold_featurizer.featurize(X_val, y_val)
+            fold_val_dataloader, _, _, _ = fold_featurizer.featurize(X_val, y_val)
             fold_model = model.make_new()
             fold_model.build(scaler=fold_train_scaler)
 
