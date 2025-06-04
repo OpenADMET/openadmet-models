@@ -253,6 +253,7 @@ class RegressionPlots(EvalBase):
                     min_val=self.min_val,
                     max_val=self.max_val,
                 )
+        return self.plot_data
 
     @staticmethod
     def regplot(
