@@ -24,7 +24,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
     ChemProp regression model
     """
 
-    type: ClassVar[str] = "ChemPropModel"
+    type: ClassVar[str] = "ChemPropMultiRegressorModel"
     batch_norm: bool = True
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
