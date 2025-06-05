@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from lightning import pytorch as pl
-from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from loguru import logger
 from pydantic import model_validator
@@ -25,13 +25,13 @@ class LightningTrainer(TrainerBase):
     early_stopping: bool = False
     early_stopping_patience: int = 10
     early_stopping_mode: str = "min"
+    early_stopping_min_delta: float = 0.001
     monitor_metric: str = "val_loss"
 
     wandb_logger: Any = None
     _logger: Any
     _trainer: Any
     _callbacks: Any = None
-
 
     @model_validator(mode="after")
     def check_monitor_metric(self):
@@ -45,12 +45,10 @@ class LightningTrainer(TrainerBase):
             )
         return self
 
-
     def prepare(self):
         """
         Build the model trainer
         """
-
 
         # Initialize logging container
         self._logger = []
@@ -58,8 +56,11 @@ class LightningTrainer(TrainerBase):
         # initialize the callbacks list
         self._callbacks = []
 
-
-        fmtstring = "best-{epoch}-{val_loss:.4f}" if self.monitor_metric == "val_loss" else "best-{epoch}-{train_loss:.4f}"
+        fmtstring = (
+            "best-{epoch}-{val_loss:.4f}"
+            if self.monitor_metric == "val_loss"
+            else "best-{epoch}-{train_loss:.4f}"
+        )
 
         # Configure checkpoint callbacks
         checkpointing = ModelCheckpoint(
@@ -77,11 +78,12 @@ class LightningTrainer(TrainerBase):
 
             # Configure early stopping callback
             early_stopping_callback = EarlyStopping(
+                min_delta=self.early_stopping_min_delta,  # Minimum change in the monitored quantity to qualify as an improvement
                 monitor=self.monitor_metric,  # Monitor validation loss for early stopping
                 patience=self.early_stopping_patience,  # Number of epochs with no improvement after which training will be stopped
                 mode=self.early_stopping_mode,  # Stop when validation loss stops decreasing
             )
-            self._logger.append(early_stopping_callback)
+            self._callbacks.append(early_stopping_callback)
 
         # Append the checkpointing callback to the callbacks list
         self._callbacks.append(checkpointing)
@@ -95,8 +97,6 @@ class LightningTrainer(TrainerBase):
 
         # Append CSV logger
         self._logger.append(CSVLogger(self.output_dir / "logs", name="model"))
-
-
 
         # Initialize the PyTorch Lightning trainer
         self._trainer = pl.Trainer(

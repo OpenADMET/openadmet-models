@@ -17,12 +17,14 @@ def get_eval_class(eval_type):
 
     return eval_class
 
+
 def mask_nans(y_true: np.ndarray, y_pred: np.ndarray):
     """
     Remove any pairs where either y_true or y_pred is NaN.
     """
     mask = ~np.isnan(y_true) & ~np.isnan(y_pred)
     return y_true[mask], y_pred[mask]
+
 
 class EvalBase(BaseModel):
     class Config:

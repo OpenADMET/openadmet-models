@@ -1,15 +1,17 @@
-from sklearn.metrics import precision_score, recall_score, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
-import numpy as np
-import wandb
 import pandas as pd
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+)
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators
 
 
 @evaluators.register("PosthocBinaryMetrics")
 class PosthocBinaryMetrics(EvalBase):
-
     """
     Intended to be used for regression-based models to calculate
     precision and recall metrics for user-input cutoffs
@@ -17,7 +19,14 @@ class PosthocBinaryMetrics(EvalBase):
     Not intended for binary models
     """
 
-    def evaluate(self, y_true: list = None, y_pred: list = None, cutoff: float = None, report: bool = False, output_dir: str = None):
+    def evaluate(
+        self,
+        y_true: list = None,
+        y_pred: list = None,
+        cutoff: float = None,
+        report: bool = False,
+        output_dir: str = None,
+    ):
         """
         Evaluate the precision and recall metrics for the model with user-input cutoffs.
 
@@ -79,9 +88,11 @@ class PosthocBinaryMetrics(EvalBase):
         precision = precision_score(true_class, pred_class)
         recall = recall_score(true_class, pred_class)
 
-        return(precision, recall)
+        return (precision, recall)
 
-    def plot_confusion_matrix(self, y_true:list, y_pred:list, cutoff:float, output_dir:str=None):
+    def plot_confusion_matrix(
+        self, y_true: list, y_pred: list, cutoff: float, output_dir: str = None
+    ):
         """
         Plot the confusion matrix for a given cutoff
         """
@@ -93,14 +104,16 @@ class PosthocBinaryMetrics(EvalBase):
         if output_dir is not None:
             plt.savefig(f"{output_dir}/confusion_matrix.png", dpi=300)
 
-    def plot_posthoc_classification(self, y_true:list, y_pred:list, cutoff:float, output_dir:str=None):
+    def plot_posthoc_classification(
+        self, y_true: list, y_pred: list, cutoff: float, output_dir: str = None
+    ):
         """
         Plot the classification of the model with a given cutoff
         """
         fig, ax = plt.subplots()
         plt.scatter(y_true, y_pred)
-        plt.axvline(cutoff, color='r', linestyle='--')
-        plt.axhline(cutoff, color='r', linestyle='--')
+        plt.axvline(cutoff, color="r", linestyle="--")
+        plt.axhline(cutoff, color="r", linestyle="--")
         plt.xlabel("True Value")
         plt.ylabel("Predicted Value")
         plt.title(f"Post-hoc classification with cutoff: {cutoff} ")

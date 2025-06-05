@@ -332,8 +332,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         target_labels = self.data_spec.target_cols
 
-
-
         # Set debug attribute
         self.debug = debug
 
@@ -474,8 +472,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.PYTORCH
 
-
-
     def run(
         self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
     ) -> Any:
@@ -570,7 +566,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Featurize splits
         logger.info("Featurizing data")
-        train_dataloader, train_scaler, train_dataset = self.feat.featurize(X_train, y_train)
+        train_dataloader, train_scaler, train_dataset = self.feat.featurize(
+            X_train, y_train
+        )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         if X_val is not None and y_val is not None:
@@ -646,7 +644,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 use_wandb=use_wandb,
                 tag=model_tag,
                 target_labels=target_labels,
-
             )
 
             # Write evaluation report

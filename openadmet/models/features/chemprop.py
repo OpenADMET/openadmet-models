@@ -1,16 +1,24 @@
 from collections.abc import Iterable
-from typing import Any
-import pandas as pd
-from chemprop.data import MoleculeDatapoint, MoleculeDataset, ReactionDataset, MulticomponentDataset
-from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
-from chemprop.data.collate import collate_batch, collate_multicomponent
-import logging
-from torch.utils.data import DataLoader
-from sklearn.preprocessing import StandardScaler
-from openadmet.models.features.chemprop import MoleculeDataset, ReactionDataset, MulticomponentDataset
+from typing import Any, Union
 
+import pandas as pd
+from chemprop.data import (
+    MoleculeDatapoint,
+    MoleculeDataset,
+    MulticomponentDataset,
+    ReactionDataset,
+)
+from chemprop.data.collate import collate_batch, collate_multicomponent
+from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader
+
+from openadmet.models.features.chemprop import (
+    MoleculeDataset,
+    MulticomponentDataset,
+    ReactionDataset,
+)
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
-from typing import Union, Tuple
 
 
 # we vendor this from chemprop so that we can pass custom samplers
@@ -45,7 +53,6 @@ def _vendor_build_dataloader(
         whether to shuffle the data during sampling.
     """
     if sampler is not None:
-
         if class_balance:
             sampler = ClassBalanceSampler(dataset.Y, seed, shuffle)
         elif shuffle and seed is not None:
@@ -53,12 +60,12 @@ def _vendor_build_dataloader(
         else:
             sampler = None
 
-
     if isinstance(dataset, MulticomponentDataset):
         collate_fn = collate_multicomponent
     else:
         collate_fn = collate_batch
 
+    # Drop last batch of size 1 to avoid issues with batch normalization
     if len(dataset) % batch_size == 1:
         drop_last = True
     else:
@@ -74,6 +81,7 @@ def _vendor_build_dataloader(
         drop_last=drop_last,
         **kwargs,
     )
+
 
 @featurizers.register("ChemPropFeaturizer")
 class ChemPropFeaturizer(DeepLearningFeaturizer):
@@ -91,7 +99,13 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Prepare the featurizer
         """
 
-    def featurize(self, smiles: Iterable[str], y: Iterable[Any]=None) -> tuple[DataLoader, StandardScaler, Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]]:
+    def featurize(
+        self, smiles: Iterable[str], y: Iterable[Any] = None
+    ) -> tuple[
+        DataLoader,
+        StandardScaler,
+        Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
+    ]:
         """
         Featurize a list of SMILES strings
 
@@ -124,9 +138,14 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         )
         return dataloader, scaler, dataset
 
-
     @staticmethod
-    def dataset_to_dataloader(dataset: MoleculeDataset, batch_size: int = 128, shuffle: bool = False, sampler=None, **kwargs) -> DataLoader:
+    def dataset_to_dataloader(
+        dataset: MoleculeDataset,
+        batch_size: int = 128,
+        shuffle: bool = False,
+        sampler=None,
+        **kwargs,
+    ) -> DataLoader:
         """
         Convert a MoleculeDataset to a DataLoader
         """
@@ -137,7 +156,6 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             sampler=sampler,
             **kwargs,
         )
-
 
     def make_new(self) -> "ChemPropFeaturizer":
         """

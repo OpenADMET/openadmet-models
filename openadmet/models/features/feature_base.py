@@ -5,11 +5,11 @@ import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from molfeat.trans import MoleculeTransformer
 from pydantic import BaseModel
-from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import StandardScaler
-from typing import Union, Tuple
+from torch.utils.data import DataLoader, Dataset
 
 featurizers = ClassRegistry(unique=True)
+
 
 def get_featurizer_class(feat_type):
     try:
@@ -40,7 +40,9 @@ class DeepLearningFeaturizer(FeaturizerBase):
     """
 
     @abstractmethod
-    def featurize(self, smiles: Iterable[str], y: Iterable[float] = None) -> tuple[DataLoader, StandardScaler, Dataset]:
+    def featurize(
+        self, smiles: Iterable[str], y: Iterable[float] = None
+    ) -> tuple[DataLoader, StandardScaler, Dataset]:
         """
         Featurize a list of SMILES strings, returns a DataLoader, StandardScaler if any scaling done by featurization and a Pytorch Dataset
         """

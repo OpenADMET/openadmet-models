@@ -2,8 +2,8 @@ import json
 from functools import partial
 
 import numpy as np
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
 from pydantic import Field
@@ -34,7 +34,15 @@ class RegressionMetrics(EvalBase):
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
     }
 
-    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, target_labels=None, **kwargs):
+    def evaluate(
+        self,
+        y_true=None,
+        y_pred=None,
+        use_wandb=False,
+        tag=None,
+        target_labels=None,
+        **kwargs,
+    ):
         """
         Evaluate the regression model
         """
@@ -42,10 +50,10 @@ class RegressionMetrics(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         n_tasks = y_true.shape[1]
-        if not(n_tasks == y_pred.shape[1]):
+        if not (n_tasks == y_pred.shape[1]):
             raise ValueError("y_true and y_pred must have the same number of tasks")
         if target_labels is None:
-            target_labels = [f'task_{i}' for i in range(n_tasks)]
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
 
         self.data = {"tag": tag}
 
@@ -58,7 +66,7 @@ class RegressionMetrics(EvalBase):
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]
             t_pred = y_pred[:, task_id]
-            #remove Nan values
+            # remove Nan values
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
@@ -78,14 +86,20 @@ class RegressionMetrics(EvalBase):
                     "value": value,
                     "lower_ci": lower_ci,
                     "upper_ci": upper_ci,
-                    "confidence_level": self.bootstrap_confidence_level
-                    }
+                    "confidence_level": self.bootstrap_confidence_level,
+                }
 
         if self.use_wandb:
             for t_label in target_labels:
                 # make a table for the metrics
                 table = wandb.Table(
-                    columns=["Metric", "Value", "Lower CI", "Upper CI", "Confidence Level"]
+                    columns=[
+                        "Metric",
+                        "Value",
+                        "Lower CI",
+                        "Upper CI",
+                        "Confidence Level",
+                    ]
                 )
                 for metric_tag in self.metric_names:
                     metric = self.data[t_label][metric_tag]
@@ -149,17 +163,17 @@ class RegressionMetrics(EvalBase):
         stat_caption = ""
 
         for task_name in self.task_names:
-            if task_name == 'tag':
+            if task_name == "tag":
                 continue
 
-            stat_caption += f'## {task_name} ##\n'
+            stat_caption += f"## {task_name} ##\n"
             for metric in self.metric_names:
                 value = self.data[task_name][metric]["value"]
                 lower_ci = self.data[task_name][metric]["lower_ci"]
                 upper_ci = self.data[task_name][metric]["upper_ci"]
                 confidence_level = self.data[task_name][metric]["confidence_level"]
                 stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-            stat_caption += '\n'
+            stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
 
@@ -181,7 +195,9 @@ class RegressionPlots(EvalBase):
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
 
-    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, **kwargs):
+    def evaluate(
+        self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, **kwargs
+    ):
         """
         Evaluate the regression model
         """
@@ -192,10 +208,10 @@ class RegressionPlots(EvalBase):
             raise ValueError("Must provide y_true and y_pred")
 
         n_tasks = y_true.shape[1]
-        if not(n_tasks == y_pred.shape[1]):
+        if not (n_tasks == y_pred.shape[1]):
             raise ValueError("y_true and y_pred must have the same number of tasks")
         if target_labels is None:
-            target_labels = [f'task_{i}' for i in range(n_tasks)]
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
 
         self.plots = {
             "regplot": self.regplot,
@@ -209,18 +225,22 @@ class RegressionPlots(EvalBase):
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]
             t_pred = y_pred[:, task_id]
-            #remove Nan values
+            # remove Nan values
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
             if self.do_stats:
                 rm = RegressionMetrics()
-                rm.evaluate(t_true.reshape(-1, 1), t_pred.reshape(-1, 1), target_labels=[t_label])
+                rm.evaluate(
+                    t_true.reshape(-1, 1),
+                    t_pred.reshape(-1, 1),
+                    target_labels=[t_label],
+                )
                 stat_caption = rm.make_stat_caption()
             else:
-                stat_caption=""
+                stat_caption = ""
 
-        # create the plots
+            # create the plots
             for plot_tag, plot in self.plots.items():
                 self.plot_data[t_label] = plot(
                     t_true,
@@ -296,7 +316,6 @@ class RegressionPlots(EvalBase):
         fig.tight_layout()
 
         return fig
-
 
     def report(self, write=False, output_dir=None):
         """

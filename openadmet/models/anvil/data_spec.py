@@ -1,14 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import fsspec
 import intake
 import jinja2
 import pandas as pd
 import yaml
-from loguru import logger
-from pydantic import BaseModel, model_validator
-
+from pydantic import BaseModel, model_validator, field_validator
 
 class DataSpec(BaseModel):
     """
@@ -18,11 +16,19 @@ class DataSpec(BaseModel):
     type: str
     resource: str
     cat_entry: Optional[str] = None
-    target_cols: list[str]
+    target_cols: Union[str, list[str]]
     input_col: str
     anvil_dir: Optional[str] = None
 
     _catalog: Optional[intake.catalog.Catalog] = None
+
+    @field_validator("target_cols", mode="before")
+    @classmethod
+    def check_target_cols_input(cls, v):
+        if isinstance(v, str):
+            return [v]
+        else:
+            return v
 
     # validator to template the resource with ANVIL_DIR if present
     @model_validator(mode="after")
@@ -54,7 +60,7 @@ class DataSpec(BaseModel):
         elif self.resource.endswith(".csv"):
             data = intake.open_csv(self.resource).read()
 
-        elif self.resource.endswith(".parquet") or self.resource.endswith(".parq") or self.resource.endswith(".pq") or self.resource.endswith(".pqt"):
+        elif any(self.resource.endswith(x) for x in [".parquet", ".pq", ".pqt"]):
             data = intake.open_parquet(self.resource).read()
         else:
             raise ValueError(f"Unsupported resource type: {self.resource}")

@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import numpy as np
 from loguru import logger
@@ -10,20 +11,16 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-import pandas as pd
-from collections import defaultdict
 from sklearn.model_selection import RepeatedKFold, cross_validate
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators
 from openadmet.models.eval.regression import (
     RegressionPlots,
+    mask_nans,
     nan_omit_ktau,
     nan_omit_spearmanr,
-    mask_nans,
 )
-from torch.utils.data import DataLoader, SubsetRandomSampler, Subset
 from openadmet.models.trainer.lightning import LightningTrainer
-import wandb
 
 
 def wrap_ktau(y_true, y_pred):
@@ -75,16 +72,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     """
     Cross-validation evaluator for sklearn models, this is aimed at single task regression models currently
     """
-    n_splits: int = Field(
-        5, description="Number of splits for cross-validation"
-    )
-    n_repeats: int = Field(
-        5, description="Number of repeats for cross-validation"
-    )
-    random_state: int = Field(
-        42, description="Random state for reproducibility"
-    )
 
+    n_splits: int = Field(5, description="Number of splits for cross-validation")
+    n_repeats: int = Field(1, description="Number of repeats for cross-validation")
+    random_state: int = Field(42, description="Random state for reproducibility")
 
     def evaluate(
         self,
@@ -118,8 +109,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         n_tasks = 1
         if target_labels is None:
-            target_labels = [f'task_{i}' for i in range(n_tasks)]
-
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
 
         if len(target_labels) != n_tasks:
             raise ValueError(
@@ -199,7 +189,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         return self.data
 
-
     def make_stat_caption(self, task_name):
         """
         Make a caption for the statistics
@@ -209,14 +198,14 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError("Must evaluate before making a caption")
         stat_caption = ""
 
-        stat_caption += f'## {task_name} ##\n'
+        stat_caption += f"## {task_name} ##\n"
         for metric in self.metric_names:
             value = self.data[task_name][metric]["mean"]
             lower_ci = self.data[task_name][metric]["lower_ci"]
             upper_ci = self.data[task_name][metric]["upper_ci"]
             confidence_level = self.data[task_name][metric]["confidence_level"]
             stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-            stat_caption += '\n'
+            stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
 
@@ -243,15 +232,13 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
-    n_splits: int = Field(
-        5, description="Number of splits for cross-validation"
-    )
-    n_repeats: int = Field(
-        5, description="Number of repeats for cross-validation"
-    )
-    random_state: int = Field(
-        42, description="Random state for reproducibility"
-    )
+    """
+    Cross-validation evaluator for Pytorch Lightning models.
+    """
+
+    n_splits: int = Field(5, description="Number of splits for cross-validation")
+    n_repeats: int = Field(1, description="Number of repeats for cross-validation")
+    random_state: int = Field(42, description="Random state for reproducibility")
     _evaluated: bool = False
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"
@@ -276,7 +263,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
-
 
     def evaluate(
         self,
@@ -308,7 +294,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             or X_train_raw is None
             or y_train_raw is None
             or featurizer is None
-            or trainer is None):
+            or trainer is None
+        ):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, and tag must be provided"
             )
@@ -342,13 +329,15 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # prepare containers for metrics
         n_tasks = y_train_raw.shape[1]
         if target_labels is None:
-            target_labels = [f'task_{i}' for i in range(n_tasks)]
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
 
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
 
-        for fold, (fold_train_ids, fold_val_ids) in enumerate(cv.split(X=X_train_raw, y=y_train_raw)):
+        for fold, (fold_train_ids, fold_val_ids) in enumerate(
+            cv.split(X=X_train_raw, y=y_train_raw)
+        ):
             logger.info(f"Fold {fold}")
 
             X_train = X_train_raw[fold_train_ids]
@@ -373,13 +362,12 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             fold_model = model.make_new()
             fold_model.build(scaler=fold_train_scaler)
 
-
             fold_trainer = LightningTrainer(
                 max_epochs=trainer.max_epochs,
                 accelerator=trainer.accelerator,
                 devices=trainer.devices,
                 use_wandb=False,
-                output_dir=trainer.output_dir / "cv" /  f"fold_{str(fold)}",
+                output_dir=trainer.output_dir / "cv" / f"fold_{str(fold)}",
                 wandb_project=trainer.wandb_project,
             )
 
@@ -390,19 +378,21 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             # Pass the dataloaders to the trainer
             fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
             # evaluate the model
-            y_pred_fold = fold_model.predict(fold_val_dataloader, accelerator=trainer.accelerator,
-            devices=trainer.devices)
+            y_pred_fold = fold_model.predict(
+                fold_val_dataloader,
+                accelerator=trainer.accelerator,
+                devices=trainer.devices,
+            )
 
             # calculate the mean and confidence interval for each metric
             # loop over tasks and calculate the statistics
-            if not(n_tasks == y_pred_fold.shape[1]):
+            if not (n_tasks == y_pred_fold.shape[1]):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
-
 
             for task_id in range(n_tasks):
                 t_true = y_val[:, task_id]
                 t_pred = y_pred_fold[:, task_id]
-                #remove Nan values
+                # remove Nan values
                 t_true, t_pred = mask_nans(t_true, t_pred)
                 t_label = target_labels[task_id]
 
@@ -446,7 +436,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]
             t_pred = y_pred[:, task_id]
-            #remove Nan values
+            # remove Nan values
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
@@ -478,7 +468,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError("Must evaluate before getting task names")
         return list(self.data.keys())
 
-
     def report(self, write=False, output_dir=None):
         """
         Report the evaluation
@@ -487,19 +476,17 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self.write_report(output_dir)
         return self.data
 
-
     def write_report(self, output_dir):
         """
         Write the evaluation report
         """
         # write to JSON
-        with open(output_dir / f"cross_validation_metrics.json", "w") as f:
+        with open(output_dir / "cross_validation_metrics.json", "w") as f:
             json.dump(self.data, f, indent=2)
 
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
-
 
     def make_stat_caption(self, task_name):
         """
@@ -510,14 +497,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError("Must evaluate before making a caption")
         stat_caption = ""
 
-
-        stat_caption += f'## {task_name} ##\n'
+        stat_caption += f"## {task_name} ##\n"
         for metric in self.metric_names:
             value = self.data[task_name][metric]["mean"]
             lower_ci = self.data[task_name][metric]["lower_ci"]
             upper_ci = self.data[task_name][metric]["upper_ci"]
             confidence_level = self.data[task_name][metric]["confidence_level"]
             stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-            stat_caption += '\n'
+            stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption

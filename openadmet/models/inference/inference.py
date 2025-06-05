@@ -1,17 +1,21 @@
-import pandas as pd
-from rdkit.Chem import PandasTools
-from openadmet.models.anvil.workflow import ProcedureSpec, Metadata
 from pathlib import Path
+
+import pandas as pd
 from loguru import logger
+from rdkit.Chem import PandasTools
+
 from openadmet.models.cli.predict import load_anvil_model_and_metadata
 
-def predict(input_path:str,
-            input_col:str,
-            model_dir:str,
-            write_csv:bool = False,
-            output_path:str = None,
-            debug:bool = False,
-            accelerator: str = "gpu"):
+
+def predict(
+    input_path: str,
+    input_col: str,
+    model_dir: str,
+    write_csv: bool = False,
+    output_path: str = None,
+    debug: bool = False,
+    accelerator: str = "gpu",
+):
     """Predict using a trained model"""
     logger.info("Starting prediction")
     logger.info(f"Input path: {input_path}")
@@ -39,7 +43,7 @@ def predict(input_path:str,
         logger.debug(f"Model: {model.estimator}")
         logger.debug(f"Feature: {feat}")
         # returns a variable length tuple, first element is the featurized data or a dataloader
-        feat_data  = feat.featurize(data[input_col])
+        feat_data = feat.featurize(data[input_col])
         X_feat = feat_data[0]
         # make the actual model predictions
         predictions = model.predict(X_feat, accelerator=accelerator)
@@ -47,7 +51,9 @@ def predict(input_path:str,
         # will need to change for multi-target models
         predictions_tag = f"OADMET_PRED_{metadata.tag}"
         if predictions_tag in data.columns:
-            raise ValueError(f"Output file already contains a '{predictions_tag}' column")
+            raise ValueError(
+                f"Output file already contains a '{predictions_tag}' column"
+            )
 
         data[predictions_tag] = predictions
 

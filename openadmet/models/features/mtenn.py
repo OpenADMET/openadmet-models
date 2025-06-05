@@ -1,18 +1,19 @@
-from collections.abc import Iterable
-from typing import Any
-from pathlib import Path
-from torch.utils.data import DataLoader
-import MDAnalysis as mda
-import torch
-from typing import Union
-from openadmet.models.features.feature_base import FeaturizerBase, featurizers
-from torch.utils.data import Dataset
-import numpy as np
 import warnings
-from rdkit.Chem import GetPeriodicTable
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Union
+
+import MDAnalysis as mda
+import numpy as np
 import pandas as pd
+import torch
+from rdkit.Chem import GetPeriodicTable
+from torch.utils.data import DataLoader, Dataset
+
+from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 ptable = GetPeriodicTable()
+
 
 def get_atomic_number(element: str) -> int:
     """
@@ -23,21 +24,30 @@ def get_atomic_number(element: str) -> int:
     except KeyError:
         raise ValueError(f"Element {element} not found in periodic table")
 
+
 atomic_number_vfunc = np.vectorize(get_atomic_number)
+
 
 class MTENNDataset(Dataset):
     """
     Custom dataset for MTENN models
     """
 
-    def __init__(self, complexes: Iterable[Path], y: Iterable[Any], ligand_resname: Union[str, list[str]] = "LIG", ignore_h: bool = True):
-        """
-        """
+    def __init__(
+        self,
+        complexes: Iterable[Path],
+        y: Iterable[Any],
+        ligand_resname: Union[str, list[str]] = "LIG",
+        ignore_h: bool = True,
+    ):
+        """ """
         self.complexes = complexes
         if isinstance(ligand_resname, str):
             ligand_resname = [ligand_resname] * len(complexes)
         elif len(ligand_resname) != len(complexes):
-            raise ValueError("ligand_resnames must be a string or a list of the same length as complexes")
+            raise ValueError(
+                "ligand_resnames must be a string or a list of the same length as complexes"
+            )
         if len(complexes) != len(y):
             raise ValueError("complexes and y must be the same length")
         self.ligand_resname = ligand_resname
@@ -45,14 +55,18 @@ class MTENNDataset(Dataset):
         self.ignore_h = ignore_h
 
         # load and feauturize the complexes
-        pos, Z, B, lig_mask = self._load_complexes(complexes, ligand_resname, ignore_h=self.ignore_h)
+        pos, Z, B, lig_mask = self._load_complexes(
+            complexes, ligand_resname, ignore_h=self.ignore_h
+        )
         self.pos = pos
         self.Z = Z
         self.B = B
         self.lig_mask = lig_mask
 
     @staticmethod
-    def _load_complexes(complexes: Iterable[Path], ligand_resname, ignore_h: bool = True):
+    def _load_complexes(
+        complexes: Iterable[Path], ligand_resname, ignore_h: bool = True
+    ):
         """
         Load the complexes into MDAnalysis"""
         all_pos = []
@@ -91,13 +105,12 @@ class MTENNDataset(Dataset):
             B = np.concatenate((protein_B, ligand_B), axis=0)
 
             lig_mask = np.zeros(pos.shape[0], dtype=bool)
-            lig_mask[protein.n_atoms:] = True
+            lig_mask[protein.n_atoms :] = True
 
             # cast them to torch tensors
             pos = torch.tensor(pos, dtype=torch.float32)
             Z = torch.tensor(Z, dtype=torch.int32)
             B = torch.tensor(B, dtype=torch.float32)
-
 
             # cast the mask to torch tensor
             lig_mask = torch.tensor(lig_mask, dtype=torch.bool)
@@ -117,7 +130,6 @@ class MTENNDataset(Dataset):
 
         return all_pos, all_Z, all_B, all_lig_mask
 
-
     def __len__(self):
         return len(self.complexes)
 
@@ -128,13 +140,7 @@ class MTENNDataset(Dataset):
         lig_mask = self.lig_mask[idx]
         y = self.y[idx]
 
-        return {
-            "pos": pos,
-            "Z": Z,
-            "B": B,
-            "lig_mask": lig_mask,
-            "Y": y
-        }
+        return {"pos": pos, "Z": Z, "B": B, "lig_mask": lig_mask, "Y": y}
 
 
 def _mtenn_collate_fn(batch):
@@ -143,18 +149,17 @@ def _mtenn_collate_fn(batch):
 
     for item in batch:
         data = {
-                'pos': item['pos'],
-                 'z': item['Z'].long(),
-                 'lig': item['lig_mask'].bool()
-                }
+            "pos": item["pos"],
+            "z": item["Z"].long(),
+            "lig": item["lig_mask"].bool(),
+        }
 
         data_list.append(data)
 
-        targets.append(torch.tensor(item['Y'], dtype=torch.float32))
+        targets.append(torch.tensor(item["Y"], dtype=torch.float32))
     targets = torch.stack(targets, dim=0)
 
     return data_list, targets
-
 
 
 @featurizers.register("MTENNFeaturizer")
@@ -162,6 +167,7 @@ class MTENNFeaturizer(FeaturizerBase):
     """
     MTENNFeaturizer featurizer for molecules for downstream use in MTENN
     """
+
     ligand_resname: Union[str, list[str]] = "LIG"
     ignore_h: bool = True
     n_jobs: int = 4
@@ -182,7 +188,7 @@ class MTENNFeaturizer(FeaturizerBase):
         """
         # if a pandas dataframe or series
         if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):
-                y = y.to_numpy()
+            y = y.to_numpy()
         y = y.reshape(-1, 1)
 
         self._dataset = MTENNDataset(
@@ -192,6 +198,12 @@ class MTENNFeaturizer(FeaturizerBase):
             ignore_h=self.ignore_h,
         )
 
-        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.n_jobs, collate_fn=_mtenn_collate_fn)
+        self._dataloader = DataLoader(
+            self._dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.n_jobs,
+            collate_fn=_mtenn_collate_fn,
+        )
         # return None for Scaler
         return self._dataloader, None

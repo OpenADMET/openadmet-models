@@ -1,24 +1,25 @@
-from lightning import pytorch as pl
-import torch
 from typing import ClassVar
+
+import torch
+from lightning import pytorch as pl
 from loguru import logger
 from mtenn.config import SchNetModelConfig
+
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
 
 class MTENNLightningWrapper(pl.LightningModule):
-    def __init__(self,
-                 model_config: SchNetModelConfig,
-                 loss_fn = torch.nn.MSELoss(),
-                 lr = 1e-4):
-         super().__init__()
-         self.model = model_config.build()
-         self.loss_fn = loss_fn
-         self.lr = lr
+    def __init__(
+        self, model_config: SchNetModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4
+    ):
+        super().__init__()
+        self.model = model_config.build()
+        self.loss_fn = loss_fn
+        self.lr = lr
 
     def forward(self, data):
-        for k,v in data.items():
+        for k, v in data.items():
             data[k] = v.to(self.device)
         pred, _ = self.model(data)
         return pred
@@ -33,17 +34,16 @@ class MTENNLightningWrapper(pl.LightningModule):
             batch_loss += loss
 
         avg_loss = batch_loss / len(data_batch)
-        self.log('train_loss', avg_loss)
+        self.log("train_loss", avg_loss)
         return avg_loss
 
     def predict_step(self, batch, batch_idx):
-        data_batch, _  = batch
+        data_batch, _ = batch
         preds = [self(data) for data in data_batch]
         return torch.cat(preds)
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
-
 
 
 @model_registry.register("MTENNSchNetModel")
@@ -52,7 +52,7 @@ class MTENNSchNetModel(TorchModelBase):
     MTENN SchNet Model Implementation
     """
 
-    type:ClassVar[str] = "MTENNSchNetModel"
+    type: ClassVar[str] = "MTENNSchNetModel"
     mod_params: dict = {}
 
     def build(self, scaler=None):
@@ -73,7 +73,7 @@ class MTENNSchNetModel(TorchModelBase):
         Train the model
         """
         raise NotImplementedError(
-           "Training not implemented in model class, use a trainer."
+            "Training not implemented in model class, use a trainer."
         )
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
@@ -85,6 +85,10 @@ class MTENNSchNetModel(TorchModelBase):
 
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None, enable_progress_bar=False, accelerator=accelerator, devices=devices)
+                logger=None,
+                enable_progress_bar=False,
+                accelerator=accelerator,
+                devices=devices,
+            )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds, dim=0).numpy()

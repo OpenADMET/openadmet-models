@@ -204,7 +204,6 @@ class ClassificationPlots(EvalBase):
         if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
 
-
         # Micro-averaged one-versus-rest
         else:
             fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred.ravel())
@@ -234,7 +233,6 @@ class ClassificationPlots(EvalBase):
             precision, recall, _ = precision_recall_curve(
                 y_true.ravel(), y_pred[:, 1].ravel()
             )
-
 
         # Micro-averaged one-versus-rest
         else:

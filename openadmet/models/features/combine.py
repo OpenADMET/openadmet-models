@@ -13,7 +13,6 @@ from openadmet.models.features.feature_base import (
 
 @featurizers.register("FeatureConcatenator")
 class FeatureConcatenator(FeaturizerBase):
-
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"
     )
