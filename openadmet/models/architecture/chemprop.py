@@ -92,8 +92,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
             elif self.normalized_targets:
                 # expects the targets to be normalized, likely to be loaded from state dict
                 output_transform = nn.UnscaleTransform([1]*self.n_tasks, [0]*self.n_tasks)
-            else:
-                output_transform = Identity()
+
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
 
