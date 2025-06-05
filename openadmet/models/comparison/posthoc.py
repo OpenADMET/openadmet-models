@@ -80,7 +80,7 @@ class PostHocComparison(ComparisonBase):
         report : bool, optional
             If True, generates and saves a PDF report of the statistical analysis. Default is False.
         output_dir : str or Path, optional
-            Directory to save output files 
+            Directory to save output files
 
         Returns
         -------
@@ -114,7 +114,7 @@ class PostHocComparison(ComparisonBase):
         """
         df = pd.DataFrame()
         for model, tag, task in zip(model_stats_fns, model_tags, task_tags):
-            with open(model, "r") as f:
+            with open(model) as f:
                 data = json.load(f)
             method_data = pd.DataFrame()
             for m in self.metrics:

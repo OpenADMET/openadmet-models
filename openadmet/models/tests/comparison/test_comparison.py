@@ -27,4 +27,3 @@ def test_posthoc_comparison_multitask_reader():
     task_tags = ["cyp3a4_pchembl_value_mean"]
     comp_obj = PostHocComparison()
     comp_obj.json_to_df(model_stats, model_tags, task_tags)
-
