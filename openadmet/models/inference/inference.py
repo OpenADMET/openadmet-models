@@ -65,7 +65,8 @@ def predict(
     output_path: str = None,
     debug: bool = False,
     accelerator: str = "gpu",
-    log: bool = True
+    log: bool = True,
+    **kwargs
 ):
     """Predict using a trained model"""
 
@@ -97,10 +98,15 @@ def predict(
     if input_col not in data.columns:
         raise ValueError(f"Column {input_col} not found in input data")
 
-
-    if not isinstance(model_dir, list):
+    # check if model dir is a list or a single path
+    if isinstance(model_dir, (str, Path)):
+        logger.debug(f"Model directory is a single path: {model_dir}")
         model_dir = [model_dir]
 
+
+
+    logger.info(f"Model directories: {model_dir}")
+    
     # mute output from FutureWarning and DeprecationWarning
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)

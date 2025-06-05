@@ -1,11 +1,8 @@
-from pathlib import Path
 
 import click
-import pandas as pd
-from loguru import logger
-from rdkit.Chem import PandasTools
 
-from openadmet.models.inference.inference import predict
+
+from openadmet.models.inference.inference import predict as inference_func
 
 
 @click.command()
@@ -36,10 +33,10 @@ from openadmet.models.inference.inference import predict
     required=True,
     type=click.Path(exists=False, writable=True),
 )
-@click.option("--debug", is_flag=True, help="Enable debug mode")
+@click.option("--debug", is_flag=True, help="Enable debug mode", default=False)
 def predict(input_path, input_col, model_dir, output_path, debug):
     """Predict using a trained model"""
-    predict(
+    inference_func(
         input_path=input_path,
         input_col=input_col,
         model_dir=model_dir,
