@@ -106,7 +106,7 @@ def predict(
 
 
     logger.info(f"Model directories: {model_dir}")
-    
+
     # mute output from FutureWarning and DeprecationWarning
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)
