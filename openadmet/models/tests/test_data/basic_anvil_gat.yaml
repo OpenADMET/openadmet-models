@@ -1,0 +1,66 @@
+metadata:
+  version: v1
+  driver: "pytorch"
+  name: "gat-regression-workflow-example"
+  build_number: 0
+  description: "An example workflow for running GATv2 regression."
+  tag: "openadmet-gat-regression-test"
+  authors: "Yuzhi Xu"
+  email: "yuzhixuchem@gmail.com"
+  date_created: "2025-5-20"
+  biotargets:
+    - "CYP3A4"
+  tags:
+    - "openadmet"
+    - "workflow"
+    - "gat"
+    - "regression"
+
+data:
+  type: intake
+  resource: "/Users/xuyuzhi/Downloads/openadmet-models/openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv"
+  input_col: "CANONICAL_SMILES"
+  target_col: "pChEMBL mean"
+
+procedure:
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.2
+      random_state: 42
+
+  feat:
+    type: GATGraphFeaturizer
+    params: {}
+
+  model:
+    type: GATv2ModelWrapper
+    params:
+      hidden_dim: 64
+      num_layers: 3
+      num_heads: 4
+      gat_dropout: 0.1
+      pooling: "mean"
+      output_dim: 1
+
+      loss_function: "mse"
+      lr: 0.001
+      weight_decay: 0.00001
+      scheduler: "cosine"
+
+  train:
+    type: LightningTrainer
+    params:
+      max_epochs: 20
+      accelerator: "cpu"
+      devices: 1
+      use_wandb: false
+
+report:
+  eval:
+    - type: RegressionMetrics
+    - type: RegressionPlots
+      params:
+        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+        title: "GATv2: True vs Predicted pChEMBL on Test Set"

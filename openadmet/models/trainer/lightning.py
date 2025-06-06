@@ -56,10 +56,13 @@ class LightningTrainer(TrainerBase):
             callbacks=[checkpointing],  # Use the configured checkpoint callback
         )
 
-    def train(self, train_dataloader):
+    def train(self, train_dataloader, val_dataloader=None):
         """
         Train the model
         """
         logger.info(f"Training model {self.model._estimator}")
-        self._trainer.fit(self.model._estimator, train_dataloader)
+        if val_dataloader is not None:
+            self._trainer.fit(self.model._estimator, train_dataloader, val_dataloader)
+        else:
+            self._trainer.fit(self.model._estimator, train_dataloader)
         return self.model
