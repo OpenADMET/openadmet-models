@@ -19,7 +19,7 @@ data:
   resource: "{{ANVIL_DIR}}/example_intake.yaml"
   cat_entry: "AChE_Landrum"
   input_col: "canonical_smiles"
-  target_col: "pchembl_active"
+  target_cols: "pchembl_active"
   transform: None
 
 procedure:
@@ -38,7 +38,7 @@ procedure:
   model:
     type: LGBMClassifierModel
     params:
-      model_params:
+      mod_params:
         objective: "binary"
         metric: "binary_error"
         boosting_type: "gbdt"

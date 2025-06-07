@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#ignore lightning_logs folder anywhere in source tree
+lightning_logs/
+
 # Distribution / packaging
 .Python
 env/

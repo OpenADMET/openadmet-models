@@ -1,0 +1,19 @@
+feat:
+  params: {}
+  type: ChemPropFeaturizer
+model:
+  params: {}
+  type: ChemPropSingleTaskRegressorModel
+split:
+  params:
+    random_state: 42
+    test_size: 0.3
+    train_size: 0.7
+  type: ShuffleSplitter
+train:
+  params:
+    gpus: 1
+    max_epochs: 10
+    use_wandb: true
+    wandb_project: openadmet-testing
+  type: LightningTrainer

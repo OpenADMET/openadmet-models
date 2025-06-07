@@ -2,6 +2,7 @@ import json
 from functools import partial
 
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
@@ -9,7 +10,7 @@ from pydantic import Field
 from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans
 
 # create partial functions for the scipy stats
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
@@ -33,53 +34,83 @@ class RegressionMetrics(EvalBase):
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
     }
 
-    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, **kwargs):
+    def evaluate(
+        self,
+        y_true=None,
+        y_pred=None,
+        use_wandb=False,
+        tag=None,
+        target_labels=None,
+        **kwargs,
+    ):
         """
         Evaluate the regression model
         """
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
+        n_tasks = y_true.shape[1]
+        if not (n_tasks == y_pred.shape[1]):
+            raise ValueError("y_true and y_pred must have the same number of tasks")
+        if target_labels is None:
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
+
         self.data = {"tag": tag}
 
         if use_wandb:
             self.use_wandb = use_wandb
 
-        for metric_tag, (metric, is_scipy, _) in self._metrics.items():
-            value, lower_ci, upper_ci = self.stat_and_bootstrap(
-                metric_tag,
-                y_pred,
-                y_true,
-                metric,
-                is_scipy_statistic=is_scipy,
-                confidence_level=self.bootstrap_confidence_level,
-            )
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true.to_numpy()
 
-            metric_data = {}
-            metric_data["value"] = value
-            metric_data["lower_ci"] = lower_ci
-            metric_data["upper_ci"] = upper_ci
-            metric_data["confidence_level"] = self.bootstrap_confidence_level
+        for task_id in range(n_tasks):
+            t_true = y_true[:, task_id]
+            t_pred = y_pred[:, task_id]
+            # remove Nan values
+            t_true, t_pred = mask_nans(t_true, t_pred)
+            t_label = target_labels[task_id]
 
-            self.data[f"{metric_tag}"] = metric_data
+            self.data[t_label] = {}
+
+            for metric_tag, (metric, is_scipy, _) in self._metrics.items():
+                value, lower_ci, upper_ci = self.stat_and_bootstrap(
+                    metric_tag,
+                    t_pred,
+                    t_true,
+                    metric,
+                    is_scipy_statistic=is_scipy,
+                    confidence_level=self.bootstrap_confidence_level,
+                )
+
+                self.data[t_label][metric_tag] = {
+                    "value": value,
+                    "lower_ci": lower_ci,
+                    "upper_ci": upper_ci,
+                    "confidence_level": self.bootstrap_confidence_level,
+                }
 
         if self.use_wandb:
-            # make a table for the metrics
-            table = wandb.Table(
-                columns=["Metric", "Value", "Lower CI", "Upper CI", "Confidence Level"]
-            )
-            for metric in self.metric_names:
-                table.add_data(
-                    metric,
-                    self.data[metric]["value"],
-                    self.data[metric]["lower_ci"],
-                    self.data[metric]["upper_ci"],
-                    self.data[metric]["confidence_level"],
+            for t_label in target_labels:
+                # make a table for the metrics
+                table = wandb.Table(
+                    columns=[
+                        "Metric",
+                        "Value",
+                        "Lower CI",
+                        "Upper CI",
+                        "Confidence Level",
+                    ]
                 )
-            wandb.log({"metrics": table})
-
-            for metric in self.metric_names:
-                wandb.log({metric: self.data[metric]["value"]})
+                for metric_tag in self.metric_names:
+                    metric = self.data[t_label][metric_tag]
+                    table.add_data(
+                        metric_tag,
+                        metric["value"],
+                        metric["lower_ci"],
+                        metric["upper_ci"],
+                        metric["confidence_level"],
+                    )
+                wandb.log({f"metrics_{t_label}": table})
 
         self._evaluated = True
         return self.data
@@ -90,6 +121,13 @@ class RegressionMetrics(EvalBase):
         Return the metric names
         """
         return list(self._metrics.keys())
+
+    @property
+    def task_names(self):
+        """
+        Return the task names
+        """
+        return list(self.data.keys())
 
     def report(self, write=False, output_dir=None):
         """
@@ -123,13 +161,20 @@ class RegressionMetrics(EvalBase):
         if not self._evaluated:
             raise ValueError("Must evaluate before making a caption")
         stat_caption = ""
-        for metric in self.metric_names:
-            value = self.data[metric]["value"]
-            lower_ci = self.data[metric]["lower_ci"]
-            upper_ci = self.data[metric]["upper_ci"]
-            confidence_level = self.data[metric]["confidence_level"]
-            stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-        stat_caption += f"Confidence level: {confidence_level}"
+
+        for task_name in self.task_names:
+            if task_name == "tag":
+                continue
+
+            stat_caption += f"## {task_name} ##\n"
+            for metric in self.metric_names:
+                value = self.data[task_name][metric]["value"]
+                lower_ci = self.data[task_name][metric]["lower_ci"]
+                upper_ci = self.data[task_name][metric]["upper_ci"]
+                confidence_level = self.data[task_name][metric]["confidence_level"]
+                stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
+            stat_caption += "\n"
+        stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
 
 
@@ -150,7 +195,9 @@ class RegressionPlots(EvalBase):
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
 
-    def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
+    def evaluate(
+        self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, **kwargs
+    ):
         """
         Evaluate the regression model
         """
@@ -160,30 +207,52 @@ class RegressionPlots(EvalBase):
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
+        n_tasks = y_true.shape[1]
+        if not (n_tasks == y_pred.shape[1]):
+            raise ValueError("y_true and y_pred must have the same number of tasks")
+        if target_labels is None:
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
+
         self.plots = {
             "regplot": self.regplot,
         }
 
         self.plot_data = {}
 
-        if self.do_stats:
-            rm = RegressionMetrics()
-            rm.evaluate(y_true, y_pred)
-            stat_caption = rm.make_stat_caption()
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true.to_numpy()
 
-        # create the plots
-        for plot_tag, plot in self.plots.items():
-            self.plot_data[plot_tag] = plot(
-                y_true,
-                y_pred,
-                xlabel=self.axes_labels[0],
-                ylabel=self.axes_labels[1],
-                title=self.title,
-                stat_caption=stat_caption,
-                pXC50=self.pXC50,
-                min_val=self.min_val,
-                max_val=self.max_val,
-            )
+        for task_id in range(n_tasks):
+            t_true = y_true[:, task_id]
+            t_pred = y_pred[:, task_id]
+            # remove Nan values
+            t_true, t_pred = mask_nans(t_true, t_pred)
+            t_label = target_labels[task_id]
+
+            if self.do_stats:
+                rm = RegressionMetrics()
+                rm.evaluate(
+                    t_true.reshape(-1, 1),
+                    t_pred.reshape(-1, 1),
+                    target_labels=[t_label],
+                )
+                stat_caption = rm.make_stat_caption()
+            else:
+                stat_caption = ""
+
+            # create the plots
+            for plot_tag, plot in self.plots.items():
+                self.plot_data[t_label] = plot(
+                    t_true,
+                    t_pred,
+                    xlabel=self.axes_labels[0],
+                    ylabel=self.axes_labels[1],
+                    title=f"{self.title}\nTask: {t_label}",
+                    stat_caption=stat_caption,
+                    pXC50=self.pXC50,
+                    min_val=self.min_val,
+                    max_val=self.max_val,
+                )
 
     @staticmethod
     def regplot(
@@ -243,7 +312,8 @@ class RegressionPlots(EvalBase):
             )
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
-        ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=6)
+        ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=5)
+        fig.tight_layout()
 
         return fig
 
@@ -261,7 +331,7 @@ class RegressionPlots(EvalBase):
         """
 
         for plot_tag, plot in self.plot_data.items():
-            plot_path = output_dir / f"{plot_tag}.png"
+            plot_path = output_dir / f"regplot_{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)
             if self.use_wandb:
                 wandb.log({plot_tag: wandb.Image(str(plot_path))})

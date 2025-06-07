@@ -1,0 +1,33 @@
+{
+  "tag": "openadmet-Acetylcholinesterase-pchembl-regression-testing-cv",
+  "mse": {
+    "value": 0.5007398044759314,
+    "lower_ci": 0.45480508419191146,
+    "upper_ci": 0.5430820658359008,
+    "confidence_level": 0.95
+  },
+  "mae": {
+    "value": 0.5426589987908084,
+    "lower_ci": 0.5204726585273727,
+    "upper_ci": 0.5645164963578766,
+    "confidence_level": 0.95
+  },
+  "r2": {
+    "value": 0.5948436844547657,
+    "lower_ci": 0.5665290206219483,
+    "upper_ci": 0.6256177490229895,
+    "confidence_level": 0.95
+  },
+  "ktau": {
+    "value": 0.574546729809941,
+    "lower_ci": 0.5553115971953142,
+    "upper_ci": 0.5943916580125183,
+    "confidence_level": 0.95
+  },
+  "spearmanr": {
+    "value": 0.7750708388240528,
+    "lower_ci": 0.755349352986247,
+    "upper_ci": 0.7969885577709669,
+    "confidence_level": 0.95
+  }
+}

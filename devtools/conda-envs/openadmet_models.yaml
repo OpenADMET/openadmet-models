@@ -16,6 +16,8 @@ dependencies:
   - zarr >=3.0.0
   - ipython
   - jupyterlab
+  - intake-parquet
+  - loguru
 
   - rdkit
   - molfeat
@@ -46,6 +48,7 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
+  - pytest-xdist
 
     # Pip-only installs
   - pip:

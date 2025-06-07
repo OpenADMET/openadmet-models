@@ -63,7 +63,7 @@ class ClassificationMetrics(EvalBase):
 
         for metric_tag, (metric, is_scipy, is_class_pred, _) in self._metrics.items():
             # Binary case
-            if y_true.ndim == 1:
+            if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
                 # Cast to class predictions before calculating the metric
                 if is_class_pred is True:
                     _y_pred = np.argmax(y_pred, axis=1).ravel()
@@ -74,7 +74,7 @@ class ClassificationMetrics(EvalBase):
                     _y_pred = y_pred[:, 1].ravel()
                     _y_true = y_true.ravel()
 
-            # Multiclass
+            # Multiclass case
             else:
                 # Cast to class predictions before calculating the metric
                 if is_class_pred is True:
@@ -201,7 +201,7 @@ class ClassificationPlots(EvalBase):
         title="Receiver Operating Characteristic Curve",
     ):
         # Binary
-        if y_true.ndim == 1:
+        if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
 
         # Micro-averaged one-versus-rest
@@ -229,7 +229,7 @@ class ClassificationPlots(EvalBase):
         title="Precision-Recall Curve",
     ):
         # Binary
-        if y_true.ndim == 1:
+        if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             precision, recall, _ = precision_recall_curve(
                 y_true.ravel(), y_pred[:, 1].ravel()
             )

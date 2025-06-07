@@ -22,7 +22,6 @@ from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
-
     _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
 
     _direction_dict: dict = {
@@ -129,7 +128,10 @@ class PostHocComparison(ComparisonBase):
         )
         for i, metric in enumerate(self.metrics):
             anova_df = pd.DataFrame({metric: df[metric]})
-            anova_df["cv_cycle"] = np.tile([i for i in range(int(len(anova_df[metric])/len(model_tags)))], len(model_tags))
+            anova_df["cv_cycle"] = np.tile(
+                [i for i in range(int(len(anova_df[metric]) / len(model_tags)))],
+                len(model_tags),
+            )
             anova_df["method"] = df["method"]
             model = AnovaRM(
                 anova_df, depvar=metric, subject="cv_cycle", within=["method"]
@@ -277,7 +279,6 @@ class PostHocComparison(ComparisonBase):
         return fig
 
     def mean_diff_plots(self, df, model_tags, cl=None, output_dir=None):
-
         fig, axes = plt.subplots(
             len(self.metrics), 1, figsize=(8, 2 * len(self.metrics)), sharex=False
         )

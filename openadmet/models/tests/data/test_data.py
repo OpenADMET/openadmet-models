@@ -7,7 +7,7 @@ def test_data_spec_from_csv():
         type="intake",
         resource=test_csv,
         cat_entry="test_data",
-        target_col="data1",
+        target_cols=["data1"],
         input_col="SMILES"
     )
     target, smiles = data_spec.read()
@@ -20,7 +20,7 @@ def test_data_spec_from_intake():
         type="intake",
         resource=intake_cat,
         cat_entry="subsel",
-        target_col="data1",
+        target_cols=["data1"],
         input_col="SMILES",
     )
     target, smiles = data_spec.read()
