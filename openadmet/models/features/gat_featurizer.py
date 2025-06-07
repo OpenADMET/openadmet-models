@@ -77,11 +77,11 @@ class GATGraphFeaturizer(FeaturizerBase):
                 float(atom.IsInRing()),
             ]
             atom_features_list.append(features)
-        
+
         if not atom_features_list: # Should not happen if MolFromSmiles was successful and molecule has atoms
             logger.warning(f"No atoms found for SMILES: {smiles} (mol object: {mol})")
             return None
-        
+
         x = torch.tensor(atom_features_list, dtype=torch.float)
 
         edge_indices = []
@@ -89,9 +89,9 @@ class GATGraphFeaturizer(FeaturizerBase):
         for bond in mol.GetBonds():
             start_idx = bond.GetBeginAtomIdx()
             end_idx = bond.GetEndAtomIdx()
-            
+
             edge_indices.extend([[start_idx, end_idx], [end_idx, start_idx]])
-            
+
             bond_f = [
                 float(bond.GetBondTypeAsDouble()),
                 float(bond.GetIsAromatic()),
@@ -99,22 +99,22 @@ class GATGraphFeaturizer(FeaturizerBase):
                 float(bond.GetStereo()) # RDKit returns BondStereo, convert to float
             ]
             edge_features_list.extend([bond_f, bond_f])
-        
+
         if edge_indices:
             edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
             edge_attr = torch.tensor(edge_features_list, dtype=torch.float) if edge_features_list else None
         else: # Handle molecules with a single atom (no bonds)
             edge_index = torch.empty((2, 0), dtype=torch.long)
             edge_attr = None # No edges, so no edge attributes
-        
+
         data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
-        
+
         if y_val is not None:
             data.y = torch.tensor([y_val], dtype=torch.float)
-        
+
         return data
 
-    def featurize(self, smiles_list: List[str], y_list: Optional[List[Any]] = None, batch_size: int = 32, shuffle: bool = False, num_workers: int = 0):
+    def featurize(self, smiles_list: list[str], y_list: Optional[list[Any]] = None, batch_size: int = 32, shuffle: bool = False, num_workers: int = 0):
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
@@ -141,7 +141,7 @@ class GATGraphFeaturizer(FeaturizerBase):
                 y_list = y_list.tolist()
             elif hasattr(y_list, 'values'):
                 y_list = y_list.values.tolist()
-        
+
         for i, smiles_str in enumerate(smiles_list):
             y_val = None
             if y_list is not None and i < len(y_list):
@@ -158,18 +158,18 @@ class GATGraphFeaturizer(FeaturizerBase):
                         "This target will be skipped."
                     )
                     # Continue processing but y_val remains None
-            
+
             data = self._featurize_single_molecule(smiles_str, y_val)
             if data is not None:
                 data_objects.append(data)
-        
+
         # Create DataLoader
         dataloader = DataLoader(
-            data_objects, 
-            batch_size=batch_size, 
-            shuffle=shuffle, 
+            data_objects,
+            batch_size=batch_size,
+            shuffle=shuffle,
             num_workers=num_workers
         )
-        
+
         # Return dataloader, scaler (None for GAT), and dataset (data_objects)
         return dataloader, None, data_objects  # Return None for scaler as we don't use one for graphs
