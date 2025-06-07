@@ -216,6 +216,11 @@ class GATv2LightningWrapper(pl.LightningModule):
         """Validation step"""
         target = batch.y
         
+        # Handle case where target is None
+        if target is None:
+            logger.warning(f"Target is None in validation batch {batch_idx}, skipping")
+            return None
+        
         pred = self(batch)
 
         if pred.ndim > 1 and pred.shape[1] == 1:
@@ -421,7 +426,11 @@ class GATv2ModelWrapper(TorchModelBase):
             )
             preds = trainer.predict(self.estimator, dataloader)
         
-        return torch.cat(preds).cpu().numpy().ravel()
+        # Return predictions as 2D array (samples, 1) to match evaluator expectations
+        preds_array = torch.cat(preds).cpu().numpy()
+        if preds_array.ndim == 1:
+            preds_array = preds_array.reshape(-1, 1)
+        return preds_array
     
     def get_model_summary(self):
         """

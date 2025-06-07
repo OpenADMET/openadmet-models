@@ -7,7 +7,7 @@ metadata:
   tag: "openadmet-gat-regression-test"
   authors: "Yuzhi Xu"
   email: "yuzhixuchem@gmail.com"
-  date_created: "2025-5-20"
+  date_created: "2025-6-07"
   biotargets:
     - "CYP3A4"
   tags:
@@ -20,15 +20,17 @@ data:
   type: intake
   resource: "/Users/xuyuzhi/Downloads/openadmet-models/openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv"
   input_col: "CANONICAL_SMILES"
-  target_col: "pChEMBL mean"
+  target_cols: "pChEMBL mean"
 
 procedure:
   split:
     type: ShuffleSplitter
     params:
-      train_size: 0.8
+      train_size: 0.7
+      val_size: 0.1
       test_size: 0.2
       random_state: 42
+      shuffle: true
 
   feat:
     type: GATGraphFeaturizer

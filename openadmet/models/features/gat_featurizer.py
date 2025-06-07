@@ -126,8 +126,9 @@ class GATGraphFeaturizer(FeaturizerBase):
             num_workers: Number of worker processes for DataLoader.
 
         Returns:
-            Tuple of (DataLoader, None). Invalid SMILES or problematic
-            molecules will be skipped (a warning will be logged).
+            Tuple of (DataLoader, None, List[Data]). The DataLoader for training,
+            scaler (None for graphs), and the list of Data objects.
+            Invalid SMILES or problematic molecules will be skipped (a warning will be logged).
         """
         if Chem is None:
             logger.error("RDKit not available. Cannot featurize SMILES.")
@@ -145,12 +146,18 @@ class GATGraphFeaturizer(FeaturizerBase):
             y_val = None
             if y_list is not None and i < len(y_list):
                 try:
-                    y_val = float(y_list[i])
+                    # Handle string representations of lists like '[5.1]'
+                    target_str = str(y_list[i])
+                    if target_str.startswith('[') and target_str.endswith(']'):
+                        # Remove brackets and try to convert
+                        target_str = target_str.strip('[]')
+                    y_val = float(target_str)
                 except (ValueError, TypeError):
                     logger.warning(
                         f"Could not convert target value '{y_list[i]}' to float for SMILES '{smiles_str}' at index {i}. "
                         "This target will be skipped."
                     )
+                    # Continue processing but y_val remains None
             
             data = self._featurize_single_molecule(smiles_str, y_val)
             if data is not None:
@@ -164,4 +171,5 @@ class GATGraphFeaturizer(FeaturizerBase):
             num_workers=num_workers
         )
         
-        return dataloader, None  # Return None for scaler as we don't use one for graphs
+        # Return dataloader, scaler (None for GAT), and dataset (data_objects)
+        return dataloader, None, data_objects  # Return None for scaler as we don't use one for graphs
