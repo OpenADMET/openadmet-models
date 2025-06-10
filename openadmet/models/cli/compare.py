@@ -46,7 +46,7 @@ def compare(
         comp = PostHocComparison()
     else:
         raise NotImplementedError
-    comp.compare(model_stats, model_tag, task_tags=taskname, 
+    comp.compare(model_stats, model_tag, task_tags=taskname,
                  output_dir=output_dir, report=report)
 
 
