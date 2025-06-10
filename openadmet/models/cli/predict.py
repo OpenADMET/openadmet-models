@@ -13,8 +13,8 @@ from openadmet.models.inference.inference import predict as inference_func
 )
 @click.option(
     "--input-col",
-    help="Column name in the CSV file containing input structure or SMILES",
-    default="SMILES",
+    help="Column name in the CSV file containing input structure or OPENADMET_SMILES",
+    default="OPENADMET_SMILES",
     show_default=True,
 )
 @click.option(
