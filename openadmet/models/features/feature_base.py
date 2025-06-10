@@ -44,7 +44,7 @@ class DeepLearningFeaturizer(FeaturizerBase):
         self, smiles: Iterable[str], y: Iterable[float] = None
     ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
-        Featurize a list of SMILES strings, returns a DataLoader, a list of indices t6hat correspond to the original input, a StandardScaler if any scaling done by featurization and a Pytorch Dataset
+        Featurize a list of SMILES strings. Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
         """
 
 
