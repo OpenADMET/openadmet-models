@@ -90,7 +90,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
             if scaler is not None:
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             elif self.normalized_targets:
-                # expects the targets to be normalized, likely to be loaded from state dict
+                # Expects the targets to be normalized, likely to be loaded from state dict
                 output_transform = nn.UnscaleTransform([1]*self.n_tasks, [0]*self.n_tasks)
 
 

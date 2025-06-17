@@ -138,7 +138,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             batch_size=self.batch_size,
         )
 
-        # need to also return an index of the original input for which the features were computed
+        # Need to also return an index of the original input for which the features were computed
         indices = np.arange(len(smiles))
 
         return dataloader, indices, scaler, dataset
