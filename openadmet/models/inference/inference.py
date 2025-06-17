@@ -11,13 +11,13 @@ from typing import Union, List
 def load_anvil_model_and_metadata(model_dir):
     """Load the Anvil model from the specified path"""
     logger.info(f"Loading model from {model_dir}")
-    # load from recipe directory
+    # Load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
     if not recipe_components_dir.exists():
         raise FileNotFoundError(
             f"Model path {model_dir} does not contain recipe components"
         )
-    # load the specification
+    # Load the specification
     procedure_spec = recipe_components_dir / "procedure.yaml"
     if not procedure_spec.exists():
         raise FileNotFoundError(
@@ -29,7 +29,7 @@ def load_anvil_model_and_metadata(model_dir):
         raise FileNotFoundError(
             f"Model path {model_dir} does not contain metadata.yaml"
         )
-    # load the metadata
+    # Load the metadata
     metadata = Metadata.from_yaml(metadata_spec)
 
 
@@ -38,16 +38,16 @@ def load_anvil_model_and_metadata(model_dir):
         raise FileNotFoundError(
             f"Model path {model_dir} does not contain data.yaml"
         )
-    # load the data specification
+    # Load the data specification
     data = DataSpec.from_yaml(data_spec)
 
-    # load the procedure specification
+    # Load the procedure specification
     procedure_spec = ProcedureSpec.from_yaml(procedure_spec)
     feat = procedure_spec.feat.to_class()
     model = procedure_spec.model.to_class()
 
 
-    # deserialize the model
+    # Deserialize the model
     loaded_model = model.deserialize(
         param_path=model_dir / model._model_json_name,
         serial_path=model_dir / model._model_save_name,
@@ -107,7 +107,7 @@ def predict(
 
     logger.info(f"Model directories: {model_dir}")
 
-    # mute output from FutureWarning and DeprecationWarning
+    # Mute output from FutureWarning and DeprecationWarning
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -116,7 +116,7 @@ def predict(
     for i, model_path in enumerate(model_dir):
         logger.info(f"Loading model {i} from {model_path}")
 
-        # load the model and metadata
+        # Load the model and metadata
         model, feat, metadata, data_spec = load_anvil_model_and_metadata(Path(model_path))
 
         tasknames = data_spec.target_cols
@@ -126,14 +126,15 @@ def predict(
         logger.debug(metadata)
         logger.debug(f"Model: {model.estimator}")
         logger.debug(f"Feature: {feat}")
-        # returns a variable length tuple, first element is the featurized data or a dataloader
-        # second element is the indices of the original input that were featurized
+        # Returns a variable length tuple, first element is the featurized data or a dataloader
+        # Second element is the indices of the original input that were featurized
         feat_data = feat.featurize(data[input_col])
-        # features or dataloader,
+        # Features or dataloader
         X_feat = feat_data[0]
-        # indices of the original input that were featurized
+
+        # Indices of the original input that were featurized
         X_indices = feat_data[1]
-        # make the actual model predictions
+        # Make the actual model predictions
         predictions = model.predict(X_feat, accelerator=accelerator)
 
         for j, taskname in enumerate(tasknames):
