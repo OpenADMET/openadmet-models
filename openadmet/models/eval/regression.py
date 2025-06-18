@@ -196,7 +196,7 @@ class RegressionPlots(EvalBase):
     dpi: int = Field(300, description="DPI for the plot")
 
     def evaluate(
-        self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, y_pred_std=None, y_true_std=None, **kwargs
+        self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, **kwargs
     ):
         """
         Evaluate the regression model
@@ -229,16 +229,6 @@ class RegressionPlots(EvalBase):
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
-            if y_pred_std is not None:
-                t_pred_std = y_pred_std[:, task_id]
-            else:
-                t_pred_std = None
-
-            if y_true_std is not None:
-                t_true_std = y_true_std[:, task_id]
-            else:
-                t_true_std = None
-
             if self.do_stats:
                 rm = RegressionMetrics()
                 rm.evaluate(
@@ -262,8 +252,6 @@ class RegressionPlots(EvalBase):
                     pXC50=self.pXC50,
                     min_val=self.min_val,
                     max_val=self.max_val,
-                    y_pred_std=t_pred_std,
-                    y_true_std=t_true_std,
                 )
         return self.plot_data
 
@@ -279,8 +267,6 @@ class RegressionPlots(EvalBase):
         pXC50=False,
         min_val=None,
         max_val=None,
-        y_pred_std=None,
-        y_true_std=None,
     ):
         """
         Create a regression plot
@@ -324,28 +310,6 @@ class RegressionPlots(EvalBase):
                 [min_ax + 1, max_ax + 1],
                 color="gray",
                 alpha=0.2,
-            )
-        if y_pred_std is not None:
-                # plot error bars
-            ax.errorbar(
-                y_true,
-                y_pred,
-                yerr=y_pred_std,
-                fmt="none",
-                capsize=5,
-                zorder=1,
-                color="C0",
-            )
-        if y_true_std is not None:
-            # plot error bars
-            ax.errorbar(
-                y_true,
-                y_pred,
-                xerr=y_true_std,
-                fmt="none",
-                capsize=5,
-                zorder=1,
-                color="C1",
             )
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
