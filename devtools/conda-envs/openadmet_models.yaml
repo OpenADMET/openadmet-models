@@ -55,4 +55,4 @@ dependencies:
     - phx-class-registry
     - email-validator
     - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
-#    - git+https://github.com/choderalab/mtenn.git@main
+    - hyperopt
