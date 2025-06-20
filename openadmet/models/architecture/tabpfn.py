@@ -8,12 +8,8 @@ from pydantic import field_validator, Field
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-class TabPFNModelBase(PickleableModelBase):
-    """
-    Base class for TabPFN models
-    """
 
-class TabPFNModelBase(BaseModel):
+class TabPFNModelBase(PickleableModelBase):
     """
     Base class for TabPFN models.
     """
@@ -36,8 +32,8 @@ class TabPFNModelBase(BaseModel):
         description="The scoring string to use for the greedy ensemble search."
     )
 
-    device: Literal["cpu", "cuda"] = Field(
-        default="cuda",
+    device: Literal["cpu", "cuda", "auto"] = Field(
+        default="auto",
         description="The device to use for training and prediction."
     )
 
@@ -74,7 +70,17 @@ class TabPFNModelBase(BaseModel):
             raise ValueError("Device must be either 'cpu' or 'cuda' or 'auto'")
         return value
 
-    
+
+    @classmethod
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
+        """
+        Create a model from parameters
+        """
+
+        instance = cls(**class_params, mod_params=mod_params)
+        instance.build()
+        return instance
+
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
