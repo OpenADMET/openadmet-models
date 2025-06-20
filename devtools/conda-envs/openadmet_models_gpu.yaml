@@ -22,6 +22,7 @@ dependencies:
   - datamol
   - mordredcommunity
   - lightgbm
+  - xgboost
   - seaborn
   - splito
   - umap-learn
