@@ -24,6 +24,7 @@ dependencies:
   - datamol
   - mordredcommunity
   - lightgbm
+  - tabpfn
   - seaborn
   - splito
   - umap-learn
@@ -55,4 +56,6 @@ dependencies:
     - phx-class-registry
     - email-validator
     - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
+    - hyperopt
+    - tabpfn-extensions
     - hyperopt
