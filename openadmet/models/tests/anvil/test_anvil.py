@@ -12,6 +12,7 @@ from openadmet.models.tests.datafiles import (
     basic_anvil_yaml,
     basic_anvil_yaml_classification,
     basic_anvil_yaml_cv,
+    anvil_yaml_xgboost_cv
 )
 
 
@@ -20,6 +21,7 @@ def all_anvil_full_recipes():
         basic_anvil_yaml,
         anvil_yaml_featconcat,
         anvil_yaml_gridsearch,
+        anvil_yaml_xgboost_cv
     ]
 
 
