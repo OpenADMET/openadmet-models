@@ -3,7 +3,7 @@ data:
   cat_entry: null
   input_col: OPENADMET_SMILES
   resource: ChEMBL_permissive_ACET_CHEMBL4078_aggregated.csv
-  target_col: pchembl_value_mean
+  target_cols: pchembl_value_mean
   type: intake
 metadata:
   authors: Hugo M-O

@@ -25,7 +25,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
     """
 
     type: ClassVar[str] = "ChemPropMultiRegressorModel"
-    batch_norm: bool = True
+    batch_norm: bool = False
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
     depth: int = 3
@@ -35,6 +35,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
     messages: str = "bond"
     aggregation: str = "norm"
     normalized_targets: bool = True
+    dropout: float = 0.0
     n_tasks: int = 1
 
     @field_validator("messages")
@@ -89,10 +90,9 @@ class ChemPropMultiRegressorModel(TorchModelBase):
             if scaler is not None:
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             elif self.normalized_targets:
-                # expects the targets to be normalized, likely to be loaded from state dict
-                output_transform = nn.UnscaleTransform([1], [0])
-            else:
-                output_transform = Identity()
+                # Expects the targets to be normalized, likely to be loaded from state dict
+                output_transform = nn.UnscaleTransform([1]*self.n_tasks, [0]*self.n_tasks)
+
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
 
@@ -106,7 +106,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
             )
 
             # Create the model
-            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth)
+            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout)
             aggr = aggregation_cls()
 
             ffn = nn.RegressionFFN(
@@ -115,6 +115,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                 hidden_dim=self.ffn_hidden_dim,
                 n_layers=self.ffn_num_layers,
                 output_transform=output_transform,
+                dropout=self.dropout,
             )
             # Create the MPNN model
 
