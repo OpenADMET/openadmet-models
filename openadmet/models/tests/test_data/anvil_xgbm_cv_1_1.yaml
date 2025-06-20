@@ -72,7 +72,7 @@ report:
       max_val: 10
       min_val: 3
       n_repeats: 1
-      n_splits: 1
+      n_splits: 2
       pXC50: true
       random_state: 42
       title: CYP3A4 True vs Predicted pChEMBL on test set
