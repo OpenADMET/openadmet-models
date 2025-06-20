@@ -298,7 +298,7 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(self, output_dir: PathLike = "anvil_run", debug: bool = False) -> Any: ...
+    def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any: ...
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -318,7 +318,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     def run(
-        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow.
@@ -473,7 +473,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.PYTORCH
 
     def run(
-        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow
