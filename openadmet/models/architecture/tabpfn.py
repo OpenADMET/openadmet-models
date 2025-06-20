@@ -111,7 +111,7 @@ class TabPFNModelBase(BaseModel):
 @models.register("TabPFNRegressorModel")
 class TabPFNRegressorModel(TabPFNModelBase):
     """
-    LightGBM regression model
+    TabPFN regression model
     """
 
     type: ClassVar[str] = "TabPFNRegressorModel"
@@ -133,7 +133,7 @@ class TabPFNRegressorModel(TabPFNModelBase):
 @models.register("TabPFNClassifierModel")
 class TabPFNClassifierModel(TabPFNModelBase):
     """
-    LightGBM classification model
+    TabPFN classification model
     """
 
     type: ClassVar[str] = "TabPFNClassifierModel"
