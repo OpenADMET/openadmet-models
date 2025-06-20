@@ -32,7 +32,7 @@ class XGBoostModelBase(PickleableModelBase):
         Train the model
         """
         self.build()
-        self.estimator = self.estimator.fit(X, y)
+        self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
         """
