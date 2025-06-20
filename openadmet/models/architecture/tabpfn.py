@@ -157,7 +157,7 @@ class TabPFNClassifierModel(TabPFNModelBase):
             raise ValueError(
                 "ges_scoring_string must be one of 'accuracy', 'f1', 'roc', 'auroc', or 'log_loss'"
             )
-        return value    
+        return value
 
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
