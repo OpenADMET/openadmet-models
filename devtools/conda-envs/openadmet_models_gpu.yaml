@@ -23,6 +23,7 @@ dependencies:
   - mordredcommunity
   - lightgbm
   - tabpfn
+  - hyperopt
 
   - seaborn
   - splito
@@ -57,4 +58,3 @@ dependencies:
     - email-validator
     - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
     - tabpfn-extensions
-    - hyperopt
