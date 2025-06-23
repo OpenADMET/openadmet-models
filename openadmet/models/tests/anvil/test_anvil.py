@@ -7,6 +7,7 @@ from openadmet.models.anvil.workflow import (
 )
 from openadmet.models.tests.datafiles import (
     acetylcholinesterase_anvil_chemprop_yaml,
+    tabpfn_anvil_classification_yaml,
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
     basic_anvil_yaml,
@@ -101,3 +102,10 @@ def test_anvil_chemprop_cpu_regression(tmp_path):
     assert Path(tmp_path / "tst" / "model.json").exists()
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
     assert any((tmp_path / "tst").glob("regplot*.png"))
+
+
+@pytest.mark.skip(reason="TabPFN requires GPU and is not supported on MacOS runners")
+def test_anvil_tabpfn_classification(tmp_path):
+    anvil_spec = AnvilSpecification.from_recipe(tabpfn_anvil_classification_yaml)
+    anvil_workflow = anvil_spec.to_workflow()
+    anvil_workflow.run(output_dir=tmp_path / "tst")

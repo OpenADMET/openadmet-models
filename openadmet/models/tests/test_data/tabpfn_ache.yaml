@@ -1,0 +1,50 @@
+metadata:
+  version: v1
+  name: "example-classification-workflow"
+  build_number: 0
+  description: "running a basic classification workflow"
+  tag: "openadmet-models-basic-classification-test"
+  authors: "Sean M Colby"
+  email: "sean.colby@omsf.io"
+  date_created: 2025-03-25
+  biotargets:
+    - "AChE"
+  tags:
+    - "openadmet"
+    - "workflow"
+    - "test"
+
+data:
+  type: intake
+  resource: "{{ANVIL_DIR}}/example_intake.yaml"
+  cat_entry: "AChE_Landrum"
+  input_col: "canonical_smiles"
+  target_cols: "pchembl_active"
+  transform: None
+
+procedure:
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.2
+      random_state: 42
+
+  feat:
+    type: DescriptorFeaturizer
+    params:
+      descr_type: "desc2d"
+
+  model:
+    type: TabPFNClassifierModel
+    params:
+      ignore_pretraining_limits: True
+      device: cpu
+
+  train:
+    type: SKLearnBasicTrainer
+
+report:
+  eval:
+    - type: ClassificationMetrics
+    - type: ClassificationPlots
