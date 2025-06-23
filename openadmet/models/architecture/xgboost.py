@@ -65,7 +65,7 @@ class XGBoostModelBase(PickleableModelBase):
         Parameters
         ----------
         X: np.ndarray
-            Data to predict on  
+            Data to predict on
 
         Returns
         -------
@@ -122,7 +122,7 @@ class XGBClassifierModel(XGBoostModelBase):
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
         Predict using the model, returning probabilities for each class.
-        
+
         Parameters
         ----------
         X: np.ndarray
