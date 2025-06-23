@@ -1,4 +1,6 @@
 {
+"cyp3a4_pchembl_value_mean": 
+{
   "fit_time": {
     "value": [
       6.218579292297363,
@@ -230,4 +232,5 @@
     "upper_ci": 0.599649100441983,
     "confidence_level": 0.95
   }
+}
 }
