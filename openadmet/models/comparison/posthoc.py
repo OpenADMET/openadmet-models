@@ -143,7 +143,6 @@ class PostHocComparison(ComparisonBase):
                 ax=axes[i],
                 data=anova_df,
                 palette="Set2",
-                legend=False,
             )
             title = metric.upper()
             ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]}")
