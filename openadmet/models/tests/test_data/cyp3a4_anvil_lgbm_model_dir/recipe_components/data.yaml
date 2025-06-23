@@ -2,5 +2,5 @@ anvil_dir: file:///store/projects/OpenADMET_WORK/initial_runs/CYP3A4_cross_val
 cat_entry: null
 input_col: OPENADMET_SMILES
 resource: cyp3a4_chembl_permissive.csv
-target_col: pchembl_value_mean
+target_cols: pchembl_value_mean
 type: intake
