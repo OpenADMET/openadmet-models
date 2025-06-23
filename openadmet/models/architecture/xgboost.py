@@ -9,7 +9,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 class XGBoostModelBase(PickleableModelBase):
     """
-    Base class for XGBoost models
+    Base class for XGBoost models, allows instantiation from parameters that are passable to the XGBoost model classes.
     """
 
     type: ClassVar[str]
@@ -55,7 +55,19 @@ class XGBoostModelBase(PickleableModelBase):
 @models.register("XGBRegressorModel")
 class XGBRegressorModel(XGBoostModelBase):
     """
-    LightGBM regression model
+    XGBoost regression model
+
+    Common parameters for XGBoost models can be found at:
+    https://xgboost.readthedocs.io/en/stable/python/python_api.html
+
+    Common parameters that you might want to set include:
+    - n_estimators: Number of trees in the ensemble
+    - max_depth: Maximum depth of a tree
+    - max_leaves: Maximum number of leaves in a tree
+    - learning_rate: Step size shrinkage used in update to prevent overfitting
+    - objective: Specify the learning task and corresponding objective function
+    - booster: Specify which booster to use, options are gbtree, gblinear or dart
+    - tree_method: Specify the tree construction algorithm used in XGBoost
     """
 
     type: ClassVar[str] = "XGBRegressorModel"
@@ -65,7 +77,18 @@ class XGBRegressorModel(XGBoostModelBase):
 @models.register("XGBClassifierModel")
 class XGBClassifierModel(XGBoostModelBase):
     """
-    LightGBM classification model
+    XGBoost classification model
+
+    Common parameters for XGBoost models can be found at:
+    https://xgboost.readthedocs.io/en/stable/python/python_api.html
+    Common parameters that you might want to set include:
+    - n_estimators: Number of trees in the ensemble
+    - max_depth: Maximum depth of a tree
+    - max_leaves: Maximum number of leaves in a tree
+    - learning_rate: Step size shrinkage used in update to prevent overfitting
+    - objective: Specify the learning task and corresponding objective function
+    - booster: Specify which booster to use, options are gbtree, gblinear or dart
+    - tree_method: Specify the tree construction algorithm used in XGBoost
     """
 
     type: ClassVar[str] = "XGBoostClaXGBClassifierModelssifierModel"
