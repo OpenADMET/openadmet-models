@@ -586,13 +586,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Build model
         logger.info("Building model")
-        # Pass train_dataloader to build method for models that need to infer dimensions
-        if hasattr(self.model, 'build'):
-            try:
-                self.model.build(scaler=train_scaler, train_dataloader=train_dataloader)
-            except TypeError:
-                # Fallback for models that don't accept train_dataloader parameter
-                self.model.build(scaler=train_scaler)
+        self.model.build(scaler=train_scaler)
         logger.info("Model built")
 
         # Pass model to trainer
