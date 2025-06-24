@@ -171,12 +171,12 @@ class GATv2LightningWrapper(pl.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters(ignore=['loss_fn_name'])
-        
+
         self.loss_functions = {
             "mse": nn.MSELoss(), "mae": nn.L1Loss(), "huber": nn.HuberLoss(),
             "bce": nn.BCEWithLogitsLoss(), "cross_entropy": nn.CrossEntropyLoss()
         }
-        
+
         self.model = GATv2Model(**model_config)
         self.loss_fn = self._get_loss_function(loss_fn_name)
         self.lr = lr
@@ -188,7 +188,7 @@ class GATv2LightningWrapper(pl.LightningModule):
         if name.lower() not in self.loss_functions:
             raise ValueError(f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}")
         return self.loss_functions[name.lower()]
-    
+
     def forward(self, data: Batch):
         """Forward pass"""
         return self.model(data)
@@ -274,7 +274,7 @@ class GATv2ModelWrapper(TorchModelBase):
 
     type: ClassVar[str] = "GATv2ModelWrapper"
     scaler: Optional[Any] = None
-    
+
     # Model hyperparameters
     input_dim: Optional[int] = None
     hidden_dim: int = 64
@@ -325,15 +325,15 @@ class GATv2ModelWrapper(TorchModelBase):
         """
         Create model instance from parameters
         """
-        
+
         if class_params:
             instance = cls(**class_params)
         else:
             instance = cls()
-        
+
         instance.build()
         return instance
-    
+
     def build(self, scaler=None, **kwargs):
         """
         Builds the GATv2 model and lightning wrapper.
@@ -400,15 +400,15 @@ class GATv2ModelWrapper(TorchModelBase):
         # Create a PyTorch Lightning Trainer for prediction
         progress_bar = TQDMProgressBar(refresh_rate=10)
         trainer = pl.Trainer(
-            accelerator=accelerator, 
-            devices=devices, 
+            accelerator=accelerator,
+            devices=devices,
             callbacks=[progress_bar],
             logger=False
         )
 
         # Make predictions
         preds = trainer.predict(self.estimator, dataloader)
-        
+
         y_pred = torch.cat(preds).cpu().numpy()
 
         if self.scaler is not None:
@@ -416,9 +416,9 @@ class GATv2ModelWrapper(TorchModelBase):
 
         if y_pred.ndim == 1:
             y_pred = y_pred.reshape(-1, 1)
-            
+
         return y_pred
-    
+
     def get_model_summary(self):
         """
         Get model summary information
@@ -455,4 +455,4 @@ if __name__ == "__main__":
     except Exception as e:
         import traceback
         logger.error(f"An error occurred: {e}")
-        logger.error(f"Full Traceback:\n{traceback.format_exc()}") 
+        logger.error(f"Full Traceback:\n{traceback.format_exc()}")

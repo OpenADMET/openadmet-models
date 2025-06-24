@@ -1,4 +1,5 @@
-from typing import Optional, List, Any, Iterable
+from typing import Optional, List, Any
+from collections.abc import Iterable
 import torch
 import numpy as np
 from torch_geometric.data import Data
@@ -102,7 +103,7 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         return data
 
-    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None) -> tuple[DataLoader, np.ndarray, None, List[Data]]:
+    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None) -> tuple[DataLoader, np.ndarray, None, list[Data]]:
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
