@@ -41,7 +41,7 @@ class GATv2Model(nn.Module):
         bias: bool = True
     ):
         super().__init__()
-        
+
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -50,13 +50,13 @@ class GATv2Model(nn.Module):
         self.pooling = pooling
         self.output_dim = output_dim
         self.concat_heads = concat_heads
-        
+
         # Input projection layer
         self.input_projection = nn.Linear(input_dim, hidden_dim)
-        
+
         # GAT layers
         self.gat_layers = nn.ModuleList()
-        
+
         for i in range(num_layers):
             # First and intermediate layers
             if i < num_layers - 1:
@@ -68,7 +68,7 @@ class GATv2Model(nn.Module):
                 in_channels = hidden_dim * num_heads if concat_heads else hidden_dim
                 out_channels = hidden_dim
                 concat = False  # Don't concatenate in the last layer
-                
+
             self.gat_layers.append(
                 GATv2Conv(
                     in_channels=in_channels,
@@ -82,7 +82,7 @@ class GATv2Model(nn.Module):
                     bias=bias
                 )
             )
-        
+
         # Batch normalization layers
         self.batch_norms = nn.ModuleList()
         for i in range(num_layers):
@@ -91,7 +91,7 @@ class GATv2Model(nn.Module):
             else:
                 bn_dim = hidden_dim
             self.batch_norms.append(nn.BatchNorm1d(bn_dim))
-        
+
         # Output layers
         final_dim = hidden_dim
         self.output_layers = nn.Sequential(
@@ -100,7 +100,7 @@ class GATv2Model(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(final_dim // 2, output_dim)
         )
-        
+
         # Pooling function
         if pooling == "mean":
             self.pool = global_mean_pool
@@ -110,49 +110,49 @@ class GATv2Model(nn.Module):
             self.pool = global_add_pool
         else:
             raise ValueError(f"Unsupported pooling method: {pooling}")
-    
+
     def forward(self, data):
         """
         Forward pass
-        
+
         Args:
             data: PyTorch Geometric data object containing:
                 - x: Node features [num_nodes, input_dim]
                 - edge_index: Edge indices [2, num_edges]
                 - batch: Batch indices [num_nodes]
                 - edge_attr (optional): Edge features [num_edges, edge_dim]
-        
+
         Returns:
             Graph-level predictions [batch_size, output_dim]
         """
         x, edge_index, batch = data.x, data.edge_index, data.batch
         edge_attr = getattr(data, 'edge_attr', None)
-        
+
         # Input projection
         x = self.input_projection(x)
         x = F.relu(x)
-        
+
         # GAT layers
         for i, (gat_layer, bn) in enumerate(zip(self.gat_layers, self.batch_norms)):
             residual = x if i > 0 and x.size(-1) == gat_layer.out_channels else None
-            
+
             x = gat_layer(x, edge_index, edge_attr=edge_attr)
             x = bn(x)
-            
+
             if i < len(self.gat_layers) - 1:  # Don't apply activation on last layer
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
-            
+
             # Residual connection (if dimensions match)
             if residual is not None and residual.size(-1) == x.size(-1):
                 x = x + residual
-        
+
         # Graph-level pooling
         x = self.pool(x, batch)
-        
+
         # Output layers
         out = self.output_layers(x)
-        
+
         return out
 
 
@@ -183,7 +183,7 @@ class GATv2LightningWrapper(pl.LightningModule):
         self.weight_decay = weight_decay
         self.scheduler_name = scheduler_name
         self.warmup_epochs = warmup_epochs
-        
+
     def _get_loss_function(self, name: str):
         if name.lower() not in self.loss_functions:
             raise ValueError(f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}")
@@ -192,47 +192,47 @@ class GATv2LightningWrapper(pl.LightningModule):
     def forward(self, data: Batch):
         """Forward pass"""
         return self.model(data)
-    
+
     def training_step(self, batch: Batch, batch_idx: int):
         """Training step"""
         target = batch.y
-        
+
         pred = self(batch)
-        
+
         if pred.ndim > 1 and pred.shape[1] == 1:
             pred = pred.squeeze(-1)
         if target.ndim > 1 and target.shape[1] == 1:
             target = target.squeeze(-1)
 
         loss = self.loss_fn(pred, target)
-        
+
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
-        
+
         return loss
-    
+
     def validation_step(self, batch: Batch, batch_idx: int):
         """Validation step"""
         target = batch.y
-        
+
         pred = self(batch)
 
         if pred.ndim > 1 and pred.shape[1] == 1:
             pred = pred.squeeze(-1)
         if target.ndim > 1 and target.shape[1] == 1:
             target = target.squeeze(-1)
-            
+
         loss = self.loss_fn(pred, target)
-        
+
         self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
-        
+
         return loss
-    
+
     def predict_step(self, batch: Batch, batch_idx: int):
         """Prediction step"""
         data = batch
         pred = self(data)
         return pred
-    
+
     def configure_optimizers(self):
         """Configure optimizers and learning rate schedulers"""
         optimizer = torch.optim.AdamW(
@@ -240,7 +240,7 @@ class GATv2LightningWrapper(pl.LightningModule):
             lr=self.lr,
             weight_decay=self.weight_decay
         )
-        
+
         if self.scheduler_name == "cosine":
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer, T_max=self.trainer.max_epochs if self.trainer else 100
@@ -271,7 +271,7 @@ class GATv2ModelWrapper(TorchModelBase):
     """
     GATv2 model wrapper inheriting from TorchModelBase
     """
-    
+
     type: ClassVar[str] = "GATv2ModelWrapper"
     scaler: Optional[Any] = None
     
@@ -288,14 +288,14 @@ class GATv2ModelWrapper(TorchModelBase):
     add_self_loops: bool = True
     share_weights: bool = False
     bias: bool = True
-    
+
     # Training hyperparameters
     lr: float = 1e-3
     weight_decay: float = 1e-5
     scheduler: str = "cosine"
     warmup_epochs: int = 10
     loss_function: str = "mse"
-    
+
     @field_validator("pooling")
     @classmethod
     def validate_pooling(cls, value):
@@ -303,7 +303,7 @@ class GATv2ModelWrapper(TorchModelBase):
         if value not in ["mean", "max", "add"]:
             raise ValueError("pooling must be one of 'mean', 'max', or 'add'")
         return value
-    
+
     @field_validator("scheduler")
     @classmethod
     def validate_scheduler(cls, value):
@@ -311,7 +311,7 @@ class GATv2ModelWrapper(TorchModelBase):
         if value not in ["cosine", "reduce_on_plateau", "none"]:
             raise ValueError("scheduler must be one of 'cosine', 'reduce_on_plateau', or 'none'")
         return value
-    
+
     @field_validator("loss_function")
     @classmethod
     def validate_loss_function(cls, value):
@@ -319,7 +319,7 @@ class GATv2ModelWrapper(TorchModelBase):
         if value not in ["mse", "mae", "huber", "bce", "cross_entropy"]:
             raise ValueError("loss_function must be one of 'mse', 'mae', 'huber', 'bce', or 'cross_entropy'")
         return value
-    
+
     @classmethod
     def from_params(cls, class_params: dict = None, model_params: dict = None):
         """
@@ -369,11 +369,11 @@ class GATv2ModelWrapper(TorchModelBase):
                 scheduler_name=self.scheduler,
                 warmup_epochs=self.warmup_epochs
             )
-            
+
             logger.info(f"Built GATv2LightningWrapper with GATv2Model config: {model_config}")
         else:
             logger.warning("Model already exists, skipping build")
-    
+
     def train(self, dataloader):
         """
         Train the model
@@ -381,7 +381,7 @@ class GATv2ModelWrapper(TorchModelBase):
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
         )
-    
+
     def predict(self, dataloader, accelerator="gpu", devices=1) -> np.ndarray:
         """
         Make predictions on a dataloader.
@@ -425,10 +425,10 @@ class GATv2ModelWrapper(TorchModelBase):
         """
         if not self.estimator:
             return "Model not built"
-        
+
         total_params = sum(p.numel() for p in self.estimator.parameters())
         trainable_params = sum(p.numel() for p in self.estimator.parameters() if p.requires_grad)
-        
+
         summary = {
             "model_type": "GATv2 (Graph Attention Network v2)",
             "total_parameters": total_params,
@@ -439,14 +439,14 @@ class GATv2ModelWrapper(TorchModelBase):
             "pooling_method": self.pooling,
             "dropout_rate": self.gat_dropout
         }
-        
+
         return summary
 
 
 if __name__ == "__main__":
     import pandas as pd
     from sklearn.model_selection import train_test_split
-    
+
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         default_yaml_path = os.path.join(script_dir, '..', 'tests', 'test_data', 'basic_anvil_gat.yaml')
