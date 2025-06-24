@@ -633,7 +633,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         for eval in self.evals:
             # Here all the data is passed to the evaluator, but some evaluators may only need a subset
             eval.evaluate(
-                y_true=y_test.values,  # Pass as array instead of series
+                y_true=y_test,
                 y_pred=y_pred,
                 model=self.model,
                 X_train=train_dataloader,

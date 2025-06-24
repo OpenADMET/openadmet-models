@@ -1,68 +1,61 @@
 metadata:
-  version: v1
+  version: "v1"
   driver: "pytorch"
-  name: "gat-regression-workflow-example"
-  build_number: 0
-  description: "An example workflow for running GATv2 regression."
-  tag: "openadmet-gat-regression-test"
+  name: "gat-cyp3a4-regression"
+  build_number: 1
+  description: "A GAT model for CYP3A4 pChEMBL value regression"
+  tag: "gat-v2-regression"
   authors: "Yuzhi Xu"
   email: "yuzhixuchem@gmail.com"
-  date_created: "2025-6-07"
-  biotargets:
-    - "CYP3A4"
-  tags:
-    - "openadmet"
-    - "workflow"
-    - "gat"
-    - "regression"
+  biotargets: ["CYP3A4"]
+  tags: ["GAT", "CYP3A4", "regression"]
 
 data:
-  type: intake
-  resource: "/Users/xuyuzhi/Downloads/openadmet-models/openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv"
-  input_col: "CANONICAL_SMILES"
-  target_cols: "pChEMBL mean"
+  type: "intake"
+  resource: openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv
+  input_col: CANONICAL_SMILES
+  target_cols:
+    - pChEMBL mean
 
 procedure:
   split:
-    type: ShuffleSplitter
+    type: "ShuffleSplitter"
     params:
-      train_size: 0.7
       val_size: 0.1
-      test_size: 0.2
-      random_state: 42
-      shuffle: true
+      test_size: 0.1
+      shuffle: True
 
   feat:
-    type: GATGraphFeaturizer
+    type: "GATGraphFeaturizer"
     params: {}
 
   model:
     type: GATv2ModelWrapper
     params:
+      input_dim: 8
+      edge_dim: 4
       hidden_dim: 64
-      num_layers: 3
-      num_heads: 4
+      num_layers: 4
+      num_heads: 8
       gat_dropout: 0.1
       pooling: "mean"
       output_dim: 1
-
       loss_function: "mse"
-      lr: 0.001
-      weight_decay: 0.00001
-      scheduler: "cosine"
 
   train:
-    type: LightningTrainer
+    type: "LightningTrainer"
     params:
-      max_epochs: 20
+      max_epochs: 3
       accelerator: "cpu"
       devices: 1
-      use_wandb: false
+      use_wandb: False
+      early_stopping: True
+      early_stopping_patience: 5
 
 report:
   eval:
     - type: RegressionMetrics
-    - type: RegressionPlots
       params:
-        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
-        title: "GATv2: True vs Predicted pChEMBL on Test Set"
+        bootstrap_confidence_level: 0.95
+    - type: RegressionPlots
+      params: {}

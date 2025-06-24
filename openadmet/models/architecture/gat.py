@@ -1,9 +1,6 @@
 import json
 from typing import ClassVar, Optional, List, Any
-from pathlib import Path
 import numpy as np
-import os
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 
 import torch
 import torch.nn as nn
@@ -175,6 +172,11 @@ class GATv2LightningWrapper(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(ignore=['loss_fn_name'])
         
+        self.loss_functions = {
+            "mse": nn.MSELoss(), "mae": nn.L1Loss(), "huber": nn.HuberLoss(),
+            "bce": nn.BCEWithLogitsLoss(), "cross_entropy": nn.CrossEntropyLoss()
+        }
+        
         self.model = GATv2Model(**model_config)
         self.loss_fn = self._get_loss_function(loss_fn_name)
         self.lr = lr
@@ -183,13 +185,9 @@ class GATv2LightningWrapper(pl.LightningModule):
         self.warmup_epochs = warmup_epochs
         
     def _get_loss_function(self, name: str):
-        loss_functions = {
-            "mse": nn.MSELoss(), "mae": nn.L1Loss(), "huber": nn.HuberLoss(),
-            "bce": nn.BCEWithLogitsLoss(), "cross_entropy": nn.CrossEntropyLoss()
-        }
-        if name.lower() not in loss_functions:
-            raise ValueError(f"Unsupported loss function: {name}. Supported: {list(loss_functions.keys())}")
-        return loss_functions[name.lower()]
+        if name.lower() not in self.loss_functions:
+            raise ValueError(f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}")
+        return self.loss_functions[name.lower()]
     
     def forward(self, data: Batch):
         """Forward pass"""
@@ -275,6 +273,7 @@ class GATv2ModelWrapper(TorchModelBase):
     """
     
     type: ClassVar[str] = "GATv2ModelWrapper"
+    scaler: Optional[Any] = None
     
     # Model hyperparameters
     input_dim: Optional[int] = None
@@ -327,19 +326,24 @@ class GATv2ModelWrapper(TorchModelBase):
         Create model instance from parameters
         """
         
-        merged_params = {}
         if class_params:
-            merged_params.update(class_params)
+            instance = cls(**class_params)
+        else:
+            instance = cls()
         
-        instance = cls(**merged_params) 
-        
-        instance.build(passed_model_params=model_params) 
+        instance.build()
         return instance
     
-    def build(self, scaler=None, passed_model_params: Optional[dict] = None, train_dataloader=None):
+    def build(self, scaler=None, **kwargs):
         """
-        Build the model
+        Builds the GATv2 model and lightning wrapper.
+        'input_dim' is a mandatory parameter.
         """
+        self.scaler = scaler
+
+        if self.input_dim is None:
+            raise ValueError("'input_dim' must be provided to build the GATv2 model.")
+
         if not self.estimator:
             # Prepare model configuration
             model_config = {
@@ -356,24 +360,6 @@ class GATv2ModelWrapper(TorchModelBase):
                 "share_weights": self.share_weights,
                 "bias": self.bias,
             }
-            if passed_model_params: 
-                model_config.update(passed_model_params)
-
-            # Try to infer input_dim from train_dataloader if not provided
-            if model_config.get("input_dim") is None and train_dataloader is not None:
-                try:
-                    sample_batch = next(iter(train_dataloader))
-                    if hasattr(sample_batch, 'x') and sample_batch.x is not None:
-                        model_config["input_dim"] = sample_batch.x.shape[1]
-                        logger.info(f"Inferred input_dim from data: {model_config['input_dim']}")
-                    if hasattr(sample_batch, 'edge_attr') and sample_batch.edge_attr is not None:
-                        model_config["edge_dim"] = sample_batch.edge_attr.shape[1]
-                        logger.info(f"Inferred edge_dim from data: {model_config['edge_dim']}")
-                except Exception as e:
-                    logger.warning(f"Could not infer dimensions from dataloader: {e}")
-
-            if model_config.get("input_dim") is None:
-                raise ValueError("input_dim must be specified or inferrable from training data")
 
             self.estimator = GATv2LightningWrapper(
                 model_config=model_config,
@@ -385,7 +371,6 @@ class GATv2ModelWrapper(TorchModelBase):
             )
             
             logger.info(f"Built GATv2LightningWrapper with GATv2Model config: {model_config}")
-            logger.info(f"LightningWrapper params: lr={self.lr}, loss={self.loss_function}, scheduler={self.scheduler}")
         else:
             logger.warning("Model already exists, skipping build")
     
@@ -399,29 +384,40 @@ class GATv2ModelWrapper(TorchModelBase):
     
     def predict(self, dataloader, accelerator="gpu", devices=1) -> np.ndarray:
         """
-        Use model for prediction
-        
+        Make predictions on a dataloader.
+
         Args:
-            dataloader: PyTorch Geometric DataLoader
-            accelerator: Accelerator type ("gpu", "cpu")
-            devices: Number of devices
-        
+            dataloader (torch.utils.data.DataLoader): Dataloader to predict on.
+            accelerator (str, optional): Accelerator to use. Defaults to "gpu".
+            devices (int, optional): Number of devices to use. Defaults to 1.
+
         Returns:
-            Numpy array of predictions
+            np.ndarray: Predictions.
         """
-        if not self.estimator:
-            raise AttributeError("Model not built or trained")
+        if not hasattr(self, 'estimator') or self.estimator is None:
+            raise RuntimeError("Model has not been built yet. Call 'build()' before 'predict'.")
+
+        # Create a PyTorch Lightning Trainer for prediction
+        progress_bar = TQDMProgressBar(refresh_rate=10)
+        trainer = pl.Trainer(
+            accelerator=accelerator, 
+            devices=devices, 
+            callbacks=[progress_bar],
+            logger=False
+        )
+
+        # Make predictions
+        preds = trainer.predict(self.estimator, dataloader)
         
-        with torch.inference_mode():
-            trainer = pl.Trainer(
-                logger=None,
-                enable_progress_bar=False,
-                accelerator=accelerator,
-                devices=devices
-            )
-            preds = trainer.predict(self.estimator, dataloader)
-        
-        return torch.cat(preds).cpu().numpy().ravel()
+        y_pred = torch.cat(preds).cpu().numpy()
+
+        if self.scaler is not None:
+            y_pred = self.scaler.inverse_transform(y_pred)
+
+        if y_pred.ndim == 1:
+            y_pred = y_pred.reshape(-1, 1)
+            
+        return y_pred
     
     def get_model_summary(self):
         """
@@ -447,179 +443,6 @@ class GATv2ModelWrapper(TorchModelBase):
         return summary
 
 
-def test_gat_from_yaml():
-    """Test GATv2ModelWrapper creation from YAML-like configuration"""
-    yaml_config_model_params = {
-        "input_dim": 128, 
-        "hidden_dim": 64,
-        "num_layers": 3,
-        "num_heads": 8,
-        "gat_dropout": 0.2,
-        "lr": 0.001
-    }
-    
-    gat_model_wrapper = GATv2ModelWrapper.from_params(class_params=yaml_config_model_params)
-    
-    assert gat_model_wrapper.type == "GATv2ModelWrapper"
-    assert gat_model_wrapper.hidden_dim == 64
-    assert gat_model_wrapper.num_heads == 8
-    assert gat_model_wrapper.lr == 0.001
-    assert gat_model_wrapper.estimator is not None 
-    assert gat_model_wrapper.estimator.model.hidden_dim == 64
-
-
-def test_gat_yaml_validation():
-    """Test GATv2ModelWrapper YAML parameter validation"""
-    with pytest.raises(ValueError): # Pydantic's ValidationError
-        GATv2ModelWrapper(pooling="invalid_pooling_method")
-    
-    with pytest.raises(ValueError):
-        GATv2ModelWrapper(scheduler="invalid_scheduler_name")
-
-    with pytest.raises(ValueError):
-        GATv2ModelWrapper(loss_function="invalid_loss_fn")
-
-
-def load_gat_from_yaml_file(yaml_path: str, model_params: Optional[dict] = None):
-    """Load GAT model from YAML file (Illustrative)"""
-    with open(yaml_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Assuming YAML structure like:
-    # procedure:
-    #   model:
-    #     type: GATv2ModelWrapper
-    #     params:
-    #       hidden_dim: 64
-    #       ...
-    
-    if "procedure" not in config or "model" not in config["procedure"] or "params" not in config["procedure"]["model"]:
-        raise ValueError("YAML file must contain procedure.model.params section")
-        
-    wrapper_params = config["procedure"]["model"].get("params", {})
-    return GATv2ModelWrapper.from_params(class_params=wrapper_params, model_params=model_params)
-
-
-def run_workflow_from_config(config_path: str):
-    """
-    Runs the entire training and evaluation workflow from a YAML configuration file.
-    """
-    # --- 1. Load Configuration ---
-    logger.info(f"Loading workflow configuration from {config_path}")
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-
-    data_cfg = config['data']
-    proc_cfg = config['procedure']
-    
-    # --- 2. Data Loading and Preprocessing ---
-    config_dir = os.path.dirname(os.path.abspath(config_path))
-    csv_file_path = os.path.join(config_dir, data_cfg['resource'])
-    
-    try:
-        df = pd.read_csv(csv_file_path)
-        df.dropna(subset=[data_cfg['input_col'], data_cfg['target_col']], inplace=True)
-        all_smiles = df[data_cfg['input_col']].tolist()
-        all_y = df[data_cfg['target_col']].astype(float).tolist()
-        logger.info(f"Loaded {len(all_smiles)} samples from {csv_file_path}")
-    except Exception as e:
-        logger.error(f"Error loading or processing CSV file: {e}. Exiting.")
-        return
-
-    max_samples = data_cfg.get('max_samples')
-    if max_samples and len(all_smiles) > max_samples:
-        logger.info(f"Using the first {max_samples} samples for this run.")
-        smiles_subset, y_subset = all_smiles[:max_samples], all_y[:max_samples]
-    else:
-        smiles_subset, y_subset = all_smiles, all_y
-
-    if not smiles_subset:
-        logger.error("No valid SMILES data to process. Exiting.")
-        return
-
-    # --- 3. Featurization ---
-    feat_cfg = proc_cfg['feat']
-    if feat_cfg['type'] == 'GATGraphFeaturizer':
-        featurizer = GATGraphFeaturizer(**feat_cfg.get('params', {}))
-        graph_data_list = featurizer.featurize(smiles_subset, y_subset)
-    else:
-        raise NotImplementedError(f"Featurizer '{feat_cfg['type']}' not implemented.")
-
-    if not graph_data_list or len(graph_data_list) < 3:
-        logger.error("Not enough data for train/validation/test split after featurization. Exiting.")
-        return
-        
-    # --- 4. Data Splitting ---
-    split_params = proc_cfg['split']['params']
-    train_size = split_params['train_size']
-    val_size = split_params['val_size']
-    test_size = 1.0 - train_size - val_size
-
-    if not (train_size > 0 and val_size > 0 and test_size > 0):
-        raise ValueError("train_size, val_size, and test_size must all be positive.")
-
-    train_val_size = train_size + val_size
-    train_val_data, test_data = train_test_split(
-        graph_data_list,
-        train_size=train_val_size,
-        random_state=split_params['random_state'],
-        shuffle=split_params['shuffle']
-    )
-    val_split_ratio = val_size / train_val_size
-    train_data, val_data = train_test_split(
-        train_val_data,
-        test_size=val_split_ratio,
-        random_state=split_params['random_state'],
-        shuffle=split_params['shuffle']
-    )
-    logger.info(f"Data split: {len(train_data)} train, {len(val_data)} validation, {len(test_data)} test samples.")
-
-    # --- 5. Create DataLoaders ---
-    train_params = proc_cfg['train']['params']
-    batch_size = train_params.get('batch_size', 32)
-    num_workers = train_params.get('num_workers', 0)
-
-    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-    # --- 6. Model Preparation ---
-    first_graph = train_data[0]
-    determined_input_dim = first_graph.x.shape[1] if hasattr(first_graph, 'x') and first_graph.x is not None else 8
-    determined_edge_dim = first_graph.edge_attr.shape[1] if hasattr(first_graph, 'edge_attr') and first_graph.edge_attr is not None else None
-    
-    dynamic_params = {"input_dim": determined_input_dim, "edge_dim": determined_edge_dim}
-    gat_model_wrapper = load_gat_from_yaml_file(config_path, model_params=dynamic_params)
-
-    # --- 7. Configure and Run Trainer ---
-    trainer_params = {
-        "max_epochs": train_params['max_epochs'],
-        "accelerator": train_params['accelerator'],
-        "devices": train_params['devices'],
-        "logger": True,
-        "enable_progress_bar": True,
-        "callbacks": [TQDMProgressBar(refresh_rate=10)],
-        "log_every_n_steps": max(1, len(train_dataloader) // 10 if train_dataloader and len(train_dataloader) > 10 else 1)
-    }
-    trainer = pl.Trainer(**trainer_params)
-
-    logger.info(f"Starting training for {trainer_params['max_epochs']} epochs...")
-    trainer.fit(
-        model=gat_model_wrapper.estimator,
-        train_dataloaders=train_dataloader,
-        val_dataloaders=val_dataloader
-    )
-    logger.info("Training completed.")
-
-    # --- 8. Evaluation ---
-    logger.info(f"Evaluating model on the test set ({len(test_data)} samples)...")
-    test_results = trainer.validate(model=gat_model_wrapper.estimator, dataloaders=test_dataloader, verbose=False)
-    if test_results and isinstance(test_results, list):
-        test_loss = test_results[0].get('val_loss', float('nan'))
-        logger.info(f"Loss on the test set: {test_loss:.4f}")
-    
-    return gat_model_wrapper, trainer, test_results
-
 if __name__ == "__main__":
     import pandas as pd
     from sklearn.model_selection import train_test_split
@@ -627,8 +450,9 @@ if __name__ == "__main__":
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         default_yaml_path = os.path.join(script_dir, '..', 'tests', 'test_data', 'basic_anvil_gat.yaml')
-        run_workflow_from_config(default_yaml_path)
+        # Since run_workflow_from_config is removed, this part will be cleaned up.
+        # Placeholder for potential future main-guard use.
     except Exception as e:
         import traceback
-        logger.error(f"An error occurred during the workflow execution: {e}")
+        logger.error(f"An error occurred: {e}")
         logger.error(f"Full Traceback:\n{traceback.format_exc()}") 

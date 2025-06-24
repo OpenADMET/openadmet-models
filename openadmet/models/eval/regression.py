@@ -49,6 +49,15 @@ class RegressionMetrics(EvalBase):
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
+        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+            y_true = y_true.to_numpy()
+
+        # Ensure y_pred and y_true are 2D arrays for consistency
+        if y_pred.ndim == 1:
+            y_pred = y_pred.reshape(-1, 1)
+        if y_true.ndim == 1:
+            y_true = y_true.reshape(-1, 1)
+
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
             raise ValueError("y_true and y_pred must have the same number of tasks")
@@ -59,9 +68,6 @@ class RegressionMetrics(EvalBase):
 
         if use_wandb:
             self.use_wandb = use_wandb
-
-        if isinstance(y_true, pd.DataFrame):
-            y_true = y_true.to_numpy()
 
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]
@@ -207,6 +213,15 @@ class RegressionPlots(EvalBase):
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
 
+        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+            y_true = y_true.to_numpy()
+
+        # Ensure y_pred and y_true are 2D arrays for consistency
+        if y_pred.ndim == 1:
+            y_pred = y_pred.reshape(-1, 1)
+        if y_true.ndim == 1:
+            y_true = y_true.reshape(-1, 1)
+
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
             raise ValueError("y_true and y_pred must have the same number of tasks")
@@ -218,9 +233,6 @@ class RegressionPlots(EvalBase):
         }
 
         self.plot_data = {}
-
-        if isinstance(y_true, pd.DataFrame):
-            y_true = y_true.to_numpy()
 
         for task_id in range(n_tasks):
             t_true = y_true[:, task_id]

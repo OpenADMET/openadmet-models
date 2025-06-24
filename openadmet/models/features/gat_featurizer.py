@@ -1,5 +1,6 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Iterable
 import torch
+import numpy as np
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from loguru import logger
@@ -7,7 +8,6 @@ from loguru import logger
 try:
     from rdkit import Chem
 except ImportError:
-
     logger.warning(
         "RDKit library not found. GraphFeaturizer will not be functional. "
         "Please install RDKit (e.g., conda install -c conda-forge rdkit)."
@@ -39,21 +39,9 @@ class GATGraphFeaturizer(FeaturizerBase):
     Featurizer to convert SMILES strings into graph Data objects suitable for GAT-like models.
     It extracts atom features and bond features using RDKit.
     """
-
-    def __init__(self):
-        super().__init__()
-        self._prepare()
-
-    def _prepare(self):
-        """
-        Check if RDKit is available.
-        """
-        if Chem is None:
-            raise ImportError(
-                "RDKit library is not installed, which is essential for GATGraphFeaturizer. "
-                "Please install RDKit."
-            )
-        logger.info("GATGraphFeaturizer initialized with RDKit.")
+    batch_size: int = 32
+    shuffle: bool = True
+    num_workers: int = 0
 
     def _featurize_single_molecule(self, smiles: str, y_val: Optional[float] = None) -> Optional[Data]:
         """
@@ -114,35 +102,30 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         return data
 
-    def featurize(self, smiles_list: list[str], y_list: Optional[list[Any]] = None, batch_size: int = 32, shuffle: bool = False, num_workers: int = 0):
+    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None) -> tuple[DataLoader, np.ndarray, None, List[Data]]:
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
         Args:
-            smiles_list: List of SMILES strings.
-            y_list: Optional list of target values. Values will be attempted to be cast to float.
-            batch_size: Batch size for DataLoader.
-            shuffle: Whether to shuffle the data in DataLoader.
-            num_workers: Number of worker processes for DataLoader.
+            smiles: An iterable of SMILES strings.
+            y: Optional iterable of target values. Values will be attempted to be cast to float.
 
         Returns:
-            Tuple of (DataLoader, None, List[Data]). The DataLoader for training,
-            scaler (None for graphs), and the list of Data objects.
+            Tuple of (DataLoader, indices, None, List[Data]). The DataLoader for training,
+            indices of successfully featurized molecules, scaler (None for graphs), and the list of Data objects.
             Invalid SMILES or problematic molecules will be skipped (a warning will be logged).
         """
         if Chem is None:
-            logger.error("RDKit not available. Cannot featurize SMILES.")
-            return DataLoader([]), None
-
+            raise ImportError(
+                "RDKit library is not installed, which is essential for GATGraphFeaturizer. "
+                "Please install RDKit."
+            )
         data_objects = []
-        # Convert y_list to a list if it's a pandas Series to avoid indexing issues
-        if y_list is not None:
-            if hasattr(y_list, 'tolist'):
-                y_list = y_list.tolist()
-            elif hasattr(y_list, 'values'):
-                y_list = y_list.values.tolist()
+        indices = []
+        # Convert y to a list if it's not None, to handle iterables and pandas Series
+        y_list = list(y) if y is not None else None
 
-        for i, smiles_str in enumerate(smiles_list):
+        for i, smiles_str in enumerate(smiles):
             y_val = None
             if y_list is not None and i < len(y_list):
                 try:
@@ -162,14 +145,15 @@ class GATGraphFeaturizer(FeaturizerBase):
             data = self._featurize_single_molecule(smiles_str, y_val)
             if data is not None:
                 data_objects.append(data)
+                indices.append(i)
 
         # Create DataLoader
         dataloader = DataLoader(
             data_objects,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.num_workers
         )
 
-        # Return dataloader, scaler (None for GAT), and dataset (data_objects)
-        return dataloader, None, data_objects  # Return None for scaler as we don't use one for graphs
+        # Return dataloader, indices, scaler (None for GAT), and dataset (data_objects)
+        return dataloader, np.array(indices), None, data_objects
