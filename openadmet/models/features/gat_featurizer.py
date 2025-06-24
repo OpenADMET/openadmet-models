@@ -7,16 +7,6 @@ from torch_geometric.loader import DataLoader
 from loguru import logger
 
 try:
-    from rdkit import Chem
-except ImportError:
-    logger.warning(
-        "RDKit library not found. GraphFeaturizer will not be functional. "
-        "Please install RDKit (e.g., conda install -c conda-forge rdkit)."
-    )
-    Chem = None # Set to None to check its availability later
-
-# Assuming feature_base.py is in the same directory or accessible via PYTHONPATH
-try:
     from .feature_base import FeaturizerBase, featurizers
 except ImportError:
     logger.warning(
@@ -103,7 +93,7 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         return data
 
-    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None) -> tuple[DataLoader, np.ndarray, None, list[Data]]:
+    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None):
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
@@ -116,13 +106,9 @@ class GATGraphFeaturizer(FeaturizerBase):
             indices of successfully featurized molecules, scaler (None for graphs), and the list of Data objects.
             Invalid SMILES or problematic molecules will be skipped (a warning will be logged).
         """
-        if Chem is None:
-            raise ImportError(
-                "RDKit library is not installed, which is essential for GATGraphFeaturizer. "
-                "Please install RDKit."
-            )
+        
         data_objects = []
-        indices = []
+        successful_indices = []
         # Convert y to a list if it's not None, to handle iterables and pandas Series
         y_list = list(y) if y is not None else None
 
@@ -146,15 +132,15 @@ class GATGraphFeaturizer(FeaturizerBase):
             data = self._featurize_single_molecule(smiles_str, y_val)
             if data is not None:
                 data_objects.append(data)
-                indices.append(i)
+                successful_indices.append(i)
 
         # Create DataLoader
         dataloader = DataLoader(
             data_objects,
             batch_size=self.batch_size,
             shuffle=self.shuffle,
-            num_workers=self.num_workers
+            num_workers=self.num_workers,
         )
 
         # Return dataloader, indices, scaler (None for GAT), and dataset (data_objects)
-        return dataloader, np.array(indices), None, data_objects
+        return dataloader, np.array(successful_indices), None, data_objects
