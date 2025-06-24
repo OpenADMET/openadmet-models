@@ -24,7 +24,7 @@ dependencies:
   - lightgbm
   - tabpfn
   - hyperopt
-
+  - xgboost
   - seaborn
   - splito
   - umap-learn

@@ -18,13 +18,13 @@ _METRIC_TO_LOSS = {
 }
 
 
-@model_registry.register("ChemPropSingleTaskRegressorModel")
-class ChemPropSingleTaskRegressorModel(TorchModelBase):
+@model_registry.register("ChemPropMultiRegressorModel")
+class ChemPropMultiRegressorModel(TorchModelBase):
     """
     ChemProp regression model
     """
 
-    type: ClassVar[str] = "ChemPropSingleTaskModel"
+    type: ClassVar[str] = "ChemPropMultiRegressorModel"
     batch_norm: bool = False
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
@@ -68,7 +68,7 @@ class ChemPropSingleTaskRegressorModel(TorchModelBase):
         instance.build()
         return instance
 
-    def make_new(self) -> "ChemPropSingleTaskRegressorModel":
+    def make_new(self) -> "ChemPropMultiRegressorModel":
         """
         Copy parameters to a new model instance without copying the estimator
         """
