@@ -1,5 +1,5 @@
 from pathlib import Path
-from urllib.request import urlretrieve 
+from urllib.request import urlretrieve
 from typing import ClassVar
 
 import numpy as np
