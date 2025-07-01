@@ -119,7 +119,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                 chemeleon_mp = torch.load(model_path, weights_only=True)
                 mp = nn.BondMessagePassing(**chemeleon_mp['hyper_parameters'])
                 mp.load_state_dict(chemeleon_mp['state_dict'])
-                logger.warn(
+                logger.warning(
                     "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                 )
             else:
