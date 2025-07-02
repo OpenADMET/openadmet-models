@@ -16,6 +16,7 @@ from reportlab.platypus import (
 from scipy import stats
 from scipy.stats import levene, tukey_hsd
 from statsmodels.stats.anova import AnovaRM
+import tabulate
 
 from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
@@ -74,6 +75,7 @@ class PostHocComparison(ComparisonBase):
             df, model_tags, self.cl, output_dir
         )
 
+        self.print_table(stats_dfs[0], stats_dfs[1])
         self.report(stats_dfs, report, output_dir)
 
         return stats_dfs
@@ -390,3 +392,15 @@ class PostHocComparison(ComparisonBase):
             elements.append(Spacer(1, 0.2 * inch))
 
         doc.build(elements)
+
+    def print_table(self, levene_df, tukeys_df):
+        """
+        Print a DataFrame as a table
+        """
+        print("Levene's test results")
+        print("-------------------------")
+        print(tabulate.tabulate(levene_df, headers=self._metrics_names, tablefmt="psql", showindex=False))
+        print("\nTukey's HSD results")
+        print("-------------------------")
+        print(tabulate.tabulate(tukeys_df, headers=['method', 'metric', 'value', 'errorbars', 'p-value'], 
+                                tablefmt="psql", showindex=False))
