@@ -402,5 +402,5 @@ class PostHocComparison(ComparisonBase):
         print(tabulate.tabulate(levene_df, headers=self._metrics_names, tablefmt="psql", showindex=False))
         print("\nTukey's HSD results")
         print("-------------------------")
-        print(tabulate.tabulate(tukeys_df, headers=['method', 'metric', 'value', 'errorbars', 'p-value'], 
+        print(tabulate.tabulate(tukeys_df, headers=['method', 'metric', 'value', 'errorbars', 'p-value'],
                                 tablefmt="psql", showindex=False))
