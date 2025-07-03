@@ -218,7 +218,7 @@ class PostHocComparison(ComparisonBase):
             model = AnovaRM(
                 anova_df, depvar=metric, subject="cv_cycle", within=["method"]
             ).fit()
-
+            
             # Calculate means and standard errors for error bars
             means = anova_df.groupby("method")[metric].mean()
             ses = anova_df.groupby("method")[metric].sem()

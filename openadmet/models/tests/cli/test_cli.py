@@ -32,7 +32,6 @@ def test_subcommand_runnable(args):
     assert click_success(result)
 
 
-
 def test_predict_cli(tmp_path):
     """Test the predict CLI command"""
 

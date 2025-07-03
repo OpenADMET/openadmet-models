@@ -8,10 +8,13 @@ _data_ref = resources.files("openadmet.models.tests.test_data")
 basic_anvil_yaml = (_data_ref / "basic_anvil.yaml").as_posix()
 anvil_yaml_gridsearch = (_data_ref / "anvil_gridsearch.yaml").as_posix()
 anvil_yaml_featconcat = (_data_ref / "anvil_featconcat.yaml").as_posix()
+anvil_yaml_xgboost_cv = (_data_ref / "anvil_xgbm_cv_1_1.yaml").as_posix()
+
 basic_anvil_yaml_cv = (_data_ref / "basic_anvil_cv.yaml").as_posix()
 basic_anvil_yaml_classification = (
     _data_ref / "basic_anvil_classification.yaml"
 ).as_posix()
+tabpfn_anvil_classification_yaml = (_data_ref / "tabpfn_ache.yaml").as_posix()
 
 # individual sections for multi-yaml
 metadata_yaml = (_data_ref / "basic_anvil_metadata.yaml").as_posix()
