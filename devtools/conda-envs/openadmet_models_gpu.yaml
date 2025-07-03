@@ -34,6 +34,9 @@ dependencies:
   - statsmodels
   - mdanalysis
   - tabulate
+  - pingouin
+
+    # mtenn
 
   # mtenn
   - pytorch_geometric
