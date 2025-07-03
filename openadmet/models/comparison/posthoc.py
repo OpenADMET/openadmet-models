@@ -145,7 +145,7 @@ class PostHocComparison(ComparisonBase):
         -------
         result : pandas.DataFrame
             DataFrame with Levene's test statistic and p-value for each metric.
-        """        
+        """
         result = pd.DataFrame()
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
         for m in self.metrics:
@@ -154,7 +154,7 @@ class PostHocComparison(ComparisonBase):
         return result
 
     def normality_plots(self, df, output_dir=None):
-        """ 
+        """
         Generate normality plots for each metric in the DataFrame.
         Parameters
         ----------
@@ -218,7 +218,7 @@ class PostHocComparison(ComparisonBase):
             model = AnovaRM(
                 anova_df, depvar=metric, subject="cv_cycle", within=["method"]
             ).fit()
-            
+
             # Calculate means and standard errors for error bars
             means = anova_df.groupby("method")[metric].mean()
             ses = anova_df.groupby("method")[metric].sem()
@@ -251,7 +251,7 @@ class PostHocComparison(ComparisonBase):
                     pvals = tukey_metric_df[mask1 | mask2]["pvalue"]
                     if not pvals.empty and (pvals > 0.05).any():
                         color = "grey"
-                bar_colors.append(color)     
+                bar_colors.append(color)
 
             # Plot means with error bars
             for j, (mean, se, color) in enumerate(zip(means.values, ses.values, bar_colors)):
@@ -501,7 +501,7 @@ class PostHocComparison(ComparisonBase):
             plt.savefig(f"{output_dir}/mean_diffs.pdf")
 
         return fig
-    
+
     def paired_plots(self, df, model_tags, output_dir=None):
         """
         Generate and save paired plots comparing all pairs of methods for 'mse' as subplots in a single PDF.
@@ -554,7 +554,7 @@ class PostHocComparison(ComparisonBase):
                 else:
                     title_color = "red"
                     if np.mean(tmp_df[tmp_df["method"] == method1][metric]) > np.mean(tmp_df[tmp_df["method"] == method2][metric]):
-                        title = "<-  " + title 
+                        title = "<-  " + title
                     else:
                         title = title + "  ->"
 
@@ -604,7 +604,7 @@ class PostHocComparison(ComparisonBase):
         Returns
         -------
         None
-        """    
+        """
         if write:
             self.write_report(data_dfs, output_dir)
 
@@ -622,7 +622,7 @@ class PostHocComparison(ComparisonBase):
         Returns
         -------
         None
-        """        
+        """
         doc = SimpleDocTemplate(
             f"{output_dir}/posthoc.pdf",
             pagesize=letter,
