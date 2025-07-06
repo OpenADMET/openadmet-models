@@ -1,0 +1,79 @@
+data:
+  type: intake
+  resource: "{{ANVIL_DIR}}/example_intake.yaml"
+  cat_entry: "CYP3A4_pchembl"
+  input_col: "CANONICAL_SMILES"
+  target_cols: ["pChEMBL mean"]
+metadata:
+  authors: Hugo M-O
+  biotargets:
+  - CYP3A4
+  build_number: 0
+  description: basic regression with combined fingerprint and descriptor features
+    using XGBoost
+  driver: sklearn
+  email: hugo.macdermott-opeskin@omsf.io
+  name: CYP3A4_pchembl_testing_lgbm
+  tag: openadmet-CYP3A4-pchembl-regression-testing-cv
+  tags:
+  - CYP3A4
+  - openadmet
+  - test
+  - pchembl
+  version: v1
+procedure:
+  feat:
+    params:
+      featurizers:
+        DescriptorFeaturizer:
+          descr_type: mordred
+        FingerprintFeaturizer:
+          fp_type: ecfp:6
+    type: FeatureConcatenator
+  model:
+    params:
+      model_params:
+        alpha: 0.005
+        learning_rate: 0.05
+    type: XGBRegressorModel
+  split:
+    params:
+      random_state: 42
+      test_size: 0.3
+      train_size: 0.7
+    type: ShuffleSplitter
+  train:
+    params:
+      param_grid:
+        alpha:
+        - 0.005
+        learning_rate:
+        - 0.05
+        n_estimators:
+        - 500
+    type: SKLearnGridSearchTrainer
+report:
+  eval:
+  - params: {}
+    type: RegressionMetrics
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      title: CYP3A4 True vs Predicted pChEMBL on test set
+    type: RegressionPlots
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      n_repeats: 1
+      n_splits: 2
+      pXC50: true
+      random_state: 42
+      title: CYP3A4 True vs Predicted pChEMBL on test set
+    type: SKLearnRepeatedKFoldCrossValidation

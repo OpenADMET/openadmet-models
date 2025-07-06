@@ -1,9 +1,10 @@
 # IMPORTANT: order matters here, make sure to import all the registered classes first
 # before importing the registry classes
+# there must be a better way to do this, but for now this works
 
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403
 
-# models
+# eval
 from openadmet.models.architecture.lgbm import *  # noqa: F401 F403
 from openadmet.models.architecture.model_base import models  # noqa: F401  F403
 from openadmet.models.eval.classification import *  # noqa: F401 F403
@@ -24,11 +25,12 @@ from openadmet.models.features.gat_featurizer import *  # noqa: F401 F403
 
 # models
 from openadmet.models.architecture.lgbm import *  # noqa: F401 F403
+from openadmet.models.architecture.xgboost import *  # noqa: F401 F403
 from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403
 from openadmet.models.architecture.gat import *  # noqa: F401 F403
-from openadmet.models.architecture.model_base import models  # noqa: F401  F403
 from openadmet.models.architecture.tabpfn import *  # noqa: F401 F403
+from openadmet.models.architecture.model_base import models  # noqa: F401  F403
 
 # util
 from openadmet.models.log import logger  # noqa: F401 F403

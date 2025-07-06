@@ -1,3 +1,5 @@
+from pathlib import Path
+from urllib.request import urlretrieve
 from typing import ClassVar
 
 import numpy as np
@@ -28,6 +30,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
     batch_norm: bool = False
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
+    from_chemeleon: bool = False
     depth: int = 3
     message_hidden_dim: int = 300
     ffn_hidden_dim: int = 300
@@ -96,18 +99,43 @@ class ChemPropMultiRegressorModel(TorchModelBase):
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
 
-            aggregation_cls = (
-                nn.MeanAggregation if self.aggregation == "mean" else nn.NormAggregation
-            )
-            message_cls = (
-                nn.BondMessagePassing
-                if self.messages == "bond"
-                else nn.AtomMessagePassing
-            )
+            if self.from_chemeleon:
+                logger.info(
+                    "Please cite DOI: 10.48550/arXiv.2506.15792 when using CheMeleon in published work"
+                )
+                ckpt_dir = Path().home() / ".chemprop"
+                ckpt_dir.mkdir(exist_ok=True)
+                model_path = ckpt_dir / "chemeleon_mp.pt"
+                if not model_path.exists():
+                    logger.info(
+                        f"Downloading CheMeleon Foundation model from Zenodo (https://zenodo.org/records/15460715) to {model_path}"
+                    )
+                    urlretrieve(
+                        r"https://zenodo.org/records/15460715/files/chemeleon_mp.pt", model_path
+                    )
+                else:
+                    logger.info(f"Loading cached CheMeleon from {model_path}")
+                aggr = nn.MeanAggregation()
+                chemeleon_mp = torch.load(model_path, weights_only=True)
+                mp = nn.BondMessagePassing(**chemeleon_mp['hyper_parameters'])
+                mp.load_state_dict(chemeleon_mp['state_dict'])
+                self.message_hidden_dim = mp.output_dim
+                logger.warning(
+                    "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
+                )
+            else:
+                aggregation_cls = (
+                    nn.MeanAggregation if self.aggregation == "mean" else nn.NormAggregation
+                )
+                message_cls = (
+                    nn.BondMessagePassing
+                    if self.messages == "bond"
+                    else nn.AtomMessagePassing
+                )
 
-            # Create the model
-            mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout)
-            aggr = aggregation_cls()
+                # Create the model
+                mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout)
+                aggr = aggregation_cls()
 
             ffn = nn.RegressionFFN(
                 n_tasks=self.n_tasks,

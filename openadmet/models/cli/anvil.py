@@ -16,6 +16,7 @@ from openadmet.models.anvil.workflow import AnvilSpecification
     type=click.Path(file_okay=False, writable=True),
     required=False,
     help="Output directory path",
+    default="anvil_training",
 )
 @click.option(
     "--tag", required=False, help="User-defined model tag to help ID this model"
