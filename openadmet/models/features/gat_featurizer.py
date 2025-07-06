@@ -92,7 +92,7 @@ class GATGraphFeaturizer(FeaturizerBase):
             indices of successfully featurized molecules, scaler (None for graphs), and the list of Data objects.
             Invalid SMILES or problematic molecules will be skipped (a warning will be logged).
         """
-        
+
         data_objects = []
         successful_indices = []
         
