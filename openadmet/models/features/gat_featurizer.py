@@ -6,23 +6,9 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from loguru import logger
 
-try:
-    from .feature_base import FeaturizerBase, featurizers
-except ImportError:
-    logger.warning(
-        "FeaturizerBase not found. GATGraphFeaturizer will not be registered. "
-        "Ensure feature_base.py is accessible."
-    )
-    # Define dummy versions if not found, so the class definition doesn't break
-    class FeaturizerBase:
-        def __init__(self, *args, **kwargs):
-            pass
-    class featurizers:
-        @staticmethod
-        def register(name):
-            def decorator(cls):
-                return cls
-            return decorator
+from rdkit import Chem
+
+from .feature_base import FeaturizerBase, featurizers
 
 @featurizers.register("GATGraphFeaturizer")
 class GATGraphFeaturizer(FeaturizerBase):
@@ -109,27 +95,36 @@ class GATGraphFeaturizer(FeaturizerBase):
         
         data_objects = []
         successful_indices = []
-        # Convert y to a list if it's not None, to handle iterables and pandas Series
-        y_list = list(y) if y is not None else None
+        
+        # Handle different types of y input no changing data_spec.py, making it more robust
+        if y is not None:
+            # If y is a pandas DataFrame, extract values from the first column
+            if hasattr(y, 'values') and hasattr(y, 'iloc'):  # DataFrame check
+                y = y.iloc[:, 0].tolist()  # Take first column and convert to list
+            # If y is a pandas Series or other iterable, convert to list
+            else:
+                y = list(y)
+        else:
+            y = None
 
-        for i, smiles_str in enumerate(smiles):
+        for i, smi in enumerate(smiles):
             y_val = None
-            if y_list is not None and i < len(y_list):
+            if y is not None and i < len(y):
                 try:
                     # Handle string representations of lists like '[5.1]'
-                    target_str = str(y_list[i])
+                    target_str = str(y[i])
                     if target_str.startswith('[') and target_str.endswith(']'):
                         # Remove brackets and try to convert
                         target_str = target_str.strip('[]')
                     y_val = float(target_str)
                 except (ValueError, TypeError):
                     logger.warning(
-                        f"Could not convert target value '{y_list[i]}' to float for SMILES '{smiles_str}' at index {i}. "
+                        f"Could not convert target value '{y[i]}' to float for SMILES '{smi}' at index {i}. "
                         "This target will be skipped."
                     )
                     # Continue processing but y_val remains None
 
-            data = self._featurize_single_molecule(smiles_str, y_val)
+            data = self._featurize_single_molecule(smi, y_val)
             if data is not None:
                 data_objects.append(data)
                 successful_indices.append(i)

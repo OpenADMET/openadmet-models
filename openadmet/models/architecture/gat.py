@@ -1,4 +1,3 @@
-import json
 from typing import ClassVar, Optional, List, Any
 import numpy as np
 
@@ -8,13 +7,9 @@ import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv, global_mean_pool, global_max_pool, global_add_pool
 from torch_geometric.data import Data, Batch
 from torch_geometric.loader import DataLoader
-import lightning as pl
-from lightning.pytorch.callbacks import TQDMProgressBar
 
 from loguru import logger
 from pydantic import field_validator
-import pytest
-import yaml
 
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -93,12 +88,12 @@ class GATv2Model(nn.Module):
             self.batch_norms.append(nn.BatchNorm1d(bn_dim))
 
         # Output layers
-        final_dim = hidden_dim
         self.output_layers = nn.Sequential(
-            nn.Linear(final_dim, final_dim // 2),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.BatchNorm1d(hidden_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(final_dim // 2, output_dim)
+            nn.Linear(hidden_dim // 2, output_dim)
         )
 
         # Pooling function
@@ -156,116 +151,6 @@ class GATv2Model(nn.Module):
         return out
 
 
-class GATv2LightningWrapper(pl.LightningModule):
-    """
-    Lightning wrapper for GAT model
-    """
-    def __init__(
-        self,
-        model_config: dict,
-        loss_fn_name: str = "mse",
-        lr: float = 1e-3,
-        weight_decay: float = 1e-5,
-        scheduler_name: str = "cosine",
-        warmup_epochs: int = 10
-    ):
-        super().__init__()
-        self.save_hyperparameters(ignore=['loss_fn_name'])
-
-        self.loss_functions = {
-            "mse": nn.MSELoss(), "mae": nn.L1Loss(), "huber": nn.HuberLoss(),
-            "bce": nn.BCEWithLogitsLoss(), "cross_entropy": nn.CrossEntropyLoss()
-        }
-
-        self.model = GATv2Model(**model_config)
-        self.loss_fn = self._get_loss_function(loss_fn_name)
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.scheduler_name = scheduler_name
-        self.warmup_epochs = warmup_epochs
-
-    def _get_loss_function(self, name: str):
-        if name.lower() not in self.loss_functions:
-            raise ValueError(f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}")
-        return self.loss_functions[name.lower()]
-
-    def forward(self, data: Batch):
-        """Forward pass"""
-        return self.model(data)
-
-    def training_step(self, batch: Batch, batch_idx: int):
-        """Training step"""
-        target = batch.y
-
-        pred = self(batch)
-
-        if pred.ndim > 1 and pred.shape[1] == 1:
-            pred = pred.squeeze(-1)
-        if target.ndim > 1 and target.shape[1] == 1:
-            target = target.squeeze(-1)
-
-        loss = self.loss_fn(pred, target)
-
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
-
-        return loss
-
-    def validation_step(self, batch: Batch, batch_idx: int):
-        """Validation step"""
-        target = batch.y
-
-        pred = self(batch)
-
-        if pred.ndim > 1 and pred.shape[1] == 1:
-            pred = pred.squeeze(-1)
-        if target.ndim > 1 and target.shape[1] == 1:
-            target = target.squeeze(-1)
-
-        loss = self.loss_fn(pred, target)
-
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
-
-        return loss
-
-    def predict_step(self, batch: Batch, batch_idx: int):
-        """Prediction step"""
-        data = batch
-        pred = self(data)
-        return pred
-
-    def configure_optimizers(self):
-        """Configure optimizers and learning rate schedulers"""
-        optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.lr,
-            weight_decay=self.weight_decay
-        )
-
-        if self.scheduler_name == "cosine":
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, T_max=self.trainer.max_epochs if self.trainer else 100
-            )
-            return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
-        elif self.scheduler_name == "reduce_on_plateau":
-            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode='min', factor=0.5, patience=10
-            )
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "val_loss",
-                    "interval": "epoch",
-                    "frequency": 1
-                }
-            }
-        elif self.scheduler_name == "none":
-            return optimizer
-        else:
-            logger.warning(f"Unsupported scheduler: {self.scheduler_name}, using AdamW without LR scheduler.")
-            return optimizer
-
-
 @model_registry.register("GATv2ModelWrapper")
 class GATv2ModelWrapper(TorchModelBase):
     """
@@ -275,8 +160,8 @@ class GATv2ModelWrapper(TorchModelBase):
     type: ClassVar[str] = "GATv2ModelWrapper"
     scaler: Optional[Any] = None
 
-    # Model hyperparameters
-    input_dim: Optional[int] = None
+    # Model architecture hyperparameters
+    input_dim: Optional[int] = 10
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
@@ -294,6 +179,8 @@ class GATv2ModelWrapper(TorchModelBase):
     weight_decay: float = 1e-5
     scheduler: str = "cosine"
     warmup_epochs: int = 10
+    scheduler_factor: float = 0.5
+    scheduler_patience: int = 10
     loss_function: str = "mse"
 
     @field_validator("pooling")
@@ -336,7 +223,7 @@ class GATv2ModelWrapper(TorchModelBase):
 
     def build(self, scaler=None, **kwargs):
         """
-        Builds the GATv2 model and lightning wrapper.
+        Builds the GATv2 model.
         'input_dim' is a mandatory parameter.
         """
         self.scaler = scaler
@@ -361,30 +248,40 @@ class GATv2ModelWrapper(TorchModelBase):
                 "bias": self.bias,
             }
 
-            self.estimator = GATv2LightningWrapper(
-                model_config=model_config,
-                loss_fn_name=self.loss_function,
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                scheduler_name=self.scheduler,
-                warmup_epochs=self.warmup_epochs
-            )
+            # Build core GAT model
+            self.estimator = GATv2Model(**model_config)
+            
+            # Store training config for later use by trainer
+            self._training_config = {
+                "loss_fn_name": self.loss_function,
+                "lr": self.lr,
+                "weight_decay": self.weight_decay,
+                "scheduler_name": self.scheduler,
+                "warmup_epochs": self.warmup_epochs,
+                "scheduler_factor": self.scheduler_factor,
+                "scheduler_patience": self.scheduler_patience
+            }
 
-            logger.info(f"Built GATv2LightningWrapper with GATv2Model config: {model_config}")
+            logger.info(f"Built GATv2Model with config: {model_config}")
         else:
             logger.warning("Model already exists, skipping build")
 
     def train(self, dataloader):
         """
-        Train the model
+        Just see the mtenn.py for reference.
+        
+        This method exists only to satisfy the abstract base class contract.
+        
+        Use openadmet.models.trainer.lightning.LightningTrainer for training.
         """
         raise NotImplementedError(
-            "Training not implemented in model class, use a trainer"
+            "GAT training is handled by LightningTrainer. "
+            "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> np.ndarray:
         """
-        Make predictions on a dataloader.
+        Make predictions on a dataloader using the core GAT model.
 
         Args:
             dataloader (torch.utils.data.DataLoader): Dataloader to predict on.
@@ -397,23 +294,40 @@ class GATv2ModelWrapper(TorchModelBase):
         if not hasattr(self, 'estimator') or self.estimator is None:
             raise RuntimeError("Model has not been built yet. Call 'build()' before 'predict'.")
 
-        # Create a PyTorch Lightning Trainer for prediction
-        progress_bar = TQDMProgressBar(refresh_rate=10)
-        trainer = pl.Trainer(
-            accelerator=accelerator,
-            devices=devices,
-            callbacks=[progress_bar],
-            logger=False
-        )
+        # Set model to evaluation mode
+        self.estimator.eval()
+        
+        # Determine device
+        if accelerator == "gpu" and torch.cuda.is_available():
+            device = torch.device("cuda")
+        elif accelerator == "mps" and torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+            
+        self.estimator.to(device)
 
-        # Make predictions
-        preds = trainer.predict(self.estimator, dataloader)
+        predictions = []
+        
+        with torch.no_grad():
+            for batch in dataloader:
+                # Move batch to device
+                batch = batch.to(device)
+                
+                # Forward pass through core model
+                pred = self.estimator(batch)
+                
+                # Move predictions to CPU and store
+                predictions.append(pred.cpu())
 
-        y_pred = torch.cat(preds).cpu().numpy()
+        # Concatenate all predictions
+        y_pred = torch.cat(predictions).numpy()
 
+        # Apply inverse scaling if scaler is available
         if self.scaler is not None:
             y_pred = self.scaler.inverse_transform(y_pred)
 
+        # Ensure correct shape
         if y_pred.ndim == 1:
             y_pred = y_pred.reshape(-1, 1)
 
@@ -441,18 +355,3 @@ class GATv2ModelWrapper(TorchModelBase):
         }
 
         return summary
-
-
-if __name__ == "__main__":
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-
-    try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        default_yaml_path = os.path.join(script_dir, '..', 'tests', 'test_data', 'basic_anvil_gat.yaml')
-        # Since run_workflow_from_config is removed, this part will be cleaned up.
-        # Placeholder for potential future main-guard use.
-    except Exception as e:
-        import traceback
-        logger.error(f"An error occurred: {e}")
-        logger.error(f"Full Traceback:\n{traceback.format_exc()}")

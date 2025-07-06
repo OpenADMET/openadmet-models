@@ -21,6 +21,7 @@ procedure:
   split:
     type: "ShuffleSplitter"
     params:
+      train_size: 0.8 
       val_size: 0.1
       test_size: 0.1
       shuffle: True
@@ -40,10 +41,9 @@ procedure:
       gat_dropout: 0.1
       pooling: "mean"
       output_dim: 1
-      loss_function: "mse"
 
   train:
-    type: "LightningTrainer"
+    type: "GATv2LightningTrainer"
     params:
       max_epochs: 3
       accelerator: "cpu"
@@ -51,6 +51,10 @@ procedure:
       use_wandb: False
       early_stopping: True
       early_stopping_patience: 5
+      loss_function: "mse"
+      scheduler: "reduce_on_plateau"
+      scheduler_factor: 0.3
+      scheduler_patience: 15
 
 report:
   eval:

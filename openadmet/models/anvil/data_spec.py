@@ -66,8 +66,6 @@ class DataSpec(BaseModel):
             raise ValueError(f"Unsupported resource type: {self.resource}")
         # now read the target columns and smiles column
         targets = data[self.target_cols]
-        if isinstance(self.target_cols, list) and len(self.target_cols) == 1:
-            targets = targets[self.target_cols[0]]
         input = data[self.input_col]
 
         return input, targets
