@@ -21,7 +21,7 @@ procedure:
   split:
     type: "ShuffleSplitter"
     params:
-      train_size: 0.8 
+      train_size: 0.8
       val_size: 0.1
       test_size: 0.1
       shuffle: True

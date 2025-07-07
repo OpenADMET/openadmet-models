@@ -95,7 +95,7 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         data_objects = []
         successful_indices = []
-        
+
         # Handle different types of y input no changing data_spec.py, making it more robust
         if y is not None:
             # If y is a pandas DataFrame, extract values from the first column

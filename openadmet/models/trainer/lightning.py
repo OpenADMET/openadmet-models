@@ -138,7 +138,7 @@ class GATv2LightningTrainer(LightningTrainer):
     warmup_epochs: int = 10
     scheduler_factor: float = 0.5
     scheduler_patience: int = 10
-    
+
     def train(self, train_dataloader, val_dataloader):
         """
         Train the GATv2 model.

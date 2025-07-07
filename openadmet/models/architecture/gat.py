@@ -250,7 +250,7 @@ class GATv2ModelWrapper(TorchModelBase):
 
             # Build core GAT model
             self.estimator = GATv2Model(**model_config)
-            
+
             # Store training config for later use by trainer
             self._training_config = {
                 "loss_fn_name": self.loss_function,
@@ -269,9 +269,9 @@ class GATv2ModelWrapper(TorchModelBase):
     def train(self, dataloader):
         """
         Just see the mtenn.py for reference.
-        
+
         This method exists only to satisfy the abstract base class contract.
-        
+
         Use openadmet.models.trainer.lightning.LightningTrainer for training.
         """
         raise NotImplementedError(
@@ -296,7 +296,7 @@ class GATv2ModelWrapper(TorchModelBase):
 
         # Set model to evaluation mode
         self.estimator.eval()
-        
+
         # Determine device
         if accelerator == "gpu" and torch.cuda.is_available():
             device = torch.device("cuda")
@@ -304,19 +304,19 @@ class GATv2ModelWrapper(TorchModelBase):
             device = torch.device("mps")
         else:
             device = torch.device("cpu")
-            
+
         self.estimator.to(device)
 
         predictions = []
-        
+
         with torch.no_grad():
             for batch in dataloader:
                 # Move batch to device
                 batch = batch.to(device)
-                
+
                 # Forward pass through core model
                 pred = self.estimator(batch)
-                
+
                 # Move predictions to CPU and store
                 predictions.append(pred.cpu())
 
