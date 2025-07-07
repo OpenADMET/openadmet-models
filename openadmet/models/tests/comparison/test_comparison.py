@@ -28,3 +28,19 @@ def test_posthoc_comparison_multitask_reader():
     task_tags = ["cyp3a4_pchembl_value_mean"]
     comp_obj = PostHocComparison()
     comp_obj.json_to_df(model_stats, model_tags, task_tags)
+    levene, tukeys_df = comp_obj.compare(model_stats, model_tags)
+    assert levene["mse"][0] == 0.29637389987684526
+    assert levene["ktau"][0] == 0.05033310952264555
+    assert tukeys_df["metric_val"][0] == 0.00705013739584795
+    assert tukeys_df["pvalue"][14] == 1.600273813462394e-08
+
+def test_posthoc_comparison_printing(capsys):
+    model_stats = [descr_json, fp_json, combined_json]
+    model_tags = ["descr", "fp", "combined"]
+    comp_obj = PostHocComparison()
+    levene, tukeys_df = comp_obj.compare(model_stats, model_tags)
+    captured = capsys.readouterr()
+    assert "Levene's test results" in captured.out
+    assert "Tukey's HSD results" in captured.out
+    assert "0.296374" in captured.out
+    assert "0.00705014" in captured.out

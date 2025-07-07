@@ -40,7 +40,7 @@ procedure:
 
 
   model:
-    type: ChemPropSingleTaskRegressorModel
+    type: ChemPropMultiRegressorModel
 
   train:
     type: LightningTrainer
