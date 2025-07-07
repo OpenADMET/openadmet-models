@@ -93,7 +93,6 @@ class PostHocComparison(ComparisonBase):
 
         """
         df = self.json_to_df(model_stats_fns, model_tags, task_tags)
-            List containing the results of Levene's test and Tukey's HSD test.
         stats_dfs = []
         stats_dfs.append(self.levene_test(df, model_tags))
         stats_dfs.append(self.get_tukeys_df(df, model_tags))
