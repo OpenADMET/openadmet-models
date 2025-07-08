@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -93,6 +94,10 @@ class PostHocComparison(ComparisonBase):
 
         """
         df = self.json_to_df(model_stats_fns, model_tags, task_tags)
+
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
         stats_dfs = []
         stats_dfs.append(self.levene_test(df, model_tags))
         stats_dfs.append(self.get_tukeys_df(df, model_tags))
@@ -135,8 +140,10 @@ class PostHocComparison(ComparisonBase):
                 data = json.load(f)
             method_data = pd.DataFrame()
             for m in self.metrics:
-                if task not in data or m not in data[task]:
-                    raise ValueError(f"Task {task} or metric {m} not found in data.")
+                if task not in data:
+                    raise ValueError(f"Task {task} not found in data.")
+                if m not in data[task]:
+                    raise ValueError(f"Metric {m} not found in task {task} data.")
                 values = data[task][m]["value"]
                 method_data[m] = values
             method_data["method"] = tag
@@ -195,7 +202,7 @@ class PostHocComparison(ComparisonBase):
         plt.tight_layout()
 
         if output_dir:
-            plt.savefig(f"{output_dir}/normality_plot.pdf")
+            plt.savefig(f"{output_dir}/normality_plots.pdf")
 
         return fig
 
