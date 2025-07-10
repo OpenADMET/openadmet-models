@@ -172,6 +172,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         self.plot_data = {}
 
         stat_caption = self.make_stat_caption(t_label)
+        stat_dict = self.make_stat_dict(t_label)
 
         # create the plots
         for plot_tag, plot in self.plots.items():
@@ -182,6 +183,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 ylabel=self.axes_labels[1],
                 title=f"{self.title}\nTask: {t_label}",
                 stat_caption=stat_caption,
+                stat_dict=stat_dict,
                 pXC50=self.pXC50,
                 min_val=self.min_val,
                 max_val=self.max_val,
@@ -208,6 +210,24 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
+    
+    def make_stat_dict(self, task_name):
+        if not self._evaluated:
+            raise ValueError("Must evaluate before making a caption")
+        
+        stat_dict = {}
+
+        stat_dict["task_name"] = task_name
+        for metric in self.metric_names:
+            value = self.data[task_name][metric]["mean"]
+            lower_ci = self.data[task_name][metric]["lower_ci"]
+            upper_ci = self.data[task_name][metric]["upper_ci"]
+            confidence_level = self.data[task_name][metric]["confidence_level"]
+
+            # Save in dict
+            stat_dict[self._metrics[metric][2]] = f"{value:.2f} [{lower_ci:.2f}, {upper_ci:.2f}]"
+        stat_dict["conf_level"] = confidence_level
+        return stat_dict
 
     def report(self, write=False, output_dir=None):
         """

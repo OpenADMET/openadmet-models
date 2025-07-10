@@ -182,6 +182,29 @@ class RegressionMetrics(EvalBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
+    
+    def make_stat_dict(self):
+        if not self._evaluated:
+            raise ValueError("Must evaluate before making a caption")
+        
+        stat_dict = {}
+
+        for task_name in self.task_names:
+            if task_name == "tag":
+                continue
+        stat_dict["task_name"] = task_name
+        for metric in self.metric_names:
+            value = self.data[task_name][metric]["value"]
+            lower_ci = self.data[task_name][metric]["lower_ci"]
+            upper_ci = self.data[task_name][metric]["upper_ci"]
+            confidence_level = self.data[task_name][metric]["confidence_level"]
+
+            # Save in dict
+            stat_dict[self._metrics[metric][2]] = f"{value:.2f} [{lower_ci:.2f}, {upper_ci:.2f}]"
+        stat_dict["conf_level"] = confidence_level
+        return stat_dict
+
+
 
 
 @evaluators.register("RegressionPlots")
@@ -249,6 +272,7 @@ class RegressionPlots(EvalBase):
                     target_labels=[t_label],
                 )
                 stat_caption = rm.make_stat_caption()
+                stat_dict = rm.make_stat_dict()
             else:
                 stat_caption = ""
 
@@ -261,6 +285,7 @@ class RegressionPlots(EvalBase):
                     ylabel=self.axes_labels[1],
                     title=f"{self.title}\nTask: {t_label}",
                     stat_caption=stat_caption,
+                    stat_dict=stat_dict,
                     pXC50=self.pXC50,
                     min_val=self.min_val,
                     max_val=self.max_val,
@@ -275,6 +300,7 @@ class RegressionPlots(EvalBase):
         ylabel="Predicted",
         title="",
         stat_caption="",
+        stat_dict={},
         confidence_level=0.95,
         pXC50=False,
         min_val=None,
@@ -283,8 +309,8 @@ class RegressionPlots(EvalBase):
         """
         Create a regression plot
         """
-        fig, ax = plt.subplots()
-        ax.set_title(title, fontsize=10)
+        fig, ax = plt.subplots(figsize=(12,8))
+        ax.set_title(title, fontsize=20)
         if min_val is None:
             min_val = min(np.min(y_true), np.min(y_pred))
             min_ax = min_val - 1
@@ -296,7 +322,9 @@ class RegressionPlots(EvalBase):
         else:
             max_ax = max_val
         # set the limits to be the same for both axes
-        _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
+
+        _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100, scatter_kws={"alpha":0.3}, color="teal")
+
         # slope, intercept, r, p, sterr = scipy.stats.linregress(
         #     x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
         # )
@@ -323,9 +351,42 @@ class RegressionPlots(EvalBase):
                 color="gray",
                 alpha=0.2,
             )
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=5)
+        ax.set_xlabel(xlabel, fontsize=18)
+        ax.set_ylabel(ylabel, fontsize=18)
+
+        if stat_dict:
+            task_name = stat_dict.get("task_name", "Task")
+            conf_level = stat_dict.get("conf_level", None)
+            metrics = {k: v for k, v in stat_dict.items() if k not in ['task_name', 'conf_level']}
+            table_data = [[k, v] for k, v in metrics.items()]
+
+            if conf_level is not None:
+                table_data.append(["*", f"Values shown with {int(conf_level * 100)}% confidence"])
+
+            bbox = [1.05, 0.2, 1, 0.6]
+
+            table = ax.table(
+                cellText=table_data,
+                colLabels=["Metric", "Value"],
+                colWidths=[0.3, 0.5],
+                loc="upper left",
+                cellLoc="left",
+                bbox=bbox,
+            )
+
+            ax.text(
+                bbox[0],
+                bbox[1] + bbox[3] + 0.02, 
+                f"Evaluation for {task_name}",
+                transform=ax.transAxes,
+                fontsize=16,
+                fontweight="bold",
+            )
+
+            for i in range(1, len(table_data) + 1):
+                table[i, 1].get_text().set_horizontalalignment("right")
+        else:
+            ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=5)
         fig.tight_layout()
 
         return fig
