@@ -167,27 +167,31 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
+            "cross_validation_ciplot": RegressionPlots.ciplot
         }
 
         self.plot_data = {}
 
-        stat_caption = self.make_stat_caption(t_label)
+        # stat_caption = self.make_stat_caption(t_label)
         stat_dict = self.make_stat_dict(t_label)
 
         # create the plots
         for plot_tag, plot in self.plots.items():
-            self.plot_data[plot_tag] = plot(
-                y_true,
-                y_pred,
-                xlabel=self.axes_labels[0],
-                ylabel=self.axes_labels[1],
-                title=f"{self.title}\nTask: {t_label}",
-                stat_caption=stat_caption,
-                stat_dict=stat_dict,
-                pXC50=self.pXC50,
-                min_val=self.min_val,
-                max_val=self.max_val,
-            )
+            if "ciplot" in plot_tag:
+                self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
+            else:
+                self.plot_data[plot_tag] = plot(
+                    y_true,
+                    y_pred,
+                    xlabel=self.axes_labels[0],
+                    ylabel=self.axes_labels[1],
+                    title=f"{self.title}\nTask: {t_label}",
+                    # stat_caption=stat_caption,
+                    stat_dict=stat_dict,
+                    pXC50=self.pXC50,
+                    min_val=self.min_val,
+                    max_val=self.max_val,
+                )
 
         return self.data
 
@@ -215,9 +219,17 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         if not self._evaluated:
             raise ValueError("Must evaluate before making a caption")
         
-        stat_dict = {}
-
+        stat_dict = {
+            "metrics": [],
+            "means": [],
+            "lower_ci": [],
+            "upper_ci": [],
+            "conf_level": None,
+            "task_name" : None
+        }
+        
         stat_dict["task_name"] = task_name
+
         for metric in self.metric_names:
             value = self.data[task_name][metric]["mean"]
             lower_ci = self.data[task_name][metric]["lower_ci"]
@@ -225,8 +237,11 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             confidence_level = self.data[task_name][metric]["confidence_level"]
 
             # Save in dict
-            stat_dict[self._metrics[metric][2]] = f"{value:.2f} [{lower_ci:.2f}, {upper_ci:.2f}]"
-        stat_dict["conf_level"] = confidence_level
+            stat_dict["metrics"].append(self._metrics[metric][2])
+            stat_dict["means"].append(float(value))
+            stat_dict["lower_ci"].append(float(lower_ci))
+            stat_dict["upper_ci"].append(float(upper_ci))
+            stat_dict["conf_level"] = confidence_level
         return stat_dict
 
     def report(self, write=False, output_dir=None):
@@ -247,7 +262,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
-            plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
+            plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
 
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
@@ -448,6 +463,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
+            "cross_validation_ciplot": RegressionPlots.ciplot
         }
 
         self.plot_data = {}
@@ -460,22 +476,27 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
-            stat_caption = self.make_stat_caption(t_label)
+            # stat_caption = self.make_stat_caption(t_label)
+            stat_dict = self.make_stat_dict(t_label)
 
             # create the plots
             for plot_tag, plot in self.plots.items():
                 plot_tag_task = f"{plot_tag}_{t_label}"
-                self.plot_data[plot_tag_task] = plot(
-                    t_true,
-                    t_pred,
-                    xlabel=self.axes_labels[0],
-                    ylabel=self.axes_labels[1],
-                    title=f"{self.title}\nTask: {t_label}",
-                    stat_caption=stat_caption,
-                    pXC50=self.pXC50,
-                    min_val=self.min_val,
-                    max_val=self.max_val,
-                )
+                if "ciplot" in plot_tag_task:
+                    self.plot_data[plot_tag_task] = plot(stat_dict=stat_dict)
+                else:
+                    self.plot_data[plot_tag_task] = plot(
+                        t_true,
+                        t_pred,
+                        xlabel=self.axes_labels[0],
+                        ylabel=self.axes_labels[1],
+                        title=f"{self.title}\nTask: {t_label}",
+                        # stat_caption=stat_caption,
+                        stat_dict=stat_dict,
+                        pXC50=self.pXC50,
+                        min_val=self.min_val,
+                        max_val=self.max_val,
+                    )
 
         return self.data
 
@@ -506,7 +527,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
-            plot.savefig(output_dir / f"{plot_tag}.png", dpi=900)
+            plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
     def make_stat_caption(self, task_name):
         """
@@ -527,3 +548,32 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
+    
+    def make_stat_dict(self, task_name):
+        if not self._evaluated:
+            raise ValueError("Must evaluate before making a caption")
+        
+        stat_dict = {
+            "metrics": [],
+            "means": [],
+            "lower_ci": [],
+            "upper_ci": [],
+            "conf_level": None,
+            "task_name" : None
+        }
+
+        stat_dict["task_name"] = task_name
+
+        for metric in self.metric_names:
+            value = self.data[task_name][metric]["mean"]
+            lower_ci = self.data[task_name][metric]["lower_ci"]
+            upper_ci = self.data[task_name][metric]["upper_ci"]
+            confidence_level = self.data[task_name][metric]["confidence_level"]
+
+            # Save in dict
+            stat_dict["metrics"].append(self._metrics[metric][2])
+            stat_dict["means"].append(value)
+            stat_dict["lower_ci"].append(lower_ci)
+            stat_dict["upper_ci"].append(upper_ci)
+            stat_dict["conf_level"] = confidence_level
+        return stat_dict
