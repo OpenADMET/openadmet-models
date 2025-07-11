@@ -182,11 +182,11 @@ class RegressionMetrics(EvalBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
-    
+
     def make_stat_dict(self):
         if not self._evaluated:
             raise ValueError("Must evaluate before making a caption")
-        
+
         stat_dict = {
             "metrics": [],
             "means": [],
@@ -342,14 +342,14 @@ class RegressionPlots(EvalBase):
         # set the limits to be the same for both axes
 
         g = sns.jointplot(
-            x=np.ravel(y_true), 
-            y=np.ravel(y_pred), 
-            kind="reg", 
-            joint_kws={"ci": confidence_level * 100}, 
-            scatter_kws={"alpha":0.3}, 
+            x=np.ravel(y_true),
+            y=np.ravel(y_pred),
+            kind="reg",
+            joint_kws={"ci": confidence_level * 100},
+            scatter_kws={"alpha":0.3},
             color="teal",
             height=10)
-        
+
         g.figure.suptitle(title, fontsize=title_font)
         g.ax_joint.set_aspect("equal", "box")
         g.ax_joint.set_xlim(min_ax, max_ax)
@@ -407,7 +407,7 @@ class RegressionPlots(EvalBase):
             # Right align the metric values
             for i in range(1, len(table_data) + 1):
                 table[i, 1].get_text().set_horizontalalignment("right")
-        
+
         g.ax_joint.set_box_aspect(1)
         g.figure.tight_layout()
         return g

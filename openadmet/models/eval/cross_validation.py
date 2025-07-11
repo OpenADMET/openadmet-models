@@ -214,11 +214,11 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
-    
+
     def make_stat_dict(self, task_name):
         if not self._evaluated:
             raise ValueError("Must evaluate before making a caption")
-        
+
         stat_dict = {
             "metrics": [],
             "means": [],
@@ -227,7 +227,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             "conf_level": None,
             "task_name" : None
         }
-        
+
         stat_dict["task_name"] = task_name
 
         for metric in self.metric_names:
@@ -548,11 +548,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             stat_caption += "\n"
         stat_caption += f"Confidence level: {confidence_level} \n"
         return stat_caption
-    
+
     def make_stat_dict(self, task_name):
         if not self._evaluated:
             raise ValueError("Must evaluate before making a caption")
-        
+
         stat_dict = {
             "metrics": [],
             "means": [],
