@@ -1,0 +1,31 @@
+feat:
+  params: {}
+  type: ChemPropFeaturizer
+model:
+  params:
+    batch_norm: true
+    depth: 3
+    dropout: 0.2
+    ffn_hidden_dim: 1024
+    ffn_hidden_num_layers: 1
+    message_hidden_dim: 2048
+    messages: bond
+    n_tasks: 1
+  type: ChemPropMultiRegressorModel
+split:
+  params:
+    random_state: 42
+    test_size: 0.1
+    train_size: 0.7
+    val_size: 0.2
+  type: ShuffleSplitter
+train:
+  params:
+    accelerator: gpu
+    early_stopping: true
+    early_stopping_patience: 10
+    max_epochs: 20
+    monitor_metric: val_loss
+    use_wandb: false
+    wandb_project: demos
+  type: LightningTrainer

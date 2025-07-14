@@ -1,0 +1,19 @@
+{
+  "batch_norm": true,
+  "metric_list": [
+    "mse",
+    "mae",
+    "rmse"
+  ],
+  "mod_params": {},
+  "from_chemeleon": false,
+  "depth": 3,
+  "message_hidden_dim": 2048,
+  "ffn_hidden_dim": 1024,
+  "ffn_num_layers": 1,
+  "messages": "bond",
+  "aggregation": "norm",
+  "normalized_targets": true,
+  "dropout": 0.2,
+  "n_tasks": 1
+}

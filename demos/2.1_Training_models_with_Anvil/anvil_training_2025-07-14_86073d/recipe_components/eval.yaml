@@ -1,0 +1,22 @@
+eval:
+- params: {}
+  type: RegressionMetrics
+- params:
+    axes_labels:
+    - True pChEMBL
+    - Predicted pChEMBL
+    max_val: 10
+    min_val: 3
+    pXC50: true
+    title: True vs Predicted pChEMBL on test set
+  type: RegressionPlots
+- params:
+    axes_labels:
+    - True pChEMBL
+    - Predicted pChEMBL
+    n_repeats: 2
+    n_splits: 5
+    pXC50: true
+    random_state: 42
+    title: True vs Predicted pChEMBL on test set
+  type: PytorchLightningRepeatedKFoldCrossValidation
