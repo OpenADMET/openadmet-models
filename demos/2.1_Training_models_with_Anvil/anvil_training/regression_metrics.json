@@ -1,0 +1,35 @@
+{
+  "tag": "openadmet-PXR-chembl",
+  "OPENADMET_LOGAC50": {
+    "mse": {
+      "value": 0.2852050966673439,
+      "lower_ci": 0.225072126228677,
+      "upper_ci": 0.3392557605893299,
+      "confidence_level": 0.95
+    },
+    "mae": {
+      "value": 0.41328850068440487,
+      "lower_ci": 0.3725576085459547,
+      "upper_ci": 0.4529853926572233,
+      "confidence_level": 0.95
+    },
+    "r2": {
+      "value": 0.5747608082686504,
+      "lower_ci": 0.4956482354685735,
+      "upper_ci": 0.6756284369758577,
+      "confidence_level": 0.95
+    },
+    "ktau": {
+      "value": 0.5340977796294634,
+      "lower_ci": 0.47598252809936037,
+      "upper_ci": 0.5974259577937205,
+      "confidence_level": 0.95
+    },
+    "spearmanr": {
+      "value": 0.7184675783485436,
+      "lower_ci": 0.6567747812588278,
+      "upper_ci": 0.7926027373368371,
+      "confidence_level": 0.95
+    }
+  }
+}

@@ -1,0 +1,7 @@
+anvil_dir: file:///Users/cynthiaxu/Documents/Coding Projects/OMSF/openadmet-models/demos/2.1_Training_models_with_Anvil
+cat_entry: null
+input_col: OPENADMET_CANONICAL_SMILES
+resource: ../1.1_Curating_external_datasets/processed_data/processed_PXR_chembl.parquet
+target_cols:
+- OPENADMET_LOGAC50
+type: intake
