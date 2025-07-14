@@ -46,7 +46,7 @@ class DataSpec(BaseModel):
         template = jinja2.Template(self.resource)
         self.resource = template.render(ANVIL_DIR=anvil_dir)
 
-    def read(self) -> tuple[pd.Series, pd.Series]:
+    def read(self, dropna:bool = True) -> tuple[pd.Series, pd.Series, int, int]:
         """
         Read the data from the resource
         """
@@ -68,7 +68,24 @@ class DataSpec(BaseModel):
         targets = data[self.target_cols]
         input = data[self.input_col]
 
-        return input, targets
+        # combine input and targets for joint NaN handling
+        combined = pd.concat([input, targets], axis=1)
+
+        # get number of combined rows for logging
+        n_before = len(combined)
+
+        if dropna:
+            cleaned_combined=combined.dropna()
+            n_after = len(cleaned_combined)
+            n_dropped = n_before - n_after
+        else:
+            n_dropped = 0
+        
+        # Split the data again
+        input_clean = cleaned_combined[self.input_col]
+        targets_clean = cleaned_combined[self.target_cols]
+
+        return input_clean, targets_clean, n_dropped, n_before
 
     @property
     def catalog(self):
