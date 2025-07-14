@@ -81,7 +81,7 @@ class DataSpec(BaseModel):
         else:
             n_dropped = 0
             cleaned_combined = combined
-        
+
         # Split the data again
         input_clean = cleaned_combined[self.input_col]
         targets_clean = cleaned_combined[self.target_cols]
