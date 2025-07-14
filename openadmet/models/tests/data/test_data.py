@@ -10,7 +10,7 @@ def test_data_spec_from_csv():
         target_cols=["data1"],
         input_col="SMILES"
     )
-    target, smiles = data_spec.read()
+    target, smiles, _, _ = data_spec.read()
     assert len(target) == 30
     assert len(smiles) == 30
 
@@ -23,6 +23,6 @@ def test_data_spec_from_intake():
         target_cols=["data1"],
         input_col="SMILES",
     )
-    target, smiles = data_spec.read()
+    target, smiles, _, _ = data_spec.read()
     assert len(target) == 30
     assert len(smiles) == 30
