@@ -1,6 +1,6 @@
 from pathlib import Path
-from urllib.request import urlretrieve
 from typing import ClassVar
+from urllib.request import urlretrieve
 
 import numpy as np
 import torch
@@ -8,7 +8,6 @@ from chemprop import models, nn
 from lightning import pytorch as pl
 from loguru import logger
 from pydantic import field_validator
-from torch.nn import Identity
 
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -94,8 +93,9 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                 output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
             elif self.normalized_targets:
                 # Expects the targets to be normalized, likely to be loaded from state dict
-                output_transform = nn.UnscaleTransform([1]*self.n_tasks, [0]*self.n_tasks)
-
+                output_transform = nn.UnscaleTransform(
+                    [1] * self.n_tasks, [0] * self.n_tasks
+                )
 
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
 
@@ -111,21 +111,24 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                         f"Downloading CheMeleon Foundation model from Zenodo (https://zenodo.org/records/15460715) to {model_path}"
                     )
                     urlretrieve(
-                        r"https://zenodo.org/records/15460715/files/chemeleon_mp.pt", model_path
+                        r"https://zenodo.org/records/15460715/files/chemeleon_mp.pt",
+                        model_path,
                     )
                 else:
                     logger.info(f"Loading cached CheMeleon from {model_path}")
                 aggr = nn.MeanAggregation()
                 chemeleon_mp = torch.load(model_path, weights_only=True)
-                mp = nn.BondMessagePassing(**chemeleon_mp['hyper_parameters'])
-                mp.load_state_dict(chemeleon_mp['state_dict'])
+                mp = nn.BondMessagePassing(**chemeleon_mp["hyper_parameters"])
+                mp.load_state_dict(chemeleon_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
                     "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                 )
             else:
                 aggregation_cls = (
-                    nn.MeanAggregation if self.aggregation == "mean" else nn.NormAggregation
+                    nn.MeanAggregation
+                    if self.aggregation == "mean"
+                    else nn.NormAggregation
                 )
                 message_cls = (
                     nn.BondMessagePassing
@@ -134,7 +137,9 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                 )
 
                 # Create the model
-                mp = message_cls(d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout)
+                mp = message_cls(
+                    d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout
+                )
                 aggr = aggregation_cls()
 
             ffn = nn.RegressionFFN(
