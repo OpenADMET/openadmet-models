@@ -14,31 +14,35 @@ class ShuffleSplitter(SplitterBase):
         Split the data
         """
 
-        # First split into train and val+test
-        X_train, X_val_test, y_train, y_val_test = train_test_split(
+        # No test nor validation set requested, return the entire dataset as train
+        if self.test_size == 0 and self.val_size == 0:
+            return X, None, None, y, None, None
+
+        # Split into train+val and test
+        X_train_val, X_test, y_train_val, y_test = train_test_split(
             X,
             y,
             train_size=None,
-            test_size=int((self.test_size + self.val_size) * X.shape[0]),
+            test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
 
-        # If no validation set is requested, return train and test sets
+        # No validation set requested, return train and test sets
         if self.val_size == 0:
-            return X_train, None, X_val_test, y_train, None, y_val_test
+            return X_train_val, None, X_test, y_train_val, None, y_test
 
-        # If no test set is requested, return train and validation sets
-        elif self.test_size == 0:
-            return X_train, X_val_test, None, y_train, y_val_test, None
+        # Split train+val into train and validation sets
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train_val,
+            y_train_val,
+            train_size=None,
+            test_size=int(self.val_size * X.shape[0]),
+            random_state=self.random_state,
+        )
 
-        # If both test and validation sets are requested, split the remaining data
-        else:
-            X_val, X_test, y_val, y_test = train_test_split(
-                X_val_test,
-                y_val_test,
-                train_size=None,
-                test_size=int(self.test_size * X.shape[0]),
-                random_state=self.random_state,
-            )
+        # No test set requested, return train and validation sets
+        if self.test_size == 0:
+            return X_train, X_val, None, y_train, y_val, None
 
-            return X_train, X_val, X_test, y_train, y_val, y_test
+        # Return train, validation and test sets
+        return X_train, X_val, X_test, y_train, y_val, y_test

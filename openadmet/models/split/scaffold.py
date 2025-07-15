@@ -13,57 +13,61 @@ class ScaffoldSplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
-        # First split into train and val+test
+        # No test nor validation set requested, return the entire dataset as train
+        if self.test_size == 0 and self.val_size == 0:
+            return X, None, None, y, None, None
+
+        # Split into train+val and test
         splitter = ScaffoldSplit(
             smiles=X,
             n_jobs=-1,
             train_size=None,
-            test_size=int((self.test_size + self.val_size) * X.shape[0]),
+            test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_test_idx = next(splitter.split(X=X))
+        train_val_idx, test_idx = next(splitter.split(X=X))
 
-        # If no validation set is requested, return train and test sets
+        # No validation set requested, return train+val and test sets
         if self.val_size == 0:
             return (
-                X[train_idx],
+                X[train_val_idx],
                 None,
-                X[val_test_idx],
-                y[train_idx],
+                X[test_idx],
+                y[train_val_idx],
                 None,
-                y[val_test_idx],
+                y[test_idx],
             )
 
-        # If no test set is requested, return train and validation sets
-        elif self.test_size == 0:
-            return (
-                X[train_idx],
-                X[val_test_idx],
-                None,
-                y[train_idx],
-                y[val_test_idx],
-                None,
-            )
+        # Split train+val into train and validation sets
+        val_splitter = ScaffoldSplit(
+            smiles=X[train_val_idx],
+            n_jobs=-1,
+            train_size=None,
+            test_size=int(self.val_size * X.shape[0]),
+            random_state=self.random_state,
+        )
+        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
-        # If both test and validation sets are requested, split the remaining data
-        else:
-            val_test_splitter = ScaffoldSplit(
-                smiles=X[val_test_idx],
-                n_jobs=-1,
-                train_size=None,
-                test_size=int(self.test_size * X.shape[0]),
-                random_state=self.random_state,
-            )
-            val_idx, test_idx = next(val_test_splitter.split(X=X[val_test_idx]))
-
+        # No test set requested, return train and validation sets
+        if self.test_size == 0:
             return (
                 X[train_idx],
                 X[val_idx],
-                X[test_idx],
+                None,
                 y[train_idx],
                 y[val_idx],
-                y[test_idx],
+                None,
             )
+
+        # Return train, validation and test sets
+        return (
+            X[train_idx],
+            X[val_idx],
+            X[test_idx],
+            y[train_idx],
+            y[val_idx],
+            y[test_idx],
+        )
 
 
 @splitters.register("PerimeterSplitter")
@@ -76,56 +80,59 @@ class PerimeterSplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
+        # No test nor validation set requested, return the entire dataset as train
+        if self.test_size == 0 and self.val_size == 0:
+            return X, None, None, y, None, None
 
-        # First split into train and val+test
+        # Split into train+val and test
         splitter = PerimeterSplit(
             n_jobs=-1,
             train_size=None,
-            test_size=int((self.test_size + self.val_size) * X.shape[0]),
+            test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_test_idx = next(splitter.split(X=X))
+        train_val_idx, test_idx = next(splitter.split(X=X))
 
-        # If no validation set is requested, return train and test sets
+        # No validation set requested, return train+val and test sets
         if self.val_size == 0:
             return (
-                X[train_idx],
+                X[train_val_idx],
                 None,
-                X[val_test_idx],
-                y[train_idx],
+                X[test_idx],
+                y[train_val_idx],
                 None,
-                y[val_test_idx],
+                y[test_idx],
             )
 
-        # If no test set is requested, return train and validation sets
-        elif self.test_size == 0:
-            return (
-                X[train_idx],
-                X[val_test_idx],
-                None,
-                y[train_idx],
-                y[val_test_idx],
-                None,
-            )
+        # Split train+val into train and validation sets
+        val_splitter = PerimeterSplit(
+            n_jobs=-1,
+            train_size=None,
+            test_size=int(self.val_size * X.shape[0]),
+            random_state=self.random_state,
+        )
+        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
-        # If both test and validation sets are requested, split the remaining data
-        else:
-            val_test_splitter = PerimeterSplit(
-                n_jobs=-1,
-                train_size=None,
-                test_size=int(self.test_size * X.shape[0]),
-                random_state=self.random_state,
-            )
-            val_idx, test_idx = next(val_test_splitter.split(X=X[val_test_idx]))
-
+        # No test set requested, return train and validation sets
+        if self.test_size == 0:
             return (
                 X[train_idx],
                 X[val_idx],
-                X[test_idx],
+                None,
                 y[train_idx],
                 y[val_idx],
-                y[test_idx],
+                None,
             )
+
+        # Return train, validation and test sets
+        return (
+            X[train_idx],
+            X[val_idx],
+            X[test_idx],
+            y[train_idx],
+            y[val_idx],
+            y[test_idx],
+        )
 
 
 @splitters.register("MaxDissimilaritySplitter")
@@ -138,53 +145,56 @@ class MaxDissimilaritySplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
+        # No test nor validation set requested, return the entire dataset as train
+        if self.test_size == 0 and self.val_size == 0:
+            return X, None, None, y, None, None
 
-        # First split into train and val+test
+        # Split into train+val and test
         splitter = MaxDissimilaritySplit(
             n_jobs=-1,
             train_size=None,
-            test_size=int((self.test_size + self.val_size) * X.shape[0]),
+            test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_test_idx = next(splitter.split(X=X))
+        train_val_idx, test_idx = next(splitter.split(X=X))
 
-        # If no validation set is requested, return train and test sets
+        # No validation set requested, return train+val and test sets
         if self.val_size == 0:
             return (
-                X[train_idx],
+                X[train_val_idx],
                 None,
-                X[val_test_idx],
-                y[train_idx],
+                X[test_idx],
+                y[train_val_idx],
                 None,
-                y[val_test_idx],
+                y[test_idx],
             )
 
-        # If no test set is requested, return train and validation sets
-        elif self.test_size == 0:
-            return (
-                X[train_idx],
-                X[val_test_idx],
-                None,
-                y[train_idx],
-                y[val_test_idx],
-                None,
-            )
+        # Split train+val into train and validation sets
+        val_splitter = MaxDissimilaritySplit(
+            n_jobs=-1,
+            train_size=None,
+            test_size=int(self.val_size * X.shape[0]),
+            random_state=self.random_state,
+        )
+        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
-        # If both test and validation sets are requested, split the remaining data
-        else:
-            val_test_splitter = MaxDissimilaritySplit(
-                n_jobs=-1,
-                train_size=None,
-                test_size=int(self.test_size * X.shape[0]),
-                random_state=self.random_state,
-            )
-            val_idx, test_idx = next(val_test_splitter.split(X=X[val_test_idx]))
-
+        # No test set requested, return train and validation sets
+        if self.test_size == 0:
             return (
                 X[train_idx],
                 X[val_idx],
-                X[test_idx],
+                None,
                 y[train_idx],
                 y[val_idx],
-                y[test_idx],
+                None,
             )
+
+        # Return train, validation and test sets
+        return (
+            X[train_idx],
+            X[val_idx],
+            X[test_idx],
+            y[train_idx],
+            y[val_idx],
+            y[test_idx],
+        )
