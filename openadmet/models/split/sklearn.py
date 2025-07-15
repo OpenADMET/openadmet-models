@@ -14,9 +14,17 @@ class ShuffleSplitter(SplitterBase):
         Split the data
         """
 
-        # No test nor validation set requested, return the entire dataset as train
-        if self.test_size == 0 and self.val_size == 0:
-            return X, None, None, y, None, None
+        # No test set requested
+        if self.test_size == 0:
+            # Split into train and val
+            X_train, X_val, y_train, y_val = train_test_split(
+                X,
+                y,
+                train_size=None,
+                test_size=int(self.val_size * X.shape[0]),
+                random_state=self.random_state,
+            )
+            return X_train, X_val, None, y_train, y_val, None
 
         # Split into train+val and test
         X_train_val, X_test, y_train_val, y_test = train_test_split(
@@ -27,11 +35,11 @@ class ShuffleSplitter(SplitterBase):
             random_state=self.random_state,
         )
 
-        # No validation set requested, return train and test sets
+        # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
             return X_train_val, None, X_test, y_train_val, None, y_test
 
-        # Split train+val into train and validation sets
+        # Split train+val into train and val sets
         X_train, X_val, y_train, y_val = train_test_split(
             X_train_val,
             y_train_val,
@@ -40,9 +48,5 @@ class ShuffleSplitter(SplitterBase):
             random_state=self.random_state,
         )
 
-        # No test set requested, return train and validation sets
-        if self.test_size == 0:
-            return X_train, X_val, None, y_train, y_val, None
-
-        # Return train, validation and test sets
+        # Return train, val and test sets
         return X_train, X_val, X_test, y_train, y_val, y_test
