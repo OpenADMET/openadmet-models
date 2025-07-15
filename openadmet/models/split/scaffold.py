@@ -1,3 +1,4 @@
+from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 
 from openadmet.models.split.split_base import SplitterBase, splitters
@@ -39,33 +40,32 @@ class ScaffoldSplitter(SplitterBase):
             )
 
         # Split train+val into train and validation sets
-        val_splitter = ScaffoldSplit(
-            smiles=X[train_val_idx],
-            n_jobs=-1,
+        X_train, X_val, y_train, y_val = train_test_split(
+            X[train_val_idx],
+            y[train_val_idx],
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
         # No test set requested, return train and validation sets
         if self.test_size == 0:
             return (
-                X[train_idx],
-                X[val_idx],
+                X_train,
+                X_val,
                 None,
-                y[train_idx],
-                y[val_idx],
+                y_train,
+                y_val,
                 None,
             )
 
         # Return train, validation and test sets
         return (
-            X[train_idx],
-            X[val_idx],
+            X_train,
+            X_val,
             X[test_idx],
-            y[train_idx],
-            y[val_idx],
+            y_train,
+            y_val,
             y[test_idx],
         )
 
@@ -104,33 +104,33 @@ class PerimeterSplitter(SplitterBase):
                 y[test_idx],
             )
 
-        # Split train+val into train and validation sets
-        val_splitter = PerimeterSplit(
-            n_jobs=-1,
+        # Split train+val into train and validation sets using sklearn
+        X_train, X_val, y_train, y_val = train_test_split(
+            X[train_val_idx],
+            y[train_val_idx],
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
         # No test set requested, return train and validation sets
         if self.test_size == 0:
             return (
-                X[train_idx],
-                X[val_idx],
+                X_train,
+                X_val,
                 None,
-                y[train_idx],
-                y[val_idx],
+                y_train,
+                y_val,
                 None,
             )
 
         # Return train, validation and test sets
         return (
-            X[train_idx],
-            X[val_idx],
+            X_train,
+            X_val,
             X[test_idx],
-            y[train_idx],
-            y[val_idx],
+            y_train,
+            y_val,
             y[test_idx],
         )
 
@@ -169,32 +169,32 @@ class MaxDissimilaritySplitter(SplitterBase):
                 y[test_idx],
             )
 
-        # Split train+val into train and validation sets
-        val_splitter = MaxDissimilaritySplit(
-            n_jobs=-1,
+        # Split train+val into train and validation sets using sklearn
+        X_train, X_val, y_train, y_val = train_test_split(
+            X[train_val_idx],
+            y[train_val_idx],
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
         )
-        train_idx, val_idx = next(val_splitter.split(X=X[train_val_idx]))
 
         # No test set requested, return train and validation sets
         if self.test_size == 0:
             return (
-                X[train_idx],
-                X[val_idx],
+                X_train,
+                X_val,
                 None,
-                y[train_idx],
-                y[val_idx],
+                y_train,
+                y_val,
                 None,
             )
 
         # Return train, validation and test sets
         return (
-            X[train_idx],
-            X[val_idx],
+            X_train,
+            X_val,
             X[test_idx],
-            y[train_idx],
-            y[val_idx],
+            y_train,
+            y_val,
             y[test_idx],
         )
