@@ -1,11 +1,14 @@
-from pathlib import Path #it is used in the main therefore i do not remove it
+from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 
+import torch
+import torch.nn as nn
 from lightning import pytorch as pl
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, TQDMProgressBar
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from loguru import logger
 from pydantic import model_validator
+from torch_geometric.data import Batch
 
 from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 
@@ -27,6 +30,13 @@ class LightningTrainer(TrainerBase):
     early_stopping_mode: str = "min"
     early_stopping_min_delta: float = 0.001
     monitor_metric: str = "val_loss"
+    gradient_clip_val: float = 0.0
+    precision: int = 32
+    accumulate_grad_batches: int = 1
+    deterministic: bool = False
+    fast_dev_run: bool = False
+    limit_train_batches: float = 1.0
+    limit_val_batches: float = 1.0
 
     wandb_logger: Any = None
     _logger: Any
@@ -73,10 +83,11 @@ class LightningTrainer(TrainerBase):
             save_top_k=1,  # Keep the top 1 checkpoints
         )
 
-        if self.early_stopping:
-            # Import EarlyStopping callback if early stopping is enabled
+        # Append the checkpointing callback to the callbacks list
+        self._callbacks.append(checkpointing)
 
-            # Configure early stopping callback
+        # Configure early stopping callback
+        if self.early_stopping:
             early_stopping_callback = EarlyStopping(
                 min_delta=self.early_stopping_min_delta,  # Minimum change in the monitored quantity to qualify as an improvement
                 monitor=self.monitor_metric,  # Monitor validation loss for early stopping
@@ -84,9 +95,6 @@ class LightningTrainer(TrainerBase):
                 mode=self.early_stopping_mode,  # Stop when validation loss stops decreasing
             )
             self._callbacks.append(early_stopping_callback)
-
-        # Append the checkpointing callback to the callbacks list
-        self._callbacks.append(checkpointing)
 
         # Append wandb longer if requested
         if self.use_wandb:
@@ -105,7 +113,14 @@ class LightningTrainer(TrainerBase):
             accelerator=self.accelerator,
             devices=self.devices,  # Use GPU if available
             max_epochs=self.max_epochs,  # number of epochs to train for
-            callbacks=[checkpointing],  # Use the configured checkpoint callback
+            callbacks=self._callbacks,
+            gradient_clip_val=self.gradient_clip_val,
+            precision=self.precision,
+            accumulate_grad_batches=self.accumulate_grad_batches,
+            deterministic=self.deterministic,
+            fast_dev_run=self.fast_dev_run,
+            limit_train_batches=self.limit_train_batches,
+            limit_val_batches=self.limit_val_batches,
         )
 
     def train(self, train_dataloader, val_dataloader):
@@ -121,9 +136,7 @@ class LightningTrainer(TrainerBase):
 
         return self.model
 
-import torch
-import torch.nn as nn
-from torch_geometric.data import Batch
+
 @trainers.register("GATv2LightningTrainer")
 class GATv2LightningTrainer(LightningTrainer):
     """
@@ -147,7 +160,9 @@ class GATv2LightningTrainer(LightningTrainer):
 
         # The model passed in should be a GATv2ModelWrapper instance
         if not isinstance(self.model.estimator, GATv2Model):
-            raise TypeError(f"GATv2LightningTrainer can only train GATv2Model, but got {type(self.model.estimator)}")
+            raise TypeError(
+                f"GATv2LightningTrainer can only train GATv2Model, but got {type(self.model.estimator)}"
+            )
 
         # Prepare model config from the model wrapper
         model_config = {
@@ -178,11 +193,12 @@ class GATv2LightningTrainer(LightningTrainer):
 
         # Create the Lightning wrapper
         lightning_wrapper = GATv2LightningWrapper(
-            model_config=model_config,
-            **training_config
+            model_config=model_config, **training_config
         )
 
-        logger.debug(f"Training GATv2 model with Lightning wrapper: {lightning_wrapper}")
+        logger.debug(
+            f"Training GATv2 model with Lightning wrapper: {lightning_wrapper}"
+        )
 
         # Fit the model
         self._trainer.fit(lightning_wrapper, train_dataloader, val_dataloader)
@@ -197,6 +213,7 @@ class GATv2LightningWrapper(pl.LightningModule):
     """
     Lightning wrapper for GAT model
     """
+
     def __init__(
         self,
         model_config: dict,
@@ -206,18 +223,22 @@ class GATv2LightningWrapper(pl.LightningModule):
         scheduler_name: str = "cosine",
         warmup_epochs: int = 10,
         scheduler_factor: float = 0.5,
-        scheduler_patience: int = 10
+        scheduler_patience: int = 10,
     ):
         super().__init__()
-        self.save_hyperparameters(ignore=['loss_fn_name'])
+        self.save_hyperparameters(ignore=["loss_fn_name"])
 
         self.loss_functions = {
-            "mse": nn.MSELoss(), "mae": nn.L1Loss(), "huber": nn.HuberLoss(),
-            "bce": nn.BCEWithLogitsLoss(), "cross_entropy": nn.CrossEntropyLoss()
+            "mse": nn.MSELoss(),
+            "mae": nn.L1Loss(),
+            "huber": nn.HuberLoss(),
+            "bce": nn.BCEWithLogitsLoss(),
+            "cross_entropy": nn.CrossEntropyLoss(),
         }
 
         # Import GATv2Model here to avoid circular imports
         from openadmet.models.architecture.gat import GATv2Model
+
         self.model = GATv2Model(**model_config)
         self.loss_fn = self._get_loss_function(loss_fn_name)
         self.lr = lr
@@ -229,7 +250,9 @@ class GATv2LightningWrapper(pl.LightningModule):
 
     def _get_loss_function(self, name: str):
         if name.lower() not in self.loss_functions:
-            raise ValueError(f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}")
+            raise ValueError(
+                f"Unsupported loss function: {name}. Supported: {list(self.loss_functions.keys())}"
+            )
         return self.loss_functions[name.lower()]
 
     def forward(self, data: Batch):
@@ -249,7 +272,14 @@ class GATv2LightningWrapper(pl.LightningModule):
 
         loss = self.loss_fn(pred, target)
 
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
+        self.log(
+            "train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
 
         return loss
 
@@ -266,7 +296,14 @@ class GATv2LightningWrapper(pl.LightningModule):
 
         loss = self.loss_fn(pred, target)
 
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, batch_size=batch.num_graphs)
+        self.log(
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
 
         return loss
 
@@ -279,19 +316,23 @@ class GATv2LightningWrapper(pl.LightningModule):
     def configure_optimizers(self):
         """Configure optimizers and learning rate schedulers"""
         optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.lr,
-            weight_decay=self.weight_decay
+            self.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
 
+        # Cosine scheduler
         if self.scheduler_name == "cosine":
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer, T_max=self.trainer.max_epochs if self.trainer else 100
             )
             return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+
+        # Reduce on plateau scheduler
         elif self.scheduler_name == "reduce_on_plateau":
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode='min', factor=self.scheduler_factor, patience=self.scheduler_patience
+                optimizer,
+                mode="min",
+                factor=self.scheduler_factor,
+                patience=self.scheduler_patience,
             )
             return {
                 "optimizer": optimizer,
@@ -299,11 +340,13 @@ class GATv2LightningWrapper(pl.LightningModule):
                     "scheduler": scheduler,
                     "monitor": "val_loss",
                     "interval": "epoch",
-                    "frequency": 1
-                }
+                    "frequency": 1,
+                },
             }
         elif self.scheduler_name == "none":
             return optimizer
         else:
-            logger.warning(f"Unsupported scheduler: {self.scheduler_name}, using AdamW without LR scheduler.")
+            logger.warning(
+                f"Unsupported scheduler: {self.scheduler_name}, using AdamW without LR scheduler."
+            )
             return optimizer
