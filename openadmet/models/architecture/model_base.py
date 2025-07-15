@@ -4,9 +4,10 @@ from os import PathLike
 from typing import Any, ClassVar
 
 import joblib
+import pytorch_lightning as pl
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 models = ClassRegistry(unique=True)
 
@@ -137,8 +138,32 @@ class PickleableModelBase(ModelBase):
         self.save(serial_path)
 
 
-class TorchModelBase(ModelBase):
+class TorchModelBase(ModelBase, pl.LightningModule):
     _model_save_name: ClassVar[str] = "model.pth"
+
+    # Optimizer and scheduler configuration
+    optimizer: str = "adamw"
+    optimizer_lr: float = 1e-3
+    optimizer_weight_decay: float = 1e-5
+    scheduler: str = "cosine"
+    scheduler_factor: float = 0.5
+    scheduler_patience: int = 10
+
+    @field_validator("optimizer")
+    @classmethod
+    def validate_optimizer(cls, value):
+        allowed = {"adamw", "adam", "sgd"}
+        if value.lower() not in allowed:
+            raise ValueError(f"Optimizer must be one of {allowed}")
+        return value
+
+    @field_validator("scheduler")
+    @classmethod
+    def validate_scheduler(cls, value):
+        allowed = {"cosine", "reduce_on_plateau", "none", None}
+        if (value.lower() not in allowed) and (value is not None):
+            raise ValueError(f"Scheduler must be one of {allowed}")
+        return value
 
     def save(self, path: PathLike):
         torch.save(self.estimator.state_dict(), path)
@@ -163,3 +188,58 @@ class TorchModelBase(ModelBase):
         instance.build()
         instance.load(serial_path)
         return instance
+
+    def configure_optimizer(self):
+        """
+        Returns optimizer and scheduler configuration for Lightning's configure_optimizers.
+        """
+        # Select optimizer
+        if self.optimizer.lower() == "adamw":
+            optimizer = torch.optim.AdamW(
+                self.estimator.parameters(),
+                lr=self.optimizer_lr,
+                weight_decay=self.optimizer_weight_decay,
+            )
+        elif self.optimizer.lower() == "adam":
+            optimizer = torch.optim.Adam(
+                self.estimator.parameters(),
+                lr=self.optimizer_lr,
+                weight_decay=self.optimizer_weight_decay,
+            )
+        elif self.optimizer.lower() == "sgd":
+            optimizer = torch.optim.SGD(
+                self.estimator.parameters(),
+                lr=self.optimizer_lr,
+                weight_decay=self.optimizer_weight_decay,
+            )
+
+        # Cosine scheduler
+        if self.scheduler.lower() == "cosine":
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=10,  # T_max could be exposed as a parameter
+            )
+            scheduler_config = {"scheduler": scheduler, "interval": "epoch"}
+
+        # Reduce on plateau scheduler
+        elif self.scheduler.lower() == "reduce_on_plateau":
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                factor=self.scheduler_factor,
+                patience=self.scheduler_patience,
+            )
+            scheduler_config = {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+                "interval": "epoch",
+                "frequency": 1,
+            }
+
+        # No scheduler
+        elif (self.scheduler is None) or (self.scheduler.lower() == "none"):
+            scheduler_config = None
+
+        if scheduler_config:
+            return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
+        else:
+            return optimizer
