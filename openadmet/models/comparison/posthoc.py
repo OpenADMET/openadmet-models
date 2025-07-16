@@ -64,7 +64,7 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self, model_stats_fns, model_tags, task_tags=['task_0'], report=False, output_dir=None):
+    def compare(self, model_stats_fns, model_tags, task_names=['task_0'], report=False, output_dir=None):
         """
         Perform post-hoc statistical comparison of model performance metrics.
 
@@ -78,7 +78,7 @@ class PostHocComparison(ComparisonBase):
             List of file paths to JSON files containing cross-validation metrics for each model.
         model_tags : list of str
             List of model names or tags corresponding to each file in `model_stats_fns`.
-        task_tags : list of str, optional
+        task_names : list of str, optional
             List of task names from multi-task models.  List should be the same
                 length as model tags, this assumes that we take one task for comparison from
                 each cross_validation_metrics.json  Default is ['task_0'].
@@ -93,7 +93,7 @@ class PostHocComparison(ComparisonBase):
             List of DataFrames containing the results of Levene's test and Tukey's HSD test.
 
         """
-        df = self.json_to_df(model_stats_fns, model_tags, task_tags)
+        df = self.json_to_df(model_stats_fns, model_tags, task_names)
 
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -118,7 +118,7 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def json_to_df(self, model_stats_fns, model_tags, task_tags):
+    def json_to_df(self, model_stats_fns, model_tags, task_names):
         """
         Convert model statistics from cross-validation JSON files into a DataFrame.
 
@@ -135,7 +135,7 @@ class PostHocComparison(ComparisonBase):
             DataFrame containing the extracted statistics for each model.
         """
         df = pd.DataFrame()
-        for model, tag, task in zip(model_stats_fns, model_tags, task_tags):
+        for model, tag, task in zip(model_stats_fns, model_tags, task_names):
             with open(model) as f:
                 data = json.load(f)
             method_data = pd.DataFrame()
