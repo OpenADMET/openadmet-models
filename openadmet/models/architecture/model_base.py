@@ -148,10 +148,22 @@ class TorchModelBase(ModelBase, pl.LightningModule):
     scheduler: str = "cosine"
     scheduler_factor: float = 0.5
     scheduler_patience: int = 10
+    monitor_metric: str = "val_loss"
 
     # This must be set for Pydantic to be happy
     # Not certain of reason for this
     training: bool = True
+
+    @field_validator("monitor_metric")
+    @classmethod
+    def check_monitor_metric(cls, value):
+        """
+        Check if the monitor metric is valid
+        """
+        allowed = ["val_loss", "train_loss"]
+        if value.lower() not in allowed:
+            raise ValueError(f"Monitored metric must be one of {allowed}")
+        return value
 
     @field_validator("optimizer")
     @classmethod
@@ -197,19 +209,23 @@ class TorchModelBase(ModelBase, pl.LightningModule):
         """
         Returns optimizer and scheduler configuration for Lightning's configure_optimizers.
         """
-        # Select optimizer
+        # Adamw optimizer
         if self.optimizer.lower() == "adamw":
             optimizer = torch.optim.AdamW(
                 self.estimator.parameters(),
                 lr=self.optimizer_lr,
                 weight_decay=self.optimizer_weight_decay,
             )
+
+        # Adam optimizer
         elif self.optimizer.lower() == "adam":
             optimizer = torch.optim.Adam(
                 self.estimator.parameters(),
                 lr=self.optimizer_lr,
                 weight_decay=self.optimizer_weight_decay,
             )
+
+        # SGD optimizer
         elif self.optimizer.lower() == "sgd":
             optimizer = torch.optim.SGD(
                 self.estimator.parameters(),
@@ -223,7 +239,13 @@ class TorchModelBase(ModelBase, pl.LightningModule):
                 optimizer,
                 T_max=10,  # T_max could be exposed as a parameter
             )
-            scheduler_config = {"scheduler": scheduler, "interval": "epoch"}
+
+            scheduler_config = {
+                "scheduler": scheduler,
+                "monitor": self.monitor_metric,
+                "interval": "epoch",
+                "frequency": 1,
+            }
 
         # Reduce on plateau scheduler
         elif self.scheduler.lower() == "reduce_on_plateau":
@@ -232,9 +254,10 @@ class TorchModelBase(ModelBase, pl.LightningModule):
                 factor=self.scheduler_factor,
                 patience=self.scheduler_patience,
             )
+
             scheduler_config = {
                 "scheduler": scheduler,
-                "monitor": "val_loss",
+                "monitor": self.monitor_metric,
                 "interval": "epoch",
                 "frequency": 1,
             }
@@ -243,6 +266,7 @@ class TorchModelBase(ModelBase, pl.LightningModule):
         elif (self.scheduler is None) or (self.scheduler.lower() == "none"):
             scheduler_config = None
 
+        # Return optimizer and scheduler configuration
         if scheduler_config:
             return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
         else:
