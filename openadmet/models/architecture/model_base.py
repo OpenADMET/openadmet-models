@@ -4,9 +4,9 @@ from os import PathLike
 from typing import Any, ClassVar
 
 import joblib
-import lightning as pl
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
+from lightning import pytorch as pl
 from pydantic import BaseModel, field_validator
 
 models = ClassRegistry(unique=True)
