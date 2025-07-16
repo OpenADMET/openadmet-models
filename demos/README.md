@@ -27,7 +27,7 @@ Now that you've curated and filtered a dataset, learn how to use Anvil to train 
 Being able to add new models to our Anvil workflow is a key part in being able to expand and scale this architecture. Here, we walkthrough how to correctly add a new model type to Anvil.  
 
 ### 2.3 Active Learning
-We use active learning to help guide selection of experiments to produce (ideally) high quality, informative data that will in turn be used to update a model's training data, thereby iteratively improving the model in successive training.  
+**TBA** We use active learning to help guide selection of experiments to produce (ideally) high quality, informative data that will in turn be used to update a model's training data, thereby iteratively improving the model in successive training.  
 
 ### 3.1. Comparing models
 Now that you've trained several different models, you can compare their performances across several different metrics to evaluate which model works best for your use case. You can even generate a final comparative report for easy readability.
