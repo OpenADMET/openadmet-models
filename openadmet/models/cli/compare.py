@@ -19,7 +19,7 @@ from openadmet.models.comparison.posthoc import PostHocComparison
 @click.option(
     "--task-name",
     help="Task names as they appear in the model stats JSON",
-    default="task_0",
+    required=True,
     multiple=True,
 )
 @click.option(
