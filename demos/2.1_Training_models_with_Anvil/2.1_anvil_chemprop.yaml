@@ -40,7 +40,7 @@ procedure:
     type: ChemPropFeaturizer
     # No parameters passed
     params: {}
-  
+
   # Model specification
   model:
     # Indicate model type
@@ -68,7 +68,7 @@ procedure:
       train_size: 0.7
       val_size: 0.2 # For LGBM, set to 0
       test_size: 0.1
-    
+
   # Specify training configuration
   train:
     # Specify the trainer, here LightningTrainer as ChemProp is a PyTorch Lightning model

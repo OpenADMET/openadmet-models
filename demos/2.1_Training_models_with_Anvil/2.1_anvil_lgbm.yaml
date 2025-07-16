@@ -45,7 +45,7 @@ procedure:
           descr_type: "desc2d"
         FingerprintFeaturizer:
           fp_type: "ecfp:4"
-  
+
   # Model specification
   model:
     # Indicate model type
@@ -67,7 +67,7 @@ procedure:
       train_size: 0.7
       val_size: 0.0 # For LGBM, no validation set is needed
       test_size: 0.3
-    
+
   # Specify training configuration
   train:
     # Specify the trainer, here LightningTrainer as ChemProp is a PyTorch Lightning model
