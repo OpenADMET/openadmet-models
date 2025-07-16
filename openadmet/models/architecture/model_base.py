@@ -4,7 +4,7 @@ from os import PathLike
 from typing import Any, ClassVar
 
 import joblib
-import pytorch_lightning as pl
+import lightning as pl
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel, field_validator
@@ -148,6 +148,10 @@ class TorchModelBase(ModelBase, pl.LightningModule):
     scheduler: str = "cosine"
     scheduler_factor: float = 0.5
     scheduler_patience: int = 10
+
+    # This must be set for Pydantic to be happy
+    # Not certain of reason for this
+    training: bool = True
 
     @field_validator("optimizer")
     @classmethod
