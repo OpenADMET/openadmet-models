@@ -15,7 +15,7 @@ metadata:
   driver: pytorch
   email: cynthia.xu@omsf.io
   name: chemprop_pchembl
-  tag: openadmet-PXR-chembl
+  tag: chemprop-PXR-chembl
   tags:
   - openadmet
   - test

@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.ckpt
 *.wandb
+*.sbatch
+*.out
 
 # C extensions
 *.so
