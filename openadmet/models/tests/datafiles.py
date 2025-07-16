@@ -36,9 +36,10 @@ acetylcholinesterase_anvil_chemprop_yaml = (_data_ref / "acetylcholinesterase_an
 
 
 # posthoc anvil outputs for testing
-descr_json = _data_ref / "cross_validation_metrics_descr.json"
-fp_json = _data_ref / "cross_validation_metrics_fp.json"
-combined_json = _data_ref / "cross_validation_metrics_combined.json"
+cyp2c9_json = (_data_ref / "cross_validation_metrics_2c9.json").as_posix()
+cyp3a4_json = (_data_ref / "cross_validation_metrics_3a4.json").as_posix()
+cyp1a2_json = (_data_ref / "cross_validation_metrics_1a2.json").as_posix()
+multi_task_json = _data_ref / "cross_validation_metrics_multitask.json"
 
 # ligand pose for reading and featurizing in MTENN
 ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()

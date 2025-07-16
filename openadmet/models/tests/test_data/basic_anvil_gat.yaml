@@ -1,0 +1,65 @@
+metadata:
+  version: "v1"
+  driver: "pytorch"
+  name: "gat-cyp3a4-regression"
+  build_number: 1
+  description: "A GAT model for CYP3A4 pChEMBL value regression"
+  tag: "gat-v2-regression"
+  authors: "Yuzhi Xu"
+  email: "yuzhixuchem@gmail.com"
+  biotargets: ["CYP3A4"]
+  tags: ["GAT", "CYP3A4", "regression"]
+
+data:
+  type: "intake"
+  resource: openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv
+  input_col: CANONICAL_SMILES
+  target_cols:
+    - pChEMBL mean
+
+procedure:
+  split:
+    type: "ShuffleSplitter"
+    params:
+      train_size: 0.8
+      val_size: 0.1
+      test_size: 0.1
+      shuffle: True
+
+  feat:
+    type: "GATGraphFeaturizer"
+    params: {}
+
+  model:
+    type: GATv2ModelWrapper
+    params:
+      input_dim: 8
+      edge_dim: 4
+      hidden_dim: 64
+      num_layers: 4
+      num_heads: 8
+      gat_dropout: 0.1
+      pooling: "mean"
+      output_dim: 1
+
+  train:
+    type: "GATv2LightningTrainer"
+    params:
+      max_epochs: 3
+      accelerator: "cpu"
+      devices: 1
+      use_wandb: False
+      early_stopping: True
+      early_stopping_patience: 5
+      loss_function: "mse"
+      scheduler: "reduce_on_plateau"
+      scheduler_factor: 0.3
+      scheduler_patience: 15
+
+report:
+  eval:
+    - type: RegressionMetrics
+      params:
+        bootstrap_confidence_level: 0.95
+    - type: RegressionPlots
+      params: {}

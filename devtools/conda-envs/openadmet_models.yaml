@@ -37,6 +37,8 @@ dependencies:
   - wandb
   - statsmodels
   - mdanalysis
+  - tabulate
+  - pingouin
 
   # mtenn
   - pytorch_geometric
