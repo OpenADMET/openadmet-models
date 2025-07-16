@@ -6,7 +6,7 @@ description: basic regression using a LightGBM model
 driver: sklearn
 email: cynthia.xu@omsf.io
 name: lgbm_pchembl
-tag: openadmet-PXR-chembl
+tag: lgbm-PXR-chembl
 tags:
 - openadmet
 - test

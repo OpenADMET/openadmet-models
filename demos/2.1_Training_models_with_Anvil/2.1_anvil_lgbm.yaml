@@ -95,5 +95,8 @@ report:
       - Predicted pAC50
       max_val: 10
       min_val: 3
+      n_repeats: 2
+      n_splits: 5
+      random_state: 42
       pXC50: true
       title: Multitask True vs Predicted pAC50 on test set
