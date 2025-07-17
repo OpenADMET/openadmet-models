@@ -252,6 +252,16 @@ class LightningModuleBase(pl.LightningModule):
         else:
             return optimizer
 
+    # TODO: Implement defaults of the following?
+    # def training_step():
+    #     pass
+
+    # def validation_step():
+    #     pass
+
+    # def predict_step():
+    #     pass
+
 
 class LightningModelBase(ModelBase):
     _model_save_name: ClassVar[str] = "model.pth"
