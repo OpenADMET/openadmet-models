@@ -22,6 +22,15 @@ from openadmet.models.architecture.model_base import models as model_registry
 
 _POOLING = {"mean": global_mean_pool, "max": global_max_pool, "add": global_add_pool}
 
+# TODO: unify with the one in chemprop.py
+_METRIC_TO_LOSS = {
+    "mse": nn.MSELoss(),
+    "mae": nn.L1Loss(),
+    "huber": nn.HuberLoss(),
+    "bce": nn.BCEWithLogitsLoss(),
+    "cross_entropy": nn.CrossEntropyLoss(),
+}
+
 
 class GATv2Module(LightningModuleBase):
     """
@@ -195,7 +204,7 @@ class GATv2Module(LightningModuleBase):
         if target.ndim > 1 and target.shape[1] == 1:
             target = target.squeeze(-1)
 
-        loss = self.loss_function(pred, target)
+        loss = _METRIC_TO_LOSS[self.loss_function](pred, target)
 
         self.log(
             "train_loss",
@@ -219,7 +228,7 @@ class GATv2Module(LightningModuleBase):
         if target.ndim > 1 and target.shape[1] == 1:
             target = target.squeeze(-1)
 
-        loss = self.loss_function(pred, target)
+        loss = _METRIC_TO_LOSS[self.loss_function](pred, target)
 
         self.log(
             "val_loss",
