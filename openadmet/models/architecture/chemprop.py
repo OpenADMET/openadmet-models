@@ -27,7 +27,7 @@ class ChemPropModel(LightningModelBase):
 
     type: ClassVar[str] = "ChemPropModel"
     batch_norm: bool = False
-    monitor_metric = "val_loss"
+    monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
     from_chemeleon: bool = False
