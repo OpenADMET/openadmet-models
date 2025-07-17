@@ -9,7 +9,7 @@ from lightning import pytorch as pl
 from loguru import logger
 from pydantic import field_validator
 
-from openadmet.models.architecture.model_base import TorchModelBase
+from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
 _METRIC_TO_LOSS = {
@@ -19,14 +19,15 @@ _METRIC_TO_LOSS = {
 }
 
 
-@model_registry.register("ChemPropMultiRegressorModel")
-class ChemPropMultiRegressorModel(TorchModelBase):
+@model_registry.register("ChemPropModel")
+class ChemPropModel(LightningModelBase):
     """
     ChemProp regression model
     """
 
-    type: ClassVar[str] = "ChemPropMultiRegressorModel"
+    type: ClassVar[str] = "ChemPropModel"
     batch_norm: bool = False
+    monitor_metric = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
     mod_params: dict = {}
     from_chemeleon: bool = False
@@ -70,7 +71,7 @@ class ChemPropMultiRegressorModel(TorchModelBase):
         instance.build()
         return instance
 
-    def make_new(self) -> "ChemPropMultiRegressorModel":
+    def make_new(self) -> "ChemPropModel":
         """
         Copy parameters to a new model instance without copying the estimator
         """
@@ -150,10 +151,9 @@ class ChemPropMultiRegressorModel(TorchModelBase):
                 output_transform=output_transform,
                 dropout=self.dropout,
             )
+
             # Create the MPNN model
-
             mpnn = models.MPNN(mp, aggr, ffn, self.batch_norm, metric_list)
-
             self.estimator = mpnn
 
         else:

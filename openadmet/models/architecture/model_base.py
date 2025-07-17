@@ -138,8 +138,12 @@ class PickleableModelBase(ModelBase):
         self.save(serial_path)
 
 
-class TorchModelBase(ModelBase, pl.LightningModule):
-    _model_save_name: ClassVar[str] = "model.pth"
+class LightningModuleBase(pl.LightningModule):
+    """
+    A PyTorch lightning model may inherit this instead of pl.LightningModule
+    to preconfigure optimizer and scheduler.
+
+    """
 
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
@@ -180,30 +184,6 @@ class TorchModelBase(ModelBase, pl.LightningModule):
         if (value.lower() not in allowed) and (value is not None):
             raise ValueError(f"Scheduler must be one of {allowed}")
         return value
-
-    def save(self, path: PathLike):
-        torch.save(self.estimator.state_dict(), path)
-
-    def load(self, path: PathLike):
-        self.estimator.load_state_dict(torch.load(path))
-
-    def serialize(
-        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
-    ):
-        with open(param_path, "w") as f:
-            f.write(self.model_dump_json(indent=2))
-        self.save(serial_path)
-
-    @classmethod
-    def deserialize(
-        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
-    ):
-        with open(param_path) as f:
-            mod_params = json.load(f)
-        instance = cls(**mod_params)
-        instance.build()
-        instance.load(serial_path)
-        return instance
 
     def configure_optimizer(self):
         """
@@ -271,3 +251,31 @@ class TorchModelBase(ModelBase, pl.LightningModule):
             return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
         else:
             return optimizer
+
+
+class LightningModelBase(ModelBase):
+    _model_save_name: ClassVar[str] = "model.pth"
+
+    def save(self, path: PathLike):
+        torch.save(self.estimator.state_dict(), path)
+
+    def load(self, path: PathLike):
+        self.estimator.load_state_dict(torch.load(path))
+
+    def serialize(
+        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
+    ):
+        with open(param_path, "w") as f:
+            f.write(self.model_dump_json(indent=2))
+        self.save(serial_path)
+
+    @classmethod
+    def deserialize(
+        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
+    ):
+        with open(param_path) as f:
+            mod_params = json.load(f)
+        instance = cls(**mod_params)
+        instance.build()
+        instance.load(serial_path)
+        return instance

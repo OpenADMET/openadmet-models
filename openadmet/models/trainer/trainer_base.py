@@ -32,6 +32,13 @@ class TrainerBase(BaseModel, ABC):
         self._model = model
 
     @abstractmethod
+    def build():
+        """
+        Build trainer, to be implemented by subclasses
+        """
+        pass
+
+    @abstractmethod
     def train(self, X: Any, y: Any):
         """
         Train the model, abstract method to be implemented by subclasses
