@@ -204,7 +204,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                                   bootstrap_confidence_level=self.confidence_level,
                                   evaluated=self._evaluated,
                                   cv=True)
-    
+
     def get_stat_dict(self, t_label):
         return _make_stat_dict(data=self.data,
                                task_name=t_label,
@@ -507,7 +507,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                                   bootstrap_confidence_level=self.confidence_level,
                                   evaluated=self._evaluated,
                                   cv=True)
-    
+
     def get_stat_dict(self, t_label):
         return _make_stat_dict(data=self.data,
                                task_name=t_label,

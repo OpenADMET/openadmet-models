@@ -1,5 +1,3 @@
-
-
 def _make_stat_caption(
         data:dict,
         task_name:str,

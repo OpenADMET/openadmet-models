@@ -160,7 +160,7 @@ class RegressionMetrics(EvalBase):
             artifact.add_file(json_path)
             # Log the artifact
             wandb.log_artifact(artifact)
-    
+
     def get_stat_caption(self, t_label):
         return _make_stat_caption(data=self.data,
                                   task_name=t_label,
@@ -169,7 +169,7 @@ class RegressionMetrics(EvalBase):
                                   bootstrap_confidence_level=self.bootstrap_confidence_level,
                                   evaluated=self._evaluated,
                                   cv=False)
-    
+
     def get_stat_dict(self, t_label):
         return _make_stat_dict(data=self.data,
                                task_name=t_label,
