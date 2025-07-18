@@ -11,6 +11,7 @@ from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans
+from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 # create partial functions for the scipy stats
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
@@ -159,63 +160,24 @@ class RegressionMetrics(EvalBase):
             artifact.add_file(json_path)
             # Log the artifact
             wandb.log_artifact(artifact)
-
-    def make_stat_caption(self):
-        """
-        Make a caption for the statistics
-        """
-        if not self._evaluated:
-            raise ValueError("Must evaluate before making a caption")
-        stat_caption = ""
-
-        for task_name in self.task_names:
-            if task_name == "tag":
-                continue
-
-            stat_caption += f"## {task_name} ##\n"
-            for metric in self.metric_names:
-                value = self.data[task_name][metric]["value"]
-                lower_ci = self.data[task_name][metric]["lower_ci"]
-                upper_ci = self.data[task_name][metric]["upper_ci"]
-                confidence_level = self.data[task_name][metric]["confidence_level"]
-                stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-            stat_caption += "\n"
-        stat_caption += f"Confidence level: {confidence_level} \n"
-        return stat_caption
-
-    def make_stat_dict(self):
-        if not self._evaluated:
-            raise ValueError("Must evaluate before making a caption")
-
-        stat_dict = {
-            "metrics": [],
-            "means": [],
-            "lower_ci": [],
-            "upper_ci": [],
-            "conf_level": None,
-            "task_name" : None
-        }
-
-        for task_name in self.task_names:
-            if task_name == "tag":
-                continue
-
-        stat_dict["task_name"] = task_name
-
-        for metric in self.metric_names:
-            value = self.data[task_name][metric]["value"]
-            lower_ci = self.data[task_name][metric]["lower_ci"]
-            upper_ci = self.data[task_name][metric]["upper_ci"]
-            confidence_level = self.data[task_name][metric]["confidence_level"]
-
-            # Save in dict
-            stat_dict["metrics"].append(self._metrics[metric][2])
-            stat_dict["means"].append(float(value))
-            stat_dict["lower_ci"].append(float(lower_ci))
-            stat_dict["upper_ci"].append(float(upper_ci))
-            stat_dict["conf_level"] = confidence_level
-        return stat_dict
-
+    
+    def get_stat_caption(self, t_label):
+        return _make_stat_caption(data=self.data,
+                                  task_name=t_label,
+                                  metric_names=self.metric_names,
+                                  metrics=self._metrics,
+                                  bootstrap_confidence_level=self.bootstrap_confidence_level,
+                                  evaluated=self._evaluated,
+                                  cv=False)
+    
+    def get_stat_dict(self, t_label):
+        return _make_stat_dict(data=self.data,
+                               task_name=t_label,
+                               metric_names=self.metric_names,
+                               metrics=self._metrics,
+                               bootstrap_confidence_level=self.bootstrap_confidence_level,
+                               evaluated=self._evaluated,
+                               cv=False)
 
 
 
@@ -285,16 +247,16 @@ class RegressionPlots(EvalBase):
                     target_labels=[t_label],
                 )
                 # stat_caption = rm.make_stat_caption()
-                stat_dict = rm.make_stat_dict()
+                stat_dict = rm.get_stat_dict(t_label=t_label)
             else:
                 # stat_caption = ""
                 stat_dict = {}
 
             # create the plots
             for plot_tag, plot in self.plots.items():
-                if plot_tag == "ciplot":
+                if "ciplot" in plot_tag:
                     self.plot_data[f"{t_label}_{plot_tag}"] = plot(stat_dict=stat_dict)
-                else:
+                elif "regplot" in plot_tag:
                     self.plot_data[f"{t_label}_{plot_tag}"] = plot(
                         t_true,
                         t_pred,
