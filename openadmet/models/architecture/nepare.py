@@ -5,16 +5,16 @@ from lightning import pytorch as pl
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
-from typing import OrderedDict
+from collections import OrderedDict
 
 
 class NeuralPairwiseRegressor(pl.LightningModule):
-    def __init__(self, 
-                 input_size: int, 
-                 hidden_size: int, 
-                 num_layers: int, 
-                 activation: torch.nn.Module = torch.nn.ReLU, 
-                 lr: float = 1e-3, 
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 num_layers: int,
+                 activation: torch.nn.Module = torch.nn.ReLU,
+                 lr: float = 1e-3,
                  n_targets: int = 1):
         super().__init__()
         _modules = OrderedDict()
@@ -53,7 +53,7 @@ class NeuralPairwiseRegressor(pl.LightningModule):
         x_1, x_2, _ = batch
         x = torch.cat((x_1, x_2), dim=1)
         return self(x)
-    
+
 @model_registry.register("NepareModel")
 class NepareModel(TorchModelBase):
 
@@ -67,4 +67,3 @@ class NepareModel(TorchModelBase):
     # Training parameters
     lr: float = 1e-3
     loss_function: str = "mse"
-
