@@ -28,7 +28,7 @@ procedure:
     type: ChemPropFeaturizer
   model:
     params: {}
-    type: ChemPropMultiRegressorModel
+    type: ChemPropModel
   split:
     params:
       random_state: 42
