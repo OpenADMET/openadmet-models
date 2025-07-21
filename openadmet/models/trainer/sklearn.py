@@ -18,6 +18,10 @@ class SKlearnBasicTrainer(TrainerBase):
         self.model.estimator = sklearn_model
         return self.model
 
+    def build(self):
+        """Unused method for sklearn models"""
+        pass
+
 
 class SKLearnSearchTrainer(TrainerBase):
     """
@@ -33,6 +37,10 @@ class SKLearnSearchTrainer(TrainerBase):
     @search.setter
     def search(self, value):
         self._search = value
+
+    def build(self):
+        """Unused method for sklearn models"""
+        pass
 
 
 @trainers.register("SKLearnGridSearchTrainer")
