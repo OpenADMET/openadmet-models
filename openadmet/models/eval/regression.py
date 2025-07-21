@@ -162,21 +162,23 @@ class RegressionMetrics(EvalBase):
             wandb.log_artifact(artifact)
 
     def get_stat_caption(self, t_label):
+        if not self._evaluated:
+            raise ValueError(":( You must evaluate the model before the statistics caption can be made.")
         return _make_stat_caption(data=self.data,
                                   task_name=t_label,
                                   metric_names=self.metric_names,
                                   metrics=self._metrics,
-                                  bootstrap_confidence_level=self.bootstrap_confidence_level,
-                                  evaluated=self._evaluated,
+                                  confidence_level=self.bootstrap_confidence_level,
                                   cv=False)
 
     def get_stat_dict(self, t_label):
+        if not self._evaluated:
+            raise ValueError("R'uh-r'oh! You must evaluate the model before the statistics dict can be made.")
         return _make_stat_dict(data=self.data,
                                task_name=t_label,
                                metric_names=self.metric_names,
                                metrics=self._metrics,
-                               bootstrap_confidence_level=self.bootstrap_confidence_level,
-                               evaluated=self._evaluated,
+                               confidence_level=self.bootstrap_confidence_level,
                                cv=False)
 
 
@@ -246,10 +248,8 @@ class RegressionPlots(EvalBase):
                     t_pred.reshape(-1, 1),
                     target_labels=[t_label],
                 )
-                # stat_caption = rm.make_stat_caption()
                 stat_dict = rm.get_stat_dict(t_label=t_label)
             else:
-                # stat_caption = ""
                 stat_dict = {}
 
             # create the plots
@@ -263,7 +263,6 @@ class RegressionPlots(EvalBase):
                         xlabel=self.axes_labels[0],
                         ylabel=self.axes_labels[1],
                         title=f"{self.title}\nTask: {t_label}",
-                        # stat_caption=stat_caption,
                         stat_dict=stat_dict,
                         pXC50=self.pXC50,
                         min_val=self.min_val,
@@ -278,7 +277,6 @@ class RegressionPlots(EvalBase):
         xlabel="Measured",
         ylabel="Predicted",
         title="",
-        # stat_caption="",
         stat_dict={},
         confidence_level=0.95,
         pXC50=False,
@@ -339,6 +337,7 @@ class RegressionPlots(EvalBase):
         g.ax_joint.set_xlabel(xlabel, fontsize=ax_font)
         g.ax_joint.set_ylabel(ylabel, fontsize=ax_font)
 
+        # From the stat_dict, parse out the performance metric values and their labels to put into a table to print on the regression plot
         if stat_dict:
             conf_level = stat_dict.get("conf_level", None)
             metric_names = stat_dict.get("metrics", [])
@@ -347,14 +346,14 @@ class RegressionPlots(EvalBase):
             upper_bounds = stat_dict.get("upper_ci", [])
 
             table_data = []
-
+            # Format the metric values for readability
             for name, val, low, high in zip(metric_names, values, lower_bounds, upper_bounds):
                 if None not in (val, low, high):
                     val_str = f"{val:.2f} [{low:.2f}, {high:.2f}]"
                 else:
                     val_str = "N/A"
                 table_data.append([name, val_str])
-
+            # Create the table 
             table = g.ax_joint.table(
                 cellText=table_data,
                 colLabels=["Metric", f"Value ± {int(conf_level*100)}% CI"],

@@ -174,7 +174,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plot_data = {}
 
-        # stat_caption = self.make_stat_caption(t_label)
         stat_dict = self.get_stat_dict(t_label=t_label)
 
         # create the plots
@@ -188,7 +187,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                     xlabel=self.axes_labels[0],
                     ylabel=self.axes_labels[1],
                     title=f"{self.title}\nTask: {t_label}",
-                    # stat_caption=stat_caption,
                     stat_dict=stat_dict,
                     pXC50=self.pXC50,
                     min_val=self.min_val,
@@ -197,21 +195,23 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         return self.data
     def get_stat_caption(self, t_label):
+        if not self._evaluated:
+            raise ValueError(":( You must evaluate the model before the statistics caption can be made.")
         return _make_stat_caption(data=self.data,
                                   task_name=t_label,
                                   metric_names=self.metric_names,
                                   metrics=self._metrics,
-                                  bootstrap_confidence_level=self.confidence_level,
-                                  evaluated=self._evaluated,
+                                  confidence_level=self.confidence_level,
                                   cv=True)
 
     def get_stat_dict(self, t_label):
+        if not self._evaluated:
+            raise ValueError("R'uh-r'oh! You must evaluate the model before the statistics dict can be made.")
         return _make_stat_dict(data=self.data,
                                task_name=t_label,
                                metric_names=self.metric_names,
                                metrics=self._metrics,
-                               bootstrap_confidence_level=self.confidence_level,
-                               evaluated=self._evaluated,
+                               confidence_level=self.confidence_level,
                                cv=True)
 
     def report(self, write=False, output_dir=None):
@@ -446,7 +446,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
 
-            # stat_caption = self.make_stat_caption(t_label)
             stat_dict = self.get_stat_dict(t_label=t_label)
 
             # create the plots
@@ -461,7 +460,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                         xlabel=self.axes_labels[0],
                         ylabel=self.axes_labels[1],
                         title=f"{self.title}\nTask: {t_label}",
-                        # stat_caption=stat_caption,
                         stat_dict=stat_dict,
                         pXC50=self.pXC50,
                         min_val=self.min_val,
@@ -504,7 +502,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                                   task_name=t_label,
                                   metric_names=self.metric_names,
                                   metrics=self._metrics,
-                                  bootstrap_confidence_level=self.confidence_level,
+                                  confidence_level=self.confidence_level,
                                   evaluated=self._evaluated,
                                   cv=True)
 
@@ -513,6 +511,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                                task_name=t_label,
                                metric_names=self.metric_names,
                                metrics=self._metrics,
-                               bootstrap_confidence_level=self.confidence_level,
+                               confidence_level=self.confidence_level,
                                evaluated=self._evaluated,
                                cv=True)

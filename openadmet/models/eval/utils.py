@@ -3,8 +3,7 @@ def _make_stat_caption(
         task_name:str,
         metric_names:list,
         metrics:dict,
-        bootstrap_confidence_level:float,
-        evaluated:bool,
+        confidence_level:float,
         cv:bool
 ) -> str:
     """A function to generate the stat caption (string) to be printed on the regplot
@@ -19,10 +18,8 @@ def _make_stat_caption(
         a dict of the names of the metrics
     metrics : dict
         a dict of tuples of (metric value, whether the value is a scipy statistic, name of metric to use in the report)
-    bootstrap_confidence_level : float
+    confidence_level : float
         conficence level for the bootstrap
-    evaluated : bool
-        whether or not the model has been evaluated
     cv : bool
         whether or not you are doing cross validation for evaluation
 
@@ -36,8 +33,6 @@ def _make_stat_caption(
     ValueError
         cannot make stat caption unless the model has been evaluated first
     """
-    if not evaluated:
-        raise ValueError("Must evaluate before making a caption")
     stat_caption = ""
 
     value_key = "mean" if cv else "value"
@@ -47,10 +42,9 @@ def _make_stat_caption(
         value = data[task_name][metric][value_key]
         lower_ci = data[task_name][metric]["lower_ci"]
         upper_ci = data[task_name][metric]["upper_ci"]
-        # confidence_level = data[task_name][metric]["confidence_level"]
         stat_caption += f"{metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
     stat_caption += "\n"
-    stat_caption += f"Confidence level: {bootstrap_confidence_level} \n"
+    stat_caption += f"Confidence level: {confidence_level} \n"
     return stat_caption
 
 def _make_stat_dict(
@@ -58,8 +52,7 @@ def _make_stat_dict(
         task_name:str,
         metric_names:list,
         metrics:dict,
-        bootstrap_confidence_level:float,
-        evaluated:bool,
+        confidence_level:float,
         cv:bool
 ):
     """A function to generate a dict of formatted metrics and names to be printed into a table on regplot
@@ -74,8 +67,6 @@ def _make_stat_dict(
         a dict of the names of the metrics
     metrics : dict
         a dict of tuples of (metric value, whether the value is a scipy statistic, name of metric to use in the report)
-    bootstrap_confidence_level : float
-        conficence level for the bootstrap
     evaluated : bool
         whether or not the model has been evaluated
 
@@ -89,8 +80,6 @@ def _make_stat_dict(
     ValueError
         cannot make stat caption unless the model has been evaluated first
     """
-    if not evaluated:
-        raise ValueError("Must evaluate before making a caption")
 
     stat_dict = {
         "metrics": [],
@@ -107,12 +96,11 @@ def _make_stat_dict(
         value = data[task_name][metric][value_key]
         lower_ci = data[task_name][metric]["lower_ci"]
         upper_ci = data[task_name][metric]["upper_ci"]
-        # confidence_level = data[task_name][metric]["confidence_level"]
 
         # Save in dict
         stat_dict["metrics"].append(metrics[metric][2])
         stat_dict["means"].append(float(value))
         stat_dict["lower_ci"].append(float(lower_ci))
         stat_dict["upper_ci"].append(float(upper_ci))
-        stat_dict["conf_level"] = bootstrap_confidence_level
+        stat_dict["conf_level"] = confidence_level
     return stat_dict
