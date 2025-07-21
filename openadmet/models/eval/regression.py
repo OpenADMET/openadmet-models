@@ -353,7 +353,7 @@ class RegressionPlots(EvalBase):
                 else:
                     val_str = "N/A"
                 table_data.append([name, val_str])
-            # Create the table 
+            # Create the table
             table = g.ax_joint.table(
                 cellText=table_data,
                 colLabels=["Metric", f"Value ± {int(conf_level*100)}% CI"],
