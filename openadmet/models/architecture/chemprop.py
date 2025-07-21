@@ -154,6 +154,9 @@ class ChemPropModel(LightningModelBase):
 
             # Create the MPNN model
             mpnn = models.MPNN(mp, aggr, ffn, self.batch_norm, metric_list)
+
+            # Pass monitor metric from "model" to "module"
+            mpnn.monitor_metric = self.monitor_metric
             self.estimator = mpnn
 
         else:
