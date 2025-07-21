@@ -1,8 +1,8 @@
 import pytest
 
 from openadmet.models.architecture.model_base import (
+    LightningModelBase,
     PickleableModelBase,
-    TorchModelBase,
     models,
 )
 
@@ -21,7 +21,7 @@ def test_save_load_pickleable(mclass, tmp_path):
 
 @pytest.mark.parametrize("mclass", models.classes())
 def test_save_load_torch_model(mclass, tmp_path):
-    if not issubclass(mclass, TorchModelBase):
+    if not issubclass(mclass, LightningModelBase):
         pytest.skip(f"Skipping non-torch model {mclass.__name__}")
     model = mclass()
     model.build()
