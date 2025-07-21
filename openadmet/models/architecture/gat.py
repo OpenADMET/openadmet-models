@@ -38,19 +38,18 @@ class GATv2Module(LightningModuleBase):
     """
 
     # Model architecture hyperparameters
-    # Why these shapes?
-    input_dim: int = (10,)
-    hidden_dim: int = (64,)
-    num_layers: int = (3,)
-    num_heads: int = (8,)
-    dropout: float = (0.2,)
-    pooling: str = ("mean",)
-    output_dim: int = (1,)
-    edge_dim: Optional[int] = (None,)
-    concat_heads: bool = (True,)
-    add_self_loops: bool = (True,)
-    share_weights: bool = (False,)
-    bias: bool = (True,)
+    input_dim: int = 10
+    hidden_dim: int = 64
+    num_layers: int = 3
+    num_heads: int = 8
+    dropout: float = 0.2
+    pooling: str = "mean"
+    output_dim: int = 1
+    edge_dim: Optional[int] = None
+    concat_heads: bool = True
+    add_self_loops: bool = True
+    share_weights: bool = False
+    bias: bool = True
 
     # Training hyperparameters
     loss_function: str = "mse"
@@ -80,7 +79,7 @@ class GATv2Module(LightningModuleBase):
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Initialize super class
         super().__init__()
 
@@ -307,7 +306,7 @@ class GATv2Model(LightningModelBase):
 
         if not self.estimator:
             # Build core GAT model
-            self.estimator = GATv2Model(
+            self.estimator = GATv2Module(
                 input_dim=self.input_dim,
                 hidden_dim=self.hidden_dim,
                 num_layers=self.num_layers,
