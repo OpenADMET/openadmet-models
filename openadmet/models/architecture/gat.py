@@ -38,14 +38,14 @@ class GATv2Module(LightningModuleBase):
     """
 
     # Model architecture hyperparameters
-    input_dim: int = 8
+    input_dim: int = 8 # must match that of GATGraphFeaturizer TODO: make this dynamic
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = None
+    edge_dim: Optional[int] = 4 # must match that of GATGraphFeaturizer TODO: make this dynamic
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = False
