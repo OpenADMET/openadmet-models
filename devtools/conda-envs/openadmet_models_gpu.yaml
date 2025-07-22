@@ -1,64 +1,54 @@
-name: openadmet_models
+name: openadmet-models
 channels:
-
+  - conda-forge
   - defaults
 dependencies:
-    # Base depends
-  - python >= 3.12
-  - pip
-
+  - ase
+  - chemprop >= 2.1.1
+  - codecov
+  - datamol
+  - e3nn
+  - h5py
+  - hyperopt
+  - intake
+  - intake-parquet
+  - joblib
+  - jupyterlab
+  - lightgbm
+  - loguru
+  - matplotlib
+  - mdanalysis
+  - modal
+  - molfeat
+  - mordredcommunity
   - numpy
   - pandas
-  - scikit-learn
-  - rich
-  - intake
-  - joblib
-  - zarr >=3.0.0
-  - intake-parquet
-  - loguru
-
-  - rdkit
-  - molfeat
-  - datamol
-  - mordredcommunity
-  - lightgbm
-  - tabpfn
-  - hyperopt
-  - xgboost
-  - seaborn
-  - splito
-  - umap-learn
-  - modal
-  - chemprop >= 2.1.1
-  - pytorch-gpu
-  - pytorch-lightning
-  - cudatoolkit
-  - wandb
-  - statsmodels
-  - mdanalysis
-  - tabulate
   - pingouin
-
-    # mtenn
-
-  # mtenn
-  - pytorch_geometric
+  - pip
+  - python >= 3.12
+  - pytorch
+  - pytorch-lightning
   - pytorch_cluster
+  - pytorch_geometric
   - pytorch_scatter
   - pytorch_sparse
-  - h5py
-  - e3nn
-  - ase
-
-    # Testing
   - pytest
   - pytest-cov
-  - codecov
   - pytest-xdist
-
-    # Pip-only installs
+  - rdkit
+  - rich
+  - scikit-learn
+  - seaborn
+  - splito
+  - statsmodels
+  - tabpfn
+  - tabulate
+  - umap-learn
+  - wandb
+  - xgboost
+  - zarr >=3.0.0
   - pip:
-    - phx-class-registry
     - email-validator
     - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
+    - phx-class-registry
     - tabpfn-extensions
