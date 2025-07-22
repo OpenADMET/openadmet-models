@@ -135,6 +135,7 @@ class GATGraphFeaturizer(FeaturizerBase):
             batch_size=self.batch_size,
             shuffle=self.shuffle,
             num_workers=self.num_workers,
+            drop_last=True
         )
 
         # Return dataloader, indices, scaler (None for GAT), and dataset (data_objects)

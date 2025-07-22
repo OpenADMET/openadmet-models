@@ -637,6 +637,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Get wandb bool from trainer
         use_wandb = self.trainer.use_wandb
 
+
         # Run evaluation on train/test
         for eval in self.evals:
             # Here all the data is passed to the evaluator, but some evaluators may only need a subset
