@@ -8,10 +8,13 @@ _data_ref = resources.files("openadmet.models.tests.test_data")
 basic_anvil_yaml = (_data_ref / "basic_anvil.yaml").as_posix()
 anvil_yaml_gridsearch = (_data_ref / "anvil_gridsearch.yaml").as_posix()
 anvil_yaml_featconcat = (_data_ref / "anvil_featconcat.yaml").as_posix()
+anvil_yaml_xgboost_cv = (_data_ref / "anvil_xgbm_cv_1_1.yaml").as_posix()
+
 basic_anvil_yaml_cv = (_data_ref / "basic_anvil_cv.yaml").as_posix()
 basic_anvil_yaml_classification = (
     _data_ref / "basic_anvil_classification.yaml"
 ).as_posix()
+tabpfn_anvil_classification_yaml = (_data_ref / "tabpfn_ache.yaml").as_posix()
 
 # individual sections for multi-yaml
 metadata_yaml = (_data_ref / "basic_anvil_metadata.yaml").as_posix()
@@ -33,9 +36,10 @@ acetylcholinesterase_anvil_chemprop_yaml = (_data_ref / "acetylcholinesterase_an
 
 
 # posthoc anvil outputs for testing
-descr_json = _data_ref / "cross_validation_metrics_descr.json"
-fp_json = _data_ref / "cross_validation_metrics_fp.json"
-combined_json = _data_ref / "cross_validation_metrics_combined.json"
+cyp2c9_json = (_data_ref / "cross_validation_metrics_2c9.json").as_posix()
+cyp3a4_json = (_data_ref / "cross_validation_metrics_3a4.json").as_posix()
+cyp1a2_json = (_data_ref / "cross_validation_metrics_1a2.json").as_posix()
+multi_task_json = _data_ref / "cross_validation_metrics_multitask.json"
 
 # ligand pose for reading and featurizing in MTENN
 ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()

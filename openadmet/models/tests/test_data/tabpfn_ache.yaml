@@ -31,19 +31,15 @@ procedure:
       random_state: 42
 
   feat:
-    type: FingerprintFeaturizer
+    type: DescriptorFeaturizer
     params:
-      fp_type: "ecfp:4"
+      descr_type: "desc2d"
 
   model:
-    type: LGBMClassifierModel
+    type: TabPFNClassifierModel
     params:
-      mod_params:
-        objective: "binary"
-        metric: "binary_error"
-        boosting_type: "gbdt"
-        learning_rate: 0.1
-        num_leaves: 31
+      ignore_pretraining_limits: True
+      device: cpu
 
   train:
     type: SKLearnBasicTrainer

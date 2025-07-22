@@ -298,7 +298,7 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(self, output_dir: PathLike = "anvil_run", debug: bool = False) -> Any: ...
+    def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any: ...
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -318,7 +318,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     def run(
-        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow.
@@ -473,7 +473,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.PYTORCH
 
     def run(
-        self, output_dir: PathLike = "anvil_run", debug: bool = False, tag: str = None
+        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
     ) -> Any:
         """
         Run the workflow
@@ -566,20 +566,21 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Featurize splits
         logger.info("Featurizing data")
-        train_dataloader, train_scaler, train_dataset = self.feat.featurize(
+        train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
             X_train, y_train
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         if X_val is not None and y_val is not None:
-            val_dataloader, _, val_dataset = self.feat.featurize(X_val, y_val)
+            val_dataloader, _, _, val_dataset = self.feat.featurize(X_val, y_val)
             torch.save(val_dataloader, output_dir / "val_dataloader.pth")
         else:
             val_dataloader = None
             val_dataset = None
             logger.warning("Validation set is None, skipping validation dataloader")
 
-        test_dataloader, _, test_dataset = self.feat.featurize(X_test, y_test)
+# Dataloader, indices, scaler, dataset
+        test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 
@@ -632,7 +633,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         for eval in self.evals:
             # Here all the data is passed to the evaluator, but some evaluators may only need a subset
             eval.evaluate(
-                y_true=y_test.values,  # Pass as array instead of series
+                y_true=y_test,
                 y_pred=y_pred,
                 model=self.model,
                 X_train=train_dataloader,

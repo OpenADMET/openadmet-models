@@ -17,6 +17,11 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     multiple=True,
 )
 @click.option(
+    "--taskname",
+    help="Task names as they appear in the model stats JSON",
+    multiple=True,
+)
+@click.option(
     "--output-dir",
     help="Path to output directory",
     required=False,
@@ -34,14 +39,15 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     required=False,
 )
 def compare(
-    model_stats, model_tag, report=False, output_dir=None, comparison="posthoc"
+    model_stats, model_tag, taskname, report=False, output_dir=None, comparison="posthoc"
 ):
     """Compare two or more models from summary statistics"""
     if comparison == "posthoc":
         comp = PostHocComparison()
     else:
         raise NotImplementedError
-    comp.compare(model_stats, model_tag, report, output_dir)
+    comp.compare(model_stats, model_tag, task_tags=taskname,
+                 output_dir=output_dir, report=report)
 
 
 if __name__ == "__main__":

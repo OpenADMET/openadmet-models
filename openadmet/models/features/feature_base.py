@@ -26,10 +26,10 @@ class FeaturizerBase(BaseModel, ABC):
     """
 
     @abstractmethod
-    def featurize(self, smiles: Iterable[str]) -> tuple[np.ndarray, np.ndarray]:
+    def featurize(self, smiles: Iterable[str], *args, **kwargs):
         """
-        Featurize a list of SMILES strings, returns a numpy array of features,
-        and a list of indices that correspond to the original input and the input indexed by the indices
+        Featurize a list of SMILES strings, returns features in an appropriate format
+        for the model (numpy arrays, dataloaders, etc.) and optional processing info
         """
 
 
@@ -42,9 +42,9 @@ class DeepLearningFeaturizer(FeaturizerBase):
     @abstractmethod
     def featurize(
         self, smiles: Iterable[str], y: Iterable[float] = None
-    ) -> tuple[DataLoader, StandardScaler, Dataset]:
+    ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
-        Featurize a list of SMILES strings, returns a DataLoader, StandardScaler if any scaling done by featurization and a Pytorch Dataset
+        Featurize a list of SMILES strings. Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
         """
 
 

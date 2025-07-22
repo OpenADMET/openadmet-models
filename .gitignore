@@ -123,6 +123,10 @@ ENV/
 # mypy
 .mypy_cache/
 
+# PyTorch Lightning logs
+lightning_logs/
+**/lightning_logs/
+
 # profraw files from LLVM? Unclear exactly what triggers this
 # There are reports this comes from LLVM profiling, but also Xcode 9.
 *profraw
