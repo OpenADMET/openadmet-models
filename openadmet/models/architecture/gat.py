@@ -48,7 +48,7 @@ class GATv2Module(LightningModuleBase):
     edge_dim: Optional[int] = 4 # must match that of GATGraphFeaturizer TODO: make this dynamic
     concat_heads: bool = True
     add_self_loops: bool = True
-    share_weights: bool = False
+    share_weights: bool = True
     bias: bool = True
 
     # Training hyperparameters
@@ -78,8 +78,53 @@ class GATv2Module(LightningModuleBase):
         if value not in allowed:
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
+    
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        input_dim: int = 8,
+        hidden_dim: int = 64,
+        num_layers: int = 3,
+        num_heads: int = 8,
+        dropout: float = 0.2,
+        pooling: str = "mean",
+        output_dim: int = 1,
+        edge_dim: Optional[int] = 4,
+        concat_heads: bool = True,
+        add_self_loops: bool = True,
+        share_weights: bool = True,
+        bias: bool = True,
+        loss_function: str = "mse",
+        optimizer: str = "adamw",
+        optimizer_lr: float = 1e-3,
+        optimizer_weight_decay: float = 1e-5,
+        scheduler: str = "cosine",
+        scheduler_factor: float = 0.5,
+        scheduler_patience: int = 10,
+        monitor_metric: str = "val_loss",
+    ):
+        
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.dropout = dropout
+        self.pooling = pooling
+        self.output_dim = output_dim
+        self.edge_dim = edge_dim
+        self.concat_heads = concat_heads
+        self.add_self_loops = add_self_loops
+        self.share_weights = share_weights
+        self.bias = bias
+        self.loss_function = loss_function
+        self.optimizer = optimizer
+        self.optimizer_lr = optimizer_lr
+        self.optimizer_weight_decay = optimizer_weight_decay
+        self.scheduler = scheduler
+        self.scheduler_factor = scheduler_factor
+        self.scheduler_patience = scheduler_patience
+        self.monitor_metric = monitor_metric
+        
         # Initialize super class
         super().__init__()
 
@@ -255,15 +300,17 @@ class GATv2Model(LightningModelBase):
     type: ClassVar[str] = "GATv2Model"
     scaler: Optional[Any] = None
 
+    mod_params: dict = {}
+
     # Model architecture hyperparameters
-    input_dim: Optional[int] = 10
+    input_dim: Optional[int] = 8
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = None
+    edge_dim: Optional[int] = 4
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = False
@@ -280,16 +327,12 @@ class GATv2Model(LightningModelBase):
     monitor_metric: str = "val_loss"
 
     @classmethod
-    def from_params(cls, class_params: dict = None, model_params: dict = None):
+    def from_params(cls, class_params: dict = None, mod_params: dict = None):
         """
         Create model instance from parameters
         """
 
-        if class_params:
-            instance = cls(**class_params)
-        else:
-            instance = cls()
-
+        instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
@@ -331,6 +374,14 @@ class GATv2Model(LightningModelBase):
             logger.info(f"Built GATv2Model with config: {self.estimator.__dict__}")
         else:
             logger.warning("Model already exists, skipping build")
+
+
+    def make_new(self) -> "GATv2Model":
+        """
+        Create a new instance of the model with the same parameters.
+        This does not copy the estimator, only the configuration.
+        """
+        return self.__class__(**self.dict(exclude={"estimator"}))
 
     def train(self, dataloader):
         """

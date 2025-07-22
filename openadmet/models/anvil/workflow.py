@@ -575,7 +575,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Featurize splits
         logger.info("Featurizing data")
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
-            X_train, y_train
+            X_train, y_train,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 

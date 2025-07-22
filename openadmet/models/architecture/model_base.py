@@ -146,7 +146,6 @@ class LightningModuleBase(pl.LightningModule):
     """
 
 
-
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
     optimizer_lr: float = 1e-3
