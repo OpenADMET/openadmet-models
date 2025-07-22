@@ -38,7 +38,7 @@ class GATv2Module(LightningModuleBase):
     """
 
     # Model architecture hyperparameters
-    input_dim: int = 10
+    input_dim: int = 8
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
