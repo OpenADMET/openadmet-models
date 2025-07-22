@@ -185,7 +185,7 @@ class LightningModuleBase(pl.LightningModule):
             raise ValueError(f"Scheduler must be one of {allowed}")
         return value
 
-    def configure_optimizer(self):
+    def configure_optimizers(self):
         """
         Returns optimizer and scheduler configuration for Lightning's configure_optimizers.
         """
