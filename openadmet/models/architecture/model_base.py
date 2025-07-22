@@ -145,6 +145,8 @@ class LightningModuleBase(pl.LightningModule):
 
     """
 
+
+
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
     optimizer_lr: float = 1e-3
@@ -192,7 +194,7 @@ class LightningModuleBase(pl.LightningModule):
         # Adamw optimizer
         if self.optimizer.lower() == "adamw":
             optimizer = torch.optim.AdamW(
-                self.estimator.parameters(),
+                self.parameters(),
                 lr=self.optimizer_lr,
                 weight_decay=self.optimizer_weight_decay,
             )
@@ -200,7 +202,7 @@ class LightningModuleBase(pl.LightningModule):
         # Adam optimizer
         elif self.optimizer.lower() == "adam":
             optimizer = torch.optim.Adam(
-                self.estimator.parameters(),
+                self.parameters(),
                 lr=self.optimizer_lr,
                 weight_decay=self.optimizer_weight_decay,
             )
@@ -208,7 +210,7 @@ class LightningModuleBase(pl.LightningModule):
         # SGD optimizer
         elif self.optimizer.lower() == "sgd":
             optimizer = torch.optim.SGD(
-                self.estimator.parameters(),
+                self.parameters(),
                 lr=self.optimizer_lr,
                 weight_decay=self.optimizer_weight_decay,
             )
