@@ -196,7 +196,7 @@ class GATv2Module(LightningModuleBase):
         """Training step"""
         target = batch.y
         pred = self.forward(batch)
-        
+
         if pred.ndim > 1 and pred.shape[1] == 1:
             pred = pred.squeeze(-1)
         if target.ndim > 1 and target.shape[1] == 1:
