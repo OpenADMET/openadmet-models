@@ -78,7 +78,7 @@ class GATv2Module(LightningModuleBase):
         if value not in allowed:
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
-    
+
 
     def __init__(
         self,
@@ -103,7 +103,7 @@ class GATv2Module(LightningModuleBase):
         scheduler_patience: int = 10,
         monitor_metric: str = "val_loss",
     ):
-        
+
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -124,7 +124,7 @@ class GATv2Module(LightningModuleBase):
         self.scheduler_factor = scheduler_factor
         self.scheduler_patience = scheduler_patience
         self.monitor_metric = monitor_metric
-        
+
         # Initialize super class
         super().__init__()
 
