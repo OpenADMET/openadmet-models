@@ -104,7 +104,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, must be provided"
             )
-        
+
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
 
@@ -308,9 +308,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, and tag must be provided"
             )
-        
+
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
-            y_true = y_true.to_numpy()        
+            y_true = y_true.to_numpy()
 
         self.data = {"tag": tag}
 
