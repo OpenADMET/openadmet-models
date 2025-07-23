@@ -7,7 +7,8 @@ from loguru import logger
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
-from typing import OrderedDict, ClassVar, Optional, Any
+from typing import ClassVar, Optional, Any
+from collections import OrderedDict
 
 
 class NeuralPairwiseRegressor(pl.LightningModule):
@@ -63,8 +64,8 @@ class NepareModel(TorchModelBase):
         """Validate loss function"""
         if value not in ["mse", "mae", "huber", "bce", "cross_entropy"]:
             raise ValueError("loss_function must be one of 'mse', 'mae', 'huber', 'bce', or 'cross_entropy'")
-        return value  
-    
+        return value
+
     @classmethod
     def from_params(cls, class_params: dict = None, model_params: dict = None):
         """
@@ -78,13 +79,13 @@ class NepareModel(TorchModelBase):
 
         instance.build()
         return instance
-    
+
     def make_new(self) -> "NepareModel":
         """
         Create a new instance of the model with the same parameters
         """
         return self.__class__(**self.dict(exclude={"estimator"}))
-    
+
     def train(self, dataloader, scaler=None):
         """
         Train the model
@@ -92,7 +93,7 @@ class NepareModel(TorchModelBase):
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
         )
-    
+
     def build(self, scaler=None):
         """
         Build the model
@@ -102,7 +103,7 @@ class NepareModel(TorchModelBase):
         if not self.estimator:
 
             model_config = {
-                "input_size": self.input_dim * 2,  
+                "input_size": self.input_dim * 2,
                 "hidden_size": self.hidden_dim,
                 "num_layers": self.num_layers,
                 "activation": self.activation,
