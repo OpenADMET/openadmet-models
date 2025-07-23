@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 
+import pandas as pd
 import numpy as np
 from loguru import logger
 from pydantic import Field
@@ -103,6 +104,9 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, must be provided"
             )
+        
+        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+            y_true = y_true.to_numpy()
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
@@ -304,6 +308,10 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError(
                 "model, X_train, y_train, y_pred, y_true, and tag must be provided"
             )
+        
+        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+            y_true = y_true.to_numpy()        
+
         self.data = {"tag": tag}
 
         if use_wandb:
@@ -503,7 +511,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                                   metric_names=self.metric_names,
                                   metrics=self._metrics,
                                   confidence_level=self.confidence_level,
-                                  evaluated=self._evaluated,
                                   cv=True)
 
     def get_stat_dict(self, t_label):
@@ -512,5 +519,4 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                                metric_names=self.metric_names,
                                metrics=self._metrics,
                                confidence_level=self.confidence_level,
-                               evaluated=self._evaluated,
                                cv=True)
