@@ -381,8 +381,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Load data from YAML specification
         logger.info("Loading data")
-        X, y, n_dropped, n_before = self.data_spec.read()
-        logger.info(f"{n_before} total rows. {n_dropped} NaN rows were dropped.")
+        X, y = self.data_spec.read()
         logger.info("Data loaded")
 
         # Transform data
