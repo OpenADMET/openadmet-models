@@ -298,7 +298,9 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any: ...
+    def run(
+        self, output_dir: PathLike = "anvil_training", debug: bool = False
+    ) -> Any: ...
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -318,7 +320,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     def run(
-        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
+        self,
+        output_dir: PathLike = "anvil_training",
+        debug: bool = False,
+        tag: str = None,
     ) -> Any:
         """
         Run the workflow.
@@ -473,7 +478,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.PYTORCH
 
     def run(
-        self, output_dir: PathLike = "anvil_training", debug: bool = False, tag: str = None
+        self,
+        output_dir: PathLike = "anvil_training",
+        debug: bool = False,
+        tag: str = None,
     ) -> Any:
         """
         Run the workflow
@@ -567,7 +575,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Featurize splits
         logger.info("Featurizing data")
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
-            X_train, y_train
+            X_train, y_train,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
@@ -579,7 +587,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             val_dataset = None
             logger.warning("Validation set is None, skipping validation dataloader")
 
-# Dataloader, indices, scaler, dataset
+        # Dataloader, indices, scaler, dataset
         test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
@@ -600,7 +608,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Prepare the trainer
         logger.info("Preparing trainer")
-        self.trainer.prepare()
+        self.trainer.build()
         logger.info("Trainer prepared")
 
         # Commence model training
@@ -628,6 +636,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Get wandb bool from trainer
         use_wandb = self.trainer.use_wandb
+
 
         # Run evaluation on train/test
         for eval in self.evals:

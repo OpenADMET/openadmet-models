@@ -5,11 +5,12 @@ from lightning import pytorch as pl
 from loguru import logger
 from mtenn.config import SchNetModelConfig
 
-from openadmet.models.architecture.model_base import TorchModelBase
+from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
 
-class MTENNLightningWrapper(pl.LightningModule):
+# TODO: Inherit from LightningModuleBase to expose more configurability
+class MTENNLightningModule(pl.LightningModule):
     def __init__(
         self, model_config: SchNetModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4
     ):
@@ -47,7 +48,7 @@ class MTENNLightningWrapper(pl.LightningModule):
 
 
 @model_registry.register("MTENNSchNetModel")
-class MTENNSchNetModel(TorchModelBase):
+class MTENNSchNetModel(LightningModelBase):
     """
     MTENN SchNet Model Implementation
     """
@@ -61,7 +62,7 @@ class MTENNSchNetModel(TorchModelBase):
         """
         if not self.estimator:
             model_config = SchNetModelConfig(**self.mod_params)
-            self.estimator = MTENNLightningWrapper(model_config)
+            self.estimator = MTENNLightningModule(model_config)
         else:
             logger.warning("Model already exists, skipping build.")
 

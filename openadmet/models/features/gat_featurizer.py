@@ -79,7 +79,7 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         return data
 
-    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None):
+    def featurize(self, smiles: Iterable[str], y: Optional[Iterable[Any]] = None) -> tuple:
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
@@ -129,12 +129,19 @@ class GATGraphFeaturizer(FeaturizerBase):
                 data_objects.append(data)
                 successful_indices.append(i)
 
+            # Drop last batch of size 1 to avoid issues with batch normalization
+        if len(data_objects) % self.batch_size == 1:
+            drop_last = True
+        else:
+            drop_last = False
+
         # Create DataLoader
         dataloader = DataLoader(
             data_objects,
             batch_size=self.batch_size,
             shuffle=self.shuffle,
             num_workers=self.num_workers,
+            drop_last=drop_last
         )
 
         # Return dataloader, indices, scaler (None for GAT), and dataset (data_objects)

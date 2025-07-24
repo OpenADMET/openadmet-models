@@ -1,41 +1,108 @@
-from typing import ClassVar, Optional, List, Any
-import numpy as np
+from typing import Any, ClassVar, Optional
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATv2Conv, global_mean_pool, global_max_pool, global_add_pool
-from torch_geometric.data import Data, Batch
-from torch_geometric.loader import DataLoader
-
 from loguru import logger
 from pydantic import field_validator
+from torch_geometric.data import Batch
+from torch_geometric.nn import (
+    GATv2Conv,
+    global_add_pool,
+    global_max_pool,
+    global_mean_pool,
+)
 
-from openadmet.models.architecture.model_base import TorchModelBase
+from openadmet.models.architecture.model_base import (
+    LightningModelBase,
+    LightningModuleBase,
+)
 from openadmet.models.architecture.model_base import models as model_registry
-from openadmet.models.features.gat_featurizer import GATGraphFeaturizer
+
+_POOLING = {"mean": global_mean_pool, "max": global_max_pool, "add": global_add_pool}
+
+# TODO: unify with the one in chemprop.py
+_METRIC_TO_LOSS = {
+    "mse": nn.MSELoss(),
+    "mae": nn.L1Loss(),
+    "huber": nn.HuberLoss(),
+    "bce": nn.BCEWithLogitsLoss(),
+    "cross_entropy": nn.CrossEntropyLoss(),
+}
 
 
-class GATv2Model(nn.Module):
+class GATv2Module(LightningModuleBase):
     """
     Graph Attention Network v2 (GATv2) Model
     """
+
+    # Model architecture hyperparameters
+    input_dim: int = 8 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    hidden_dim: int = 64
+    num_layers: int = 3
+    num_heads: int = 8
+    dropout: float = 0.2
+    pooling: str = "mean"
+    output_dim: int = 1
+    edge_dim: Optional[int] = 4 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    concat_heads: bool = True
+    add_self_loops: bool = True
+    share_weights: bool = True
+    bias: bool = True
+
+    # Training hyperparameters
+    loss_function: str = "mse"
+    optimizer: str = "adamw"
+    optimizer_lr: float = 1e-3
+    optimizer_weight_decay: float = 1e-5
+    scheduler: str = "cosine"
+    scheduler_factor: float = 0.5
+    scheduler_patience: int = 10
+    monitor_metric: str = "val_loss"
+
+    @field_validator("pooling")
+    @classmethod
+    def validate_pooling(cls, value):
+        """Validate pooling method"""
+        allowed = ["mean", "max", "add"]
+        if value not in allowed:
+            raise ValueError(f"Pooling must be one of {allowed}")
+        return value
+
+    @field_validator("loss_function")
+    @classmethod
+    def validate_loss_function(cls, value):
+        """Validate loss function"""
+        allowed = ["mse", "mae", "huber", "bce", "cross_entropy"]
+        if value not in allowed:
+            raise ValueError(f"Loss function must be one of {allowed}")
+        return value
+
+
     def __init__(
         self,
-        input_dim: int,
+        input_dim: int = 8,
         hidden_dim: int = 64,
         num_layers: int = 3,
         num_heads: int = 8,
         dropout: float = 0.2,
         pooling: str = "mean",
         output_dim: int = 1,
-        edge_dim: Optional[int] = None,
+        edge_dim: Optional[int] = 4,
         concat_heads: bool = True,
         add_self_loops: bool = True,
-        share_weights: bool = False,
-        bias: bool = True
+        share_weights: bool = True,
+        bias: bool = True,
+        loss_function: str = "mse",
+        optimizer: str = "adamw",
+        optimizer_lr: float = 1e-3,
+        optimizer_weight_decay: float = 1e-5,
+        scheduler: str = "cosine",
+        scheduler_factor: float = 0.5,
+        scheduler_patience: int = 10,
+        monitor_metric: str = "val_loss",
     ):
-        super().__init__()
 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -44,67 +111,87 @@ class GATv2Model(nn.Module):
         self.dropout = dropout
         self.pooling = pooling
         self.output_dim = output_dim
+        self.edge_dim = edge_dim
         self.concat_heads = concat_heads
+        self.add_self_loops = add_self_loops
+        self.share_weights = share_weights
+        self.bias = bias
+        self.loss_function = loss_function
+        self.optimizer = optimizer
+        self.optimizer_lr = optimizer_lr
+        self.optimizer_weight_decay = optimizer_weight_decay
+        self.scheduler = scheduler
+        self.scheduler_factor = scheduler_factor
+        self.scheduler_patience = scheduler_patience
+        self.monitor_metric = monitor_metric
+
+        # Initialize super class
+        super().__init__()
 
         # Input projection layer
-        self.input_projection = nn.Linear(input_dim, hidden_dim)
+        self.input_projection = nn.Linear(self.input_dim, self.hidden_dim)
 
         # GAT layers
         self.gat_layers = nn.ModuleList()
 
-        for i in range(num_layers):
+        for i in range(self.num_layers):
             # First and intermediate layers
-            if i < num_layers - 1:
-                in_channels = hidden_dim if i == 0 else (hidden_dim * num_heads if concat_heads else hidden_dim)
-                out_channels = hidden_dim
-                concat = concat_heads
+            if i < self.num_layers - 1:
+                in_channels = (
+                    self.hidden_dim
+                    if i == 0
+                    else (
+                        self.hidden_dim * self.num_heads
+                        if self.concat_heads
+                        else self.hidden_dim
+                    )
+                )
+                out_channels = self.hidden_dim
+                concat = self.concat_heads
             # Last layer
             else:
-                in_channels = hidden_dim * num_heads if concat_heads else hidden_dim
-                out_channels = hidden_dim
+                in_channels = (
+                    self.hidden_dim * self.num_heads
+                    if self.concat_heads
+                    else self.hidden_dim
+                )
+                out_channels = self.hidden_dim
                 concat = False  # Don't concatenate in the last layer
 
             self.gat_layers.append(
                 GATv2Conv(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    heads=num_heads,
+                    heads=self.num_heads,
                     concat=concat,
-                    dropout=dropout,
-                    edge_dim=edge_dim,
-                    add_self_loops=add_self_loops,
-                    share_weights=share_weights,
-                    bias=bias
+                    dropout=self.dropout,
+                    edge_dim=self.edge_dim,
+                    add_self_loops=self.add_self_loops,
+                    share_weights=self.share_weights,
+                    bias=self.bias,
                 )
             )
 
         # Batch normalization layers
         self.batch_norms = nn.ModuleList()
-        for i in range(num_layers):
-            if i < num_layers - 1 and concat_heads:
-                bn_dim = hidden_dim * num_heads
+        for i in range(self.num_layers):
+            if i < self.num_layers - 1 and self.concat_heads:
+                bn_dim = self.hidden_dim * self.num_heads
             else:
-                bn_dim = hidden_dim
+                bn_dim = self.hidden_dim
             self.batch_norms.append(nn.BatchNorm1d(bn_dim))
 
         # Output layers
         self.output_layers = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.BatchNorm1d(hidden_dim // 2),
+            nn.Linear(self.hidden_dim, self.hidden_dim // 2),
+            nn.BatchNorm1d(self.hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, output_dim)
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_dim // 2, self.output_dim),
         )
 
         # Pooling function
-        if pooling == "mean":
-            self.pool = global_mean_pool
-        elif pooling == "max":
-            self.pool = global_max_pool
-        elif pooling == "add":
-            self.pool = global_add_pool
-        else:
-            raise ValueError(f"Unsupported pooling method: {pooling}")
+        self.pool = _POOLING[self.pooling]
 
     def forward(self, data):
         """
@@ -121,7 +208,7 @@ class GATv2Model(nn.Module):
             Graph-level predictions [batch_size, output_dim]
         """
         x, edge_index, batch = data.x, data.edge_index, data.batch
-        edge_attr = getattr(data, 'edge_attr', None)
+        edge_attr = getattr(data, "edge_attr", None)
 
         # Input projection
         x = self.input_projection(x)
@@ -150,74 +237,102 @@ class GATv2Model(nn.Module):
 
         return out
 
+    def training_step(self, batch: Batch, batch_idx: int):
+        """Training step"""
+        target = batch.y
+        pred = self.forward(batch)
 
-@model_registry.register("GATv2ModelWrapper")
-class GATv2ModelWrapper(TorchModelBase):
+        if pred.ndim > 1 and pred.shape[1] == 1:
+            pred = pred.squeeze(-1)
+        if target.ndim > 1 and target.shape[1] == 1:
+            target = target.squeeze(-1)
+
+        loss = _METRIC_TO_LOSS[self.loss_function](pred, target)
+
+        self.log(
+            "train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
+
+        return loss
+
+    def validation_step(self, batch: Batch, batch_idx: int):
+        """Validation step"""
+        target = batch.y
+
+        pred = self.forward(batch)
+
+        if pred.ndim > 1 and pred.shape[1] == 1:
+            pred = pred.squeeze(-1)
+        if target.ndim > 1 and target.shape[1] == 1:
+            target = target.squeeze(-1)
+
+        loss = _METRIC_TO_LOSS[self.loss_function](pred, target)
+
+        self.log(
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
+
+        return loss
+
+    def predict_step(self, batch: Batch, batch_idx: int):
+        """Prediction step"""
+        data = batch
+        pred = self.forward(data)
+        return pred
+
+
+@model_registry.register("GATv2Model")
+class GATv2Model(LightningModelBase):
     """
     GATv2 model wrapper inheriting from TorchModelBase
     """
 
-    type: ClassVar[str] = "GATv2ModelWrapper"
+    type: ClassVar[str] = "GATv2Model"
     scaler: Optional[Any] = None
 
+    mod_params: dict = {}
+
     # Model architecture hyperparameters
-    input_dim: Optional[int] = 10
+    input_dim: Optional[int] = 8
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
-    gat_dropout: float = 0.2
+    dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = None
+    edge_dim: Optional[int] = 4
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = False
     bias: bool = True
 
     # Training hyperparameters
-    lr: float = 1e-3
-    weight_decay: float = 1e-5
+    loss_function: str = "mse"
+    optimizer: str = "adamw"
+    optimizer_lr: float = 1e-3
+    optimizer_weight_decay: float = 1e-5
     scheduler: str = "cosine"
-    warmup_epochs: int = 10
     scheduler_factor: float = 0.5
     scheduler_patience: int = 10
-    loss_function: str = "mse"
-
-    @field_validator("pooling")
-    @classmethod
-    def validate_pooling(cls, value):
-        """Validate pooling method"""
-        if value not in ["mean", "max", "add"]:
-            raise ValueError("pooling must be one of 'mean', 'max', or 'add'")
-        return value
-
-    @field_validator("scheduler")
-    @classmethod
-    def validate_scheduler(cls, value):
-        """Validate learning rate scheduler"""
-        if value not in ["cosine", "reduce_on_plateau", "none"]:
-            raise ValueError("scheduler must be one of 'cosine', 'reduce_on_plateau', or 'none'")
-        return value
-
-    @field_validator("loss_function")
-    @classmethod
-    def validate_loss_function(cls, value):
-        """Validate loss function"""
-        if value not in ["mse", "mae", "huber", "bce", "cross_entropy"]:
-            raise ValueError("loss_function must be one of 'mse', 'mae', 'huber', 'bce', or 'cross_entropy'")
-        return value
+    monitor_metric: str = "val_loss"
 
     @classmethod
-    def from_params(cls, class_params: dict = None, model_params: dict = None):
+    def from_params(cls, class_params: dict = None, mod_params: dict = None):
         """
         Create model instance from parameters
         """
 
-        if class_params:
-            instance = cls(**class_params)
-        else:
-            instance = cls()
-
+        instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
@@ -232,39 +347,41 @@ class GATv2ModelWrapper(TorchModelBase):
             raise ValueError("'input_dim' must be provided to build the GATv2 model.")
 
         if not self.estimator:
-            # Prepare model configuration
-            model_config = {
-                "input_dim": self.input_dim,
-                "hidden_dim": self.hidden_dim,
-                "num_layers": self.num_layers,
-                "num_heads": self.num_heads,
-                "dropout": self.gat_dropout,
-                "pooling": self.pooling,
-                "output_dim": self.output_dim,
-                "edge_dim": self.edge_dim,
-                "concat_heads": self.concat_heads,
-                "add_self_loops": self.add_self_loops,
-                "share_weights": self.share_weights,
-                "bias": self.bias,
-            }
-
             # Build core GAT model
-            self.estimator = GATv2Model(**model_config)
+            self.estimator = GATv2Module(
+                input_dim=self.input_dim,
+                hidden_dim=self.hidden_dim,
+                num_layers=self.num_layers,
+                num_heads=self.num_heads,
+                dropout=self.dropout,
+                pooling=self.pooling,
+                output_dim=self.output_dim,
+                edge_dim=self.edge_dim,
+                concat_heads=self.concat_heads,
+                add_self_loops=self.add_self_loops,
+                share_weights=self.share_weights,
+                bias=self.bias,
+                loss_function=self.loss_function,
+                optimizer=self.optimizer,
+                optimizer_lr=self.optimizer_lr,
+                optimizer_weight_decay=self.optimizer_weight_decay,
+                scheduler=self.scheduler,
+                scheduler_factor=self.scheduler_factor,
+                scheduler_patience=self.scheduler_patience,
+                monitor_metric=self.monitor_metric,
+            )
 
-            # Store training config for later use by trainer
-            self._training_config = {
-                "loss_fn_name": self.loss_function,
-                "lr": self.lr,
-                "weight_decay": self.weight_decay,
-                "scheduler_name": self.scheduler,
-                "warmup_epochs": self.warmup_epochs,
-                "scheduler_factor": self.scheduler_factor,
-                "scheduler_patience": self.scheduler_patience
-            }
-
-            logger.info(f"Built GATv2Model with config: {model_config}")
+            logger.info(f"Built GATv2Model with config: {self.estimator.__dict__}")
         else:
             logger.warning("Model already exists, skipping build")
+
+
+    def make_new(self) -> "GATv2Model":
+        """
+        Create a new instance of the model with the same parameters.
+        This does not copy the estimator, only the configuration.
+        """
+        return self.__class__(**self.dict(exclude={"estimator"}))
 
     def train(self, dataloader):
         """
@@ -291,8 +408,10 @@ class GATv2ModelWrapper(TorchModelBase):
         Returns:
             np.ndarray: Predictions.
         """
-        if not hasattr(self, 'estimator') or self.estimator is None:
-            raise RuntimeError("Model has not been built yet. Call 'build()' before 'predict'.")
+        if not hasattr(self, "estimator") or self.estimator is None:
+            raise RuntimeError(
+                "Model has not been built yet. Call `build` before `predict`."
+            )
 
         # Set model to evaluation mode
         self.estimator.eval()
@@ -341,7 +460,9 @@ class GATv2ModelWrapper(TorchModelBase):
             return "Model not built"
 
         total_params = sum(p.numel() for p in self.estimator.parameters())
-        trainable_params = sum(p.numel() for p in self.estimator.parameters() if p.requires_grad)
+        trainable_params = sum(
+            p.numel() for p in self.estimator.parameters() if p.requires_grad
+        )
 
         summary = {
             "model_type": "GATv2 (Graph Attention Network v2)",
@@ -351,7 +472,7 @@ class GATv2ModelWrapper(TorchModelBase):
             "num_attention_heads": self.num_heads,
             "hidden_dimension": self.hidden_dim,
             "pooling_method": self.pooling,
-            "dropout_rate": self.gat_dropout
+            "dropout_rate": self.dropout,
         }
 
         return summary
