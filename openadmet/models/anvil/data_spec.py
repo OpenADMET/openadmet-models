@@ -7,6 +7,7 @@ import jinja2
 import pandas as pd
 import yaml
 from pydantic import BaseModel, model_validator, field_validator
+from loguru import logger
 
 class DataSpec(BaseModel):
     """
@@ -19,6 +20,7 @@ class DataSpec(BaseModel):
     target_cols: Union[str, list[str]]
     input_col: str
     anvil_dir: Optional[str] = None
+    dropna: Optional[bool] = True
 
     _catalog: Optional[intake.catalog.Catalog] = None
 
@@ -64,11 +66,28 @@ class DataSpec(BaseModel):
             data = intake.open_parquet(self.resource).read()
         else:
             raise ValueError(f"Unsupported resource type: {self.resource}")
-        # now read the target columns and smiles column
-        targets = data[self.target_cols]
-        input = data[self.input_col]
 
-        return input, targets
+        # combine input and targets for joint NaN handling
+        combined = data[[self.input_col] + (self.target_cols if isinstance(self.target_cols, list) else [self.target_cols])]
+
+        # get number of combined rows for logging
+        n_before = len(combined)
+
+        if self.dropna:
+            cleaned_combined = combined.dropna()
+            n_after = len(cleaned_combined)
+            n_dropped = n_before - n_after
+        else:
+            n_dropped = 0
+            cleaned_combined = combined
+
+        # Split the data again
+        input_clean = cleaned_combined[self.input_col]
+        targets_clean = cleaned_combined[self.target_cols]
+
+        logger.info(f"{n_before} total rows. {n_dropped} NaN rows were dropped.")
+
+        return input_clean, targets_clean
 
     @property
     def catalog(self):
