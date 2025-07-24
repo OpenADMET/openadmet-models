@@ -11,6 +11,7 @@ from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans
+from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 # create partial functions for the scipy stats
 nan_omit_ktau = partial(kendalltau, nan_policy="omit")
@@ -160,28 +161,26 @@ class RegressionMetrics(EvalBase):
             # Log the artifact
             wandb.log_artifact(artifact)
 
-    def make_stat_caption(self):
-        """
-        Make a caption for the statistics
-        """
+    def get_stat_caption(self, t_label):
         if not self._evaluated:
-            raise ValueError("Must evaluate before making a caption")
-        stat_caption = ""
+            raise ValueError(":( You must evaluate the model before the statistics caption can be made.")
+        return _make_stat_caption(data=self.data,
+                                  task_name=t_label,
+                                  metric_names=self.metric_names,
+                                  metrics=self._metrics,
+                                  confidence_level=self.bootstrap_confidence_level,
+                                  cv=False)
 
-        for task_name in self.task_names:
-            if task_name == "tag":
-                continue
+    def get_stat_dict(self, t_label):
+        if not self._evaluated:
+            raise ValueError("R'uh-r'oh! You must evaluate the model before the statistics dict can be made.")
+        return _make_stat_dict(data=self.data,
+                               task_name=t_label,
+                               metric_names=self.metric_names,
+                               metrics=self._metrics,
+                               confidence_level=self.bootstrap_confidence_level,
+                               cv=False)
 
-            stat_caption += f"## {task_name} ##\n"
-            for metric in self.metric_names:
-                value = self.data[task_name][metric]["value"]
-                lower_ci = self.data[task_name][metric]["lower_ci"]
-                upper_ci = self.data[task_name][metric]["upper_ci"]
-                confidence_level = self.data[task_name][metric]["confidence_level"]
-                stat_caption += f"{self._metrics[metric][2]}: {value:.2f}$_{{{lower_ci:.2f}}}^{{{upper_ci:.2f}}}$\n"
-            stat_caption += "\n"
-        stat_caption += f"Confidence level: {confidence_level} \n"
-        return stat_caption
 
 
 @evaluators.register("RegressionPlots")
@@ -230,6 +229,7 @@ class RegressionPlots(EvalBase):
 
         self.plots = {
             "regplot": self.regplot,
+            "ciplot": self.ciplot
         }
 
         self.plot_data = {}
@@ -248,23 +248,26 @@ class RegressionPlots(EvalBase):
                     t_pred.reshape(-1, 1),
                     target_labels=[t_label],
                 )
-                stat_caption = rm.make_stat_caption()
+                stat_dict = rm.get_stat_dict(t_label=t_label)
             else:
-                stat_caption = ""
+                stat_dict = {}
 
             # create the plots
             for plot_tag, plot in self.plots.items():
-                self.plot_data[t_label] = plot(
-                    t_true,
-                    t_pred,
-                    xlabel=self.axes_labels[0],
-                    ylabel=self.axes_labels[1],
-                    title=f"{self.title}\nTask: {t_label}",
-                    stat_caption=stat_caption,
-                    pXC50=self.pXC50,
-                    min_val=self.min_val,
-                    max_val=self.max_val,
-                )
+                if "ciplot" in plot_tag:
+                    self.plot_data[f"{t_label}_{plot_tag}"] = plot(stat_dict=stat_dict)
+                elif "regplot" in plot_tag:
+                    self.plot_data[f"{t_label}_{plot_tag}"] = plot(
+                        t_true,
+                        t_pred,
+                        xlabel=self.axes_labels[0],
+                        ylabel=self.axes_labels[1],
+                        title=f"{self.title}\nTask: {t_label}",
+                        stat_dict=stat_dict,
+                        pXC50=self.pXC50,
+                        min_val=self.min_val,
+                        max_val=self.max_val,
+                    )
         return self.plot_data
 
     @staticmethod
@@ -274,7 +277,7 @@ class RegressionPlots(EvalBase):
         xlabel="Measured",
         ylabel="Predicted",
         title="",
-        stat_caption="",
+        stat_dict={},
         confidence_level=0.95,
         pXC50=False,
         min_val=None,
@@ -283,8 +286,9 @@ class RegressionPlots(EvalBase):
         """
         Create a regression plot
         """
-        fig, ax = plt.subplots()
-        ax.set_title(title, fontsize=10)
+        title_font = 20
+        ax_font = 18
+        tick_font = 16
         if min_val is None:
             min_val = min(np.min(y_true), np.min(y_pred))
             min_ax = min_val - 1
@@ -296,38 +300,127 @@ class RegressionPlots(EvalBase):
         else:
             max_ax = max_val
         # set the limits to be the same for both axes
-        _ = sns.regplot(x=y_true, y=y_pred, ax=ax, ci=confidence_level * 100)
-        # slope, intercept, r, p, sterr = scipy.stats.linregress(
-        #     x=p.get_lines()[0].get_xdata(), y=p.get_lines()[0].get_ydata()
-        # )
-        ax.set_aspect("equal", "box")
 
-        ax.set_xlim(min_ax, max_ax)
-        ax.set_ylim(min_ax, max_ax)
+        g = sns.jointplot(
+            x=np.ravel(y_true),
+            y=np.ravel(y_pred),
+            kind="reg",
+            joint_kws={"ci": confidence_level * 100},
+            scatter_kws={"alpha":0.3},
+            color="teal",
+            height=10)
+
+        g.figure.suptitle(title, fontsize=title_font)
+        g.ax_joint.set_aspect("equal", "box")
+        g.ax_joint.set_xlim(min_ax, max_ax)
+        g.ax_joint.set_ylim(min_ax, max_ax)
+        g.ax_joint.tick_params(axis='both', labelsize=tick_font)
         # plot y = x line in dashed grey
-        ax.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
+        g.ax_joint.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
 
         # if pXC50 measure then plot the 0.5 and 1.0 log range unit
         if pXC50:
-            ax.fill_between(
+            g.ax_joint.fill_between(
                 [min_ax, max_ax],
                 [min_ax - 0.5, max_ax - 0.5],
                 [min_ax + 0.5, max_ax + 0.5],
                 color="gray",
                 alpha=0.2,
             )
-            ax.fill_between(
+            g.ax_joint.fill_between(
                 [min_ax, max_ax],
                 [min_ax - 1, max_ax - 1],
                 [min_ax + 1, max_ax + 1],
                 color="gray",
                 alpha=0.2,
             )
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        ax.text(0.05, 0.7, stat_caption, transform=ax.transAxes, fontsize=5)
-        fig.tight_layout()
+        g.ax_joint.set_xlabel(xlabel, fontsize=ax_font)
+        g.ax_joint.set_ylabel(ylabel, fontsize=ax_font)
 
+        # From the stat_dict, parse out the performance metric values and their labels to put into a table to print on the regression plot
+        if stat_dict:
+            conf_level = stat_dict.get("conf_level", None)
+            metric_names = stat_dict.get("metrics", [])
+            values = stat_dict.get("means", [])
+            lower_bounds = stat_dict.get("lower_ci", [])
+            upper_bounds = stat_dict.get("upper_ci", [])
+
+            table_data = []
+            # Format the metric values for readability
+            for name, val, low, high in zip(metric_names, values, lower_bounds, upper_bounds):
+                if None not in (val, low, high):
+                    val_str = f"{val:.2f} [{low:.2f}, {high:.2f}]"
+                else:
+                    val_str = "N/A"
+                table_data.append([name, val_str])
+            # Create the table
+            table = g.ax_joint.table(
+                cellText=table_data,
+                colLabels=["Metric", f"Value ± {int(conf_level*100)}% CI"],
+                colWidths=[0.2, 0.3],
+                loc="upper left",
+                cellLoc="left",
+            )
+
+            table.scale(1, 1.8)
+            for key, cell in table.get_celld().items():
+                cell.set_fontsize(ax_font)
+            # Right align the metric values
+            for i in range(1, len(table_data) + 1):
+                table[i, 1].get_text().set_horizontalalignment("right")
+
+        g.ax_joint.set_box_aspect(1)
+        g.figure.tight_layout()
+        return g
+
+    @staticmethod
+    def ciplot(
+        stat_dict={}
+    ):
+
+        metrics = stat_dict["metrics"]
+        means = stat_dict["means"]
+        lower_ci = stat_dict["lower_ci"]
+        upper_ci = stat_dict["upper_ci"]
+        conf_level = stat_dict["conf_level"]
+        task_name = stat_dict["task_name"]
+
+        title_font = 16
+        tick_font = 12
+        ax_font = 14
+
+        padding = 0.2
+        y_limits = {
+            "MSE": (0-padding, 1+padding),
+            "MAE": (0-padding, 1+padding),
+            "$R^2$": (-1-padding, 1+padding),
+            "Kendall's $\\tau$": (-1-padding, 1+padding),
+            "Spearman's $\\rho$": (-1-padding, 1+padding)
+        }
+
+        n_metrics = len(metrics)
+        fig, axes = plt.subplots(1, n_metrics, figsize=(8, n_metrics), sharex=False)
+
+        if n_metrics == 1:
+            axes = [axes]  # Ensure it's iterable
+
+        for i, ax in enumerate(axes):
+            if i == 0:
+                ax.set_ylabel("Performance Metric Value", fontsize=ax_font)
+            metric = metrics[i]
+            y = means[i]
+            yerr = [[y - lower_ci[i]], [upper_ci[i] - y]]
+            ax.errorbar([metric], [y], yerr=yerr, fmt='o', capsize=8, color='green')
+            ax.tick_params(axis='both', labelsize=tick_font)
+            ax.yaxis.grid(True, linestyle='--', color='lightgray', alpha=0.6)
+            ax.set_xlim(-0.5, 0.5)
+
+            # Set fixed y-limits
+            if metric in y_limits:
+                ax.set_ylim(y_limits[metric])
+
+        fig.suptitle(f"Evaluation of {task_name} with {int(conf_level * 100)}% Confidence Intervals", fontsize=title_font)
+        fig.tight_layout()
         return fig
 
     def report(self, write=False, output_dir=None):

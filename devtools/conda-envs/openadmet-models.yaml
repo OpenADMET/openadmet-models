@@ -1,0 +1,54 @@
+name: openadmet-models
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ase
+  - chemprop >= 2.1.1
+  - codecov
+  - datamol
+  - e3nn
+  - h5py
+  - hyperopt
+  - intake
+  - intake-parquet
+  - joblib
+  - jupyterlab
+  - lightgbm
+  - loguru
+  - matplotlib
+  - mdanalysis
+  - modal
+  - molfeat
+  - mordredcommunity
+  - numpy
+  - pandas
+  - pingouin
+  - pip
+  - python >= 3.12
+  - pytorch
+  - pytorch-lightning
+  - pytorch_cluster
+  - pytorch_geometric
+  - pytorch_scatter
+  - pytorch_sparse
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - rdkit
+  - rich
+  - scikit-learn
+  - seaborn
+  - splito
+  - statsmodels
+  - tabpfn
+  - tabulate
+  - umap-learn
+  - wandb
+  - xgboost
+  - zarr >=3.0.0
+  - pip:
+    - email-validator
+    - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
+    - phx-class-registry
+    - tabpfn-extensions
