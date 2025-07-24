@@ -410,7 +410,7 @@ class GATv2Model(LightningModelBase):
         """
         if not hasattr(self, "estimator") or self.estimator is None:
             raise RuntimeError(
-                "Model has not been built yet. Call 'build()' before 'predict'."
+                "Model has not been built yet. Call `build` before `predict`."
             )
 
         # Set model to evaluation mode
