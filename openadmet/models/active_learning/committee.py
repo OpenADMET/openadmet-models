@@ -1,64 +1,28 @@
 from typing import ClassVar
 
 import numpy as np
-from modAL import ActiveLearner, CommitteeRegressor
-from pydantic import Field, field_validator
 
-from openadmet.models.active_learning.acquisition import (
-    exploitation_query,
-    max_uncertainty_reduction_query,
-    random_query,
-    upper_confidence_bound_query,
-)
+from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
 from openadmet.models.architecture.model_base import ModelBase, PickleableModelBase
 
-_QUERY_STRATEGIES = {
-    "max-uncertainty-reduction": max_uncertainty_reduction_query,
-    "exploitation": exploitation_query,
-    "upper-confidence-bound": upper_confidence_bound_query,  # `beta` should be configurable
-    "random": random_query,
-}
 
-
-# @models.register("ActiveLearningCommitteeRegressor")
-class ActiveLearningCommitteeRegressor(PickleableModelBase):
-    """
-    Committee regressor for active learning
-    """
-
-    type: ClassVar[str] = "ActiveLearningCommitteeRegressor"
+# @models.register("CommitteeRegressor")
+class CommitteeRegressor(PickleableModelBase):
+    type: ClassVar[str] = "CommitteeRegressor"
     models: list = []
-    query_strategy: str = Field(
-        ...,
-        title="Query strategy",
-        description=f"The query strategy to use. Valid options are: {list(_QUERY_STRATEGIES.keys())}",
-    )
-    _committee: CommitteeRegressor = None
 
-    @field_validator("query_strategy")
-    @classmethod
-    def validate_query_strategy(cls, value):
-        """
-        Validate the descriptor type
-        """
-        if value not in _QUERY_STRATEGIES.keys():
-            raise ValueError(
-                f"Query strategy {value} is not valid. "
-                f"Valid options are: {list(_QUERY_STRATEGIES.keys())}"
-            )
-        return value
+    def build(self):
+        pass
 
     @classmethod
-    def from_models(cls, models: list = [], query_strategy: str = None):
+    def from_models(cls, models: list = []):
         """
         Create a committee from list of models.
         """
 
         instance = cls(
             models=models,
-            query_strategy=query_strategy,
         )
-        instance.build()
         return instance
 
     @classmethod
@@ -69,7 +33,6 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
         estimator: ModelBase = None,
         estimator_params: dict = {},
         n_models: int = 1,
-        query_strategy: str = None,
     ):
         """
         Train committee regressor members on bootstrapped data subsets.
@@ -86,13 +49,13 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
             The parameters to pass to the model.
         n_models : int
             The number of models in the committee, by default 1.
-        query_strategy : str, optional
-            The query strategy to use.
+        trainer : TrainerBase
+            Trainer instance, needed for deep learning models.
 
         Returns
         -------
-        ActiveLearningCommitteeRegressor
-            An instance of the ActiveLearningCommitteeRegressor class.
+        CommitteeRegressor
+            An instance of the CommitteeRegressor class.
 
         """
 
@@ -106,32 +69,19 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
             # Initialize model
             model = estimator.from_params(mod_params=estimator_params)
 
-            # Train
+            # Bootstrap the data
             bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
+
+            # Train the model on the bootstrapped data
             model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
 
             # Add to list
             models.append(model)
 
         # Instantiate the committee regressor
-        return cls.from_models(models, query_strategy=query_strategy)
+        return cls.from_models(models)
 
-    def build(self):
-        """
-        Build the committee regressor from the list of models and query strategy.
-        """
-
-        # Map to active learners
-        learners = [ActiveLearner(estimator=x) for x in self.models]
-
-        # Assemble committee
-        committee = CommitteeRegressor(
-            learner_list=learners, query_strategy=_QUERY_STRATEGIES[self.query_strategy]
-        )
-
-        self._committee = committee
-
-    def query(self, X, n_instances: int = 1, **kwargs):
+    def query(self, X, query_strategy: str = None, **kwargs):
         """
         Query the committee to select instances for labeling.
 
@@ -139,21 +89,25 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
         ----------
         X : array-like
             The input data from which instances are to be queried.
-        n_instances : int, optional
-            The number of instances to query, by default 1.
+        query_strategy : str, optional
+            The query strategy to use for selecting instances.
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's query method.
 
         Returns
         -------
-        tuple
-            A tuple containing the indices of the queried instances and the corresponding
-            information (e.g., uncertainty scores) as determined by the committee.
+        np.array
+            Values of the query strategy applied to the input data `X`.
         """
+        if query_strategy.lower() not in _QUERY_STRATEGIES:
+            raise ValueError(
+                f"Invalid query strategy: {query_strategy}. "
+                f"Valid options are: {list(_QUERY_STRATEGIES.keys())}"
+            )
 
-        return self._committee.query(X, n_instances=n_instances, **kwargs)
+        return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
-    def predict(self, X, **kwargs):
+    def predict(self, X, return_std=True):
         """
         Make predictions using the committee model.
 
@@ -170,7 +124,19 @@ class ActiveLearningCommitteeRegressor(PickleableModelBase):
             Predicted values or probabilities, depending on the committee's implementation.
         """
 
-        return self._committee.predict(X, **kwargs)
+        preds = np.stack([model.predict(X) for model in self.models], axis=-1)
+        mean = np.mean(preds, axis=-1)
+        std = np.std(preds, axis=-1)
+
+        if return_std is True:
+            return mean, std
+
+        else:
+            return mean
 
     def from_params(self):
+        """
+        This method doesn't really make sense for this class, as it is instantiated from already-trained models
+        or from the `train` method.
+        """
         raise NotImplementedError
