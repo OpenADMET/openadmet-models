@@ -1,6 +1,6 @@
 from openadmet.models.anvil.data_spec import DataSpec
 from openadmet.models.tests.datafiles import intake_cat, test_csv, nan_data
-
+import pytest
 
 def test_data_spec_from_csv():
     data_spec = DataSpec(
@@ -27,25 +27,17 @@ def test_data_spec_from_intake():
     assert len(target) == 30
     assert len(smiles) == 30
 
-def test_data_spec_dropna():
+@pytest.mark.parametrize("dropna, expected_length", [(True, 3333), (False, 7196)])
+def test_data_spec_dropna(dropna, expected_length):
     data_spec = DataSpec(
         type="intake",
         resource=nan_data,
         target_cols=["OPENADMET_LOGAC50"],
         input_col="OPENADMET_CANONICAL_SMILES",
-        dropna=True
-    )
-    data_spec2 = DataSpec(
-        type="intake",
-        resource=nan_data,
-        target_cols=["OPENADMET_LOGAC50"],
-        input_col="OPENADMET_CANONICAL_SMILES",
-        dropna=False
+        dropna=dropna
     )
 
     target, smiles = data_spec.read()
-    target2, smiles2, = data_spec2.read()
-    assert len(target) == 3333
-    assert len(smiles) == 3333
-    assert len(target2) == 7196
-    assert len(smiles2) == 7196
+
+    assert len(target) == expected_length
+    assert len(smiles) == expected_length
