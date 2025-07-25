@@ -3,6 +3,7 @@ from openadmet.models.tests.test_utils import click_success
 from openadmet.models.tests.datafiles import (
     anvil_lgbm_trained_model_dir,
     pred_test_data_csv,
+    basic_anvil_yaml_cv
 )
 import pytest
 from click.testing import CliRunner
@@ -51,3 +52,22 @@ def test_predict_cli(tmp_path):
         ],
     )
     assert click_success(result)
+
+
+def test_anvil_cli(tmp_path):
+    """Test the anvil CLI command"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "anvil",
+            "--recipe-path",
+            basic_anvil_yaml_cv,
+            "--output-path",
+            tmp_path / "anvil_output",
+        ],
+    )
+
+    assert click_success(result)
+ 
