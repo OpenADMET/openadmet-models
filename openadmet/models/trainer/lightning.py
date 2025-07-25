@@ -121,6 +121,6 @@ class LightningTrainer(TrainerBase):
 
     def make_new(self) -> "LightningTrainer":
         """
-        Copy parameters to a new ChemPropFeaturizer instance
+        Copy parameters to a new LightningTrainer instance
         """
         return self.__class__(**self.__dict__)
