@@ -53,11 +53,11 @@ jobs:
           python -m pip install . --no-deps
           micromamba list
 
-      - name: Run tests
+      - name: Run unit tests
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest -v -n auto --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/
+          pytest -v -n auto --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/unit
 
 
       - name: CodeCov
