@@ -7,42 +7,10 @@ from loguru import logger
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
-from typing import ClassVar, Optional, Any
-from collections import OrderedDict
-
-
-class NeuralPairwiseRegressor(pl.LightningModule):
-
-    def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), self.lr)
-
-    def forward(self, x: torch.Tensor):
-        return self.fnn(x)
-
-    def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
-        x_1, x_2, y = batch
-        x = torch.cat((x_1, x_2), dim=1)
-        y_hat = self(x)
-        loss = torch.nn.functional.mse_loss(y_hat, y)
-        self.log(f"{name}/loss", loss, prog_bar=True)
-        return loss
-
-    def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "training")
-
-    def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "validation")
-
-    def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "testing")
-
-    def predict_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
-        x_1, x_2, _ = batch
-        x = torch.cat((x_1, x_2), dim=1)
-        return self(x)
+from typing import OrderedDict, ClassVar, Optional, Any
 
 @model_registry.register("NepareModel")
-class NepareModel(TorchModelBase):
+class NepareModelBase(TorchModelBase):
 
     type: ClassVar[str] = "NepareModel"
     scaler: Optional[Any] = None
@@ -67,25 +35,14 @@ class NepareModel(TorchModelBase):
         return value
 
     @classmethod
-    def from_params(cls, class_params: dict = None, model_params: dict = None):
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
         Create model instance from parameters
         """
-
-        if class_params:
-            instance = cls(**class_params)
-        else:
-            instance = cls()
-
+        instance = cls(**class_params, mod_params = mod_params)
         instance.build()
         return instance
-
-    def make_new(self) -> "NepareModel":
-        """
-        Create a new instance of the model with the same parameters
-        """
-        return self.__class__(**self.dict(exclude={"estimator"}))
-
+    
     def train(self, dataloader, scaler=None):
         """
         Train the model
