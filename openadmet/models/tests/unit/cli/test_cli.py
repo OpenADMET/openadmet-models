@@ -1,6 +1,6 @@
 from openadmet.models.cli.cli import cli
 from openadmet.models.tests.test_utils import click_success
-from openadmet.models.tests.datafiles import (
+from openadmet.models.tests.unit.datafiles import (
     anvil_lgbm_trained_model_dir,
     pred_test_data_csv,
     basic_anvil_yaml_cv

@@ -3,7 +3,7 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from openadmet.models.comparison.compare_base import get_comparison_class
 from openadmet.models.comparison.posthoc import PostHocComparison
-from openadmet.models.tests.datafiles import cyp2c9_json, cyp1a2_json, cyp3a4_json, multi_task_json
+from openadmet.models.tests.unit.datafiles import cyp2c9_json, cyp1a2_json, cyp3a4_json, multi_task_json
 
 
 def test_get_comparison_class():

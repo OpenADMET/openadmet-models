@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import pandas as pd
 from openadmet.models.features.mtenn import MTENNFeaturizer, MTENNDataset
-from openadmet.models.tests.datafiles import ligand_pose
+from openadmet.models.tests.unit.datafiles import ligand_pose
 
 @pytest.fixture()
 def cyp3a4_pose():

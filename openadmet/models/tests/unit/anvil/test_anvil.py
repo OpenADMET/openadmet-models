@@ -5,7 +5,7 @@ import glob
 from openadmet.models.anvil.workflow import (
     AnvilSpecification,
 )
-from openadmet.models.tests.datafiles import (
+from openadmet.models.tests.unit.datafiles import (
     acetylcholinesterase_anvil_chemprop_yaml,
     tabpfn_anvil_classification_yaml,
     anvil_yaml_featconcat,

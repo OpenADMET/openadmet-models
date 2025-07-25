@@ -4,7 +4,7 @@ import os
 import pytest
 
 from openadmet.models.inference.inference import predict
-from openadmet.models.tests.datafiles import pred_test_data_csv, anvil_lgbm_trained_model_dir, anvil_chemprop_trained_model_dir
+from openadmet.models.tests.unit.datafiles import pred_test_data_csv, anvil_lgbm_trained_model_dir, anvil_chemprop_trained_model_dir
 
 
 @pytest.fixture

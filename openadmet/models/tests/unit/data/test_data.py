@@ -1,5 +1,5 @@
 from openadmet.models.anvil.data_spec import DataSpec
-from openadmet.models.tests.datafiles import intake_cat, test_csv, nan_data
+from openadmet.models.tests.unit.datafiles import intake_cat, test_csv, nan_data
 import pytest
 
 def test_data_spec_from_csv():
