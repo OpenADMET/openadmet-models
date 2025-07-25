@@ -55,5 +55,5 @@ class PairwiseFeatureizer(FeaturizerBase):
     # also probably before the split, because this doesn't
     # won't work on the Xs.  But, possibly need to do indexing
     # on the Xs, pass those here, because don't want to featurize
-    # on concatenated smiles strings.  So, this still needs to 
+    # on concatenated smiles strings.  So, this still needs to
     # happen, need to add some stuff in the anvil workflow as well.

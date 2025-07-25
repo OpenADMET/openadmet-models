@@ -7,7 +7,8 @@ from loguru import logger
 from openadmet.models.architecture.model_base import TorchModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
-from typing import OrderedDict, ClassVar, Optional, Any
+from typing import ClassVar, Optional, Any
+from collections import OrderedDict
 
 @model_registry.register("NepareModel")
 class NepareModelBase(TorchModelBase):
@@ -42,7 +43,7 @@ class NepareModelBase(TorchModelBase):
         instance = cls(**class_params, mod_params = mod_params)
         instance.build()
         return instance
-    
+
     def train(self, dataloader, scaler=None):
         """
         Train the model
