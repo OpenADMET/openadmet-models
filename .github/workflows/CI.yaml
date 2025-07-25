@@ -59,6 +59,13 @@ jobs:
         run: |
           pytest -v -n auto --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/unit
 
+      - name: Run CPU integration tests
+        # conda setup requires this special shell
+        shell: bash -l {0}
+        # use the `-m cpu` marker to run only CPU tests
+        run: |
+          pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
+
 
       - name: CodeCov
         uses: codecov/codecov-action@v5.4.2
