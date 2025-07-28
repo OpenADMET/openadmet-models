@@ -39,7 +39,7 @@ procedure:
     # See openadmet.models.features
     type: DescriptorFeaturizer
     params:
-        descr_type:: "mordred"
+      descr_type: "mordred"
 
   # Model specification
   model:
