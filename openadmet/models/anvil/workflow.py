@@ -417,6 +417,16 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
 
+        # Pair data if necessary
+        if self.feat.pairwise:
+
+            logger.info("Pairing data")
+
+            X_train_feat, y_train, pair_inds = self.feat.pair_data(X_train_feat, y_train)
+            X_test_feat, y_test, pair_inds = self.feat.pair_data(X_test_feat, y_test)
+
+            pair_inds.to_csv(data_dir / "pair_inds.csv", index=False)
+
         logger.info("Data featurized")
 
         # Build model
