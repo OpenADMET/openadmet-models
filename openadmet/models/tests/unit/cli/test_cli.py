@@ -70,4 +70,3 @@ def test_anvil_cli(tmp_path):
     )
 
     assert click_success(result)
-
