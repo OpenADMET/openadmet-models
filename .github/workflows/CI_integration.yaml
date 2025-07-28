@@ -1,4 +1,4 @@
-name: CI
+name: CI_integration_cpu
 
 on:
   # GitHub has started calling new repo's first branch "main" https://github.com/github/renaming
@@ -53,11 +53,12 @@ jobs:
           python -m pip install . --no-deps
           micromamba list
 
-      - name: Run unit tests
+      - name: Run CPU integration tests
         # conda setup requires this special shell
         shell: bash -l {0}
+        # use the `-m cpu` marker to run only CPU tests
         run: |
-          pytest -v -n auto --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/unit
+          pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
 
 
       - name: CodeCov
