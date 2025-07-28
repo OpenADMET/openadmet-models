@@ -32,7 +32,6 @@ class FeaturizerBase(BaseModel, ABC):
         for the model (numpy arrays, dataloaders, etc.) and optional processing info
         """
 
-
 class DeepLearningFeaturizer(FeaturizerBase):
     """
     Base class for deep learning featurizers, allows for arbitrary featurization of molecules

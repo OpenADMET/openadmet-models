@@ -5,13 +5,9 @@ from random import sample
 from pydantic import Field, field_validator, model_validator
 from itertools import combinations, combinations_with_replacement, product, chain
 
-from openadmet.models.features.feature_base import (
-    FeaturizerBase,
-    featurizers,
-)
+from openadmet.models.augment.augment_base import AugmentBase
 
-@featurizers.register("PairFeaturizedData")
-class PairFeaturizedData(FeaturizerBase):
+class PairFeaturizedData(AugmentBase):
     """ 
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method
@@ -43,14 +39,7 @@ class PairFeaturizedData(FeaturizerBase):
             )
         return self
 
-    def featurize(self):
-        """
-        This method is not implemented as PairFeaturizedData is not a featurizer
-        but a data processor for pairing features.
-        """
-        raise NotImplementedError("PairFeaturizedData does not implement featurization.")
-
-    def pair_data(self, x_feat, y) -> np.ndarray:
+    def augment_data(self, x_feat, y) -> np.ndarray:
         """
         Pair the features according to the specified method
 
