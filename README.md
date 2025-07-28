@@ -11,7 +11,7 @@ Implementations of machine learning architectures used in the OpenADMET project 
 
 
 ## Examples
-This repo contains a set of workflows called `anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications. 
+This repo contains a set of workflows called `anvil` (inspired by conda forge) used to produce models from human readable model recipe specifications.
 
 This allows you to train a new model with in a simple command line call:
 
@@ -39,7 +39,7 @@ openadmet compare --model-stats my_model-1/cross_validation_metrics.json --taskn
 ## Getting started
 
 >[!NOTE]
-> We are currently in development mode and are working on what our first release and documentation will look like, we hope to have something stable for people to try out in Q4 2025! 
+> We are currently in development mode and are working on what our first release and documentation will look like, we hope to have something stable for people to try out in Q4 2025!
 
 > When it is available, you will be able to read the documentation here: https://openadmet-models.readthedocs.io/en/latest/, watch this space!
 
