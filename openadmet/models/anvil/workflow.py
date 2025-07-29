@@ -15,7 +15,10 @@ import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
-from openadmet.models.active_learning.ensemble_base import get_ensemble_class
+from openadmet.models.active_learning.ensemble_base import (
+    EnsembleBase,
+    get_ensemble_class,
+)
 from openadmet.models.anvil.data_spec import DataSpec
 from openadmet.models.architecture.model_base import ModelBase, get_mod_class
 from openadmet.models.eval.eval_base import EvalBase, get_eval_class
@@ -145,7 +148,7 @@ class ModelSpec(AnvilSection):
 
 class EnsembleSpec(AnvilSection):
     """
-    Model specification.
+    Ensemble specification.
     """
 
     section_name: ClassVar[str] = "ensemble"
