@@ -35,7 +35,7 @@ procedure:
       messages: bond
       n_tasks: 4
       from_chemeleon: True
-    type: ChemPropMultiRegressorModel
+    type: ChemPropModel
   split:
     params:
       random_state: 42

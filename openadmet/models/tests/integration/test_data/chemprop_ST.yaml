@@ -28,7 +28,7 @@ procedure:
     params:
       messages: bond
       n_tasks: 1
-    type: ChemPropMultiRegressorModel
+    type: ChemPropModel
   split:
     params:
       random_state: 42
