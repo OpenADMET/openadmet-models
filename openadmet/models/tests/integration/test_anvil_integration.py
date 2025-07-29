@@ -4,6 +4,7 @@ import pytest
 from click.testing import CliRunner
 
 from openadmet.models.tests.integration.datafiles import lgbm_fp_prop_cv, lgbm_fp_cv, lgbm_prop_cv
+from openadmet.models.tests.integration.datafiles import chemprop_MT, chemprop_ST, chemeleon_MT, tabpfn, mtenn_anvil
 
 
 
@@ -45,7 +46,11 @@ class TestGPUAnvilConfigs:
     @pytest.mark.gpu
     @pytest.mark.skipif(not test_cuda_available(), reason="CUDA not available")
     @pytest.mark.parametrize("recipe_file", [
-        None
+        chemprop_MT,
+        chemprop_ST,
+        chemeleon_MT,
+        tabpfn,
+        mtenn_anvil
     ])
     def test_gpu_configs(self, recipe_file, tmp_path):
 
