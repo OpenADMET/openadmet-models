@@ -107,7 +107,7 @@ class CommitteeRegressor(PickleableModelBase):
 
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
-    def predict(self, X, return_std=True):
+    def predict(self, X, return_std=False):
         """
         Make predictions using the committee model.
 
