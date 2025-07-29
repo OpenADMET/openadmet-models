@@ -1,4 +1,4 @@
-name: Test Self-Hosted Runner
+name: GPU_CI_integration
 on:
   workflow_dispatch:
 
