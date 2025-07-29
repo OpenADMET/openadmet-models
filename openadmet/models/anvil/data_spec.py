@@ -74,7 +74,7 @@ class DataSpec(BaseModel):
         n_before = len(combined)
 
         if self.dropna:
-            cleaned_combined = combined.dropna()
+            cleaned_combined = combined.dropna().reset_index(drop=True)
             n_after = len(cleaned_combined)
             n_dropped = n_before - n_after
         else:

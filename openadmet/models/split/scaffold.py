@@ -1,8 +1,8 @@
 from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 import numpy as np
+import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
-
 
 @splitters.register("ScaffoldSplitter")
 class ScaffoldSplitter(SplitterBase):
@@ -14,6 +14,7 @@ class ScaffoldSplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
+
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -29,11 +30,11 @@ class ScaffoldSplitter(SplitterBase):
 
 
             return (
-                X[train_idx],
-                X[val_idx],
+                safe_index(X, train_idx),
+                safe_index(X, val_idx),
                 None,
-                y[train_idx],
-                y[val_idx],
+                safe_index(y, train_idx),
+                safe_index(y, val_idx),
                 None,
             )
 
@@ -50,18 +51,18 @@ class ScaffoldSplitter(SplitterBase):
         # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
             return (
-                X[train_val_idx],
+                safe_index(X, train_val_idx),
                 None,
-                X[test_idx],
-                y[train_val_idx],
+                safe_index(X, test_idx),
+                safe_index(y, train_val_idx),
                 None,
-                y[test_idx],
+                safe_index(y, test_idx),
             )
 
         # Split train+val into train and val sets
         X_train, X_val, y_train, y_val = train_test_split(
-            X[train_val_idx],
-            y[train_val_idx],
+            safe_index(X, train_val_idx),
+            safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
@@ -71,10 +72,10 @@ class ScaffoldSplitter(SplitterBase):
         return (
             X_train,
             X_val,
-            X[test_idx],
+            safe_index(X, test_idx),
             y_train,
             y_val,
-            y[test_idx],
+            safe_index(y, test_idx),
         )
 
 
@@ -101,11 +102,11 @@ class PerimeterSplitter(SplitterBase):
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
-                X[train_idx],
-                X[val_idx],
+                safe_index(X, train_idx),
+                safe_index(X, val_idx),
                 None,
-                y[train_idx],
-                y[val_idx],
+                safe_index(y, train_idx),
+                safe_index(y, val_idx),
                 None,
             )
 
@@ -121,18 +122,18 @@ class PerimeterSplitter(SplitterBase):
         # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
             return (
-                X[train_val_idx],
+                safe_index(X, train_val_idx),
                 None,
-                X[test_idx],
-                y[train_val_idx],
+                safe_index(X, test_idx),
+                safe_index(y, train_val_idx),
                 None,
-                y[test_idx],
+                safe_index(y, test_idx),
             )
 
         # Split train+val into train and val sets using sklearn
         X_train, X_val, y_train, y_val = train_test_split(
-            X[train_val_idx],
-            y[train_val_idx],
+            safe_index(X, train_val_idx),
+            safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
@@ -142,10 +143,10 @@ class PerimeterSplitter(SplitterBase):
         return (
             X_train,
             X_val,
-            X[test_idx],
+            safe_index(X, test_idx),
             y_train,
             y_val,
-            y[test_idx],
+            safe_index(y, test_idx),
         )
 
 
@@ -172,11 +173,11 @@ class MaxDissimilaritySplitter(SplitterBase):
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
-                X[train_idx],
-                X[val_idx],
+                safe_index(X, train_idx),
+                safe_index(X, val_idx),
                 None,
-                y[train_idx],
-                y[val_idx],
+                safe_index(y, train_idx),
+                safe_index(y, val_idx),
                 None,
             )
 
@@ -192,18 +193,18 @@ class MaxDissimilaritySplitter(SplitterBase):
         # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
             return (
-                X[train_val_idx],
+                safe_index(X, train_val_idx),
                 None,
-                X[test_idx],
-                y[train_val_idx],
+                safe_index(X, test_idx),
+                safe_index(y, train_val_idx),
                 None,
-                y[test_idx],
+                safe_index(y, test_idx),
             )
 
         # Split train+val into train and val sets using sklearn
         X_train, X_val, y_train, y_val = train_test_split(
-            X[train_val_idx],
-            y[train_val_idx],
+            safe_index(X, train_val_idx),
+            safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
             random_state=self.random_state,
@@ -213,8 +214,30 @@ class MaxDissimilaritySplitter(SplitterBase):
         return (
             X_train,
             X_val,
-            X[test_idx],
+            safe_index(X, test_idx),
             y_train,
             y_val,
-            y[test_idx],
+            safe_index(y, test_idx),
         )
+
+def safe_index(data, idx):
+    """A helper function for correct indexing depending on whether X and y are numpy arrays or pandas series/dataframes.
+
+    Parameters
+    ----------
+    data : nd.array, list, pd.Series, or pd.DataFrame
+        X or y data
+    idx : list
+        list of integers (positional indices)
+
+    Returns
+    -------
+    nd.array or pd.Series
+        indexed data
+    """
+    if isinstance(data, (np.ndarray, list)):
+        return data[idx]
+    elif isinstance(data, (pd.Series, pd.DataFrame)):
+        return data.iloc[idx]
+    else:
+        raise TypeError(f"Unsupported data type for indexing: {type(data)}")
