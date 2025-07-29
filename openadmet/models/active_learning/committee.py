@@ -1,13 +1,14 @@
+from os import PathLike
 from typing import ClassVar
 
 import numpy as np
 
 from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
-from openadmet.models.architecture.model_base import ModelBase, PickleableModelBase
+from openadmet.models.architecture.model_base import ModelBase, models
 
 
-# @models.register("CommitteeRegressor")
-class CommitteeRegressor(PickleableModelBase):
+@models.register("CommitteeRegressor")
+class CommitteeRegressor(ModelBase):
     type: ClassVar[str] = "CommitteeRegressor"
     models: list = []
 
@@ -30,8 +31,8 @@ class CommitteeRegressor(PickleableModelBase):
         cls,
         X,
         y,
-        estimator: ModelBase = None,
-        estimator_params: dict = {},
+        model: ModelBase = None,
+        mod_params: dict = {},
         n_models: int = 1,
     ):
         """
@@ -43,9 +44,9 @@ class CommitteeRegressor(PickleableModelBase):
             The input samples to train on.
         y : array-like of shape (n_samples,)
             The target values.
-        estimator : ModelBase
+        model : ModelBase
             The type of model to use for training.
-        estimator_params : dict
+        mod_params : dict
             The parameters to pass to the model.
         n_models : int
             The number of models in the committee, by default 1.
@@ -60,14 +61,14 @@ class CommitteeRegressor(PickleableModelBase):
         """
 
         # Verify estimator input
-        if estimator is None:
-            raise ValueError("Estimator must be provided.")
+        if model is None:
+            raise ValueError("Model type must be provided.")
 
         # Initialize set of models
         models = []
         for i in range(n_models):
             # Initialize model
-            model = estimator.from_params(mod_params=estimator_params)
+            model = model.from_params(mod_params=mod_params)
 
             # Bootstrap the data
             bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
@@ -107,7 +108,7 @@ class CommitteeRegressor(PickleableModelBase):
 
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
-    def predict(self, X, return_std=False):
+    def predict(self, X, return_std=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -124,7 +125,7 @@ class CommitteeRegressor(PickleableModelBase):
             Predicted values or probabilities, depending on the committee's implementation.
         """
 
-        preds = np.stack([model.predict(X) for model in self.models], axis=-1)
+        preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
         mean = np.mean(preds, axis=-1)
         std = np.std(preds, axis=-1)
 
@@ -140,3 +141,134 @@ class CommitteeRegressor(PickleableModelBase):
         or from the `train` method.
         """
         raise NotImplementedError
+
+    def save(self, paths: list[PathLike]):
+        """
+        Save the committee model to the provided paths.
+
+        Parameters
+        ----------
+        paths : list of PathLike
+            The file paths to save the model weights.
+
+        Returns
+        -------
+        None
+
+        """
+
+        # Check number of paths match
+        if len(self.models) != len(paths):
+            raise ValueError(
+                "Number of models in the committee does not match the number of paths."
+            )
+
+        # Save each model to the provided paths
+        for model, path in zip(self.models, paths):
+            model.save(path)
+
+    @classmethod
+    def load(cls, paths: list[PathLike], model: ModelBase = None):
+        """
+        Load a committee model from the provided paths.
+
+        Parameters
+        ----------
+        paths : list of PathLike
+            The file paths to the model weights.
+        model : ModelBase
+            Model type associated with path to weights.
+
+        Returns
+        -------
+        CommitteeRegressor
+            A committee model created from the loaded models.
+
+        """
+
+        # Check model type
+        if model is None:
+            raise ValueError("Must provide a model type to load.")
+
+        # Load each model from the provided paths
+        models = []
+        for path in paths:
+            models.append(model.load(path))
+
+        # Create a CommitteeRegressor instance from the loaded models
+        return cls.from_models(models)
+
+    def serialize(self, param_paths: list[PathLike], serial_paths: list[PathLike]):
+        """
+        Save the model to a json file and a pickled file.
+
+        Parameters
+        ----------
+        param_paths : list of PathLike
+            The file paths to save the model weights.
+        serial_paths : list of PathLike
+            The file paths to save the model architecture.
+
+        Returns
+        -------
+        None
+
+        """
+
+        # Check number of paths match
+        if len(param_paths) != len(serial_paths):
+            raise ValueError("Number of parameter files and serial files do not match.")
+
+        # Check number of models match
+        if len(self.models) != len(param_paths):
+            raise ValueError(
+                "Number of models in the committee does not match the number of parameter files."
+            )
+
+        # Serialize each model
+        for model, param_path, serial_path in zip(
+            self.models, param_paths, serial_paths
+        ):
+            model.serialize(param_path, serial_path)
+
+    @classmethod
+    def deserialize(
+        cls,
+        param_paths: list[PathLike],
+        serial_paths: list[PathLike],
+        model: ModelBase = None,
+    ):
+        """
+        Create a model from parameters and a pickled model.
+
+        Parameters
+        ----------
+        param_paths : list of PathLike
+            The file paths to the model parameters.
+        serial_paths : list of PathLike
+            The file paths to the model serializations.
+        model : ModelBase
+            An existing model to update with the deserialized parameters.
+
+        Returns
+        -------
+        Committee
+            A committee model created from the deserialized parameters.
+
+        """
+
+        # Check model type
+        if model is None:
+            raise ValueError("Must provide a model type to load.")
+
+        # Check lengths match
+        if len(param_paths) != len(serial_paths):
+            raise ValueError("Number of parameter files and serial files do not match.")
+
+        # Deserialize each model
+        models = []
+        for param_path, serial_path in zip(param_paths, serial_paths):
+            models.append(model.deserialize(param_path, serial_path))
+
+        # Create a CommitteeRegressor instance from the deserialized models
+        return cls.from_models(models)
