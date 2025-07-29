@@ -386,7 +386,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
             # Pass model to trainer
             fold_trainer.model = fold_model
-            fold_trainer.prepare()
+            fold_trainer.build()
 
             # Pass the dataloaders to the trainer
             fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
