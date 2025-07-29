@@ -39,7 +39,7 @@ def test_mtenn_featurizer(cyp3a4_pose):
         ignore_h=True,
     )
 
-    dataloader, _  = ft.featurize([cyp3a4_pose], pd.Series([42]))
+    dataloader, _, _, _  = ft.featurize([cyp3a4_pose], pd.Series([42]))
 
     # Check the length of the dataloader
     assert len(dataloader) == 1
