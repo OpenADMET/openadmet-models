@@ -29,6 +29,6 @@ tabpfn = (_data_ref / "tabpfn.yaml").as_posix()
 mtenn_anvil = (_data_ref / "mtenn_anvil.yaml").as_posix()
 
 
-# poses data 
+# poses data
 poses_data = (_data_ref / "poses.csv").as_posix()
 pdb_folder = (_data_ref / "pose_data").as_posix()

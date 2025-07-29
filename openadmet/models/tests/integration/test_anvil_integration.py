@@ -69,7 +69,7 @@ class TestGPUAnvilConfigs:
 
 class TestStructuralModelGPUAnvilConfigs:
     """Test for MTENN Anvil configuration with GPU support
-    
+
     We need to generate the poses data dynamically for the test, as the original
     mtenn_anvil.yaml file expects a CSV with poses and a folder with PDB files in a static location.
     The test will create a temporary folder with PDB files and a CSV file pointing to
@@ -94,7 +94,7 @@ class TestStructuralModelGPUAnvilConfigs:
         poses_df.to_csv(poses_csv, index=False)
 
         # replace the resource in the recipe file with the temporary CSV file
-        with open(recipe_file, 'r') as file:
+        with open(recipe_file) as file:
             recipe_content = file.read()
         recipe_content = recipe_content.replace("{{ANVIL_DIR}}/poses.csv", poses_csv.as_posix())
 
