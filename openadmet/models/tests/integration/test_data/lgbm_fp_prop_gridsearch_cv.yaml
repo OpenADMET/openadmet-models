@@ -1,13 +1,10 @@
 # This spection specifies the input data
 data:
   # Specify where anvil will run (inputs, outputs, etc.)
-  anvil_dir: demos/anvil_models/lgbm
   # Specify the dataset file
-  resource: ../multitask.csv
+  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
   # TODO: add description of intake
   type: intake
-  # COMMENT ONCE WE KNOW WHAT THIS IS
-  cat_entry: null
   # Specify input column containing SMILES
   input_col: OPENADMET_SMILES
   # Specify each (1+) of the target columns, or the column that you're trying to predict

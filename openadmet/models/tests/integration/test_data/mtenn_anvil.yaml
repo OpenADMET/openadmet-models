@@ -1,0 +1,65 @@
+metadata:
+  version: v1
+  name: "cyp3a4_schnet_test"
+  build_number: 0
+  description: "test schnet model"
+  tag: "blah"
+  authors: "Hugo M-O"
+  email: "hugo.macdermott-opeskin@omsf.io"
+  date_created: "2025-03-04"
+  biotargets:
+    - "CYP3A4"
+  tags:
+    - "openadmet"
+    - "test"
+    - "SCHNET"
+
+  driver: pytorch
+
+data:
+  type: intake
+  resource: "input_poses.csv"
+  input_col: "poses"
+  target_cols: ["y"]
+
+transform:
+
+procedure:
+
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.7
+      test_size: 0.3
+      random_state: 42
+
+  feat:
+    type: MTENNFeaturizer
+    
+
+  model:
+    type: MTENNSchNetModel
+
+  train:
+    type: LightningTrainer
+    params:
+      max_epochs: 1
+      #gpus: 1
+      accelerator: "cpu"
+      devices: 1
+      use_wandb: false
+      wandb_project: "anvil-schnet-testing"
+
+
+
+
+report:
+
+  eval:
+    - type: RegressionMetrics
+    - type: RegressionPlots
+      params:
+        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+        title: "Random stuff"
+        pXC50: true
+
