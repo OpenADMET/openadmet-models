@@ -27,3 +27,8 @@ chemeleon_MT = (_data_ref / "chemeleon_MT.yaml").as_posix()
 tabpfn = (_data_ref / "tabpfn.yaml").as_posix()
 # MTENN anvil
 mtenn_anvil = (_data_ref / "mtenn_anvil.yaml").as_posix()
+
+
+# poses data 
+poses_data = (_data_ref / "poses.csv").as_posix()
+pdb_folder = (_data_ref / "pose_data").as_posix()

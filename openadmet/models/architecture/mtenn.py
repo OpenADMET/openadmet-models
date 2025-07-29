@@ -12,12 +12,14 @@ from openadmet.models.architecture.model_base import models as model_registry
 # TODO: Inherit from LightningModuleBase to expose more configurability
 class MTENNLightningModule(pl.LightningModule):
     def __init__(
-        self, model_config: SchNetModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4
+        self, model_config: SchNetModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4, monitor_metric: str = "val_loss"
     ):
         super().__init__()
         self.model = model_config.build()
         self.loss_fn = loss_fn
         self.lr = lr
+        self.monitor_metric = monitor_metric
+
 
     def forward(self, data):
         for k, v in data.items():

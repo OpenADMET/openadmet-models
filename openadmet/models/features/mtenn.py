@@ -205,5 +205,7 @@ class MTENNFeaturizer(FeaturizerBase):
             num_workers=self.n_jobs,
             collate_fn=_mtenn_collate_fn,
         )
+        indices = np.arange(len(complexes))
+
         # return None for Scaler
-        return self._dataloader, None
+        return self._dataloader, indices, None, self._dataset
