@@ -73,4 +73,3 @@ report:
       random_state: 42
       title: Multitask True vs Predicted pChEMBL on test set
     type: PytorchLightningRepeatedKFoldCrossValidation
-
