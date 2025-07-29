@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 import pandas as pd
 import numpy as np
-from openadmet.models.tests.integration.datafiles import lgbm_fp_prop_cv, lgbm_fp_cv, lgbm_prop_cv, chemprop_MT_cpu_single
+from openadmet.models.tests.integration.datafiles import lgbm_fp_prop_cv, lgbm_fp_cv, lgbm_prop_cv, chemprop_MT_cpu_single, xgboost_perimeter_cv
 from openadmet.models.tests.integration.datafiles import chemprop_MT, chemprop_ST, chemeleon_MT, tabpfn, mtenn_anvil, pdb_folder
 
 
@@ -16,7 +16,8 @@ class TestCPUAnvilConfigs:
         lgbm_fp_cv,
         lgbm_fp_prop_cv,
         lgbm_prop_cv,
-        chemprop_MT_cpu_single
+        chemprop_MT_cpu_single,
+        xgboost_perimeter_cv
     ])
     def test_configs(self, recipe_file, tmp_path):
         runner = CliRunner()
@@ -117,3 +118,6 @@ class TestStructuralModelGPUAnvilConfigs:
             ]
         )
         assert click_success(result)
+
+
+#TODO: Add in tests for inline comparison and inference

@@ -15,6 +15,8 @@ lgbm_prop_cv = (_data_ref / "lgbm_prop_scaffold_cv.yaml").as_posix()
 # single epoch ChemProp with multitask
 chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 
+# xgboost perimeter split
+xgboost_perimeter_cv = (_data_ref / "xgboost_prop_perimeter_cv.yaml").as_posix()
 
 # GPU
 
