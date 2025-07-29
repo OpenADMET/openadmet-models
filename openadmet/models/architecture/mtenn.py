@@ -95,3 +95,10 @@ class MTENNSchNetModel(LightningModelBase):
             )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds, dim=0).numpy()
+    
+
+    def make_new(self) -> "ChemPropModel":
+        """
+        Copy parameters to a new model instance without copying the estimator
+        """
+        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
