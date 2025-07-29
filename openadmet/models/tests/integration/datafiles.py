@@ -12,7 +12,8 @@ lgbm_fp_prop_cv = (_data_ref / "lgbm_fp_prop_gridsearch_cv.yaml").as_posix()
 lgbm_fp_cv = (_data_ref / "lgbm_fp_cv.yaml").as_posix()
 # LGBM with properties and scaffold splitting and cross-validation
 lgbm_prop_cv = (_data_ref / "lgbm_prop_scaffold_cv.yaml").as_posix()
-
+# single epoch ChemProp with multitask
+chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 
 
 # GPU
