@@ -35,7 +35,7 @@ procedure:
 
   feat:
     type: MTENNFeaturizer
-    
+
 
   model:
     type: MTENNSchNetModel
@@ -59,4 +59,3 @@ report:
         axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
         title: "Random stuff"
         pXC50: true
-
