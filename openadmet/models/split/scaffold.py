@@ -14,8 +14,6 @@ class ScaffoldSplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
-        X = X.reset_index(drop=True)
-        y = y.reset_index(drop=True)
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
