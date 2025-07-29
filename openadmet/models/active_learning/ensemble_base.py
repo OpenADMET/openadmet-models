@@ -25,3 +25,19 @@ class EnsembleBase(ModelBase):
 
     type: ClassVar[str] = "EnsembleBase"
     models: list = []
+    n_models: int = 0
+
+    def build(self):
+        """
+        Not needed, as the committee will be built from provided models.
+
+        """
+
+        pass
+
+    def from_params(self):
+        """
+        This method doesn't really make sense for this class, as it is instantiated from already-trained models
+        or from the `train` method.
+        """
+        raise NotImplementedError
