@@ -64,7 +64,7 @@ def test_anvil_cli(tmp_path):
             "anvil",
             "--recipe-path",
             basic_anvil_yaml_cv,
-            "--output-path",
+            "--output-dir",
             tmp_path / "anvil_output",
         ],
     )
