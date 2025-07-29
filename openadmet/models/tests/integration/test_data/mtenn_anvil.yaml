@@ -16,9 +16,10 @@ metadata:
 
   driver: pytorch
 
+# these are dummy values, replace with actual data in due course
 data:
   type: intake
-  resource: "input_poses.csv"
+  resource: "{{ANVIL_DIR}}/poses.csv"
   input_col: "poses"
   target_cols: ["y"]
 
@@ -43,19 +44,33 @@ procedure:
   train:
     type: LightningTrainer
     params:
-      max_epochs: 1
-      #gpus: 1
-      accelerator: "cpu"
+      max_epochs: 10
+      accelerator: "gpu"
       devices: 1
       use_wandb: false
 
 
 report:
-
   eval:
-    - type: RegressionMetrics
-    - type: RegressionPlots
-      params:
-        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
-        title: "Random stuff"
-        pXC50: true
+  - params: {}
+    type: RegressionMetrics
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      title: Multitask True vs Predicted pChEMBL on test set
+    type: RegressionPlots
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      n_repeats: 2
+      n_splits: 5
+      pXC50: true
+      random_state: 42
+      title: Multitask True vs Predicted pChEMBL on test set
+    type: PytorchLightningRepeatedKFoldCrossValidation
+
