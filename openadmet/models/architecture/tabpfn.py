@@ -37,8 +37,8 @@ class TabPFNModelBase(PickleableModelBase):
         description="The device to use for training and prediction."
     )
 
-    random_state: Optional[Union[int, object]] = Field(
-        default=None,
+    random_state: int = Field(
+        default=42,
         description="Controls both the randomness of base models and the post hoc ensembling method."
     )
 
