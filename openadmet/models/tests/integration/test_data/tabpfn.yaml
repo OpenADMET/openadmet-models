@@ -1,0 +1,69 @@
+data:
+  cat_entry: null
+  input_col: OPENADMET_SMILES
+  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
+  target_cols:
+  - cyp3a4_pchembl_value_mean
+  type: intake
+metadata:
+  authors: Hugo M-O
+  biotargets:
+  - CYP3A4
+  build_number: 0
+  description: basic regression with combined fingerprint and descriptor features
+    using LGBM
+  driver: sklearn
+  email: hugo.macdermott-opeskin@omsf.io
+  name: CYP3A4_pchembl_testing_lgbm
+  tag: openadmet-CYP3A4-pchembl-regression-testing-cv
+  tags:
+  - CYP3A4
+  - openadmet
+  - test
+  - pchembl
+  version: v1
+procedure:
+  feat:
+
+    type: DescriptorFeaturizer
+
+    params:
+      descr_type: desc2d
+  model:
+    type: TabPFNRegressorModel
+    params:
+      ignore_pretraining_limits: True
+      device: cuda
+  split:
+    params:
+      random_state: 42
+      test_size: 0.3
+      train_size: 0.7
+    type: ShuffleSplitter
+  train:
+    type: SKLearnBasicTrainer
+report:
+  eval:
+  - params: {}
+    type: RegressionMetrics
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      title: CYP3A4 True vs Predicted pChEMBL on test set
+    type: RegressionPlots
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      n_repeats: 5
+      n_splits: 2
+      pXC50: true
+      random_state: 42
+      title: CYP3A4 True vs Predicted pChEMBL on test set
+    type: SKLearnRepeatedKFoldCrossValidation

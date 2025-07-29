@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
-
+import numpy as np
 from openadmet.models.split.split_base import SplitterBase, splitters
 
 
@@ -25,6 +25,8 @@ class ScaffoldSplitter(SplitterBase):
                 random_state=self.random_state,
             )
             train_idx, val_idx = next(splitter.split(X=X))
+
+
 
             return (
                 X[train_idx],

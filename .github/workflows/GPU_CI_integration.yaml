@@ -1,0 +1,61 @@
+name: GPU_CI_integration
+on:
+  workflow_dispatch:
+
+jobs:
+  start-aws-runner:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      mapping: ${{ steps.aws-start.outputs.mapping }}
+      instances: ${{ steps.aws-start.outputs.instances }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GPU_SELF_HOSTED_ARN }}
+          aws-region: us-east-1
+      - name: Create cloud runner
+        id: aws-start
+        uses: omsf/start-aws-gha-runner@v1.0.0
+        with:
+          aws_image_id: ami-010e080c2b31bb75e
+          aws_instance_type: g4dn.xlarge
+          aws_home_dir: /home/ubuntu
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+  self-hosted-test:
+    runs-on: ${{ fromJSON(needs.start-aws-runner.outputs.instances) }} # This ensures that you only run on the instances you just provisioned
+    needs:
+      - start-aws-runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print disk usage
+        run: "df -h"
+      - name: Print Docker details
+        run: "docker version || true"
+      - name: say hello
+        run: echo "Hey Ethan"
+  stop-aws-runner:
+    runs-on: ubuntu-latest
+    permissions:
+        id-token: write
+        contents: read
+    needs:
+      - start-aws-runner
+      - self-hosted-test
+    if: ${{ always() }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GPU_SELF_HOSTED_ARN }}
+          aws-region: us-east-1
+      - name: Stop instances
+        uses: omsf/stop-aws-gha-runner@v1.0.0
+        with:
+          instance_mapping: ${{ needs.start-aws-runner.outputs.mapping }}
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}

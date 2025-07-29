@@ -60,7 +60,8 @@ namespaces = true
 where = ["."]
 
 [tool.setuptools.package-data]
-"openadmet.models.tests.test_data" = ["**"]
+"openadmet.models.tests.unit.test_data" = ["**"]
+"openadmet.models.tests.integration.test_data" = ["**"]
 
 
 

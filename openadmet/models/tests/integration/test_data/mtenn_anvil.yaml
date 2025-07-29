@@ -1,0 +1,75 @@
+metadata:
+  version: v1
+  name: "cyp3a4_schnet_test"
+  build_number: 0
+  description: "test schnet model"
+  tag: "blah"
+  authors: "Hugo M-O"
+  email: "hugo.macdermott-opeskin@omsf.io"
+  date_created: "2025-03-04"
+  biotargets:
+    - "CYP3A4"
+  tags:
+    - "openadmet"
+    - "test"
+    - "SCHNET"
+
+  driver: pytorch
+
+# these are dummy values, replace with actual data in due course
+data:
+  type: intake
+  resource: "{{ANVIL_DIR}}/poses.csv"
+  input_col: "poses"
+  target_cols: ["y"]
+
+transform:
+
+procedure:
+
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.7
+      test_size: 0.3
+      random_state: 42
+
+  feat:
+    type: MTENNFeaturizer
+
+
+  model:
+    type: MTENNSchNetModel
+
+  train:
+    type: LightningTrainer
+    params:
+      max_epochs: 10
+      accelerator: "gpu"
+      devices: 1
+      use_wandb: false
+
+
+report:
+  eval:
+  - params: {}
+    type: RegressionMetrics
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      title: Multitask True vs Predicted pChEMBL on test set
+    type: RegressionPlots
+  - params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      n_repeats: 2
+      n_splits: 5
+      pXC50: true
+      random_state: 42
+      title: Multitask True vs Predicted pChEMBL on test set
+    type: PytorchLightningRepeatedKFoldCrossValidation
