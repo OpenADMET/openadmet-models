@@ -95,7 +95,7 @@ class MTENNSchNetModel(LightningModelBase):
             )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds, dim=0).numpy()
-    
+
 
     def make_new(self) -> "MTENNSchNetModel":
         """
