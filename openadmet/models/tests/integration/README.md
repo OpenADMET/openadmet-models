@@ -1,6 +1,6 @@
 # Integration testing
 
-Run integration testing on high level components here 
+Run integration testing on high level components here
 
 To run the CPU only tests use the `-m` flag of pytest to only run tests with the CPU mark
 
