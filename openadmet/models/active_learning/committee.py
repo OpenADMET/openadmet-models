@@ -4,21 +4,33 @@ from typing import ClassVar
 import numpy as np
 
 from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
-from openadmet.models.architecture.model_base import ModelBase, models
+from openadmet.models.active_learning.ensemble_base import EnsembleBase, ensemblers
+from openadmet.models.architecture.model_base import ModelBase
 
 
-@models.register("CommitteeRegressor")
-class CommitteeRegressor(ModelBase):
+@ensemblers.register("CommitteeRegressor")
+class CommitteeRegressor(EnsembleBase):
     type: ClassVar[str] = "CommitteeRegressor"
     models: list = []
 
     def build(self):
+        """
+        Not needed, as the committee will be built from provided models.
+
+        """
+
         pass
 
     @classmethod
     def from_models(cls, models: list = []):
         """
         Create a committee from list of models.
+
+        Parameters
+        ----------
+        models : list
+            A list of committee model members.
+
         """
 
         instance = cls(
