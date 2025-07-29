@@ -15,7 +15,7 @@ import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
-from openadmet.models.active_learning.committee import CommitteeRegressor
+from openadmet.models.active_learning.ensemble_base import get_ensemble_class
 from openadmet.models.anvil.data_spec import DataSpec
 from openadmet.models.architecture.model_base import ModelBase, get_mod_class
 from openadmet.models.eval.eval_base import EvalBase, get_eval_class
@@ -27,6 +27,7 @@ from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
     "model": get_mod_class,
+    "ensemble": get_ensemble_class,
     "split": get_splitter_class,
     "eval": get_eval_class,
     "train": get_trainer_class,
@@ -142,6 +143,14 @@ class ModelSpec(AnvilSection):
     section_name: ClassVar[str] = "model"
 
 
+class EnsembleSpec(AnvilSection):
+    """
+    Model specification.
+    """
+
+    section_name: ClassVar[str] = "ensemble"
+
+
 class TrainerSpec(AnvilSection):
     """
     Trainer specification.
@@ -168,6 +177,7 @@ class ProcedureSpec(SpecBase):
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
+    ensemble: EnsembleSpec
     train: TrainerSpec
 
 
@@ -275,6 +285,7 @@ class AnvilSpecification(BaseModel):
             metadata=self.metadata,
             data_spec=self.data,
             model=self.procedure.model.to_class(),
+            ensemble=self.procedure.ensemble.to_class(),
             transform=None,
             split=self.procedure.split.to_class(),
             feat=self.procedure.feat.to_class(),
@@ -295,6 +306,7 @@ class AnvilWorkflowBase(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
+    ensemble: EnsembleBase
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
@@ -794,7 +806,7 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
-        for i in range(self.model.n_models):
+        for i in range(self.ensemble.n_models):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
@@ -860,8 +872,8 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
             # Add model to list
             models.append(self.model)
 
-        # Create committee regressor from trained models
-        self.model = CommitteeRegressor.from_models(models)
+        # Create ensemble from trained models
+        self.model = self.ensemble.from_models(models)
 
         # Predict on test set
         logger.info("Predicting")
