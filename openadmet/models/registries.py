@@ -45,3 +45,7 @@ from openadmet.models.trainer.lightning import *  # noqa: F401 F403
 # trainers
 from openadmet.models.trainer.sklearn import *  # noqa: F401 F403
 from openadmet.models.trainer.trainer_base import trainers  # noqa: F401 F403
+
+# active learning
+from openadmet.models.active_learning.ensemble_base import ensemblers  # noqa: F401 F403
+from openadmet.models.active_learning.committee import *  # noqa: F401 F403
