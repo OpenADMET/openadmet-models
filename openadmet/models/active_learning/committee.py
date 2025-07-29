@@ -11,15 +11,6 @@ from openadmet.models.architecture.model_base import ModelBase
 @ensemblers.register("CommitteeRegressor")
 class CommitteeRegressor(EnsembleBase):
     type: ClassVar[str] = "CommitteeRegressor"
-    models: list = []
-
-    def build(self):
-        """
-        Not needed, as the committee will be built from provided models.
-
-        """
-
-        pass
 
     @classmethod
     def from_models(cls, models: list = []):
@@ -146,13 +137,6 @@ class CommitteeRegressor(EnsembleBase):
 
         else:
             return mean
-
-    def from_params(self):
-        """
-        This method doesn't really make sense for this class, as it is instantiated from already-trained models
-        or from the `train` method.
-        """
-        raise NotImplementedError
 
     def save(self, paths: list[PathLike]):
         """
