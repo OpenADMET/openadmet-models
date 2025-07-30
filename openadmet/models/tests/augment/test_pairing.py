@@ -12,7 +12,7 @@ def smiles():
 
 def test_pairwise_featurization(smiles):
     fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
-    
+
     # Featurize the SMILES strings
     X, _ = fp_featurizer.featurize(smiles)
 
@@ -31,7 +31,7 @@ def test_pairwise_invalid_name():
 
 def test_pairwise_rand(smiles):
     paired_featurizer = PairFeaturizedData(how_to_pair="rand", num_pairs=2)
-    
+
     # Featurize the SMILES strings
     fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
     X, _ = fp_featurizer.featurize(smiles)

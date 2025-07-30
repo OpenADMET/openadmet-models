@@ -15,7 +15,7 @@ def get_augment_class(augment_type):
 
 class AugmentBase(BaseModel, ABC):
     """
-    Base class for Augmenters, allows for arbitrary adjustments to 
+    Base class for Augmenters, allows for arbitrary adjustments to
     data after featurization
     """
 

@@ -8,7 +8,7 @@ from itertools import combinations, combinations_with_replacement, product, chai
 from openadmet.models.augment.augment_base import AugmentBase
 
 class PairFeaturizedData(AugmentBase):
-    """ 
+    """
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method
     """
