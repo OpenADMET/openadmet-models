@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 from os import PathLike
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal  # Add Optional
 
 import fsspec
 import numpy as np
@@ -16,7 +16,6 @@ from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
-    EnsembleBase,
     get_ensemble_class,
 )
 from openadmet.models.anvil.data_spec import DataSpec
@@ -35,6 +34,13 @@ _SECTION_CLASS_GETTERS = {
     "eval": get_eval_class,
     "train": get_trainer_class,
     "INVALID": lambda x: None,
+}
+
+_DEFAULTS = {
+    "metadata": {},
+    "data": {},
+    "procedure": {"split": {}, "feat": {}, "model": {}, "ensemble": {}, "train": {}},
+    "report": {"eval": []},
 }
 
 
@@ -114,12 +120,16 @@ class AnvilSection(SpecBase):
     Anvil specification section base class.
     """
 
-    type: str
+    type: str = None
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
+    optional: bool = False
 
     def to_class(self):
-        return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
+        if self.type is None and self.optional is True:
+            return None
+        else:
+            return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
 
 
 class SplitSpec(AnvilSection):
@@ -152,6 +162,7 @@ class EnsembleSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "ensemble"
+    optional: bool = True
 
 
 class TrainerSpec(AnvilSection):
@@ -214,7 +225,12 @@ class AnvilSpecification(BaseModel):
         # Load YAML file
         of = fsspec.open(yaml_path, "r", **storage_options)
         with of as stream:
-            data = yaml.safe_load(stream)
+            _data = yaml.safe_load(stream)
+
+        # Update from default dictionary
+        data = _DEFAULTS.copy()
+        for k in data:
+            data[k].update(_data[k])
 
         # Parse parent protocol
         parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
@@ -309,7 +325,7 @@ class AnvilWorkflowBase(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
-    ensemble: EnsembleBase
+    ensemble: EnsembleBase | None
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
