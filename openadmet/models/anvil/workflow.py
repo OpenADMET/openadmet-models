@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 from os import PathLike
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Optional
 
 import fsspec
 import torch
@@ -27,7 +27,6 @@ _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
     "model": get_mod_class,
     "split": get_splitter_class,
-    "augment": get_augment_class,
     "eval": get_eval_class,
     "train": get_trainer_class,
     "INVALID": lambda x: None,
@@ -133,15 +132,6 @@ class FeatureSpec(AnvilSection):
     section_name: ClassVar[str] = "feat"
 
 
-class AugmentSpec(AnvilSection):
-    """
-    Data augmentation specification.
-    (Currently only refers to pairwise featurization)
-    """
-
-    section_name: ClassVar[str] = "augment"
-
-
 class ModelSpec(AnvilSection):
     """
     Model specification.
@@ -175,7 +165,6 @@ class ProcedureSpec(SpecBase):
 
     split: SplitSpec
     feat: FeatureSpec
-    augment: AugmentSpec = Field(default=None)
     model: ModelSpec
     train: TrainerSpec
 
@@ -286,7 +275,6 @@ class AnvilSpecification(BaseModel):
             model=self.procedure.model.to_class(),
             transform=None,
             split=self.procedure.split.to_class(),
-            augment=self.procedure.augment.to_class() if self.procedure.augment else None,
             feat=self.procedure.feat.to_class(),
             trainer=self.procedure.train.to_class(),
             evals=[eval.to_class() for eval in self.report.eval],
@@ -304,7 +292,6 @@ class AnvilWorkflowBase(BaseModel):
     transform: Any
     split: SplitterBase
     feat: FeaturizerBase
-    augment: AugmentBase = None
     model: ModelBase
     trainer: TrainerBase
     evals: list[EvalBase]
@@ -430,16 +417,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
-
-        # Pair data if necessary
-        if self.augment is not None:
-
-            logger.info("Pairing data")
-
-            X_train_feat, y_train, pair_inds = self.augment.augment_data(X_train_feat, y_train)
-            X_test_feat, y_test, pair_inds = self.augment.augment_data(X_test_feat, y_test)
-
-            pair_inds.to_csv(data_dir / "pair_inds.csv", index=False)
 
         logger.info("Data featurized")
 
