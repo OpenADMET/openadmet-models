@@ -53,17 +53,7 @@ class PairedFeaturizer(DeepLearningFeaturizer):
         """
         featurizer_cls = globals()[self.featurizer]
         featurizer = featurizer_cls()
-        unpaired_data = featurizer.featurize(smiles, y)
-
-        all_features = []
-        all_labels = []
-
-        for batch_features, batch_labels in unpaired_data:
-            all_features.append(batch_features)
-            all_labels.append(batch_labels)
-
-        dataset_features = np.concatenate(all_features, axis=0)
-        dataset_labels = np.concatenate(all_labels, axis=0)
+        _, _, scaler, unpaired_dataset = featurizer.featurize(smiles, y)
 
         paired_dataset = PairwiseAugmentedDataset(dataset_features, dataset_labels, how=self.how_to_pair)
 
