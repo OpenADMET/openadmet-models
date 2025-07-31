@@ -42,7 +42,7 @@ dependencies:
   - seaborn
   - splito
   - statsmodels
-  - tabpfn
+  # - tabpfn
   - tabulate
   - umap-learn
   - wandb
@@ -53,3 +53,4 @@ dependencies:
     - git+https://github.com/OpenADMET/mtenn.git@remove_dgl
     - phx-class-registry
     - tabpfn-extensions
+    - git+https://github.com/PriorLabs/TabPFN.git@main

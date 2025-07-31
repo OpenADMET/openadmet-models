@@ -45,7 +45,7 @@ procedure:
     type: CatBoostRegressorModel
     # Specify model parameters
     params:
-      alpha: 0.005
+      # alpha: 0.005
       learning_rate: 0.05
 
   # Specify data splits
@@ -67,7 +67,7 @@ procedure:
     params:
       param_grid:
         n_estimators: [500]
-        alpha: [0.005]
+        # alpha: [0.005]
         learning_rate: [0.05]
 
 # Section specifying report generation
