@@ -20,6 +20,8 @@ from openadmet.models.features.chemprop import (
 )
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
+from nepare.data import PairwiseAugmentedDataset, PairwiseAnchoredDataset, PairwiseInferenceDataset
+
 
 # we vendor this from chemprop so that we can pass custom samplers
 # taken directly from https://github.com/chemprop/chemprop/blob/main/chemprop/data/dataloader.py
