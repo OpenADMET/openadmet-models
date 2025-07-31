@@ -3,16 +3,24 @@ from numpy.typing import ArrayLike
 from typing import Literal
 from random import sample
 from pydantic import Field, field_validator, model_validator
-from itertools import combinations, combinations_with_replacement, product, chain
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
+from sklearn.preprocessing import StandardScaler
 
+from openadmet.models.features.chemprop import ChemPropFeaturizer
 from openadmet.models.features.feature_base import DeepLearningFeaturizer
+
+from nepare.data import PairwiseAugmentedDataset
 
 class PairedFeaturizer(DeepLearningFeaturizer):
     """ 
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method
     """
+    featurizer: str = Field(
+        type=str,
+        default="ChemPropFeaturizer",
+        description="Featurizer to use before pairing",
+    )
 
     how_to_pair: Literal['all', 'ut', 'sut', 'rand'] = Field(
         "all",
@@ -20,6 +28,9 @@ class PairedFeaturizer(DeepLearningFeaturizer):
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
         "'rand' for random set of pairs from all, as set by num_pairs.",
     )
+    n_jobs: int = 4
+    batch_size: int = 128
+    shuffle: bool = False
 
     @model_validator(mode="after")
     def validate_pairwise(self):
@@ -30,6 +41,7 @@ class PairedFeaturizer(DeepLearningFeaturizer):
             raise ValueError(
                 "how_to_pair must be one of 'all', 'ut', or 'sut'"
             )
+        return self
 
     def featurize(
         self,
@@ -39,6 +51,27 @@ class PairedFeaturizer(DeepLearningFeaturizer):
         """
         Featurize a list of SMILES strings. Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
         """
-        # Featurization logic here
-        # This is a placeholder for the actual implementation
-        pass
+        featurizer_cls = globals()[self.featurizer]
+        featurizer = featurizer_cls()
+        unpaired_data = featurizer.featurize(smiles, y)
+
+        all_features = []
+        all_labels = []
+
+        for batch_features, batch_labels in unpaired_data:
+            all_features.append(batch_features)
+            all_labels.append(batch_labels)
+
+        dataset_features = np.concatenate(all_features, axis=0)
+        dataset_labels = np.concatenate(all_labels, axis=0)
+
+        paired_dataset = PairwiseAugmentedDataset(dataset_features, dataset_labels, how=self.how_to_pair)
+
+        dataloader = DataLoader(
+            paired_dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.n_jobs,
+        )
+        
+        return dataloader, paired_dataset.indices
