@@ -21,7 +21,6 @@ from openadmet.models.features.feature_base import FeaturizerBase, get_featurize
 from openadmet.models.registries import *  # noqa: F401, F403
 from openadmet.models.split.split_base import SplitterBase, get_splitter_class
 from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
-from openadmet.models.augment.augment_base import AugmentBase, get_augment_class
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
