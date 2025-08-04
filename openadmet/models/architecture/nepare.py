@@ -4,89 +4,38 @@ from lightning import pytorch as pl
 from pydantic import field_validator
 from loguru import logger
 
-from openadmet.models.architecture.model_base import TorchModelBase
+from openadmet.models.architecture.chemprop import ChemPropModel
 from openadmet.models.architecture.model_base import models as model_registry
+
+from nepare.nn import LearnedEmbeddingNeuralPairwiseRegressor
 
 from typing import ClassVar, Optional, Any
 from collections import OrderedDict
 
-@model_registry.register("NepareModel")
-class NepareModelBase(TorchModelBase):
+@model_registry.register("NepareChemPropModel")
+class NepareChempropModelBase(ChemPropModel):
+    """
+    NepareChemPropModel is a neural pairwise regression model based on ChemProp.
+    It uses learned embeddings for pairwise features.
+    """
+    
+    type: ClassVar[str] = "NepareChemPropModel"
+    
+    def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
+        x_1, x_2, y = batch
+        x = torch.cat((x_1, x_2), dim=1)
+        return super()._step((x, y), name)
 
-    type: ClassVar[str] = "NepareModel"
-    scaler: Optional[Any] = None
+    def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
+        return self._step(batch, "training")
 
-    # Model parameters
-    input_dim: int = 128
-    hidden_dim: int = 64
-    num_layers: int = 3
-    activation = torch.nn.ReLU
-    n_targets: int = 1
+    def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
+        return self._step(batch, "validation")
 
-    # Training parameters
-    lr: float = 1e-3
-    loss_function: str = "mse"
+    def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
+        return self._step(batch, "testing")
 
-    @field_validator("loss_function")
-    @classmethod
-    def validate_loss_function(cls, value):
-        """Validate loss function"""
-        if value not in ["mse", "mae", "huber", "bce", "cross_entropy"]:
-            raise ValueError("loss_function must be one of 'mse', 'mae', 'huber', 'bce', or 'cross_entropy'")
-        return value
-
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create model instance from parameters
-        """
-        instance = cls(**class_params, mod_params = mod_params)
-        instance.build()
-        return instance
-
-    def train(self, dataloader, scaler=None):
-        """
-        Train the model
-        """
-        raise NotImplementedError(
-            "Training not implemented in model class, use a trainer"
-        )
-
-    def build(self, scaler=None):
-        """
-        Build the model
-        """
-        self.scaler = scaler
-
-        if not self.estimator:
-
-            model_config = {
-                "input_size": self.input_dim * 2,
-                "hidden_size": self.hidden_dim,
-                "num_layers": self.num_layers,
-                "activation": self.activation,
-                "lr": self.lr,
-                "n_targets": self.n_targets
-            }
-
-            _modules = OrderedDict()
-            for i in range(self.num_layers):
-                _modules[f"hidden_{i}"] = torch.nn.Linear(self.input_dim if i == 0 else self.hidden_dim, self.hidden_dim)
-                _modules[f"{self.activation.__name__.lower()}_{i}"] = self.activation()
-            _modules["readout"] = torch.nn.Linear(self.hidden_dim, self.n_targets)
-            self.estimator = torch.nn.Sequential(_modules)
-
-            self._training_config = {
-                "loss_function": self.loss_function,
-                "optimizer": "AdamW",
-                "lr": self.lr
-            }
-
-            logger.info(f"Built {self.type} with config: {model_config}")
-
-        else:
-            logger.warning(f"{self.type} already built, skipping build step")
-
-    def predict(self, dataloader, accelerator="gpu", devices=1) -> np.ndarray:
-
-        pass
+    def predict_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
+        x_1, x_2, _ = batch
+        x = torch.cat((x_1, x_2), dim=1)
+        return self(x)
