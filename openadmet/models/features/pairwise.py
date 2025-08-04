@@ -11,22 +11,17 @@ from openadmet.models.features.feature_base import DeepLearningFeaturizer
 
 from nepare.data import PairwiseAugmentedDataset
 
-class PairedFeaturizer(DeepLearningFeaturizer):
+class NepareChempropFeaturizer(DeepLearningFeaturizer):
     """ 
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method
     """
-    featurizer: str = Field(
-        type=str,
-        default="ChemPropFeaturizer",
-        description="Featurizer to use before pairing",
-    )
 
-    how_to_pair: Literal['all', 'ut', 'sut', 'rand'] = Field(
-        "all",
-        description="How to pair the features, options are 'all' for all pairs, " \
+    how_to_pair: Literal['full', 'ut', 'sut'] = Field(
+        "full",
+        description="How to pair the features, options are 'full' for all pairs, " \
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
-        "'rand' for random set of pairs from all, as set by num_pairs.",
+        "'rand' for random set of pairs from full, as set by num_pairs.",
     )
     n_jobs: int = 4
     batch_size: int = 128
@@ -37,9 +32,9 @@ class PairedFeaturizer(DeepLearningFeaturizer):
         """
         Validate the how_to_pair and num_pairs parameters together.
         """
-        if self.how_to_pair not in ["all", "ut", "sut"]:
+        if self.how_to_pair not in ["full", "ut", "sut"]:
             raise ValueError(
-                "how_to_pair must be one of 'all', 'ut', or 'sut'"
+                "how_to_pair must be one of 'full', 'ut', or 'sut'"
             )
         return self
 
@@ -51,11 +46,13 @@ class PairedFeaturizer(DeepLearningFeaturizer):
         """
         Featurize a list of SMILES strings. Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
         """
-        featurizer_cls = globals()[self.featurizer]
-        featurizer = featurizer_cls()
-        _, _, scaler, unpaired_dataset = featurizer.featurize(smiles, y)
+        featurizer = ChemPropFeaturizer(n_jobs=self.n_jobs, normalize_targets=False, batch_size=self.batch_size, shuffle=self.shuffle)
+        _, _, _, unpaired_dataset = featurizer.featurize(smiles, y)
 
-        paired_dataset = PairwiseAugmentedDataset(dataset_features, dataset_labels, how=self.how_to_pair)
+        X = np.array(unpaired_dataset.smiles)
+        y = np.array([dp.y[0] for dp in unpaired_dataset.data]) # assumes target is a single value 
+
+        paired_dataset = PairwiseAugmentedDataset(X, y, how=self.how_to_pair)
 
         dataloader = DataLoader(
             paired_dataset,
@@ -63,5 +60,7 @@ class PairedFeaturizer(DeepLearningFeaturizer):
             shuffle=self.shuffle,
             num_workers=self.n_jobs,
         )
+
+        indices = np.arange(len(paired_dataset.X))
         
-        return dataloader, paired_dataset.indices
+        return dataloader, indices, None, paired_dataset # returns None for scaler to stay consistent with ChempropFeaturizer
