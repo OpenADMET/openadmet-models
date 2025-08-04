@@ -18,9 +18,9 @@ class NepareChempropModelBase(ChemPropModel):
     NepareChemPropModel is a neural pairwise regression model based on ChemProp.
     It uses learned embeddings for pairwise features.
     """
-    
+
     type: ClassVar[str] = "NepareChemPropModel"
-    
+
     def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
         x_1, x_2, y = batch
         x = torch.cat((x_1, x_2), dim=1)
