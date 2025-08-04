@@ -12,7 +12,7 @@ from openadmet.models.features.feature_base import DeepLearningFeaturizer
 from nepare.data import PairwiseAugmentedDataset
 
 class NepareChempropFeaturizer(DeepLearningFeaturizer):
-    """ 
+    """
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method
     """
@@ -50,7 +50,7 @@ class NepareChempropFeaturizer(DeepLearningFeaturizer):
         _, _, _, unpaired_dataset = featurizer.featurize(smiles, y)
 
         X = np.array(unpaired_dataset.smiles)
-        y = np.array([dp.y[0] for dp in unpaired_dataset.data]) # assumes target is a single value 
+        y = np.array([dp.y[0] for dp in unpaired_dataset.data]) # assumes target is a single value
 
         paired_dataset = PairwiseAugmentedDataset(X, y, how=self.how_to_pair)
 
@@ -62,5 +62,5 @@ class NepareChempropFeaturizer(DeepLearningFeaturizer):
         )
 
         indices = np.arange(len(paired_dataset.X))
-        
+
         return dataloader, indices, None, paired_dataset # returns None for scaler to stay consistent with ChempropFeaturizer
