@@ -10,13 +10,13 @@ ensemblers = ClassRegistry(unique=True)
 
 def get_ensemble_class(ensemble_type):
     try:
-        feat_class = ensemblers.get_class(ensemble_type)
+        ensemble_class = ensemblers.get_class(ensemble_type)
     except RegistryKeyError:
         raise ValueError(
             f"Ensemble type {ensemble_type} not found in ensemble catalogue,"
             f"available ensembles are {list(ensemblers.classes())}"
         )
-    return feat_class
+    return ensemble_class
 
 
 class EnsembleBase(ModelBase):
