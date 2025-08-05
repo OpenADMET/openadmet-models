@@ -7,11 +7,13 @@ from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import StandardScaler
 
 from openadmet.models.features.chemprop import ChemPropFeaturizer
-from openadmet.models.features.feature_base import DeepLearningFeaturizer
+from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
 from nepare.data import PairwiseAugmentedDataset
 
-class NepareChempropFeaturizer(DeepLearningFeaturizer):
+
+@featurizers.register("NepareChemPropFeaturizer")
+class NepareChemPropFeaturizer(DeepLearningFeaturizer):
     """
     PairFeaturizedData is a featurizer that pairs features
     according to a specified method

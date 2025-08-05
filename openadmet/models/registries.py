@@ -14,6 +14,8 @@ from openadmet.models.eval.eval_base import evaluators  # noqa: F401 F403
 # evaluators
 from openadmet.models.eval.regression import *  # noqa: F401 F403
 from openadmet.models.features.chemprop import *  # noqa: F401 F403
+from openadmet.models.features.pairwise import *  # noqa: F401 F403
+
 from openadmet.models.features.combine import *  # noqa: F401 F403
 from openadmet.models.features.feature_base import featurizers  # noqa: F401 F403
 
@@ -28,6 +30,8 @@ from openadmet.models.architecture.lgbm import *  # noqa: F401 F403
 from openadmet.models.architecture.xgboost import *  # noqa: F401 F403
 from openadmet.models.architecture.catboost import *  # noqa: F401 F403
 from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
+from openadmet.models.architecture.nepare import *  # noqa: F401 F403
+
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403
 from openadmet.models.architecture.gat import *  # noqa: F401 F403
 from openadmet.models.architecture.tabpfn import *  # noqa: F401 F403
