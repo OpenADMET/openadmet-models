@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 
 from openadmet.models.active_learning.committee import (
     _QUERY_STRATEGIES,
-    ActiveLearningCommitteeRegressor,
+    CommitteeRegressor,
 )
 from openadmet.models.architecture.lgbm import LGBMRegressorModel
 
@@ -57,12 +58,55 @@ def test_committee(query_strategy, models, eval_data):
     X, y = eval_data
 
     # Create committee
-    alr = ActiveLearningCommitteeRegressor.from_models(
-        models=models, query_strategy=query_strategy
-    )
+    committee = CommitteeRegressor.from_models(models=models)
 
     # Query
-    idx, instances = alr.query(X, n_instances=1)
+    y_query = committee.query(X, query_strategy=query_strategy)
 
     # Predict
-    y_pred, y_pred_std = alr.predict(X, return_std=True)
+    y_pred, y_pred_std = committee.predict(X, return_std=True)
+
+
+# def test_save_load(tmp_path, models, eval_data):
+#     # Data
+#     X, y = eval_data
+
+#     # Create committee
+#     committee = CommitteeRegressor.from_models(models=models)
+
+#     # Predict before saving
+#     preds = committee.predict(X)
+
+#     # Save and load
+#     save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(models))]
+#     committee.save(save_paths)
+#     committee.load(save_paths, model=models[0])
+
+#     # Predict after loading
+#     preds2 = committee.predict(X)
+
+#     # Check that predictions are the same
+#     assert_allclose(preds, preds2)
+
+
+def test_serialization(tmp_path, models, eval_data):
+    # Data
+    X, y = eval_data
+
+    # Create committee
+    committee = CommitteeRegressor.from_models(models=models)
+
+    # Predict before saving
+    preds = committee.predict(X)
+
+    # Save and load
+    param_paths = [tmp_path / "committee_model_{i}.json" for i in range(len(models))]
+    serial_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(models))]
+    committee.serialize(param_paths, serial_paths)
+    committee.deserialize(param_paths, serial_paths, model=type(models[0]))
+
+    # Predict after loading
+    preds2 = committee.predict(X)
+
+    # Check that predictions are the same
+    assert_allclose(preds, preds2)
