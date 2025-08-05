@@ -22,11 +22,6 @@ class TabPFNModelBase(PickleableModelBase):
         description="The maximum time to spend on fitting the post hoc ensemble."
     )
 
-    preset: Literal["default", "custom_hps", "avoid_overfitting"] = Field(
-        default="default",
-        description="The preset to use for the post hoc ensemble."
-    )
-
     ges_scoring_string: Literal["rmse", "mse", "mae"] = Field(
         default="mse",
         description="The scoring string to use for the greedy ensemble search."
