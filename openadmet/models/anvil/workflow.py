@@ -120,7 +120,7 @@ class AnvilSection(SpecBase):
     Anvil specification section base class.
     """
 
-    type: str = None
+    type: str | None = None
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
     optional: bool = False
