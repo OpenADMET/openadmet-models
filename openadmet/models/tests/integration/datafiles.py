@@ -19,7 +19,9 @@ chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 xgboost_perimeter_cv = (_data_ref / "xgboost_prop_perimeter_cv.yaml").as_posix()
 
 # CatBoost with properties and dissimilarity splitting
-catboost_prop_dissimilarity = (_data_ref / "catboost_prop_dissimilarity.yaml").as_posix()
+catboost_prop_dissimilarity = (
+    _data_ref / "catboost_prop_dissimilarity.yaml"
+).as_posix()
 
 rf_scaffold_cv = (_data_ref / "rf_scaffold_cv.yaml").as_posix()
 
@@ -35,6 +37,8 @@ chemeleon_MT = (_data_ref / "chemeleon_MT.yaml").as_posix()
 tabpfn = (_data_ref / "tabpfn.yaml").as_posix()
 # MTENN anvil
 mtenn_anvil = (_data_ref / "mtenn_anvil.yaml").as_posix()
+# Chemeleon ensemble
+chemeleon_MT_ensemble = (_data_ref / "chemeleon_MT_ensemble.yaml").as_posix()
 
 
 # poses data
