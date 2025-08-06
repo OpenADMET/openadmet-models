@@ -21,6 +21,7 @@ from openadmet.models.features.feature_base import FeaturizerBase, get_featurize
 from openadmet.models.registries import *  # noqa: F401, F403
 from openadmet.models.split.split_base import SplitterBase, get_splitter_class
 from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
+from openadmet.models.transform.transform_base import TransformBase, get_transform_class
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -28,6 +29,7 @@ _SECTION_CLASS_GETTERS = {
     "split": get_splitter_class,
     "eval": get_eval_class,
     "train": get_trainer_class,
+    "transform": get_transform_class,
     "INVALID": lambda x: None,
 }
 
@@ -272,7 +274,7 @@ class AnvilSpecification(BaseModel):
             metadata=self.metadata,
             data_spec=self.data,
             model=self.procedure.model.to_class(),
-            transform=None,
+            transform=self.procedure.transform.to_class(),
             split=self.procedure.split.to_class(),
             feat=self.procedure.feat.to_class(),
             trainer=self.procedure.train.to_class(),
@@ -288,7 +290,7 @@ class AnvilWorkflowBase(BaseModel):
 
     metadata: Metadata
     data_spec: DataSpec
-    transform: Any
+    transform: TransformBase
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
@@ -389,13 +391,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X, y = self.data_spec.read()
         logger.info("Data loaded")
 
-        # Transform data
-        logger.info("Transforming data")
-        if self.transform:
-            X = self.transform.transform(X)
-            logger.info("Data transformed")
-        else:
-            logger.info("No transform specified, skipping")
+
 
         # Split data into train, validation, and test sets
         logger.info("Splitting data")
@@ -416,6 +412,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
+
+        if self.transform:
+            X_train_feat = self.transform.transform(X_train_feat)
+            X_test_feat = self.transform.transform(X_test_feat)
+            zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
+            zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
+            logger.info("Data transformed")
+        else:
+            logger.info("No transform specified, skipping")
 
         logger.info("Data featurized")
 

@@ -1,10 +1,11 @@
-from openadmet.models.transforms.transform_base import TransformBase
+from openadmet.models.transforms.transform_base import TransformBase, transforms
 from sklearn.impute import SimpleImputer, IterativeImputer
 import numpy as np
 from pydantic import field_validator
 from typing import Optional, Literal
 
 
+@transforms.register("ImputeTransform")
 class ImputeTransform(TransformBase):
     """
     Impute missing values in the dataset using a specified strategy.
