@@ -90,7 +90,6 @@ class TabPFNModelBase(PickleableModelBase):
         """
         if not self.estimator:
             self.estimator = self.mod_class(max_time=self.max_time,
-                                            preset=self.preset,
                                             device=self.device,
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits,
