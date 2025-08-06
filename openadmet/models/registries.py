@@ -27,6 +27,7 @@ from openadmet.models.features.gat_featurizer import *  # noqa: F401 F403
 from openadmet.models.architecture.lgbm import *  # noqa: F401 F403
 from openadmet.models.architecture.xgboost import *  # noqa: F401 F403
 from openadmet.models.architecture.catboost import *  # noqa: F401 F403
+from openadmet.models.architecture.svm import *  # noqa: F401 F403
 from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403
 from openadmet.models.architecture.gat import *  # noqa: F401 F403
