@@ -67,26 +67,37 @@ def test_committee(query_strategy, models, eval_data):
     y_pred, y_pred_std = committee.predict(X, return_std=True)
 
 
-# def test_save_load(tmp_path, models, eval_data):
-#     # Data
-#     X, y = eval_data
+def test_save_load(tmp_path, models, eval_data):
+    # Model parameters
+    mod_params = {
+        "n_estimators": 5,
+        "force_row_wise": True,
+    }
 
-#     # Create committee
-#     committee = CommitteeRegressor.from_models(models=models)
+    # Data
+    X, y = eval_data
 
-#     # Predict before saving
-#     preds = committee.predict(X)
+    # Create committee
+    committee = CommitteeRegressor.from_models(models=models)
 
-#     # Save and load
-#     save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(models))]
-#     committee.save(save_paths)
-#     committee.load(save_paths, model=models[0])
+    # Predict before saving
+    preds = committee.predict(X)
 
-#     # Predict after loading
-#     preds2 = committee.predict(X)
+    # Save and load
+    save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(models))]
+    committee.save(save_paths)
+    committee.load(
+        save_paths,
+        models=[
+            LGBMRegressorModel.from_params(mod_params=mod_params) for _ in save_paths
+        ],
+    )
 
-#     # Check that predictions are the same
-#     assert_allclose(preds, preds2)
+    # Predict after loading
+    preds2 = committee.predict(X)
+
+    # Check that predictions are the same
+    assert_allclose(preds, preds2)
 
 
 def test_serialization(tmp_path, models, eval_data):
@@ -103,7 +114,7 @@ def test_serialization(tmp_path, models, eval_data):
     param_paths = [tmp_path / "committee_model_{i}.json" for i in range(len(models))]
     serial_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(models))]
     committee.serialize(param_paths, serial_paths)
-    committee.deserialize(param_paths, serial_paths, model=type(models[0]))
+    committee.deserialize(param_paths, serial_paths, mod_class=models[0].__class__)
 
     # Predict after loading
     preds2 = committee.predict(X)
