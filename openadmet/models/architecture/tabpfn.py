@@ -22,11 +22,6 @@ class TabPFNModelBase(PickleableModelBase):
         description="The maximum time to spend on fitting the post hoc ensemble."
     )
 
-    ges_scoring_string: Literal["rmse", "mse", "mae"] = Field(
-        default="mse",
-        description="The scoring string to use for the greedy ensemble search."
-    )
-
     device: Literal["cpu", "cuda", "auto"] = Field(
         default="auto",
         description="The device to use for training and prediction."
@@ -37,10 +32,6 @@ class TabPFNModelBase(PickleableModelBase):
         description="Controls both the randomness of base models and the post hoc ensembling method."
     )
 
-    categorical_feature_indices: Optional[list[int]] = Field(
-        default=None,
-        description="The indices of the categorical features in the input data. Can also be passed to `fit()`."
-    )
 
     ignore_pretraining_limits: bool = Field(
         default=False,
@@ -93,9 +84,7 @@ class TabPFNModelBase(PickleableModelBase):
                                             device=self.device,
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits,
-                                            phe_init_args=self.phe_init_args,
-                                            categorical_feature_indices=self.categorical_feature_indices,
-                                            ges_scoring_string=self.ges_scoring_string)
+                                            phe_init_args=self.phe_init_args)
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -116,18 +105,6 @@ class TabPFNRegressorModel(TabPFNModelBase):
 
     type: ClassVar[str] = "TabPFNRegressorModel"
     mod_class: ClassVar[type] = AutoTabPFNRegressor
-    ges_scoring_string: str = "mse"
-
-
-    @field_validator("ges_scoring_string")
-    @classmethod
-    def validate_ges_scoring_string(cls, value):
-        """
-        Validate the ges_scoring_string parameter
-        """
-        if value not in ["mse", "mae", "rmse"]:
-            raise ValueError("ges_scoring_string must be one of 'mse', 'mae', or 'rmse'")
-        return value
 
 
 @models.register("TabPFNClassifierModel")
@@ -138,20 +115,6 @@ class TabPFNClassifierModel(TabPFNModelBase):
 
     type: ClassVar[str] = "TabPFNClassifierModel"
     mod_class: ClassVar[type] = AutoTabPFNClassifier
-    ges_scoring_string: str = "accuracy"
-
-
-    @field_validator("ges_scoring_string")
-    @classmethod
-    def validate_ges_scoring_string(cls, value):
-        """
-        Validate the ges_scoring_string parameter
-        """
-        if value not in ["accuracy", "f1", "roc", "auroc", "log_loss"]:
-            raise ValueError(
-                "ges_scoring_string must be one of 'accuracy', 'f1', 'roc', 'auroc', or 'log_loss'"
-            )
-        return value
 
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
