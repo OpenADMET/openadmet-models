@@ -21,6 +21,8 @@ xgboost_perimeter_cv = (_data_ref / "xgboost_prop_perimeter_cv.yaml").as_posix()
 # CatBoost with properties and dissimilarity splitting
 catboost_prop_dissimilarity = (_data_ref / "catboost_prop_dissimilarity.yaml").as_posix()
 
+rf_scaffold_cv = (_data_ref / "rf_scaffold_cv.yaml").as_posix()
+
 # GPU
 
 # ChemProp with multitask and cross-validation
