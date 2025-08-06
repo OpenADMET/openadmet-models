@@ -163,39 +163,38 @@ class CommitteeRegressor(EnsembleBase):
         for model, path in zip(self.models, paths):
             model.save(path)
 
-    # @classmethod
-    # def load(cls, paths: list[PathLike], model: ModelBase = None):
-    #     """
-    #     Load a committee model from the provided paths.
+    @classmethod
+    def load(cls, paths: list[PathLike], models: list[ModelBase] = None):
+        """
+        Load a committee model from the provided paths.
 
-    #     Parameters
-    #     ----------
-    #     paths : list of PathLike
-    #         The file paths to the model weights.
-    #     model : ModelBase
-    #         Model type associated with path to weights.
+        Parameters
+        ----------
+        paths : list of PathLike
+            The file paths to the model weights.
+        models : list of ModelBase
+            Model instances associated with path to weights.
 
-    #     Returns
-    #     -------
-    #     CommitteeRegressor
-    #         A committee model created from the loaded models.
+        Returns
+        -------
+        CommitteeRegressor
+            A committee model created from the loaded models.
 
-    #     """
+        """
 
-    #     # Check model type
-    #     if model is None:
-    #         raise ValueError("Must provide a model type to load.")
+        # Check model type
+        if models is None:
+            raise ValueError("Must provide a list of model instances to load.")
 
-    #     # Load each model from the provided paths
-    #     models = []
-    #     for path in paths:
-    #         models.append(model.load(path))
+        # Check lengths match
+        if len(paths) != len(models):
+            raise ValueError("Number of paths and models do not match.")
 
-    #     # Create a CommitteeRegressor instance from the loaded models
-    #     return cls.from_models(models)
+        # Load each model from the provided paths
+        [model.load(path) for model, path in zip(models, paths)]
 
-    def load(self, paths: list[PathLike], model: ModelBase = None):
-        pass
+        # Create a CommitteeRegressor instance from the loaded models
+        return cls.from_models(models)
 
     def serialize(self, param_paths: list[PathLike], serial_paths: list[PathLike]):
         """
@@ -235,7 +234,7 @@ class CommitteeRegressor(EnsembleBase):
         cls,
         param_paths: list[PathLike],
         serial_paths: list[PathLike],
-        model: ModelBase = None,
+        mod_class: ModelBase = None,
     ):
         """
         Create a model from parameters and a pickled model.
@@ -246,8 +245,8 @@ class CommitteeRegressor(EnsembleBase):
             The file paths to the model parameters.
         serial_paths : list of PathLike
             The file paths to the model serializations.
-        model : ModelBase
-            An existing model to update with the deserialized parameters.
+        mod_class : ModelBase
+            Model class to update with the deserialized parameters.
 
         Returns
         -------
@@ -257,7 +256,7 @@ class CommitteeRegressor(EnsembleBase):
         """
 
         # Check model type
-        if model is None:
+        if mod_class is None:
             raise ValueError("Must provide a model type to load.")
 
         # Check lengths match
@@ -267,7 +266,7 @@ class CommitteeRegressor(EnsembleBase):
         # Deserialize each model
         models = []
         for param_path, serial_path in zip(param_paths, serial_paths):
-            models.append(model.deserialize(param_path, serial_path))
+            models.append(mod_class.deserialize(param_path, serial_path))
 
         # Create a CommitteeRegressor instance from the deserialized models
         return cls.from_models(models)
