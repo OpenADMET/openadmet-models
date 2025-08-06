@@ -1,4 +1,5 @@
 from openadmet.models.transforms.transform_base import TransformBase, transforms
+from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
 import numpy as np
 from pydantic import field_validator
@@ -34,6 +35,7 @@ class ImputeTransform(TransformBase):
         if value not in ["simple", "iterative"]:
             raise ValueError("Imputer must be either 'simple' or 'iterative'")
         return value
+
 
     def transform(self, X: np.ndarray, *args, **kwargs) -> np.ndarray:
         """

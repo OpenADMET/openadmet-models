@@ -10,6 +10,8 @@ _data_ref = resources.files("openadmet.models.tests.integration.test_data")
 lgbm_fp_prop_cv = (_data_ref / "lgbm_fp_prop_gridsearch_cv.yaml").as_posix()
 # fingerprint only
 lgbm_fp_cv = (_data_ref / "lgbm_fp_cv.yaml").as_posix()
+# fingerprint and properties with Mordred features and cross-validation with imputation of missing values
+lgbm_mordred_cv_impute = (_data_ref / "lgbm_mordred_cv_impute.yaml").as_posix()
 # LGBM with properties and scaffold splitting and cross-validation
 lgbm_prop_cv = (_data_ref / "lgbm_prop_scaffold_cv.yaml").as_posix()
 # single epoch ChemProp with multitask

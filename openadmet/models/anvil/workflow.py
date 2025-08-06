@@ -13,6 +13,8 @@ import yaml
 import zarr
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import field_validator
+from typing import Optional
 
 from openadmet.models.anvil.data_spec import DataSpec
 from openadmet.models.architecture.model_base import ModelBase, get_mod_class
@@ -21,7 +23,7 @@ from openadmet.models.features.feature_base import FeaturizerBase, get_featurize
 from openadmet.models.registries import *  # noqa: F401, F403
 from openadmet.models.split.split_base import SplitterBase, get_splitter_class
 from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
-from openadmet.models.transform.transform_base import TransformBase, get_transform_class
+from openadmet.models.transforms.transform_base import TransformBase, get_transform_class
 
 _SECTION_CLASS_GETTERS = {
     "feat": get_featurizer_class,
@@ -168,6 +170,7 @@ class ProcedureSpec(SpecBase):
     feat: FeatureSpec
     model: ModelSpec
     train: TrainerSpec
+    transform: TransformBase | None = None  # Optional transform step
 
 
 class ReportSpec(SpecBase):
@@ -290,7 +293,7 @@ class AnvilWorkflowBase(BaseModel):
 
     metadata: Metadata
     data_spec: DataSpec
-    transform: TransformBase
+    transform: Optional[TransformBase] = None  # Optional transform step
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
