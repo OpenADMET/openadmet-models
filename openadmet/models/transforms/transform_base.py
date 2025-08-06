@@ -32,5 +32,4 @@ class TransformBase(BaseModel, ABC):
         Transform the input data X, returns transformed data in an appropriate format
         """
         raise NotImplementedError("Transform method must be implemented in subclasses")
-    
 

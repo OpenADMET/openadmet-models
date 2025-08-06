@@ -26,7 +26,7 @@ class ImputeTransform(TransformBase):
                 "Strategy must be one of 'mean', 'median', 'most_frequent', or 'constant'"
             )
         return value
-    
+
     @field_validator("imputer")
     def validate_imputer(cls, value):
         """
