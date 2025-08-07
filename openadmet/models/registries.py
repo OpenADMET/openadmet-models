@@ -32,6 +32,7 @@ from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403
 from openadmet.models.architecture.gat import *  # noqa: F401 F403
 from openadmet.models.architecture.tabpfn import *  # noqa: F401 F403
+from openadmet.models.architecture.rf import *  # noqa: F401 F403
 from openadmet.models.architecture.model_base import models  # noqa: F401  F403
 
 # util

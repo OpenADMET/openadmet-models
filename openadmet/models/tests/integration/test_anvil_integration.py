@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 import pandas as pd
 import numpy as np
-from openadmet.models.tests.integration.datafiles import lgbm_fp_prop_cv, lgbm_fp_cv, lgbm_prop_cv, chemprop_MT_cpu_single, xgboost_perimeter_cv, catboost_prop_dissimilarity, lgbm_mordred_cv_impute
+from openadmet.models.tests.integration.datafiles import lgbm_fp_prop_cv, lgbm_fp_cv, lgbm_prop_cv, chemprop_MT_cpu_single, xgboost_perimeter_cv, catboost_prop_dissimilarity, rf_scaffold_cv, lgbm_mordred_cv_impute
 from openadmet.models.tests.integration.datafiles import chemprop_MT, chemprop_ST, chemeleon_MT, tabpfn, mtenn_anvil, pdb_folder
 
 
@@ -20,6 +20,7 @@ class TestCPUAnvilConfigs:
         xgboost_perimeter_cv,
         catboost_prop_dissimilarity,
         lgbm_mordred_cv_impute,
+        rf_scaffold_cv,
     ])
     def test_configs(self, recipe_file, tmp_path):
         runner = CliRunner()
