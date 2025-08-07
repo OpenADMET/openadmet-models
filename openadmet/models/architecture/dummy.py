@@ -105,5 +105,3 @@ class DummyClassifierModel(DummyModelBase):
     type: ClassVar[str] = "DummyClassifierModel"
     mod_class: ClassVar[type] = DummyClassifier
     strategy: str = "most_frequent"  # Default strategy for dummy models
-
-
