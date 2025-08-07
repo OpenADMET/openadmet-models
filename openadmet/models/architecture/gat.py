@@ -396,7 +396,7 @@ class GATv2Model(LightningModelBase):
             "GAT training is handled by LightningTrainer. "
             "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
-
+    #change to the lightning trainer
     def predict(
         self, X: torch.utils.data.DataLoader, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
