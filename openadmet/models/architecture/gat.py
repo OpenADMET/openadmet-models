@@ -397,24 +397,61 @@ class GATv2Model(LightningModelBase):
             "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
 
-    def predict(self, X, accelerator="gpu", devices=1, **kwargs) -> np.ndarray:
+    def predict(self, dataloader, accelerator="gpu", devices=1) -> np.ndarray:
         """
-        Predict using the model
-        """
-        if not self.estimator:
-            raise AttributeError("Model not trained")
+        Make predictions on a dataloader using the core GAT model.
 
+        Args:
+            dataloader (torch.utils.data.DataLoader): Dataloader to predict on.
+            accelerator (str, optional): Accelerator to use. Defaults to "gpu".
+            devices (int, optional): Number of devices to use. Defaults to 1.
+
+        Returns:
+            np.ndarray: Predictions.
+        """
+        if not hasattr(self, "estimator") or self.estimator is None:
+            raise RuntimeError(
+                "Model has not been built yet. Call `build` before `predict`."
+            )
+
+        # Set model to evaluation mode
         self.estimator.eval()
 
-        with torch.inference_mode():
-            trainer = pl.Trainer(
-                logger=None,
-                enable_progress_bar=False,
-                accelerator=accelerator,
-                devices=devices,
-            )
-            preds = trainer.predict(self.estimator, X)
-        return torch.cat(preds).numpy()
+        # Determine device
+        if accelerator == "gpu" and torch.cuda.is_available():
+            device = torch.device("cuda")
+        elif accelerator == "mps" and torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+
+        self.estimator.to(device)
+
+        predictions = []
+
+        with torch.no_grad():
+            for batch in dataloader:
+                # Move batch to device
+                batch = batch.to(device)
+
+                # Forward pass through core model
+                pred = self.estimator(batch)
+
+                # Move predictions to CPU and store
+                predictions.append(pred.cpu())
+
+        # Concatenate all predictions
+        y_pred = torch.cat(predictions).numpy()
+
+        # Apply inverse scaling if scaler is available
+        if self.scaler is not None:
+            y_pred = self.scaler.inverse_transform(y_pred)
+
+        # Ensure correct shape
+        if y_pred.ndim == 1:
+            y_pred = y_pred.reshape(-1, 1)
+
+        return y_pred
 
     def get_model_summary(self):
         """
