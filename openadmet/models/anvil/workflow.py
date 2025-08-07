@@ -286,7 +286,7 @@ class AnvilSpecification(BaseModel):
             metadata=self.metadata,
             data_spec=self.data,
             model=self.procedure.model.to_class(),
-            transform=self.procedure.transform.to_class(),
+            transform=self.procedure.transform.to_class() if self.procedure.transform else None,
             split=self.procedure.split.to_class(),
             feat=self.procedure.feat.to_class(),
             trainer=self.procedure.train.to_class(),
