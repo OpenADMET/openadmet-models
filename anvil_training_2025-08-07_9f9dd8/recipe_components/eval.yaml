@@ -1,6 +1,0 @@
-eval:
-- params:
-    bootstrap_confidence_level: 0.95
-  type: RegressionMetrics
-- params: {}
-  type: RegressionPlots

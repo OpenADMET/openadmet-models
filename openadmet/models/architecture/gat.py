@@ -397,20 +397,12 @@ class GATv2Model(LightningModelBase):
             "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
 
-    def predict(self, dataloader, accelerator="gpu", devices=1, **kwargs) -> np.ndarray:
+    def predict(self, X, accelerator="gpu", devices=1, **kwargs) -> np.ndarray:
         """
-        Make predictions on a dataloader using the core GAT model.
-
-        Args:
-            dataloader (torch.utils.data.DataLoader): Dataloader to predict on.
-            accelerator (str, optional): Accelerator to use. Defaults to "gpu".
-            devices (int, optional): Number of devices to use. Defaults to 1.
-
-        Returns:
-            np.ndarray: Predictions.
+        Predict using the model
         """
         if not self.estimator:
-            raise RuntimeError("Model has not been built yet. Call `build` before `predict`.")
+            raise AttributeError("Model not trained")
 
         self.estimator.eval()
 
@@ -421,17 +413,8 @@ class GATv2Model(LightningModelBase):
                 accelerator=accelerator,
                 devices=devices,
             )
-            predictions = trainer.predict(self.estimator, dataloader)
-
-        y_pred = torch.cat(predictions).numpy()
-
-        if self.scaler is not None:
-            y_pred = self.scaler.inverse_transform(y_pred)
-
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-
-        return y_pred
+            preds = trainer.predict(self.estimator, X)
+        return torch.cat(preds).numpy()
 
     def get_model_summary(self):
         """
