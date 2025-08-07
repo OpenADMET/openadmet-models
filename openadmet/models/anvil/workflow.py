@@ -713,6 +713,12 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
         Run the workflow
         """
 
+        # Ensure ensemble is configured
+        if self.ensemble is None:
+            raise ValueError(
+                "Ensemble is not configured. Please provide an ensemble specification."
+            )
+
         # Override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
