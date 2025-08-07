@@ -42,7 +42,7 @@ procedure:
   model:
     # Indicate model type
     # See openadmet.models.architecture for all model types
-    type: RandomForestRegressorModel
+    type: RFRegressorModel
     # Specify model parameters
     params:
       # alpha: 0.005
