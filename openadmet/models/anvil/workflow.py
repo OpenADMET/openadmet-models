@@ -688,6 +688,7 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
 
     driver: Drivers = Drivers.PYTORCH_ENSEMBLE
     ensemble: EnsembleBase
+    transform: None = None  # Transform is not used in ensemble workflow
 
     def run(
         self,
@@ -759,14 +760,6 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
         logger.info("Loading data")
         X, y = self.data_spec.read()
         logger.info("Data loaded")
-
-        # Transform data
-        logger.info("Transforming data")
-        if self.transform:
-            X = self.transform.transform(X)
-            logger.info("Data transformed")
-        else:
-            logger.info("No transform specified, skipping")
 
         # Split data into train, validation, and test sets
         logger.info("Splitting data")
