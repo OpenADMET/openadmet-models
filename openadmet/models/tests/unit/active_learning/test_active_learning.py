@@ -40,7 +40,7 @@ def models(train_data):
     models = []
     for i in range(5):
         # Initialize model
-        model = LGBMRegressorModel.from_params(mod_params=mod_params)
+        model = LGBMRegressorModel(**mod_params)
 
         # Train
         bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
@@ -88,9 +88,7 @@ def test_save_load(tmp_path, models, eval_data):
     committee.save(save_paths)
     committee.load(
         save_paths,
-        models=[
-            LGBMRegressorModel.from_params(mod_params=mod_params) for _ in save_paths
-        ],
+        models=[LGBMRegressorModel(**mod_params) for _ in save_paths],
     )
 
     # Predict after loading
