@@ -45,7 +45,7 @@ jobs:
           df -h
           ulimit -a
 
-          
+
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
       - uses: mamba-org/setup-micromamba@v1
         with:
