@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from loguru import logger
-import lightning.pytorch as pl
 from pydantic import field_validator
 from torch_geometric.data import Batch
 from torch_geometric.nn import (
