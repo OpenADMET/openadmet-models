@@ -37,7 +37,7 @@ class ImputeTransform(TransformBase):
         return value
 
 
-    def transform(self, X: np.ndarray, *args, **kwargs) -> np.ndarray:
+    def transform(self, X: np.ndarray, *args, **kwargs):
         """
         Impute missing values in the input data X.
 

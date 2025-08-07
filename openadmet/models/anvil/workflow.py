@@ -159,6 +159,15 @@ class EvalSpec(AnvilSection):
     section_name: ClassVar[str] = "eval"
 
 
+class TransformSpec(AnvilSection):
+    """
+    Transform specification.
+    """
+
+    section_name: ClassVar[str] = "transform"
+
+
+
 class ProcedureSpec(SpecBase):
     """
     Procedure specification.
@@ -170,7 +179,7 @@ class ProcedureSpec(SpecBase):
     feat: FeatureSpec
     model: ModelSpec
     train: TrainerSpec
-    transform: TransformBase | None = None  # Optional transform step
+    transform: Optional[TransformSpec]  = None  # Optional transform step
 
 
 class ReportSpec(SpecBase):

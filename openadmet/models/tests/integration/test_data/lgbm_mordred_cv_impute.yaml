@@ -39,8 +39,8 @@ procedure:
         descr_type: "mordred"
 
   transform:
-    # Using the ImputerTransform to handle missing values
-    type: ImputerTransform
+    # Using the ImputeTransform to handle missing values
+    type: ImputeTransform
     params:
       strategy: mean  # or median, most_frequent, etc.
 

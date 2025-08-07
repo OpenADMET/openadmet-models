@@ -38,6 +38,13 @@ procedure:
     params:
         fp_type: "ecfp:4"
 
+
+  transfrom:
+    # Using the Imputer to handle missing values
+    type: ImputerTransform
+    params:
+      strategy: "mean"
+
   # Model specification
   model:
     # Indicate model type
