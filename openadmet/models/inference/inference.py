@@ -58,7 +58,7 @@ def load_anvil_model_and_metadata(model_dir):
         loaded_model = ensemble.deserialize(
             param_paths=list(model_dir.glob(f"*/{model._model_json_name}")),
             serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
-            model=model,
+            mod_class=model,
         )
 
     # Load single model
