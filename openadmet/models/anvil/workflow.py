@@ -191,7 +191,7 @@ class ProcedureSpec(SpecBase):
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
-    ensemble: EnsembleSpec
+    ensemble: EnsembleSpec | None = None
     train: TrainerSpec
 
 
