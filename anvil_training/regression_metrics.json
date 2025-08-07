@@ -1,0 +1,35 @@
+{
+  "tag": "gat-v2-regression",
+  "pChEMBL mean": {
+    "mse": {
+      "value": 3.4171797997599693,
+      "lower_ci": 2.039444769907754,
+      "upper_ci": 4.21959798949379,
+      "confidence_level": 0.95
+    },
+    "mae": {
+      "value": 1.4710815343534065,
+      "lower_ci": 1.3894892659296139,
+      "upper_ci": 1.5441951235959974,
+      "confidence_level": 0.95
+    },
+    "r2": {
+      "value": -12.047625909045017,
+      "lower_ci": -15.763110025183494,
+      "upper_ci": -5.626518019532206,
+      "confidence_level": 0.95
+    },
+    "ktau": {
+      "value": 0.026150407027677527,
+      "lower_ci": -0.02331897409818655,
+      "upper_ci": 0.07460033395139636,
+      "confidence_level": 0.95
+    },
+    "spearmanr": {
+      "value": 0.038081252243207984,
+      "lower_ci": -0.03282250987127,
+      "upper_ci": 0.1072737353712977,
+      "confidence_level": 0.95
+    }
+  }
+}

@@ -1,0 +1,34 @@
+feat:
+  params: {}
+  type: GATGraphFeaturizer
+model:
+  params:
+    edge_dim: 4
+    gat_dropout: 0.1
+    hidden_dim: 64
+    input_dim: 8
+    num_heads: 8
+    num_layers: 4
+    output_dim: 1
+    pooling: mean
+  type: GATv2Model
+split:
+  params:
+    shuffle: true
+    test_size: 0.1
+    train_size: 0.8
+    val_size: 0.1
+  type: ShuffleSplitter
+train:
+  params:
+    accelerator: cpu
+    devices: 1
+    early_stopping: true
+    early_stopping_patience: 5
+    loss_function: mse
+    max_epochs: 3
+    scheduler: reduce_on_plateau
+    scheduler_factor: 0.3
+    scheduler_patience: 15
+    use_wandb: false
+  type: LightningTrainer

@@ -1,0 +1,8 @@
+anvil_dir: file:///Users/xuyuzhi/Downloads/openadmet-models/openadmet/models/tests/unit/test_data
+cat_entry: null
+dropna: true
+input_col: CANONICAL_SMILES
+resource: openadmet/models/tests/unit/test_data/CYP3A4_chembl_pchembl.csv
+target_cols:
+- pChEMBL mean
+type: intake
