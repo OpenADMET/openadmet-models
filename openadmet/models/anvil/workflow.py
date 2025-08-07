@@ -36,13 +36,6 @@ _SECTION_CLASS_GETTERS = {
     "INVALID": lambda x: None,
 }
 
-_DEFAULTS = {
-    "metadata": {},
-    "data": {},
-    "procedure": {"split": {}, "feat": {}, "model": {}, "ensemble": {}, "train": {}},
-    "report": {"eval": []},
-}
-
 
 class SpecBase(BaseModel):
     """
@@ -123,13 +116,9 @@ class AnvilSection(SpecBase):
     type: str | None = None
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
-    optional: bool = False
 
     def to_class(self):
-        if self.type is None and self.optional is True:
-            return None
-        else:
-            return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
+        return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
 
 
 class SplitSpec(AnvilSection):
@@ -162,7 +151,6 @@ class EnsembleSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "ensemble"
-    optional: bool = True
 
 
 class TrainerSpec(AnvilSection):
@@ -225,12 +213,7 @@ class AnvilSpecification(BaseModel):
         # Load YAML file
         of = fsspec.open(yaml_path, "r", **storage_options)
         with of as stream:
-            _data = yaml.safe_load(stream)
-
-        # Update from default dictionary
-        data = _DEFAULTS.copy()
-        for k in data:
-            data[k].update(_data[k])
+            data = yaml.safe_load(stream)
 
         # Parse parent protocol
         parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
@@ -304,7 +287,9 @@ class AnvilSpecification(BaseModel):
             metadata=self.metadata,
             data_spec=self.data,
             model=self.procedure.model.to_class(),
-            ensemble=self.procedure.ensemble.to_class(),
+            ensemble=self.procedure.ensemble.to_class()
+            if self.procedure.ensemble
+            else None,
             transform=None,
             split=self.procedure.split.to_class(),
             feat=self.procedure.feat.to_class(),
@@ -325,7 +310,7 @@ class AnvilWorkflowBase(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
-    ensemble: EnsembleBase | None
+    ensemble: None = None
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
@@ -702,6 +687,7 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
     """
 
     driver: Drivers = Drivers.PYTORCH_ENSEMBLE
+    ensemble: EnsembleBase
 
     def run(
         self,
@@ -712,12 +698,6 @@ class AnvilDeepLearningEnsembleWorkflow(AnvilWorkflowBase):
         """
         Run the workflow
         """
-
-        # Ensure ensemble is configured
-        if self.ensemble is None:
-            raise ValueError(
-                "Ensemble is not configured. Please provide an ensemble specification."
-            )
 
         # Override the model tag from yaml if provided in cli
         if tag is not None:
