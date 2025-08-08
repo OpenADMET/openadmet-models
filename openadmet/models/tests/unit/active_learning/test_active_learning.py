@@ -79,12 +79,18 @@ def test_save_load(tmp_path, model_list, request):
     # Predict before saving
     preds = committee.predict(X, accelerator="cpu")
 
-    # Save and load
+    # Save
     save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))]
     committee.save(save_paths)
+
+    # Instantiate empty models to "fill"
+    models_new = [model.make_new() for model in model_list]
+    [model.build() for model in models_new]
+
+    # Load
     committee.load(
         save_paths,
-        models=[model.__class__() for model in model_list],
+        models=models_new,
     )
 
     # Predict after loading
