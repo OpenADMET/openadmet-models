@@ -1,7 +1,7 @@
 data:
   cat_entry: null
   input_col: OPENADMET_SMILES
-  resource: "{{ANVIL_DIR}}/cyp_multitask_ensemble.csv"
+  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
   target_cols:
   - cyp3a4_pchembl_value_mean
   - cyp2d6_pchembl_value_mean
