@@ -1,7 +1,7 @@
 from scipy.stats import norm
 
 
-def max_uncertainty_reduction_query(regressor, X):
+def max_uncertainty_reduction_query(regressor, X, **kwargs):
     r"""Maximum uncertainty reduction acquisition function. Refines an already well-performing model.
 
     .. math::
@@ -17,6 +17,8 @@ def max_uncertainty_reduction_query(regressor, X):
         Regressor with `predict(X, return_std=True)`.
     X : np.array
         Pool of examples.
+    kwargs : keyword arguments
+        Additional keyword arguments to pass to the regressor's `predict` method.
 
     Returns
     -------
@@ -30,12 +32,12 @@ def max_uncertainty_reduction_query(regressor, X):
 
     """
     # Predict on available points
-    _, std = regressor.predict(X, return_std=True)
+    _, std = regressor.predict(X, return_std=True, **kwargs)
 
     return std
 
 
-def exploitation_query(regressor, X):
+def exploitation_query(regressor, X, **kwargs):
     r"""Returns the instances within `X` with highest predicted values.
 
     Parameters
@@ -44,6 +46,8 @@ def exploitation_query(regressor, X):
         Regressor with `predict(X, return_std=True)`.
     X : np.array
         Pool of examples.
+    kwargs : keyword arguments
+        Additional keyword arguments to pass to the regressor's `predict` method.
 
     Returns
     -------
@@ -52,12 +56,12 @@ def exploitation_query(regressor, X):
 
     """
     # Predict on available points
-    preds = regressor.predict(X, return_std=False)
+    preds = regressor.predict(X, return_std=False, **kwargs)
 
     return preds
 
 
-def probability_improvement_query(regressor, X, best_y, xi=0.01):
+def probability_improvement_query(regressor, X, best_y, xi=0.01, **kwargs):
     r"""
     Probability Improvement (PI) acquisition function. Balances exploration and exploitation.
 
@@ -82,6 +86,8 @@ def probability_improvement_query(regressor, X, best_y, xi=0.01):
         Best observed value so far.
     xi : float
         Exploration-exploitation tradeoff parameter.
+    kwargs : keyword arguments
+        Additional keyword arguments to pass to the regressor's `predict` method.
 
     Returns
     -------
@@ -94,7 +100,7 @@ def probability_improvement_query(regressor, X, best_y, xi=0.01):
     presence of noise. Journal of Basic Engineering, 86(1), 97–106.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
+    mean, std = regressor.predict(X, return_std=True, **kwargs)
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     PI = norm.cdf((mean - best_y - xi) / std)
@@ -102,7 +108,7 @@ def probability_improvement_query(regressor, X, best_y, xi=0.01):
     return PI
 
 
-def expected_improvement_query(regressor, X, best_y, xi=0.01):
+def expected_improvement_query(regressor, X, best_y, xi=0.01, **kwargs):
     r"""
     Expected Improvement (EI) acquisition function. Balances exploration and exploitation.
 
@@ -130,6 +136,8 @@ def expected_improvement_query(regressor, X, best_y, xi=0.01):
         Best observed value so far.
     xi : float
         Exploration-exploitation tradeoff parameter.
+    kwargs : keyword arguments
+        Additional keyword arguments to pass to the regressor's `predict` method.
 
     Returns
     -------
@@ -142,7 +150,7 @@ def expected_improvement_query(regressor, X, best_y, xi=0.01):
     functions. Journal of Global Optimization, 13(4), 455–492.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
+    mean, std = regressor.predict(X, return_std=True, **kwargs)
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     improvement = mean - best_y - xi
@@ -152,7 +160,7 @@ def expected_improvement_query(regressor, X, best_y, xi=0.01):
     return EI
 
 
-def upper_confidence_bound_query(regressor, X, beta=2.0):
+def upper_confidence_bound_query(regressor, X, beta=2.0, **kwargs):
     r"""
     Upper Confidence Bound (UCB) acquisition function. Ensures exploration while still considering high predictions.
 
@@ -173,6 +181,8 @@ def upper_confidence_bound_query(regressor, X, beta=2.0):
         Pool of examples.
     beta : float
         Tradeoff parameter (higher = more exploration).
+    kwargs : keyword arguments
+        Additional keyword arguments to pass to the regressor's `predict` method.
 
     Returns
     -------
@@ -185,7 +195,7 @@ def upper_confidence_bound_query(regressor, X, beta=2.0):
     Setting: No Regret and Experimental Design. ICML.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
+    mean, std = regressor.predict(X, return_std=True, **kwargs)
 
     ucb = mean + beta * std  # Exploration-exploitation balance
 
