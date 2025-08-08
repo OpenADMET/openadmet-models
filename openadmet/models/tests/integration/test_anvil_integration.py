@@ -13,6 +13,7 @@ from openadmet.models.tests.integration.datafiles import (
     chemprop_ST,
     lgbm_fp_cv,
     lgbm_fp_prop_cv,
+    lgbm_mordred_cv_impute,
     lgbm_prop_cv,
     mtenn_anvil,
     pdb_folder,
@@ -34,6 +35,7 @@ class TestCPUAnvilConfigs:
             chemprop_MT_cpu_single,
             xgboost_perimeter_cv,
             catboost_prop_dissimilarity,
+            lgbm_mordred_cv_impute,
             rf_scaffold_cv,
         ],
     )

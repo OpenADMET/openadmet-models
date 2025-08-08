@@ -24,6 +24,7 @@ jobs:
           aws_image_id: ami-010e080c2b31bb75e
           aws_instance_type: g4dn.xlarge
           aws_home_dir: /home/ubuntu
+          aws_root_device_size: 50
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
   self-hosted-test:
