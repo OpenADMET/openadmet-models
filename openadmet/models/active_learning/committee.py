@@ -56,23 +56,21 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        val_mean, val_std = self.predict(X, return_std=True)
+        X_mean, X_std = self.predict(X, return_std=True)
 
         # Fit a separate isotonic regression model for each target dimension
         calibration_models = []
         for i in range(y.shape[-1]):
             # Get the predictive uncertainties in terms of expected proportions and
             # observed proportions on the recalibration set
-            val_exp_props, val_obs_props = (
+            X_exp_props, X_obs_props = (
                 uct.metrics_calibration.get_proportion_lists_vectorized(
-                    val_mean[:, i], val_std[:, i], y[:, i]
+                    X_mean[:, i], X_std[:, i], y[:, i]
                 )
             )
 
             # Train a recalibration model
-            iso_model = uct.recalibration.iso_recal(
-                val_exp_props, val_obs_props
-            ).predict
+            iso_model = uct.recalibration.iso_recal(X_exp_props, X_obs_props).predict
 
             # Append to per-dimension list
             calibration_models.append(iso_model)
@@ -104,14 +102,14 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        val_mean, val_std = self.predict(X, return_std=True)
+        X_mean, X_std = self.predict(X, return_std=True)
 
         # Fit a separate scaling factor for each target dimension
         calibration_models = []
         for i in range(y.shape[-1]):
             # Determine scale factor
             scale_factor = uct.recalibration.optimize_recalibration_ratio(
-                val_mean[:, i], val_std[:, i], y[:, i], criterion="miscal"
+                X_mean[:, i], X_std[:, i], y[:, i], criterion="miscal"
             )
 
             # Append to per-dimension list
@@ -225,6 +223,7 @@ class CommitteeRegressor(EnsembleBase):
         np.array
             Values of the query strategy applied to the input data `X`.
         """
+
         if query_strategy.lower() not in _QUERY_STRATEGIES:
             raise ValueError(
                 f"Invalid query strategy: {query_strategy}. "
