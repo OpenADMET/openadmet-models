@@ -234,6 +234,22 @@ class CommitteeRegressor(EnsembleBase):
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
     def predict(self, X, return_std=False, **kwargs):
+        """
+        Make predictions using the committee model.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples to predict.
+        **kwargs : dict
+            Additional keyword arguments to pass to the committee's predict method.
+
+        Returns
+        -------
+        array-like
+            Predicted values or probabilities, depending on the committee's implementation.
+        """
+
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
         mean = np.mean(preds, axis=-1)
         std = np.std(preds, axis=-1)
