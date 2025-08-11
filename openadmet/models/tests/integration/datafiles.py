@@ -27,6 +27,9 @@ catboost_prop_dissimilarity = (
 
 rf_scaffold_cv = (_data_ref / "rf_scaffold_cv.yaml").as_posix()
 
+# dummy models
+dummy_fp = (_data_ref / "dummy_fp.yaml").as_posix()
+
 # GPU
 
 # ChemProp with multitask and cross-validation

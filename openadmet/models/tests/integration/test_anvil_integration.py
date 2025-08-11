@@ -11,6 +11,7 @@ from openadmet.models.tests.integration.datafiles import (
     chemprop_MT,
     chemprop_MT_cpu_single,
     chemprop_ST,
+    dummy_fp,
     lgbm_fp_cv,
     lgbm_fp_prop_cv,
     lgbm_mordred_cv_impute,
@@ -37,6 +38,7 @@ class TestCPUAnvilConfigs:
             catboost_prop_dissimilarity,
             lgbm_mordred_cv_impute,
             rf_scaffold_cv,
+            dummy_fp,
         ],
     )
     def test_configs(self, recipe_file, tmp_path):
