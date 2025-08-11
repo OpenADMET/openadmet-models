@@ -35,7 +35,7 @@ class CommitteeRegressor(EnsembleBase):
         )
         return instance
 
-    def _isotonic_regression_calibration(self, X, y):
+    def _isotonic_regression_calibration(self, X, y, **kwargs):
         """
         Configure uncertainty calibration using isotonic regression.
 
@@ -45,6 +45,8 @@ class CommitteeRegressor(EnsembleBase):
             The input validation set samples to calibrate.
         y : array-like of shape (n_samples, n_features)
             The target validation set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
 
         Returns
         -------
@@ -56,21 +58,21 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        X_mean, X_std = self.predict(X, return_std=True)
+        y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
 
         # Fit a separate isotonic regression model for each target dimension
         calibration_models = []
         for i in range(y.shape[-1]):
             # Get the predictive uncertainties in terms of expected proportions and
             # observed proportions on the recalibration set
-            X_exp_props, X_obs_props = (
+            y_exp_props, y_obs_props = (
                 uct.metrics_calibration.get_proportion_lists_vectorized(
-                    X_mean[:, i], X_std[:, i], y[:, i]
+                    y_pred_mean[:, i], y_pred_std[:, i], y[:, i]
                 )
             )
 
             # Train a recalibration model
-            iso_model = uct.recalibration.iso_recal(X_exp_props, X_obs_props).predict
+            iso_model = uct.recalibration.iso_recal(y_exp_props, y_obs_props).predict
 
             # Append to per-dimension list
             calibration_models.append(iso_model)
@@ -81,7 +83,7 @@ class CommitteeRegressor(EnsembleBase):
             axis=1,
         )
 
-    def _scaling_factor_calibration(self, X, y):
+    def _scaling_factor_calibration(self, X, y, **kwargs):
         """
         Configure uncertainty calibration using scaling factor.
 
@@ -91,6 +93,8 @@ class CommitteeRegressor(EnsembleBase):
             The input validation set samples to calibrate.
         y : array-like of shape (n_samples, n_features)
             The target validation set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
 
         Returns
         -------
@@ -102,14 +106,14 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        X_mean, X_std = self.predict(X, return_std=True)
+        y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
 
         # Fit a separate scaling factor for each target dimension
         calibration_models = []
         for i in range(y.shape[-1]):
             # Determine scale factor
             scale_factor = uct.recalibration.optimize_recalibration_ratio(
-                X_mean[:, i], X_std[:, i], y[:, i], criterion="miscal"
+                y_pred_mean[:, i], y_pred_std[:, i], y[:, i], criterion="miscal"
             )
 
             # Append to per-dimension list
@@ -121,7 +125,7 @@ class CommitteeRegressor(EnsembleBase):
             axis=1,
         )
 
-    def calibrate_uncertainty(self, X, y, method="isotonic-regression"):
+    def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
         """
         Configure uncertainty calibration using selected method.
 
@@ -133,6 +137,8 @@ class CommitteeRegressor(EnsembleBase):
             The target validation set values.
         method : str
             The calibration method to use. Options are "isotonic-regression" or "scaling-factor".
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
 
         Returns
         -------
@@ -147,7 +153,7 @@ class CommitteeRegressor(EnsembleBase):
                 f"Valid options are: {self._calibration_methods.keys()}"
             )
 
-        getattr(self, self._calibration_methods[method])(X, y)
+        getattr(self, self._calibration_methods[method])(X, y, **kwargs)
 
     @classmethod
     def train(
