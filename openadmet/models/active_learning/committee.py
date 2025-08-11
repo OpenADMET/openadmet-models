@@ -1,7 +1,8 @@
 from os import PathLike
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
+import uncertainty_toolbox as uct
 
 from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
 from openadmet.models.active_learning.ensemble_base import EnsembleBase, ensemblers
@@ -11,6 +12,11 @@ from openadmet.models.architecture.model_base import ModelBase
 @ensemblers.register("CommitteeRegressor")
 class CommitteeRegressor(EnsembleBase):
     type: ClassVar[str] = "CommitteeRegressor"
+    _calibration_model: Any = None
+    _calibration_methods: dict = {
+        "isotonic-regression": "_isotonic_regression_calibration",
+        "scaling-factor": "_scaling_factor_calibration",
+    }
 
     @classmethod
     def from_models(cls, models: list = []):
@@ -28,6 +34,122 @@ class CommitteeRegressor(EnsembleBase):
             models=models,
         )
         return instance
+
+    def _isotonic_regression_calibration(self, X, y):
+        """
+        Configure uncertainty calibration using isotonic regression.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+
+        Returns
+        -------
+        None
+
+        """
+
+        # Reset calibration model
+        self._calibration_model = None
+
+        # Predict on recalibration (validation) set
+        val_mean, val_std = self.predict(X, return_std=True)
+
+        # Fit a separate isotonic regression model for each target dimension
+        calibration_models = []
+        for i in range(y.shape[-1]):
+            # Get the predictive uncertainties in terms of expected proportions and
+            # observed proportions on the recalibration set
+            val_exp_props, val_obs_props = (
+                uct.metrics_calibration.get_proportion_lists_vectorized(
+                    val_mean[:, i], val_std[:, i], y[:, i]
+                )
+            )
+
+            # Train a recalibration model
+            iso_model = uct.recalibration.iso_recal(
+                val_exp_props, val_obs_props
+            ).predict
+
+            # Append to per-dimension list
+            calibration_models.append(iso_model)
+
+        # Create per-dimension calibration model
+        self._calibration_model = lambda x: np.stack(
+            [calibration_models[i](x[:, i]) for i in range(x.shape[-1])],
+            axis=1,
+        )
+
+    def _scaling_factor_calibration(self, X, y):
+        """
+        Configure uncertainty calibration using scaling factor.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+
+        Returns
+        -------
+        None
+
+        """
+
+        # Reset calibration model
+        self._calibration_model = None
+
+        # Predict on recalibration (validation) set
+        val_mean, val_std = self.predict(X, return_std=True)
+
+        # Fit a separate scaling factor for each target dimension
+        calibration_models = []
+        for i in range(y.shape[-1]):
+            # Determine scale factor
+            scale_factor = uct.recalibration.optimize_recalibration_ratio(
+                val_mean[:, i], val_std[:, i], y[:, i], criterion="miscal"
+            )
+
+            # Append to per-dimension list
+            calibration_models.append(lambda x, s=scale_factor: s * x)
+
+        # Create per-dimension calibration model
+        self._calibration_model = lambda x: np.stack(
+            [calibration_models[i](x[:, i]) for i in range(x.shape[-1])],
+            axis=1,
+        )
+
+    def calibrate_uncertainty(self, X, y, method="isotonic-regression"):
+        """
+        Configure uncertainty calibration using selected method.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+        method : str
+            The calibration method to use. Options are "isotonic-regression" or "scaling-factor".
+
+        Returns
+        -------
+        None
+
+        """
+
+        # Validate method selection
+        if method not in self._calibration_methods:
+            raise ValueError(
+                f"Invalid calibration method: {method}. "
+                f"Valid options are: {self._calibration_methods.keys()}"
+            )
+
+        getattr(self, self._calibration_methods[method])(X, y)
 
     @classmethod
     def train(
@@ -112,29 +234,15 @@ class CommitteeRegressor(EnsembleBase):
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
     def predict(self, X, return_std=False, **kwargs):
-        """
-        Make predictions using the committee model.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input samples to predict.
-        **kwargs : dict
-            Additional keyword arguments to pass to the committee's predict method.
-
-        Returns
-        -------
-        array-like
-            Predicted values or probabilities, depending on the committee's implementation.
-        """
-
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
         mean = np.mean(preds, axis=-1)
         std = np.std(preds, axis=-1)
 
+        if self._calibration_model is not None:
+            std = self._calibration_model(std)
+
         if return_std is True:
             return mean, std
-
         else:
             return mean
 
