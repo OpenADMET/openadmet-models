@@ -82,7 +82,7 @@ class DummyRegressorModel(DummyModelBase):
     Dummy regression model
 
     Common parameters for dummy models can be found at:
-    https://scikit-learn.org/stable/modules/dummy.html
+    https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
     type: ClassVar[str] = "DummyRegressorModel"
     mod_class: ClassVar[type] = DummyRegressor
@@ -100,7 +100,7 @@ class DummyClassifierModel(DummyModelBase):
     Dummy classification model
 
     Common parameters for dummy models can be found at:
-    https://scikit-learn.org/stable/modules/dummy.html
+    https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
     type: ClassVar[str] = "DummyClassifierModel"
     mod_class: ClassVar[type] = DummyClassifier
