@@ -11,9 +11,10 @@ from openadmet.models.active_learning.committee import (
 )
 from openadmet.models.inference.inference import load_anvil_model_and_metadata
 from openadmet.models.tests.unit.datafiles import (
+    ACEH_chembl_pchembl,  # chemprop
+    CYP3A4_chembl_pchembl,  # lgbm
     anvil_chemprop_trained_model_dir,
     anvil_lgbm_trained_model_dir,
-    pred_test_data_csv,
 )
 
 
@@ -27,11 +28,15 @@ def chemprop_models():
         )
         models.append(model)
 
-    # Featurize small subset of test data
-    X = pd.read_csv(pred_test_data_csv)["MY_SMILES"].values[:10]
+    # Load data
+    data = pd.read_csv(ACEH_chembl_pchembl).iloc[:100, :]
+    X = data["OPENADMET_SMILES"].values
+    y = data["pchembl_value_mean"].values
+
+    # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return models, X_feat
+    return models, X_feat, y
 
 
 @pytest.fixture
@@ -43,23 +48,35 @@ def lgbm_models():
         )
         models.append(model)
 
-    # Featurize small subset of test data
-    X = pd.read_csv(pred_test_data_csv)["MY_SMILES"].values[:10]
+    # Load data
+    data = pd.read_csv(CYP3A4_chembl_pchembl).iloc[:100, :]
+    X = data["CANONICAL_SMILES"].values
+    y = data["pChEMBL mean"].values
+
+    # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return models, X_feat
+    return models, X_feat, y
 
 
 @pytest.mark.parametrize(
-    "query_strategy, model_list",
-    product(_QUERY_STRATEGIES.keys(), ["lgbm_models", "chemprop_models"]),
+    "query_strategy, model_list, calibration_method",
+    product(
+        _QUERY_STRATEGIES.keys(),
+        ["lgbm_models", "chemprop_models"],
+        ["isotonic-regression", "scaling-factor", None],
+    ),
 )
-def test_committee(query_strategy, model_list, request):
+def test_committee(query_strategy, model_list, calibration_method, request):
     # Unpack models, features
-    model_list, X = request.getfixturevalue(model_list)
+    model_list, X, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
+
+    # Calibrate uncertainty
+    if calibration_method is not None:
+        committee.calibrate_uncertainty(X, y, method=calibration_method)
 
     # Query
     y_query = committee.query(X, query_strategy=query_strategy, accelerator="cpu")
@@ -71,7 +88,7 @@ def test_committee(query_strategy, model_list, request):
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
 def test_save_load(tmp_path, model_list, request):
     # Unpack models, features
-    model_list, X = request.getfixturevalue(model_list)
+    model_list, X, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
@@ -103,7 +120,7 @@ def test_save_load(tmp_path, model_list, request):
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
 def test_serialization(tmp_path, model_list, request):
     # Unpack models, features
-    model_list, X = request.getfixturevalue(model_list)
+    model_list, X, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
