@@ -34,7 +34,7 @@ class CommitteeRegressor(EnsembleBase):
         cls,
         X,
         y,
-        model: ModelBase = None,
+        mod_class: ModelBase = None,
         mod_params: dict = {},
         n_models: int = 1,
     ):
@@ -47,7 +47,7 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to train on.
         y : array-like of shape (n_samples,)
             The target values.
-        model : ModelBase
+        mod_class : ModelBase
             The type of model to use for training.
         mod_params : dict
             The parameters to pass to the model.
@@ -64,14 +64,14 @@ class CommitteeRegressor(EnsembleBase):
         """
 
         # Verify estimator input
-        if model is None:
+        if mod_class is None:
             raise ValueError("Model type must be provided.")
 
         # Initialize set of models
         models = []
         for i in range(n_models):
             # Initialize model
-            model = model(**mod_params)
+            model = mod_class(**mod_params)
 
             # Bootstrap the data
             bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
