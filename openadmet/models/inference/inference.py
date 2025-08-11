@@ -1,15 +1,21 @@
 from pathlib import Path
+from typing import Union
 
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
-from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
-from openadmet.models.anvil.data_spec import DataSpec
 
-from typing import Union, List
+from openadmet.models.anvil.data_spec import DataSpec
+from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+
 
 def load_anvil_model_and_metadata(model_dir):
     """Load the Anvil model from the specified path"""
+
+    # Safely cast to Path
+    if not isinstance(model_dir, Path):
+        model_dir = Path(model_dir)
+
     logger.info(f"Loading model from {model_dir}")
     # Load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
@@ -32,12 +38,9 @@ def load_anvil_model_and_metadata(model_dir):
     # Load the metadata
     metadata = Metadata.from_yaml(metadata_spec)
 
-
     data_spec = recipe_components_dir / "data.yaml"
     if not data_spec.exists():
-        raise FileNotFoundError(
-            f"Model path {model_dir} does not contain data.yaml"
-        )
+        raise FileNotFoundError(f"Model path {model_dir} does not contain data.yaml")
     # Load the data specification
     data = DataSpec.from_yaml(data_spec)
 
@@ -46,15 +49,27 @@ def load_anvil_model_and_metadata(model_dir):
     feat = procedure_spec.feat.to_class()
     model = procedure_spec.model.to_class()
 
+    # Load model ensemble
+    if procedure_spec.ensemble is not None:
+        # Get ensemble class
+        ensemble = procedure_spec.ensemble.to_class()
 
-    # Deserialize the model
-    loaded_model = model.deserialize(
-        param_path=model_dir / model._model_json_name,
-        serial_path=model_dir / model._model_save_name,
-    )
+        # Deserialize the model ensemble
+        loaded_model = ensemble.deserialize(
+            param_paths=list(model_dir.glob(f"*/{model._model_json_name}")),
+            serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
+            mod_class=model,
+        )
+
+    # Load single model
+    else:
+        # Deserialize the model
+        loaded_model = model.deserialize(
+            param_path=model_dir / model._model_json_name,
+            serial_path=model_dir / model._model_save_name,
+        )
 
     return loaded_model, feat, metadata, data
-
 
 
 def predict(
@@ -66,10 +81,9 @@ def predict(
     debug: bool = False,
     accelerator: str = "gpu",
     log: bool = True,
-    **kwargs
+    **kwargs,
 ):
     """Predict using a trained model"""
-
 
     if not log:
         logger.remove()
@@ -103,12 +117,11 @@ def predict(
         logger.debug(f"Model directory is a single path: {model_dir}")
         model_dir = [model_dir]
 
-
-
     logger.info(f"Model directories: {model_dir}")
 
     # Mute output from FutureWarning and DeprecationWarning
     import warnings
+
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -117,7 +130,9 @@ def predict(
         logger.info(f"Loading model {i} from {model_path}")
 
         # Load the model and metadata
-        model, feat, metadata, data_spec = load_anvil_model_and_metadata(Path(model_path))
+        model, feat, metadata, data_spec = load_anvil_model_and_metadata(
+            Path(model_path)
+        )
 
         tasknames = data_spec.target_cols
         logger.info(f"Model {i} has tasks: {tasknames}")
@@ -145,8 +160,10 @@ def predict(
                 )
 
             # Add the predictions to the data DataFrame
-            data[predictions_tag] = pd.Series(predictions[:,j], index=X_indices)
-            logger.info(f"Predictions for model {i} task {j} saved to column '{predictions_tag}'")
+            data[predictions_tag] = pd.Series(predictions[:, j], index=X_indices)
+            logger.info(
+                f"Predictions for model {i} task {j} saved to column '{predictions_tag}'"
+            )
 
     logger.info("Finished prediction")
     logger.info(f"Predictions saved to {output_path}")

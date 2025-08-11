@@ -118,3 +118,9 @@ class LightningTrainer(TrainerBase):
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
         return self.model
+
+    def make_new(self) -> "LightningTrainer":
+        """
+        Copy parameters to a new LightningTrainer instance
+        """
+        return self.__class__(**self.__dict__)

@@ -12,7 +12,7 @@ metadata:
 
 data:
   type: "intake"
-  resource: openadmet/models/tests/unit/test_data/CYP3A4_chembl_pchembl.csv
+  resource: openadmet/models/tests/test_data/CYP3A4_chembl_pchembl.csv
   input_col: CANONICAL_SMILES
   target_cols:
     - pChEMBL mean
@@ -31,7 +31,7 @@ procedure:
     params: {}
 
   model:
-    type: GATv2Model
+    type: GATv2ModelWrapper
     params:
       input_dim: 8
       edge_dim: 4
@@ -43,7 +43,7 @@ procedure:
       output_dim: 1
 
   train:
-    type: "LightningTrainer"
+    type: "GATv2LightningTrainer"
     params:
       max_epochs: 3
       accelerator: "cpu"

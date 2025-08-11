@@ -55,7 +55,7 @@ def test_anvil_workflow_run(tmp_path, anvil_full_recipie):
     anvil_workflow.run(output_dir=tmp_path / "tst")
     assert Path(tmp_path / "tst" / "model.json").exists()
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
-    assert any((tmp_path / "tst").glob("regplot*.png"))
+    assert any((tmp_path / "tst").glob("*regplot.png"))
 
 
 def test_anvil_multiyaml(tmp_path):
@@ -103,7 +103,7 @@ def test_anvil_chemprop_cpu_regression(tmp_path):
     anvil_workflow.run(output_dir=tmp_path / "tst")
     assert Path(tmp_path / "tst" / "model.json").exists()
     assert Path(tmp_path / "tst" / "regression_metrics.json").exists()
-    assert any((tmp_path / "tst").glob("regplot*.png"))
+    assert any((tmp_path / "tst").glob("*regplot.png"))
 
 
 @pytest.mark.skip(reason="TabPFN requires GPU and is not supported on MacOS runners")
