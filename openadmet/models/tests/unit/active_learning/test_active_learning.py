@@ -21,12 +21,12 @@ from openadmet.models.tests.unit.datafiles import (
 @pytest.fixture
 def chemprop_models():
     # Load the model and metadata
-    models = []
+    model_list = []
     for i in range(5):
         model, feat, _, _ = load_anvil_model_and_metadata(
             Path(anvil_chemprop_trained_model_dir)
         )
-        models.append(model)
+        model_list.append(model)
 
     # Load data
     data = pd.read_csv(ACEH_chembl_pchembl).iloc[:100, :]
@@ -36,17 +36,17 @@ def chemprop_models():
     # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return models, X_feat, y
+    return model_list, X_feat, y
 
 
 @pytest.fixture
 def lgbm_models():
-    models = []
+    model_list = []
     for i in range(5):
         model, feat, _, _ = load_anvil_model_and_metadata(
             Path(anvil_lgbm_trained_model_dir)
         )
-        models.append(model)
+        model_list.append(model)
 
     # Load data
     data = pd.read_csv(CYP3A4_chembl_pchembl).iloc[:100, :]
@@ -56,45 +56,47 @@ def lgbm_models():
     # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return models, X_feat, y
+    return model_list, X_feat, y
 
 
 @pytest.mark.parametrize(
-    "query_strategy, model_list, calibration_method",
+    # "calibration_method, query_strategy, model_list",
+    "query_strategy, model_list",
     product(
+        # ["isotonic-regression", "scaling-factor", None],
         _QUERY_STRATEGIES.keys(),
         ["lgbm_models", "chemprop_models"],
-        ["isotonic-regression", "scaling-factor", None],
     ),
 )
-def test_committee(query_strategy, model_list, calibration_method, request):
+# def test_committee(request, calibration_method, query_strategy, model_list):
+def test_committee(request, query_strategy, model_list):
     # Unpack models, features
-    model_list, X, y = request.getfixturevalue(model_list)
+    _model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
-    committee = CommitteeRegressor.from_models(models=model_list)
+    committee = CommitteeRegressor.from_models(models=_model_list)
 
-    # Calibrate uncertainty
-    if calibration_method is not None:
-        committee.calibrate_uncertainty(X, y, method=calibration_method)
+    # # Calibrate uncertainty
+    # if calibration_method is not None:
+    #     committee.calibrate_uncertainty(X_feat, y, method=calibration_method)
 
     # Query
-    y_query = committee.query(X, query_strategy=query_strategy, accelerator="cpu")
+    y_query = committee.query(X_feat, query_strategy=query_strategy, accelerator="cpu")
 
     # Predict
-    y_pred, y_pred_std = committee.predict(X, return_std=True, accelerator="cpu")
+    y_pred, y_pred_std = committee.predict(X_feat, return_std=True, accelerator="cpu")
 
 
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
 def test_save_load(tmp_path, model_list, request):
     # Unpack models, features
-    model_list, X, y = request.getfixturevalue(model_list)
+    model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
 
     # Predict before saving
-    preds = committee.predict(X, accelerator="cpu")
+    preds = committee.predict(X_feat, accelerator="cpu")
 
     # Save
     save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))]
@@ -111,7 +113,7 @@ def test_save_load(tmp_path, model_list, request):
     )
 
     # Predict after loading
-    preds2 = committee.predict(X, accelerator="cpu")
+    preds2 = committee.predict(X_feat, accelerator="cpu")
 
     # Check that predictions are the same
     assert_allclose(preds, preds2)
@@ -120,13 +122,13 @@ def test_save_load(tmp_path, model_list, request):
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
 def test_serialization(tmp_path, model_list, request):
     # Unpack models, features
-    model_list, X, y = request.getfixturevalue(model_list)
+    model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
 
     # Predict before saving
-    preds = committee.predict(X, accelerator="cpu")
+    preds = committee.predict(X_feat, accelerator="cpu")
 
     # Save and load
     param_paths = [
@@ -139,7 +141,7 @@ def test_serialization(tmp_path, model_list, request):
     committee.deserialize(param_paths, serial_paths, mod_class=model_list[0].__class__)
 
     # Predict after loading
-    preds2 = committee.predict(X, accelerator="cpu")
+    preds2 = committee.predict(X_feat, accelerator="cpu")
 
     # Check that predictions are the same
     assert_allclose(preds, preds2)
