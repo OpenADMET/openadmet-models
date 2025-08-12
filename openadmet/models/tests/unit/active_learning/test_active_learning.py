@@ -36,7 +36,7 @@ def chemprop_models():
     # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return model_list, X_feat, y
+    return model_list, X_feat, y.reshape(-1, 1)
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def lgbm_models():
     # Featurize
     X_feat = feat.featurize(X)[0]
 
-    return model_list, X_feat, y
+    return model_list, X_feat, y.reshape(-1, 1)
 
 
 @pytest.mark.parametrize(
@@ -87,13 +87,25 @@ def test_committee(request, model_list, calibration_method, query_strategy):
     y_pred, y_pred_std = committee.predict(X_feat, return_std=True, accelerator="cpu")
 
 
-@pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
-def test_save_load(request, tmp_path, model_list):
+@pytest.mark.parametrize(
+    "model_list, calibration_method",
+    product(
+        ["lgbm_models", "chemprop_models"],
+        ["isotonic-regression", "scaling-factor", None],
+    ),
+)
+def test_save_load(request, tmp_path, model_list, calibration_method):
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
+
+    # Calibrate uncertainty
+    if calibration_method is not None:
+        committee.calibrate_uncertainty(
+            X_feat, y, method=calibration_method, accelerator="cpu"
+        )
 
     # Predict before saving
     preds = committee.predict(X_feat, accelerator="cpu")
@@ -119,13 +131,25 @@ def test_save_load(request, tmp_path, model_list):
     assert_allclose(preds, preds2)
 
 
-@pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
-def test_serialization(request, tmp_path, model_list):
+@pytest.mark.parametrize(
+    "model_list, calibration_method",
+    product(
+        ["lgbm_models", "chemprop_models"],
+        ["isotonic-regression", "scaling-factor", None],
+    ),
+)
+def test_serialization(request, tmp_path, model_list, calibration_method):
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=model_list)
+
+    # Calibrate uncertainty
+    if calibration_method is not None:
+        committee.calibrate_uncertainty(
+            X_feat, y, method=calibration_method, accelerator="cpu"
+        )
 
     # Predict before saving
     preds = committee.predict(X_feat, accelerator="cpu")

@@ -1,6 +1,7 @@
 from os import PathLike
 from typing import Any, ClassVar
 
+import joblib
 import numpy as np
 import uncertainty_toolbox as uct
 
@@ -305,6 +306,18 @@ class CommitteeRegressor(EnsembleBase):
         else:
             return mean
 
+    def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
+        # Save calibration model
+        if self._calibration_model is not None:
+            with open(path, "wb") as f:
+                joblib.dump(self._calibration_model, f)
+
+    def _load_calibration_model(self, path: PathLike = "calibration_model.pkl"):
+        # Load calibration model
+        if path.exists():
+            with open(path, "rb") as f:
+                self._calibration_model = joblib.load(f)
+
     def save(self, paths: list[PathLike]):
         """
         Save the committee model to the provided paths.
@@ -329,6 +342,9 @@ class CommitteeRegressor(EnsembleBase):
         # Save each model to the provided paths
         for model, path in zip(self.models, paths):
             model.save(path)
+
+        # Save calibration model
+        self._save_calibration_model(paths[0].parent / "calibration_model.pkl")
 
     @classmethod
     def load(cls, paths: list[PathLike], models: list[ModelBase] = None):
@@ -361,7 +377,12 @@ class CommitteeRegressor(EnsembleBase):
         [model.load(path) for model, path in zip(models, paths)]
 
         # Create a CommitteeRegressor instance from the loaded models
-        return cls.from_models(models)
+        instance = cls.from_models(models)
+
+        # Load calibration model
+        instance._load_calibration_model(paths[0].parent / "calibration_model.pkl")
+
+        return instance
 
     def serialize(self, param_paths: list[PathLike], serial_paths: list[PathLike]):
         """
@@ -395,6 +416,9 @@ class CommitteeRegressor(EnsembleBase):
             self.models, param_paths, serial_paths
         ):
             model.serialize(param_path, serial_path)
+
+        # Save calibration model
+        self._save_calibration_model(param_paths[0].parent / "calibration_model.pkl")
 
     @classmethod
     def deserialize(
@@ -436,4 +460,11 @@ class CommitteeRegressor(EnsembleBase):
             models.append(mod_class.deserialize(param_path, serial_path))
 
         # Create a CommitteeRegressor instance from the deserialized models
-        return cls.from_models(models)
+        instance = cls.from_models(models)
+
+        # Load calibration model
+        instance._load_calibration_model(
+            param_paths[0].parent / "calibration_model.pkl"
+        )
+
+        return instance
