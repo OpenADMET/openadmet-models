@@ -155,6 +155,44 @@ class CommitteeRegressor(EnsembleBase):
 
         getattr(self, self._calibration_methods[method])(X, y, **kwargs)
 
+    def plot_uncertainty_calibration(self, X, y, **kwargs):
+        """
+        Plot uncertainty calibration for the committee model.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input test set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target test set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
+
+        Returns
+        -------
+        list
+            A list of plots for each target dimension.
+
+        """
+
+        # Predict on recalibration (validation) set
+        y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
+
+        # Plot calibration
+        plots = []
+        for i in range(y.shape[-1]):
+            plots.append(
+                uct.viz.plot_calibration(
+                    y_pred_mean.flatten(), y_pred_std.flatten(), y[:, i].flatten()
+                )
+            )
+
+        # If only one plot is generated, return it directly
+        if len(plots) == 1:
+            return plots[0]
+
+        return plots
+
     @classmethod
     def train(
         cls,
