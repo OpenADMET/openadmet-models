@@ -60,25 +60,25 @@ def lgbm_models():
 
 
 @pytest.mark.parametrize(
-    # "calibration_method, query_strategy, model_list",
-    "query_strategy, model_list",
+    "model_list, calibration_method, query_strategy",
     product(
-        # ["isotonic-regression", "scaling-factor", None],
-        _QUERY_STRATEGIES.keys(),
         ["lgbm_models", "chemprop_models"],
+        ["isotonic-regression", "scaling-factor", None],
+        _QUERY_STRATEGIES.keys(),
     ),
 )
-# def test_committee(request, calibration_method, query_strategy, model_list):
-def test_committee(request, query_strategy, model_list):
+def test_committee(request, model_list, calibration_method, query_strategy):
     # Unpack models, features
     _model_list, X_feat, y = request.getfixturevalue(model_list)
 
     # Create committee
     committee = CommitteeRegressor.from_models(models=_model_list)
 
-    # # Calibrate uncertainty
-    # if calibration_method is not None:
-    #     committee.calibrate_uncertainty(X_feat, y, method=calibration_method)
+    # Calibrate uncertainty
+    if calibration_method is not None:
+        committee.calibrate_uncertainty(
+            X_feat, y, method=calibration_method, accelerator="cpu"
+        )
 
     # Query
     y_query = committee.query(X_feat, query_strategy=query_strategy, accelerator="cpu")
@@ -88,7 +88,7 @@ def test_committee(request, query_strategy, model_list):
 
 
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
-def test_save_load(tmp_path, model_list, request):
+def test_save_load(request, tmp_path, model_list):
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
 
@@ -120,7 +120,7 @@ def test_save_load(tmp_path, model_list, request):
 
 
 @pytest.mark.parametrize("model_list", ["lgbm_models", "chemprop_models"])
-def test_serialization(tmp_path, model_list, request):
+def test_serialization(request, tmp_path, model_list):
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
 
