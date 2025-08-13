@@ -79,10 +79,7 @@ class CommitteeRegressor(EnsembleBase):
             calibration_models.append(iso_model)
 
         # Create per-dimension calibration model
-        self._calibration_model = lambda x: np.stack(
-            [calibration_models[i](x[:, i]) for i in range(x.shape[-1])],
-            axis=1,
-        )
+        self._calibration_model = {"isotonic-regression": calibration_models}
 
     def _scaling_factor_calibration(self, X, y, **kwargs):
         """
@@ -117,14 +114,9 @@ class CommitteeRegressor(EnsembleBase):
                 y_pred_mean[:, i], y_pred_std[:, i], y[:, i], criterion="miscal"
             )
 
-            # Append to per-dimension list
-            calibration_models.append(lambda x, s=scale_factor: s * x)
+            calibration_models.append(scale_factor)
 
-        # Create per-dimension calibration model
-        self._calibration_model = lambda x: np.stack(
-            [calibration_models[i](x[:, i]) for i in range(x.shape[-1])],
-            axis=1,
-        )
+        self._calibration_model = {"scaling-factor": calibration_models}
 
     def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
         """
@@ -155,6 +147,27 @@ class CommitteeRegressor(EnsembleBase):
             )
 
         getattr(self, self._calibration_methods[method])(X, y, **kwargs)
+
+    def _get_calibration_function(self):
+        if "scaling-factor" in self._calibration_model:
+            # Create per-dimension calibration model
+            return lambda x: np.stack(
+                [
+                    self._calibration_model["scaling-factor"][i] * (x[:, i])
+                    for i in range(x.shape[-1])
+                ],
+                axis=1,
+            )
+
+        elif "isotonic-regression" in self._calibration_model:
+            # Create per-dimension calibration model
+            return lambda x: np.stack(
+                [
+                    self._calibration_model["isotonic-regression"][i](x[:, i])
+                    for i in range(x.shape[-1])
+                ],
+                axis=1,
+            )
 
     def plot_uncertainty_calibration(self, X, y, **kwargs):
         """
@@ -294,17 +307,24 @@ class CommitteeRegressor(EnsembleBase):
             Predicted values or probabilities, depending on the committee's implementation.
         """
 
+        # Make predictions
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
+
+        # Compute mean
         mean = np.mean(preds, axis=-1)
+
+        # Skip std if not requested
+        if return_std is False:
+            return mean
+
+        # Compute standard deviation
         std = np.std(preds, axis=-1)
 
+        # Calibrate std if calibration model is available
         if self._calibration_model is not None:
-            std = self._calibration_model(std)
+            std = self._get_calibration_function()(std)
 
-        if return_std is True:
-            return mean, std
-        else:
-            return mean
+        return mean, std
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Save calibration model
