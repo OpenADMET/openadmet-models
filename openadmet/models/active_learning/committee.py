@@ -76,7 +76,7 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        y_pred_mean, y_pred_std = self.predict(X, return_std=True, quiet=True, **kwargs)
+        y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
 
         # Fit a separate isotonic regression model for each target dimension
         calibration_models = []
@@ -121,7 +121,7 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        y_pred_mean, y_pred_std = self.predict(X, return_std=True, quiet=True, **kwargs)
+        y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
 
         # Fit a separate scaling factor for each target dimension
         calibration_models = []
@@ -307,7 +307,7 @@ class CommitteeRegressor(EnsembleBase):
 
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
-    def predict(self, X, return_std=False, quiet=False, **kwargs):
+    def _predict(self, X, return_std=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -317,8 +317,6 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to predict.
         return_std : bool, optional
             Whether to return the standard deviation of the predictions.
-        quiet : bool, optional
-            Whether to suppress logging output.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
@@ -344,13 +342,35 @@ class CommitteeRegressor(EnsembleBase):
         # Calibrate std if calibration model is available
         if self.calibrated:
             std = self._get_calibration_function()(std)
-        else:
-            if not quiet:
-                logger.warning(
-                    "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
-                )
 
         return mean, std
+
+    def predict(self, X, return_std=False, **kwargs):
+        """
+        Make predictions using the committee model.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples to predict.
+        return_std : bool, optional
+            Whether to return the standard deviation of the predictions.
+        **kwargs : dict
+            Additional keyword arguments to pass to the committee's predict method.
+
+        Returns
+        -------
+        array-like
+            Predicted values or probabilities, depending on the committee's implementation.
+
+        """
+
+        if return_std is True and not self.calibrated:
+            logger.warning(
+                "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
+            )
+
+        return self._predict(X, return_std=return_std, **kwargs)
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Save calibration model
