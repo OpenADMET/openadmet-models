@@ -19,6 +19,20 @@ class CommitteeRegressor(EnsembleBase):
         "scaling-factor": "_scaling_factor_calibration",
     }
 
+    @property
+    def calibrated(self):
+        """
+        Check if the committee regressor has a calibration model.
+
+        Returns
+        -------
+        bool
+            True if the committee regressor has a calibration model, False otherwise.
+
+        """
+
+        return self._calibration_model is not None
+
     @classmethod
     def from_models(cls, models: list = []):
         """
@@ -31,9 +45,11 @@ class CommitteeRegressor(EnsembleBase):
 
         """
 
+        # Initialize class from model list
         instance = cls(
             models=models,
         )
+
         return instance
 
     def _isotonic_regression_calibration(self, X, y, **kwargs):
@@ -321,14 +337,14 @@ class CommitteeRegressor(EnsembleBase):
         std = np.std(preds, axis=-1)
 
         # Calibrate std if calibration model is available
-        if self._calibration_model is not None:
+        if self.calibrated:
             std = self._get_calibration_function()(std)
 
         return mean, std
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Save calibration model
-        if self._calibration_model is not None:
+        if self.calibrated:
             with open(path, "wb") as f:
                 joblib.dump(self._calibration_model, f)
 
