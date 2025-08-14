@@ -289,7 +289,7 @@ def test_calibration(tmp_path, toy_data, calibration_method):
 
     # Check that we successfully loaded calibration models
     if calibration_method is not None:
-        assert committee._calibration_model is not None
+        assert committee.calibrated
 
     # Save/load
     save_paths = [
@@ -318,4 +318,4 @@ def test_calibration(tmp_path, toy_data, calibration_method):
 
     # Check that we successfully loaded calibration models
     if calibration_method is not None:
-        assert committee._calibration_model is not None
+        assert committee.calibrated
