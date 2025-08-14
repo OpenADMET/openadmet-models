@@ -76,7 +76,7 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
+        y_pred_mean, y_pred_std = self.predict(X, return_std=True, quiet=True, **kwargs)
 
         # Fit a separate isotonic regression model for each target dimension
         calibration_models = []
@@ -121,7 +121,7 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = None
 
         # Predict on recalibration (validation) set
-        y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
+        y_pred_mean, y_pred_std = self.predict(X, return_std=True, quiet=True, **kwargs)
 
         # Fit a separate scaling factor for each target dimension
         calibration_models = []
@@ -307,7 +307,7 @@ class CommitteeRegressor(EnsembleBase):
 
         return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
 
-    def predict(self, X, return_std=False, **kwargs):
+    def predict(self, X, return_std=False, quiet=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -315,6 +315,10 @@ class CommitteeRegressor(EnsembleBase):
         ----------
         X : array-like of shape (n_samples, n_features)
             The input samples to predict.
+        return_std : bool, optional
+            Whether to return the standard deviation of the predictions.
+        quiet : bool, optional
+            Whether to suppress logging output.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
@@ -341,9 +345,10 @@ class CommitteeRegressor(EnsembleBase):
         if self.calibrated:
             std = self._get_calibration_function()(std)
         else:
-            logger.warning(
-                "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
-            )
+            if not quiet:
+                logger.warning(
+                    "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
+                )
 
         return mean, std
 
