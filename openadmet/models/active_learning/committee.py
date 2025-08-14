@@ -4,6 +4,7 @@ from typing import Any, ClassVar
 import joblib
 import numpy as np
 import uncertainty_toolbox as uct
+from loguru import logger
 
 from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
 from openadmet.models.active_learning.ensemble_base import EnsembleBase, ensemblers
@@ -339,6 +340,10 @@ class CommitteeRegressor(EnsembleBase):
         # Calibrate std if calibration model is available
         if self.calibrated:
             std = self._get_calibration_function()(std)
+        else:
+            logger.warning(
+                "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
+            )
 
         return mean, std
 
@@ -353,6 +358,8 @@ class CommitteeRegressor(EnsembleBase):
         if path.exists():
             with open(path, "rb") as f:
                 self._calibration_model = joblib.load(f)
+
+            logger.info(f"Successfully loaded calibration from {path}")
 
     def save(self, paths: list[PathLike]):
         """
