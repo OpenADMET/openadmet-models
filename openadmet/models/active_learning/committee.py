@@ -266,7 +266,7 @@ class CommitteeRegressor(EnsembleBase):
         models = []
         for i in range(n_models):
             # Initialize model
-            model = mod_class(**mod_params)
+            model = mod_class.from_params(mod_params=mod_params)
 
             # Bootstrap the data
             bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
