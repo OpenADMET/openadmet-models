@@ -154,7 +154,7 @@ def predict(
 
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
-        
+
         # Make the actual model predictions
 
         # if ensemble, return std as well
