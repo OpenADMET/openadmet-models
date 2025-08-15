@@ -34,6 +34,7 @@ class CommitteeRegressor(EnsembleBase):
 
         return self._calibration_model is not None
 
+
     @classmethod
     def from_models(cls, models: list = []):
         """

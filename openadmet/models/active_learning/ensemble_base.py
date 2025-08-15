@@ -26,14 +26,14 @@ class EnsembleBase(ModelBase):
 
     type: ClassVar[str] = "EnsembleBase"
     models: list = []
-    n_models: int = 1
 
-    @field_validator("n_models")
-    @classmethod
-    def validate_n_models(cls, value):
-        if value < 1:
-            raise ValueError("Number of models must be greater than zero.")
-        return value
+
+    @property
+    def n_models(self):
+        """
+        Get the number of models in the ensemble.
+        """
+        return len(self.models)
 
     def build(self):
         """
@@ -42,6 +42,8 @@ class EnsembleBase(ModelBase):
         """
 
         pass
+
+
 
     def from_params(self):
         """

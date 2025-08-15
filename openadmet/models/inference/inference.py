@@ -7,6 +7,8 @@ from rdkit.Chem import PandasTools
 
 from openadmet.models.anvil.data_spec import DataSpec
 from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+from openadmet.models.active_learning.ensemble_base import EnsembleBase
+import numpy as np
 
 
 def load_anvil_model_and_metadata(model_dir):
@@ -60,6 +62,8 @@ def load_anvil_model_and_metadata(model_dir):
             serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
             mod_class=model,
         )
+        print(loaded_model)
+        logger.info(f"Loaded model ensemble from {model_dir}, with {loaded_model.n_models} models")
 
     # Load single model
     else:
@@ -95,6 +99,7 @@ def predict(
     logger.info(f"Write CSV: {write_csv}")
     logger.info(f"Output path: {output_path}")
     logger.info(f"Input column: {input_col}")
+    logger.info(f"Accelerator: {accelerator}")
     # load input data
     if isinstance(input_path, pd.DataFrame):
         data = input_path
@@ -149,20 +154,31 @@ def predict(
 
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
+        
         # Make the actual model predictions
-        predictions = model.predict(X_feat, accelerator=accelerator)
+
+        # if ensemble, return std as well
+        if isinstance(model, EnsembleBase):
+            predictions, std = model.predict(X_feat, accelerator=accelerator, return_std=True)
+        else:
+            predictions = model.predict(X_feat, accelerator=accelerator)
+            std = np.nan_like(predictions)
 
         for j, taskname in enumerate(tasknames):
             predictions_tag = f"OADMET_PRED_{metadata.tag}_{taskname}"
-            if predictions_tag in data.columns:
+            std_tag = f"OADMET_STD_{metadata.tag}_{taskname}"
+            query_tag = f"OADMET_QUERY_{metadata.tag}_{taskname}"
+
+            if predictions_tag in data.columns or std_tag in data.columns:
                 raise ValueError(
-                    f"Output file already contains a '{predictions_tag}' column"
+                    f"Output file already contains a '{predictions_tag}' column or '{std_tag}' column"
                 )
 
             # Add the predictions to the data DataFrame
             data[predictions_tag] = pd.Series(predictions[:, j], index=X_indices)
+            data[std_tag] = pd.Series(std[:, j], index=X_indices)
             logger.info(
-                f"Predictions for model {i} task {j} saved to column '{predictions_tag}'"
+                f"Predictions for model {i} task {j} saved to column '{predictions_tag}', std saved to column '{std_tag}'"
             )
 
     logger.info("Finished prediction")
