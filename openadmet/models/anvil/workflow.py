@@ -346,12 +346,19 @@ class AnvilWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.SKLEARN
 
     @model_validator(mode="after")
-    def check_for_no_val(self):
-        # Check that val_size is set to zero
-        if self.split.val_size != 0:
+    def check_if_val_needed(self):
+        # Ensemble models require a validation set
+        if self.ensemble and self.split.val_size == 0:
             raise ValueError(
-                "Validation set requested, but not supported in this workflow."
+                "Ensemble models require a validation set for uncertainty calibration."
             )
+
+        # Non-ensemble models do not use a validation set
+        elif not self.ensemble and self.split.val_size != 0:
+            raise ValueError(
+                "Validation set requested, but not unused for this workflow configuration."
+            )
+
         return self
 
     def _train(self, X_train_feat, y_train, output_dir):
@@ -369,11 +376,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Training model")
         self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
-
-        # Save serialized model
-        logger.info("Saving model")
-        self.model.serialize(output_dir / "model.json", output_dir / "model.pkl")
-        logger.info("Model saved")
 
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
         # Bootstrap iterations
@@ -399,13 +401,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
             logger.info("Training model")
             self.model = self.trainer.train(X_train_feat_bootstrap, y_train_bootstrap)
             logger.info("Model trained")
-
-            # Save serialized model
-            logger.info("Saving model")
-            self.model.serialize(
-                bootstrap_dir / "model.json", bootstrap_dir / "model.pth"
-            )
-            logger.info("Model saved")
 
             # Add model to list
             models.append(self.model)
@@ -485,29 +480,53 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Split data into train, validation, and test sets
         logger.info("Splitting data")
-        X_train, _, X_test, y_train, _, y_test = self.split.split(X, y)
+        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
-        X_test.to_csv(data_dir / "X_test.csv", index=False)
         y_train.to_csv(data_dir / "y_train.csv", index=False)
+
+        # Save val if present
+        if X_val is not None:
+            X_val.to_csv(data_dir / "X_val.csv", index=False)
+            y_val.to_csv(data_dir / "y_val.csv", index=False)
+
+        # Test
+        X_test.to_csv(data_dir / "X_test.csv", index=False)
         y_test.to_csv(data_dir / "y_test.csv", index=False)
 
         logger.info("Data split")
 
         # Featurize splits
         logger.info("Featurizing data")
+        # Train
         X_train_feat, _ = self.feat.featurize(X_train)
         zarr.save(data_dir / "X_train_feat.zarr", X_train_feat)
 
+        # Val
+        if X_val is not None:
+            X_val_feat, _ = self.feat.featurize(X_val)
+            zarr.save(data_dir / "X_val_feat.zarr", X_val_feat)
+
+        # Test
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
 
+        # Transform data
         if self.transform:
+            # Train
             X_train_feat = self.transform.transform(X_train_feat)
-            X_test_feat = self.transform.transform(X_test_feat)
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
+
+            # Val
+            if X_val is not None:
+                X_val_feat = self.transform.transform(X_val_feat)
+                zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
+
+            # Test
+            X_test_feat = self.transform.transform(X_test_feat)
             zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
+
             logger.info("Data transformed")
         else:
             logger.info("No transform specified, skipping")
@@ -518,9 +537,31 @@ class AnvilWorkflow(AnvilWorkflowBase):
         if self.ensemble:
             # Ensemble mode
             self._train_ensemble(X_train_feat, y_train, output_dir)
+
+            # Calibrate
+            self.model.calibrate_uncertainty(X_val_feat, y_val)
+
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                [
+                    output_dir / f"bootstrap_{i}" / "model.json"
+                    for i in range(self.ensemble.n_models)
+                ],
+                [
+                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    for i in range(self.ensemble.n_models)
+                ],
+            )
+            logger.info("Model saved")
         else:
             # Single-model mode
             self._train(X_train_feat, y_train, output_dir)
+
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            logger.info("Model saved")
 
         # Predict on test set
         logger.info("Predicting")
@@ -569,6 +610,16 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
         return self
 
+    @model_validator(mode="after")
+    def check_if_val_needed(self):
+        # Ensemble models require a validation set
+        if self.ensemble and self.split.val_size == 0:
+            raise ValueError(
+                "Ensemble models require a validation set for uncertainty calibration."
+            )
+
+        return self
+
     def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
         # Build model
         logger.info("Building model")
@@ -593,11 +644,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Training model")
         self.model = self.trainer.train(train_dataloader, val_dataloader)
         logger.info("Model trained")
-
-        # Save serialized model
-        logger.info("Saving model")
-        self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
-        logger.info("Model saved")
 
     def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
         # Check if there is an output directory
@@ -661,13 +707,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Training model")
             self.model = self.trainer.train(bootstrap_dataloader, val_dataloader)
             logger.info("Model trained")
-
-            # Save serialized model
-            logger.info("Saving model")
-            self.model.serialize(
-                bootstrap_dir / "model.json", bootstrap_dir / "model.pth"
-            )
-            logger.info("Model saved")
 
             # Add model to list
             models.append(self.model)
@@ -787,9 +826,36 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if self.ensemble:
             # Ensemble mode
             self._train_ensemble(X_train, y_train, val_dataloader, output_dir)
+
+            # Calibrate
+            self.model.calibrate_uncertainty(
+                val_dataloader,
+                y_val,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+            )
+
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                [
+                    output_dir / f"bootstrap_{i}" / "model.json"
+                    for i in range(self.ensemble.n_models)
+                ],
+                [
+                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    for i in range(self.ensemble.n_models)
+                ],
+            )
+            logger.info("Model saved")
         else:
             # Single-model mode
             self._train(train_dataloader, val_dataloader, train_scaler, output_dir)
+
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            logger.info("Model saved")
 
         # Predict on test set
         logger.info("Predicting")
