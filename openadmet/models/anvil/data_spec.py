@@ -20,7 +20,7 @@ class DataSpec(BaseModel):
     target_cols: Union[str, list[str]]
     input_col: str
     anvil_dir: Optional[str] = None
-    dropna: Optional[bool] = True
+    dropna: Optional[bool] = False
 
     _catalog: Optional[intake.catalog.Catalog] = None
 
