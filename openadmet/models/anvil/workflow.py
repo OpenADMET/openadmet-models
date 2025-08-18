@@ -326,7 +326,7 @@ class AnvilWorkflowBase(BaseModel):
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
-    ensemble: None = None
+    ensemble: EnsembleBase | None = None
     trainer: TrainerBase
     evals: list[EvalBase]
     parent_spec: AnvilSpecification
