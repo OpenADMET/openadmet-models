@@ -381,7 +381,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
         # Bootstrap iterations
         models = []
-        for i in range(self.procedure.ensemble.n_models):
+        for i in range(self.parent_spec.procedure.ensemble.n_models):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
@@ -653,7 +653,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
-        for i in range(self.procedure.ensemble.n_models):
+        for i in range(self.parent_spec.procedure.ensemble.n_models):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
