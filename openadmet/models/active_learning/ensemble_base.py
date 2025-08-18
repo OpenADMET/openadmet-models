@@ -1,7 +1,6 @@
 from typing import ClassVar
 
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import field_validator
 
 from openadmet.models.architecture.model_base import ModelBase
 
@@ -26,14 +25,13 @@ class EnsembleBase(ModelBase):
 
     type: ClassVar[str] = "EnsembleBase"
     models: list = []
-    n_models: int = 1
 
-    @field_validator("n_models")
-    @classmethod
-    def validate_n_models(cls, value):
-        if value < 1:
-            raise ValueError("Number of models must be greater than zero.")
-        return value
+    @property
+    def n_models(self):
+        """
+        Get the number of models in the ensemble.
+        """
+        return len(self.models)
 
     def build(self):
         """
