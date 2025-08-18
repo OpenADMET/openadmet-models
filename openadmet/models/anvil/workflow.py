@@ -158,6 +158,12 @@ class EnsembleSpec(AnvilSection):
     section_name: ClassVar[str] = "ensemble"
     n_models: int = 0
 
+    @field_validator("n_models")
+    def check_n_models(cls, value):
+        if value < 2:
+            raise ValueError("Ensemble must have more than one model.")
+        return value
+
 
 class TrainerSpec(AnvilSection):
     """
