@@ -10,7 +10,6 @@ data:
   # Specify each (1+) of the target columns, or the column that you're trying to predict
   target_cols:
   - cyp3a4_pchembl_value_mean
-  dropna: true
 
 # Additional metadata
 metadata:
@@ -18,7 +17,7 @@ metadata:
   biotargets:
   - CYP3A4
   build_number: 0
-  description: basic regression using a random forest model
+  description: basic regression using a LightGBM model
   driver: sklearn
   email: cynthia.xu@omsf.io
   name: lgbm_pchembl
@@ -37,24 +36,29 @@ procedure:
     # See openadmet.models.features
     type: DescriptorFeaturizer
     params:
-      descr_type: "mordred"
+        descr_type: "mordred"
+
+  transform:
+    # Using the ImputeTransform to handle missing values
+    type: ImputeTransform
+    params:
+      strategy: mean  # or median, most_frequent, etc.
 
   # Model specification
   model:
     # Indicate model type
     # See openadmet.models.architecture for all model types
-    type: RFRegressorModel
+    type: LGBMRegressorModel
     # Specify model parameters
     params:
-      # alpha: 0.005
-      n_estimators: 100
-      max_depth: 10
+      alpha: 0.005
+      learning_rate: 0.05
 
   # Specify data splits
   split:
     # Specify how data will be split
     # See openadmet.models.split
-    type: MaxDissimilaritySplitter
+    type: ShuffleSplitter
     # Specify split parameters
     params:
       random_state: 42
@@ -64,8 +68,13 @@ procedure:
 
   train:
 
-    type: SKLearnBasicTrainer
-
+    type: SKLearnGridSearchTrainer
+    # Specify model parameters
+    params:
+      param_grid:
+        n_estimators: [500]
+        alpha: [0.005]
+        learning_rate: [0.05]
 
 # Section specifying report generation
 report:

@@ -1,6 +1,8 @@
 from sklearn.utils.discovery import all_estimators
 
 
+#TODO: this is a stub, we should consider implementing if need arbitrary sklearn pipelines
+
 def get_sklearn_estimators_as_dict(type_filter: str = None):
     """
     Get the sklearn estimators

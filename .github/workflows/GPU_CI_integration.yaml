@@ -1,5 +1,8 @@
 name: GPU_CI_integration
 on:
+  schedule:
+    # Run at 5:30 UTC every Monday
+    - cron: '30 5 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -24,6 +27,7 @@ jobs:
           aws_image_id: ami-010e080c2b31bb75e
           aws_instance_type: g4dn.xlarge
           aws_home_dir: /home/ubuntu
+          aws_root_device_size: 200
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
   self-hosted-test:
@@ -36,8 +40,63 @@ jobs:
         run: "df -h"
       - name: Print Docker details
         run: "docker version || true"
-      - name: say hello
-        run: echo "Hey Ethan"
+      - uses: actions/checkout@v4
+
+      - name: Additional info about the build
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+
+      # More info on options: https://github.com/marketplace/actions/setup-micromamba
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: devtools/conda-envs/openadmet-models-gpu.yaml
+          environment-name: openadmet-models
+          condarc: |
+            channels:
+              - conda-forge
+
+      - name: Install package
+        # conda setup requires this special shell
+        shell: bash -l {0}
+        run: |
+          python -m pip install . --no-deps
+          micromamba list
+
+      - name: Run GPU integration tests
+        # conda setup requires this special shell
+        shell: bash -l {0}
+        # use the `-m gpu` marker to run only GPU tests
+        run: |
+          pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
+
+      - name: Post to failure to Slack Channel
+        if: ${{ failure() }}
+        id: slack_failure
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+            method: chat.postMessage
+            token: ${{ secrets.SLACK_BOT_TOKEN }}
+            payload: |
+              channel: ${{ secrets.SLACK_CHANNEL }}
+              text: "A GPU integration test failed: ${{ github.event.pull_request.html_url }}"
+
+      - name: Post to success to Slack Channel
+        if: ${{ success() }}
+        id: slack_success
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+            method: chat.postMessage
+            token: ${{ secrets.SLACK_BOT_TOKEN }}
+            payload: |
+              channel: ${{ secrets.SLACK_CHANNEL }}
+              text: "A GPU integration test succeeded: ${{ github.event.pull_request.html_url }}"
+
+
+
   stop-aws-runner:
     runs-on: ubuntu-latest
     permissions:

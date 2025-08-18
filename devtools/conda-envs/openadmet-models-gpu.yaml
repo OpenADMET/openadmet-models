@@ -45,6 +45,7 @@ dependencies:
   # - tabpfn
   - tabulate
   - umap-learn
+  - uncertainty-toolbox
   - wandb
   - xgboost
   - zarr >=3.0.0
