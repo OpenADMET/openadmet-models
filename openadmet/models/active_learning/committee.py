@@ -3,6 +3,7 @@ from typing import Any, ClassVar
 
 import joblib
 import numpy as np
+import pandas as pd
 import uncertainty_toolbox as uct
 from loguru import logger
 
@@ -75,6 +76,9 @@ class CommitteeRegressor(EnsembleBase):
         # Reset calibration model
         self._calibration_model = None
 
+        if isinstance(y, (pd.Series, pd.DataFrame)):
+            y = y.to_numpy()
+
         # Predict on recalibration (validation) set
         y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
 
@@ -119,6 +123,9 @@ class CommitteeRegressor(EnsembleBase):
 
         # Reset calibration model
         self._calibration_model = None
+
+        if isinstance(y, (pd.Series, pd.DataFrame)):
+            y = y.to_numpy()
 
         # Predict on recalibration (validation) set
         y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
@@ -205,6 +212,9 @@ class CommitteeRegressor(EnsembleBase):
             A list of plots for each target dimension.
 
         """
+
+        if isinstance(y, (pd.Series, pd.DataFrame)):
+            y = y.to_numpy()
 
         # Predict on recalibration (validation) set
         y_pred_mean, y_pred_std = self.predict(X, return_std=True, **kwargs)
