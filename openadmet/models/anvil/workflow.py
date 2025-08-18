@@ -156,6 +156,7 @@ class EnsembleSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "ensemble"
+    n_models: int = 0
 
 
 class TrainerSpec(AnvilSection):
@@ -380,7 +381,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
         # Bootstrap iterations
         models = []
-        for i in range(self.ensemble.n_models):
+        for i in range(self.procedure.ensemble.n_models):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
@@ -652,7 +653,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
-        for i in range(self.ensemble.n_models):
+        for i in range(self.procedure.ensemble.n_models):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)

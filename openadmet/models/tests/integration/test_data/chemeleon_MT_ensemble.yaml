@@ -41,9 +41,8 @@ procedure:
       from_chemeleon: True
 
   ensemble:
+    n_models: 3
     type: CommitteeRegressor
-    params:
-      n_models: 3
 
   split:
     type: ShuffleSplitter
