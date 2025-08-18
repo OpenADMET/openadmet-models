@@ -356,7 +356,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Non-ensemble models do not use a validation set
         elif not self.ensemble and self.split.val_size != 0:
             raise ValueError(
-                "Validation set requested, but not unused for this workflow configuration."
+                "Validation set requested, but not used in this workflow configuration."
             )
 
         return self
@@ -612,7 +612,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
-        # Ensemble models require a validation set
+        # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
                 "Ensemble models require a validation set for uncertainty calibration."
