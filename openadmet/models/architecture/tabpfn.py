@@ -1,6 +1,7 @@
 from typing import ClassVar, Literal, Optional, Union
 
 from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNRegressor, AutoTabPFNClassifier
+from tabpfn import TabPFNRegressor, TabPFNClassifier
 import numpy as np
 from loguru import logger
 from pydantic import field_validator, Field
@@ -9,7 +10,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 
-class TabPFNModelBase(PickleableModelBase):
+class TabPFNExtensionModelBase(PickleableModelBase):
     """
     Base class for TabPFN models.
     """
@@ -97,23 +98,23 @@ class TabPFNModelBase(PickleableModelBase):
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
 
-@models.register("TabPFNRegressorModel")
-class TabPFNRegressorModel(TabPFNModelBase):
+@models.register("TabPFNPostHocRegressorModel")
+class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
     """
-    TabPFN regression model
+    TabPFN regression model using `tabpfn-extensions`, posthoc ensembling.
     """
 
-    type: ClassVar[str] = "TabPFNRegressorModel"
+    type: ClassVar[str] = "TabPFNPostHocRegressorModel"
     mod_class: ClassVar[type] = AutoTabPFNRegressor
 
 
-@models.register("TabPFNClassifierModel")
-class TabPFNClassifierModel(TabPFNModelBase):
+@models.register("TabPFNPostHocClassifierModel")
+class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
     """
-    TabPFN classification model
+    TabPFN classification model using `tabpfn-extensions`, posthoc ensembling.
     """
 
-    type: ClassVar[str] = "TabPFNClassifierModel"
+    type: ClassVar[str] = "TabPFNPostHocClassifierModel"
     mod_class: ClassVar[type] = AutoTabPFNClassifier
 
 
@@ -124,3 +125,68 @@ class TabPFNClassifierModel(TabPFNModelBase):
         if not self.estimator:
             raise ValueError("Model not trained")
         return self.estimator.predict_proba(X)
+
+
+
+class TabPFNModelBase(PickleableModelBase):
+    device: Literal["cpu", "cuda", "auto"] = Field(default="auto")
+    random_state: int = Field(default=42)
+    ignore_pretraining_limits: bool = Field(default=False)
+
+    @classmethod
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
+        """
+        Create a model from parameters
+        """
+
+        instance = cls(**class_params, mod_params=mod_params)
+        instance.build()
+        return instance
+
+
+    def train(self, X: np.ndarray, y: np.ndarray):
+        """
+        Train the model
+        """
+        self.build()
+        self.estimator = self.estimator.fit(X, y)
+
+    def build(self):
+        """
+        Prepare the model
+        """
+        if not self.estimator:
+            self.estimator = self.mod_class(device=self.device,
+                                            random_state=self.random_state,
+                                            ignore_pretraining_limits=self.ignore_pretraining_limits)
+        else:
+            logger.warning("Model already exists, skipping build")
+
+    def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
+        """
+        Predict using the model
+        """
+        if not self.estimator:
+            raise ValueError("Model not trained")
+        return np.expand_dims(self.estimator.predict(X), axis=1)
+
+
+@models.register("TabPFNRegressorModel")
+class TabPFNRegressorModel(TabPFNModelBase):
+    """
+    TabPFN regression model using the basic `tabpfn` implementation.
+    """
+
+    type: ClassVar[str] = "TabPFNRegressorModel"
+    mod_class: ClassVar[type] = TabPFNRegressor
+
+
+
+@models.register("TabPFNClassifierModel")
+class TabPFNClassifierModel(TabPFNModelBase):
+    """
+    TabPFN classification model using the basic `tabpfn` implementation.
+    """
+
+    type: ClassVar[str] = "TabPFNClassifierModel"
+    mod_class: ClassVar[type] = TabPFNClassifier
