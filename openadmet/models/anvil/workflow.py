@@ -553,11 +553,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self.model.serialize(
                 [
                     output_dir / f"bootstrap_{i}" / "model.json"
-                    for i in range(self.ensemble.n_models)
+                    for i in range(self.model.n_models)
                 ],
                 [
                     output_dir / f"bootstrap_{i}" / "model.pth"
-                    for i in range(self.ensemble.n_models)
+                    for i in range(self.model.n_models)
                 ],
             )
             logger.info("Model saved")
@@ -847,11 +847,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.serialize(
                 [
                     output_dir / f"bootstrap_{i}" / "model.json"
-                    for i in range(self.ensemble.n_models)
+                    for i in range(self.model.n_models)
                 ],
                 [
                     output_dir / f"bootstrap_{i}" / "model.pth"
-                    for i in range(self.ensemble.n_models)
+                    for i in range(self.model.n_models)
                 ],
             )
             logger.info("Model saved")
