@@ -354,7 +354,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
-        # Ensemble models require a validation set
+        # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
                 "Ensemble models require a validation set for uncertainty calibration."
