@@ -162,7 +162,7 @@ def predict(
             predictions, std = model.predict(X_feat, accelerator=accelerator, return_std=True)
         else:
             predictions = model.predict(X_feat, accelerator=accelerator)
-            std = np.nan_like(predictions)
+            std = np.full(predictions.shape, np.nan)
 
         for j, taskname in enumerate(tasknames):
             predictions_tag = f"OADMET_PRED_{metadata.tag}_{taskname}"
