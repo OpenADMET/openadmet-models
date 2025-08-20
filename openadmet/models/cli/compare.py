@@ -5,21 +5,21 @@ from openadmet.models.comparison.posthoc import PostHocComparison
 
 @click.command()
 @click.option(
-    "--model-stats",
-    multiple=True,
-    help="Path to JSON of model stats, needst to be in the same order as model-tag",
-    required=True,
-    type=click.Path(exists=True),
+    "--model-dir",
+    help="Path to main model directory"
+    required=True
+    type=click.path(exists=True)
 )
 @click.option(
     "--model-tag",
     help="Names to identify different models, user specified in same order as model-stats",
+    required=False
     multiple=True,
 )
 @click.option(
     "--task-name",
     help="Task names as they appear in the model stats JSON",
-    required=True,
+    required=False,
     multiple=True,
 )
 @click.option(
