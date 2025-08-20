@@ -13,7 +13,7 @@ from typing import ClassVar, Optional, Any
 from collections import OrderedDict
 
 @model_registry.register("NepareChemPropModel")
-class NepareChempropModelBase(ChemPropModel):
+class NepareChempropModelBase(Model):
     """
     NepareChemPropModel is a neural pairwise regression model based on ChemProp.
     It uses learned embeddings for pairwise features.
