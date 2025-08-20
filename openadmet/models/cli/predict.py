@@ -25,21 +25,29 @@ from openadmet.models.inference.inference import predict as inference_func
     multiple=True,
 )
 @click.option(
-    "--output-path",
+    "--output-csv",
     help="Path to the output CSV file for predictions",
     default="predictions.csv",
     show_default=True,
     required=True,
     type=click.Path(exists=False, writable=True),
 )
+@click.option(
+    "--accelerator",
+    help="One of either cpu or gpu, default is gpu",
+    required=False,
+    default="gpu",
+    type=str,
+)
 @click.option("--debug", is_flag=True, help="Enable debug mode", default=False)
-def predict(input_path, input_col, model_dir, output_path, debug):
+def predict(input_path, input_col, model_dir, output_csv, debug, accelerator):
     """Predict using a trained model"""
     inference_func(
         input_path=input_path,
         input_col=input_col,
         model_dir=model_dir,
         write_csv=True,
-        output_path=output_path,
+        output_csv=output_csv,
         debug=debug,
+        accelerator=accelerator
     )

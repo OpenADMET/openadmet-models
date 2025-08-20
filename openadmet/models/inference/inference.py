@@ -77,7 +77,7 @@ def predict(
     input_col: str,
     model_dir: Union[str, Path, list[Union[str, Path]]],
     write_csv: bool = False,
-    output_path: str = None,
+    output_csv: str = None,
     debug: bool = False,
     accelerator: str = "gpu",
     log: bool = True,
@@ -93,7 +93,7 @@ def predict(
     logger.info(f"Input path: {input_path}")
     logger.info(f"Model directories: {model_dir}")
     logger.info(f"Write CSV: {write_csv}")
-    logger.info(f"Output path: {output_path}")
+    logger.info(f"Output CSV: {output_csv}")
     logger.info(f"Input column: {input_col}")
     # load input data
     if isinstance(input_path, pd.DataFrame):
@@ -166,7 +166,7 @@ def predict(
             )
 
     logger.info("Finished prediction")
-    logger.info(f"Predictions saved to {output_path}")
+    logger.info(f"Predictions saved to {output_csv}")
     # remove ROMol column if it exists
     if "ROMol" in data.columns:
         data.drop(columns=["ROMol"], inplace=True)
@@ -175,6 +175,6 @@ def predict(
         data.drop(columns=["ID"], inplace=True)
 
     if write_csv:
-        data.to_csv(output_path, index=False)
+        data.to_csv(output_csv, index=False)
 
     return data
