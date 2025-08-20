@@ -10,6 +10,7 @@ data:
   # Specify each (1+) of the target columns, or the column that you're trying to predict
   target_cols:
   - cyp3a4_pchembl_value_mean
+  dropna: true
 
 # Additional metadata
 metadata:
