@@ -312,7 +312,7 @@ class RegressionPlots(EvalBase):
             scatter_kws={"alpha":0.3},
             color="teal",
             height=10)
-        
+
         if y_pred_err is not None:
             g.ax_joint.errorbar(
                 x=np.ravel(y_true),
