@@ -18,7 +18,7 @@ metadata:
   - CYP1A2
   build_number: 0
   description: basic regression  using a ChemProp multitask task model
-  driver: pytorch_ensemble
+  driver: pytorch
   email: hugo.macdermott-opeskin@omsf.io
   name: chemprop_MT_pchembl_testing_chemprop
   tag: openadmet-CYP3A4-pchembl-regression-testing-cv
@@ -41,9 +41,8 @@ procedure:
       from_chemeleon: True
 
   ensemble:
+    n_models: 3
     type: CommitteeRegressor
-    params:
-      n_models: 3
 
   split:
     type: ShuffleSplitter

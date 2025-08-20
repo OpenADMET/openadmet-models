@@ -1,7 +1,6 @@
 from typing import ClassVar
 
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import field_validator
 
 from openadmet.models.architecture.model_base import ModelBase
 
@@ -26,7 +25,6 @@ class EnsembleBase(ModelBase):
 
     type: ClassVar[str] = "EnsembleBase"
     models: list = []
-
 
     @property
     def n_models(self):
