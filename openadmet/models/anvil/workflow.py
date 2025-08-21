@@ -1,7 +1,8 @@
 import hashlib
 import uuid
 from datetime import datetime
-from pathlib import Path, PathLike
+from os import PathLike
+from pathlib import Path
 from typing import Any, StrEnum
 
 import numpy as np
