@@ -5,8 +5,7 @@ import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
 
-from openadmet.models.anvil.specification import DataSpec
-from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSpec
 
 
 def load_anvil_model_and_metadata(model_dir):
