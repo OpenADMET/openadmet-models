@@ -13,7 +13,6 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
-from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
 from openadmet.models.architecture.model_base import get_mod_class
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.features.feature_base import get_featurizer_class
@@ -383,6 +382,9 @@ class AnvilSpecification(BaseModel):
         """
 
         logger.info("Making workflow from specification")
+
+        # Import here to avoid circular import
+        from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
 
         return _DRIVER_TO_CLASS[self.metadata.driver](
             metadata=self.metadata,
