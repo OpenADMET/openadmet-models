@@ -1,9 +1,10 @@
 import hashlib
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from os import PathLike
 from pathlib import Path
-from typing import Any, StrEnum
+from typing import Any
 
 import numpy as np
 import torch
