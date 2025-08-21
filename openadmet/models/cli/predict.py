@@ -1,6 +1,5 @@
 import click
 
-
 from openadmet.models.inference.inference import predict as inference_func
 
 
@@ -49,5 +48,5 @@ def predict(input_path, input_col, model_dir, output_csv, debug, accelerator):
         write_csv=True,
         output_csv=output_csv,
         debug=debug,
-        accelerator=accelerator
+        accelerator=accelerator,
     )
