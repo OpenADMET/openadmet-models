@@ -177,7 +177,7 @@ class Metadata(SpecBase):
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
     )
-    driver: Drivers = Field(
+    driver: str = Field(
         Drivers.SKLEARN.value, description="The driver for the workflow."
     )
 
