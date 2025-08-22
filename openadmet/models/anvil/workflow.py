@@ -1,7 +1,6 @@
 import hashlib
 import uuid
 from datetime import datetime
-from enum import StrEnum
 from os import PathLike
 from pathlib import Path
 from typing import Any
@@ -12,16 +11,8 @@ import zarr
 from loguru import logger
 from pydantic import model_validator
 
+from openadmet.models.anvil import Drivers
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
-
-
-class Drivers(StrEnum):
-    """
-    Enum for the drivers.
-    """
-
-    PYTORCH = "pytorch"
-    SKLEARN = "sklearn"
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
