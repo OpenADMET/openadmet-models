@@ -41,7 +41,6 @@ class EnsembleBase(ModelBase):
 
         pass
 
-
     def from_params(self):
         """
         This method doesn't really make sense for this class, as it is instantiated from already-trained models
