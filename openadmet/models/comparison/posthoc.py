@@ -1,4 +1,5 @@
 import os
+import yaml
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -64,61 +65,111 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self, model_stats_fns, model_tags, task_names=['task_0'], report=False, output_dir=None):
+    def compare(self, 
+                model_dirs, 
+                label_types, 
+                mt_id=None, 
+                model_stats_fns=None, 
+                labels=None, 
+                task_names=None, 
+                report=False, 
+                output_dir=None):
         """
-        Perform post-hoc statistical comparison of model performance metrics.
-
-        This method loads cross-validation statistics from multiple models, performs Levene's test for equal variances,
-        Tukey's HSD for pairwise comparisons, and generates various plots and reports. Optionally, results can be saved
-        to disk.
-
-        Parameters
-        ----------
-        model_stats_fns : list of str or Path
-            List of file paths to JSON files containing cross-validation metrics for each model.
-        model_tags : list of str
-            List of model names or tags corresponding to each file in `model_stats_fns`.
-        task_names : list of str, optional
-            List of task names from multi-task models.  List should be the same
-                length as model tags, this assumes that we take one task for comparison from
-                each cross_validation_metrics.json  Default is ['task_0'].
-        report : bool, optional
-            If True, generates and saves a PDF report of the statistical analysis. Default is False.
-        output_dir : str or Path, optional
-            Directory to save output files
-
-        Returns
-        -------
-        stats_dfs : list of pandas.DataFrame
-            List of DataFrames containing the results of Levene's test and Tukey's HSD test.
-
+        TODO: new docstring
         """
-        df = self.json_to_df(model_stats_fns, model_tags, task_names)
+        if not model_stats_fns and not labels and not task_names:
+            model_stats_fns = [
+                f"{d}/anvil_training/cross_validation_metrics.json"
+                for d in os.listdir(model_dirs)
+                if os.path.exists(f"{d}/anvil_training/cross_validation_metrics.json")
+            ]
+            labels, task_names = self.label_and_task_name_from_anvil(model_dirs, label_types, mt_id=mt_id)
+
+        df = self.json_to_df(model_stats_fns, labels, task_names)
 
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         stats_dfs = []
-        stats_dfs.append(self.levene_test(df, model_tags))
-        stats_dfs.append(self.get_tukeys_df(df, model_tags))
+        stats_dfs.append(self.levene_test(df, labels))
+        stats_dfs.append(self.get_tukeys_df(df, labels))
         if output_dir:
             self.stats_to_json(stats_dfs, output_dir=output_dir)
 
         plot_data = {}
         plot_data["normality"] = self.normality_plots(df, output_dir)
-        plot_data["anova"] = self.anova(df, model_tags, output_dir)
-        plot_data["mcs"] = self.mcs_plots(df, model_tags, output_dir)
+        plot_data["anova"] = self.anova(df, labels, output_dir)
+        plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
         plot_data["mean_diff"] = self.mean_diff_plots(
-            df, model_tags, self.cl, output_dir
+            df, labels, self.cl, output_dir
         )
-        plot_data["paired"] = self.paired_plots(df, model_tags, output_dir)
+        plot_data["paired"] = self.paired_plots(df, labels, output_dir)
 
         self.print_table(stats_dfs[0], stats_dfs[1])
         self.report(stats_dfs, report, output_dir)
 
         return stats_dfs
 
-    def json_to_df(self, model_stats_fns, model_tags, task_names):
+    def label_and_task_name_from_anvil(self, model_dirs, label_types, mt_id=None):
+
+        all_labels = []
+        all_task_names = []
+
+        for model_dir in model_dirs:
+
+            with open(f"{model_dir}/anvil_training/anvil_recipe.yaml", 'r') as f:
+                anvil = yaml.safe_load(f)
+
+            full_label = []
+            target_cols = anvil['data']['target_cols']
+
+            # this assumes the tasks are going to be target based, user can specify the
+            # admet target and it will try to match to the task_name in the anvil file
+            if len(target_cols) > 1 and mt_id:
+                col_match = []
+                ind_for_biotarget = 0
+                for ind, col in enumerate(target_cols):
+                    if mt_id.lower() in col.lower():
+                        col_match.append(col)
+                        ind_for_biotarget = ind.copy() # this is to get the index for the list of biotargets
+                if len(col_match) == 1:
+                    all_task_names.append(col_match[0])
+                elif len(col_match) == 0:
+                    raise ValueError(f"Target {mt_id} not found in target columns {target_cols}")
+                else:
+                    raise ValueError(f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific")
+
+            for l in label_types:
+
+                if l == 'biotarget':
+                    all_targets = anvil['metadata']['biotargets']
+                    if len(all_targets) == 1:
+                        full_label.append(all_targets[0])
+                    else:
+                        full_label.append(all_targets[ind_for_biotarget])
+
+                if l == 'model':
+                    to_remove = ['Regressor', 'Classifier', 'Model', 'Module', 'Lightning']
+                    label = anvil['procedure']['model']['type']
+                    for r in to_remove:
+                        label = label.replace(r, '')
+                    full_label.append(label)
+
+                if l == 'feat':
+                    raise NotImplementedError("Feature type not yet implemented in posthoc comparison labels")
+
+                if l == 'tasks':
+                    num_tasks = len(target_cols)
+                    if num_tasks > 1:
+                        full_label.append("MT")
+                    else:
+                        full_label.append("ST")
+
+            all_labels.append('-'.join(full_label))
+
+        return(all_labels, anvil['data']['target_cols'])
+
+    def json_to_df(self, model_stats_fns, labels, task_names):
         """
         Convert model statistics from cross-validation JSON files into a DataFrame.
 
@@ -126,7 +177,7 @@ class PostHocComparison(ComparisonBase):
         ----------
         model_stats_fns : list of str
             List of file paths to JSON files with model statistics.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used for plotting and reporting.
 
         Returns
@@ -135,7 +186,7 @@ class PostHocComparison(ComparisonBase):
             DataFrame containing the extracted statistics for each model.
         """
         df = pd.DataFrame()
-        for model, tag, task in zip(model_stats_fns, model_tags, task_names):
+        for model, tag, task in zip(model_stats_fns, labels, task_names):
             with open(model) as f:
                 data = json.load(f)
             method_data = pd.DataFrame()
@@ -150,7 +201,7 @@ class PostHocComparison(ComparisonBase):
             df = pd.concat([df, method_data])
         return df
 
-    def levene_test(self, df, model_tags):
+    def levene_test(self, df, labels):
         """
         Perform Levene's test across models.
 
@@ -158,7 +209,7 @@ class PostHocComparison(ComparisonBase):
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used to group data for the test.
 
         Returns
@@ -167,7 +218,7 @@ class PostHocComparison(ComparisonBase):
             DataFrame with Levene's test statistic and p-value for each metric.
         """
         result = pd.DataFrame()
-        lev_vecs = [df[df["method"] == tag] for tag in model_tags]
+        lev_vecs = [df[df["method"] == tag] for tag in labels]
         for m in self.metrics:
             lev = levene(*[vec[m] for vec in lev_vecs])
             result[m] = {"stat": lev.statistic, "pvalue": lev.pvalue}
@@ -206,7 +257,7 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def anova(self, df, model_tags, output_dir=None):
+    def anova(self, df, labels, output_dir=None):
         """
         Perform repeated measures ANOVA for each metric and plot means with error bars.
 
@@ -214,7 +265,7 @@ class PostHocComparison(ComparisonBase):
         ----------
         df : pandas.DataFrame
             Balanced DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used for grouping and labeling.
         output_dir : str, optional
             Directory to save the ANOVA plots. If None, plots are not saved.
@@ -245,7 +296,7 @@ class PostHocComparison(ComparisonBase):
             ax = axes[i]
 
             # Get Tukey HSD results for determining significance
-            hsd_df = self.get_tukeys_df(df, model_tags)
+            hsd_df = self.get_tukeys_df(df, labels)
 
             # Plot means with error bars, colored by Tukey HSD results
             # Find the best model (lowest mean if minimize, highest if maximize)
@@ -301,7 +352,7 @@ class PostHocComparison(ComparisonBase):
         return fig
 
     @staticmethod
-    def tukey_hsd_by_metric(df, metric, model_tags):
+    def tukey_hsd_by_metric(df, metric, labels):
         """
         Perform Tukey's HSD test for a specific metric across multiple models.
         Parameters
@@ -310,7 +361,7 @@ class PostHocComparison(ComparisonBase):
             DataFrame containing the extracted statistics for each model.
         metric : str
             The metric for which to perform Tukey's HSD test.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used to group data for the test.
         Returns
         -------
@@ -318,17 +369,17 @@ class PostHocComparison(ComparisonBase):
             Results of Tukey's HSD test, including statistics and p-values.
         """
         return tukey_hsd(
-            *[np.array(df[df["method"] == tag][metric]) for tag in model_tags]
+            *[np.array(df[df["method"] == tag][metric]) for tag in labels]
         )
 
-    def get_tukeys_df(self, df, model_tags, cl=0.95):
+    def get_tukeys_df(self, df, labels, cl=0.95):
         """
         Generate a DataFrame with Tukey's HSD results for multiple metrics.
         Parameters
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used to group data for the test.
         cl : float, optional
             Confidence level for the Tukey's HSD test. Default is 0.95.
@@ -339,7 +390,7 @@ class PostHocComparison(ComparisonBase):
             metric names, statistics, error bars, and p-values.
         """
         tukeys = [
-            self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics
+            self.tukey_hsd_by_metric(df, metric, labels) for metric in self.metrics
         ]
         method_compare = []
         stats = []
@@ -350,7 +401,7 @@ class PostHocComparison(ComparisonBase):
             for i in range(len(hsd.statistic) - 1):
                 for j in range(i + 1, len(hsd.statistic)):
                     s = hsd.statistic[i, j]
-                    method_compare.append(f"{model_tags[i]}-{model_tags[j]}")
+                    method_compare.append(f"{labels[i]}-{labels[j]}")
                     stats.append(s)
                     errorbars.append(
                         [
@@ -371,14 +422,14 @@ class PostHocComparison(ComparisonBase):
         )
         return hsd_df
 
-    def mcs_plots(self, df, model_tags, output_dir=None):
+    def mcs_plots(self, df, labels, output_dir=None):
         """
         Generate and save multiple comparison of means (MCS) plots for each metric.
         Parameters
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used for grouping and labeling.
         output_dir : str, optional
             Directory to save the MCS plots. If None, plots are not saved.
@@ -401,7 +452,7 @@ class PostHocComparison(ComparisonBase):
             if self.direction_dict[metric] == "minimize":
                 reverse_cmap = True
 
-            hsd = self.tukey_hsd_by_metric(df, metric, model_tags)
+            hsd = self.tukey_hsd_by_metric(df, metric, labels)
 
             cmap = "coolwarm"
             if reverse_cmap:
@@ -432,8 +483,8 @@ class PostHocComparison(ComparisonBase):
                 vmax=None,
             )
 
-            x_label_list = [x for x in model_tags]
-            y_label_list = [x for x in model_tags]
+            x_label_list = [x for x in labels]
+            y_label_list = [x for x in labels]
             hax.set_xticklabels(
                 x_label_list, ha="center", va="top", rotation=0, rotation_mode="anchor"
             )
@@ -463,14 +514,14 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def mean_diff_plots(self, df, model_tags, cl=None, output_dir=None):
+    def mean_diff_plots(self, df, labels, cl=None, output_dir=None):
         """
         Generate and save mean difference plots with error bars for each metric.
         Parameters
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used for grouping and labeling.
         cl : float, optional
             Confidence level for the error bars. Default is 0.95.
@@ -487,7 +538,7 @@ class PostHocComparison(ComparisonBase):
         ax_ind = 0
         if not cl:
             cl = 0.95
-        tukeys_df = self.get_tukeys_df(df, model_tags, cl=cl)
+        tukeys_df = self.get_tukeys_df(df, labels, cl=cl)
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
@@ -522,7 +573,7 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def paired_plots(self, df, model_tags, output_dir=None):
+    def paired_plots(self, df, labels, output_dir=None):
         """
         Generate and save paired plots comparing all pairs of methods for 'mse' as subplots in a single PDF.
 
@@ -530,7 +581,7 @@ class PostHocComparison(ComparisonBase):
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
-        model_tags : list of str
+        labels : list of str
             List of tags for the models, used for grouping and labeling.
         output_dir : str, optional
             Directory to save the paired plots. If None, plots are not saved.
@@ -543,7 +594,7 @@ class PostHocComparison(ComparisonBase):
         import warnings
         from itertools import product
 
-        pairs = list(combinations(model_tags, 2))
+        pairs = list(combinations(labels, 2))
         metrics = self.metrics
         nrows = len(pairs)
         ncols = len(metrics)
@@ -552,7 +603,7 @@ class PostHocComparison(ComparisonBase):
         axes = axes.flatten() if nrows * ncols > 1 else [axes]
 
         # Tukey HSD DataFrame for significance
-        hsd_df = self.get_tukeys_df(df, model_tags)
+        hsd_df = self.get_tukeys_df(df, labels)
 
         plot_idx = 0
         for metric in metrics:

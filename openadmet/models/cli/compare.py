@@ -6,14 +6,14 @@ from openadmet.models.comparison.posthoc import PostHocComparison
 @click.command()
 @click.option(
     "--model-dir",
-    help="Path to main model directory"
-    required=True
-    type=click.path(exists=True)
+    help="Path to main model directory",
+    required=True,
+    type=click.path(exists=True),
 )
 @click.option(
-    "--model-tag",
-    help="Names to identify different models, user specified in same order as model-stats",
-    required=False
+    "--label",
+    help="Category from the yaml file with which to label each model",
+    required=True,
     multiple=True,
 )
 @click.option(
@@ -21,6 +21,12 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     help="Task names as they appear in the model stats JSON",
     required=False,
     multiple=True,
+)
+@click.option(
+    "--target",
+    help="If using label and multitask, give the name of the target",
+    requried=False,
+    multiple=False,
 )
 @click.option(
     "--output-dir",
@@ -35,11 +41,11 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     type=bool,
 )
 def compare(
-    model_stats, model_tag, task_name, output_dir=None, report=False,
+    model_stats, model_tag, task_name, target=None, output_dir=None, report=False,
 ):
     """Compare two or more models from summary statistics"""
     comp = PostHocComparison()
-    comp.compare(model_stats, model_tag, task_name,
+    comp.compare(model_stats, model_tag, task_name, target=target,
                  output_dir=output_dir, report=report)
 
 
