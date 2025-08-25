@@ -65,14 +65,14 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self, 
-                model_dirs, 
-                label_types, 
-                mt_id=None, 
-                model_stats_fns=None, 
-                labels=None, 
-                task_names=None, 
-                report=False, 
+    def compare(self,
+                model_dirs,
+                label_types,
+                mt_id=None,
+                model_stats_fns=None,
+                labels=None,
+                task_names=None,
+                report=False,
                 output_dir=None):
         """
         TODO: new docstring
@@ -117,7 +117,7 @@ class PostHocComparison(ComparisonBase):
 
         for model_dir in model_dirs:
 
-            with open(f"{model_dir}/anvil_training/anvil_recipe.yaml", 'r') as f:
+            with open(f"{model_dir}/anvil_training/anvil_recipe.yaml") as f:
                 anvil = yaml.safe_load(f)
 
             full_label = []
