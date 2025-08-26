@@ -143,7 +143,6 @@ class TabPFNModelBase(PickleableModelBase):
         instance.build()
         return instance
 
-
     def train(self, X: np.ndarray, y: np.ndarray):
         """
         Train the model
