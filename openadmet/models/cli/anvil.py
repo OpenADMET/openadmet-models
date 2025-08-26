@@ -1,6 +1,6 @@
 import click
 
-from openadmet.models.anvil.workflow import AnvilSpecification
+from openadmet.models.anvil.specification import AnvilSpecification
 
 
 @click.command()
