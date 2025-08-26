@@ -56,7 +56,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         """
         if value not in ["cpu", "gpu", "auto"]:
             raise ValueError("Accelerator must be either 'cpu' or 'gpu' or 'auto'")
-        
+
         return value
 
 
