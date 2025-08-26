@@ -180,7 +180,6 @@ class TabPFNRegressorModel(TabPFNModelBase):
     mod_class: ClassVar[type] = TabPFNRegressor
 
 
-
 @models.register("TabPFNClassifierModel")
 class TabPFNClassifierModel(TabPFNModelBase):
     """
