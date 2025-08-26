@@ -23,10 +23,10 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         description="The maximum time to spend on fitting the post hoc ensemble."
     )
 
-    device: Literal["cpu", "cuda", "auto"] = Field(
+    accelerator: Literal["cpu", "cuda", "auto"] = Field(
         default="auto",
         description="The device to use for training and prediction."
-    )
+    )  # TABPFN calls this "device" but we use "accelerator" here to match Pytorch
 
     random_state: int = Field(
         default=42,
@@ -47,14 +47,14 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 
 
 
-    @field_validator("device")
+    @field_validator("accelerator")
     @classmethod
-    def validate_device(cls, value):
+    def validate_accelerator(cls, value):
         """
-        Validate the device parameter
+        Validate the accelerator parameter
         """
         if value not in ["cpu", "cuda", "auto"]:
-            raise ValueError("Device must be either 'cpu' or 'cuda' or 'auto'")
+            raise ValueError("Accelerator must be either 'cpu' or 'cuda' or 'auto'")
         return value
 
 
@@ -82,7 +82,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         """
         if not self.estimator:
             self.estimator = self.mod_class(max_time=self.max_time,
-                                            device=self.device,
+                                            device=self.accelerator,
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits,
                                             phe_init_args=self.phe_init_args)
@@ -129,7 +129,7 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
 
 
 class TabPFNModelBase(PickleableModelBase):
-    device: Literal["cpu", "cuda", "auto"] = Field(default="auto")
+    accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
     random_state: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
 
@@ -155,7 +155,7 @@ class TabPFNModelBase(PickleableModelBase):
         Prepare the model
         """
         if not self.estimator:
-            self.estimator = self.mod_class(device=self.device,
+            self.estimator = self.mod_class(device=self.accelerator, # TABPFN calls this device
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits)
         else:
