@@ -23,10 +23,11 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         description="The maximum time to spend on fitting the post hoc ensemble."
     )
 
-    accelerator: Literal["cpu", "cuda", "auto"] = Field(
+    accelerator: Literal["cpu", "gpu", "auto"] = Field(
         default="auto",
         description="The device to use for training and prediction."
     )  # TABPFN calls this "device" but we use "accelerator" here to match Pytorch
+       # tabpfn doesn't use the same device convention as pytorch (cuda vs gpu), we unify here
 
     random_state: int = Field(
         default=42,
@@ -53,8 +54,9 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         """
         Validate the accelerator parameter
         """
-        if value not in ["cpu", "cuda", "auto"]:
-            raise ValueError("Accelerator must be either 'cpu' or 'cuda' or 'auto'")
+        if value not in ["cpu", "gpu", "auto"]:
+            raise ValueError("Accelerator must be either 'cpu' or 'gpu' or 'auto'")
+        
         return value
 
 
@@ -80,9 +82,11 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         """
         Prepare the model
         """
+        # tabpfn doesn't use the same device convention as pytorch, we unify here
+        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
         if not self.estimator:
             self.estimator = self.mod_class(max_time=self.max_time,
-                                            device=self.accelerator,
+                                            device=accelerator,
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits,
                                             phe_init_args=self.phe_init_args)
@@ -154,8 +158,10 @@ class TabPFNModelBase(PickleableModelBase):
         """
         Prepare the model
         """
+        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
+        # tabpfn doesn't use the same device convention as pytorch (cuda vs gpu), we unify here
         if not self.estimator:
-            self.estimator = self.mod_class(device=self.accelerator, # TABPFN calls this device
+            self.estimator = self.mod_class(device=accelerator, # TABPFN calls this device
                                             random_state=self.random_state,
                                             ignore_pretraining_limits=self.ignore_pretraining_limits)
         else:
