@@ -45,7 +45,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             and self.parent_spec.procedure.model.serial_path is not None
         ):
             logger.info("Loading model from disk, overrides any specified `mod_params`")
-            self.model.deserialize(
+            self.model = self.model.deserialize(
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
             )
@@ -334,7 +334,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             and self.parent_spec.procedure.model.serial_path is not None
         ):
             logger.info("Loading model from disk, overrides any specified `mod_params`")
-            self.model.deserialize(
+            self.model = self.model.deserialize(
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
             )
