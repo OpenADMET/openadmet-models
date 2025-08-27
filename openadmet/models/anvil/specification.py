@@ -232,8 +232,8 @@ class ModelSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "model"
-    param_path: PathLike | None = None
-    serial_path: PathLike | None = None
+    param_path: str | None = None
+    serial_path: str | None = None
 
     @model_validator(mode="after")
     def check_paths(self):
@@ -257,8 +257,8 @@ class EnsembleSpec(AnvilSection):
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int = 0
-    param_paths: list[PathLike] | None = None
-    serial_paths: list[PathLike] | None = None
+    param_paths: list[str] | None = None
+    serial_paths: list[str] | None = None
 
     @field_validator("n_models")
     def check_n_models(cls, value):
@@ -279,7 +279,8 @@ class EnsembleSpec(AnvilSection):
             # Check matches model count
             if len(self.param_paths) != self.n_models:
                 raise ValueError(
-                    "Number of parameter and serial paths must match the number of models."
+                    f"Number of parameter ({len(self.param_paths)}) and serial paths ({len(self.serial_paths)}) must "
+                    f"match the number of models ({self.n_models})."
                 )
 
             return self
