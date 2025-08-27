@@ -421,6 +421,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             else:
                 logger.info(f"Building model {i}")
                 self.model = self.model.make_new()
+                self.model.build(scaler=bootstrap_scaler)
                 logger.info(f"Model {i} built")
 
             # Pass model to trainer
