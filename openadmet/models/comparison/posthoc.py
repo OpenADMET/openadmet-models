@@ -114,6 +114,7 @@ class PostHocComparison(ComparisonBase):
         anvil_recipes = [os.path.dirname(i) for i in glob.glob(f"{training_dir}/**/anvil_recipe.yaml", recursive=True)]
         cv_metrics = [os.path.dirname(i) for i in glob.glob(f"{training_dir}/**/cross_validation_metrics.json", recursive=True)]
         model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
+        print(f"Found {len(model_dirs)} models in {training_dir}")
 
         model_stats_fns = [f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs]
 
@@ -160,6 +161,10 @@ class PostHocComparison(ComparisonBase):
                     label = anvil['procedure']['model']['type']
                     for r in to_remove:
                         label = label.replace(r, '')
+                    # chemeleon special case
+                    if label == 'ChemProp':
+                        if anvil['procedure']['model']['params']['from_chemeleon'] == True:
+                            label = 'Chemeleon'
                     full_label.append(label)
 
                 if lab == 'feat':
@@ -172,7 +177,7 @@ class PostHocComparison(ComparisonBase):
                     else:
                         full_label.append("ST")
 
-            all_labels.append('-'.join(full_label))
+            all_labels.append('_'.join(full_label))
 
         return(model_stats_fns, all_labels, all_task_names)
 
@@ -206,6 +211,7 @@ class PostHocComparison(ComparisonBase):
                 method_data[m] = values
             method_data["method"] = tag
             df = pd.concat([df, method_data])
+            print("Reading in model: " + method_data["method"].values[0], method_data.shape)
         return df
 
     def levene_test(self, df, labels):
