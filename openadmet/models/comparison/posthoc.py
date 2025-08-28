@@ -65,14 +65,14 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self, 
-                training_dir=None, 
-                label_types=None, 
-                mt_id=None, 
-                model_stats_fns=None, 
-                labels=None, 
-                task_names=None, 
-                report=False, 
+    def compare(self,
+                training_dir=None,
+                label_types=None,
+                mt_id=None,
+                model_stats_fns=None,
+                labels=None,
+                task_names=None,
+                report=False,
                 output_dir=None):
         """
         TODO: new docstring
@@ -119,7 +119,7 @@ class PostHocComparison(ComparisonBase):
 
         for model_dir in model_dirs:
 
-            with open(f"{model_dir}/anvil_recipe.yaml", 'r') as f:
+            with open(f"{model_dir}/anvil_recipe.yaml") as f:
                 anvil = yaml.safe_load(f)
 
             full_label = []
@@ -143,7 +143,7 @@ class PostHocComparison(ComparisonBase):
                     raise ValueError(f"Target {mt_id} not found in target columns {target_cols}")
                 else:
                     raise ValueError(f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific")
-            
+
             # single-task case
             else:
                 all_task_names.append(target_cols[0])
