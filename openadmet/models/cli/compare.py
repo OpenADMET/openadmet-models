@@ -8,7 +8,7 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     "--model-dir",
     help="Path to main model directory",
     required=True,
-    type=click.path(exists=True),
+    type=click.Path(exists=True),
 )
 @click.option(
     "--label",

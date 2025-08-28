@@ -330,7 +330,7 @@ class PostHocComparison(ComparisonBase):
             bar_colors = []
             for method in means.index:
                 color = "red"
-                if method in best_method: # this line is probably what caused cynthia's issue
+                if method == best_method:
                     color = "blue"
                 else:
                     mask1 = tukey_metric_df["method"] == f"{best_method} - {method}"
