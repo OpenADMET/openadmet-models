@@ -1,4 +1,5 @@
 import os
+import glob
 import yaml
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +26,6 @@ import tabulate
 import warnings
 
 from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
-
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
@@ -65,25 +65,20 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         return self._stats_names
 
-    def compare(self,
-                model_dirs,
-                label_types,
-                mt_id=None,
-                model_stats_fns=None,
-                labels=None,
-                task_names=None,
-                report=False,
+    def compare(self, 
+                training_dir=None, 
+                label_types=None, 
+                mt_id=None, 
+                model_stats_fns=None, 
+                labels=None, 
+                task_names=None, 
+                report=False, 
                 output_dir=None):
         """
         TODO: new docstring
         """
-        if not model_stats_fns and not labels and not task_names:
-            model_stats_fns = [
-                f"{d}/anvil_training/cross_validation_metrics.json"
-                for d in os.listdir(model_dirs)
-                if os.path.exists(f"{d}/anvil_training/cross_validation_metrics.json")
-            ]
-            labels, task_names = self.label_and_task_name_from_anvil(model_dirs, label_types, mt_id=mt_id)
+        if not model_stats_fns:
+            model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(training_dir, label_types, mt_id=mt_id)
 
         df = self.json_to_df(model_stats_fns, labels, task_names)
 
@@ -110,21 +105,28 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def label_and_task_name_from_anvil(self, model_dirs, label_types, mt_id=None):
+    def label_and_task_name_from_anvil(self, training_dir, label_types, mt_id=None):
 
         all_labels = []
         all_task_names = []
 
+        # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within training_dir
+        anvil_recipes = [os.path.dirname(i) for i in glob.glob(f"{training_dir}/**/anvil_recipe.yaml", recursive=True)]
+        cv_metrics = [os.path.dirname(i) for i in glob.glob(f"{training_dir}/**/cross_validation_metrics.json", recursive=True)]
+        model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
+
+        model_stats_fns = [f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs]
+
         for model_dir in model_dirs:
 
-            with open(f"{model_dir}/anvil_training/anvil_recipe.yaml") as f:
+            with open(f"{model_dir}/anvil_recipe.yaml", 'r') as f:
                 anvil = yaml.safe_load(f)
 
             full_label = []
             target_cols = anvil['data']['target_cols']
 
-            # this assumes the tasks are going to be target based, user can specify the
-            # admet target and it will try to match to the task_name in the anvil file
+            # NOTE: this logic assumes that if multitask, the tasks will have
+            # different biotargets and that # biotargets == # tasks
             if len(target_cols) > 1 and mt_id:
                 col_match = []
                 ind_for_biotarget = 0
@@ -132,33 +134,38 @@ class PostHocComparison(ComparisonBase):
                     if mt_id.lower() in col.lower():
                         col_match.append(col)
                         ind_for_biotarget = ind.copy() # this is to get the index for the list of biotargets
+
+                # check that the multitask id provided by the user does not
+                # appear in multiple target columns
                 if len(col_match) == 1:
                     all_task_names.append(col_match[0])
                 elif len(col_match) == 0:
                     raise ValueError(f"Target {mt_id} not found in target columns {target_cols}")
                 else:
                     raise ValueError(f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific")
+            
+            # single-task case
+            else:
+                all_task_names.append(target_cols[0])
+                ind_for_biotarget = 0 # if single task, there will be only one biotarget
 
-            for l in label_types:
+            for lab in label_types:
 
-                if l == 'biotarget':
-                    all_targets = anvil['metadata']['biotargets']
-                    if len(all_targets) == 1:
-                        full_label.append(all_targets[0])
-                    else:
-                        full_label.append(all_targets[ind_for_biotarget])
+                if lab == 'biotarget':
+                    full_label.append(anvil['metadata']['biotargets'][ind_for_biotarget])
 
-                if l == 'model':
+                # sets model label based on the class names of the model, as specified in anvil recipe
+                if lab == 'model':
                     to_remove = ['Regressor', 'Classifier', 'Model', 'Module', 'Lightning']
                     label = anvil['procedure']['model']['type']
                     for r in to_remove:
                         label = label.replace(r, '')
                     full_label.append(label)
 
-                if l == 'feat':
+                if lab == 'feat':
                     raise NotImplementedError("Feature type not yet implemented in posthoc comparison labels")
 
-                if l == 'tasks':
+                if lab == 'tasks':
                     num_tasks = len(target_cols)
                     if num_tasks > 1:
                         full_label.append("MT")
@@ -167,7 +174,7 @@ class PostHocComparison(ComparisonBase):
 
             all_labels.append('-'.join(full_label))
 
-        return(all_labels, anvil['data']['target_cols'])
+        return(model_stats_fns, all_labels, all_task_names)
 
     def json_to_df(self, model_stats_fns, labels, task_names):
         """
@@ -314,7 +321,7 @@ class PostHocComparison(ComparisonBase):
             bar_colors = []
             for method in means.index:
                 color = "red"
-                if method in best_method:
+                if method in best_method: # this line is probably what caused cynthia's issue
                     color = "blue"
                 else:
                     mask1 = tukey_metric_df["method"] == f"{best_method}-{method}"
