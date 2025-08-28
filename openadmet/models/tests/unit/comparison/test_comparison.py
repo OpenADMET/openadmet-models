@@ -63,6 +63,13 @@ def test_posthoc_comparison_anvil_bad_label():
     with pytest.raises(ValueError):
         model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
 
+def test_posthoc_comparison_anvil_feature_label():
+    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
+    label_types = ["feat"]
+    comp_obj = PostHocComparison()
+    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
+    assert labels == ['mordred+ecfp:6']
+
 def test_posthoc_comparison_json_reader():
     model_stats = [multi_task_json, cyp3a4_json]
     model_tags = ["multitask", "single_task"]

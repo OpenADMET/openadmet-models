@@ -242,8 +242,25 @@ class PostHocComparison(ComparisonBase):
                     full_label.append(label)
 
                 elif lab == 'feat':
-                    raise NotImplementedError("Feature type not yet implemented in posthoc comparison labels")
-
+                    to_remove = ['Featurizer']
+                    label = anvil['procedure']['feat']['type']
+                    if label == 'DescriptorFeaturizer':
+                        label = anvil['procedure']['feat']['params']['descr_type']
+                    if label == 'FingerprintFeaturizer':
+                        label = anvil['procedure']['feat']['params']['fp_type']
+                    if label == 'FeatureConcatenator':
+                        label = ''
+                        for ind, f in enumerate(anvil['procedure']['feat']['params']['featurizers']):
+                            if f == 'DescriptorFeaturizer':
+                                label += anvil['procedure']['feat']['params']['featurizers']['DescriptorFeaturizer']['descr_type']
+                            if f == 'FingerprintFeaturizer':
+                                label += anvil['procedure']['feat']['params']['featurizers']['FingerprintFeaturizer']['fp_type']
+                            if ind < len(anvil['procedure']['feat']['params']['featurizers']) - 1:
+                                label += '+'
+                    for r in to_remove:
+                        label = label.replace(r, '')
+                    full_label.append(label)
+                    
                 elif lab == 'tasks':
                     num_tasks = len(target_cols)
                     if num_tasks > 1:
