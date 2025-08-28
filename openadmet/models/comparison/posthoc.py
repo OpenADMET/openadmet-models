@@ -260,7 +260,7 @@ class PostHocComparison(ComparisonBase):
                     for r in to_remove:
                         label = label.replace(r, '')
                     full_label.append(label)
-                    
+
                 elif lab == 'tasks':
                     num_tasks = len(target_cols)
                     if num_tasks > 1:
