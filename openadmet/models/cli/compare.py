@@ -25,7 +25,7 @@ from openadmet.models.comparison.posthoc import PostHocComparison
 @click.option(
     "--target",
     help="If using label and multitask, give the name of the target",
-    requried=False,
+    required=False,
     multiple=False,
 )
 @click.option(
