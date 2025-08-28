@@ -11,6 +11,32 @@ def test_get_comparison_class():
     with pytest.raises(ValueError):
         get_comparison_class("NotARealClass")
 
+def test_posthoc_fails_on_incorrect_inputs():
+    comp_obj = PostHocComparison()
+    with pytest.raises(ValueError):
+        comp_obj.compare()
+    with pytest.raises(ValueError):
+        comp_obj.compare(model_stats_fns=[cyp2c9_json])
+    with pytest.raises(ValueError):
+        comp_obj.compare(labels=["model1"])
+    with pytest.raises(ValueError):
+        comp_obj.compare(task_names=["task1"])
+    with pytest.raises(ValueError):
+        comp_obj.compare(model_stats_fns=[cyp2c9_json], labels=["model1"])
+    with pytest.raises(ValueError):
+        comp_obj.compare(model_stats_fns=[cyp2c9_json], task_names=["task1"])
+    with pytest.raises(ValueError):
+        comp_obj.compare(labels=["model1"], task_names=["task1"])
+    with pytest.raises(ValueError):
+        comp_obj.compare(model_stats_fns=[cyp2c9_json, cyp3a4_json], labels=["model1"], task_names=["task1", "task2", "task3"])
+
+def test_posthoc_repeat_label_error():
+    model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
+    model_tags = ["openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP1A2-pchembl-regression-testing-cv"]
+    task_tags = ["pchembl_value_mean"]*3
+    comp_obj = PostHocComparison()
+    with pytest.raises(ValueError):
+        comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
 
 def test_posthoc_comparison():
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
@@ -23,7 +49,21 @@ def test_posthoc_comparison():
     assert_almost_equal(tukeys_df["metric_val"][0], 0.10937620875054632)
     assert_almost_equal(tukeys_df["pvalue"][14], 0.00321143)
 
-def test_posthoc_comparison_multitask_reader():
+def test_posthoc_comparison_anvil_reader():
+    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
+    label_types = ["biotarget", "model", "tasks"]
+    comp_obj = PostHocComparison()
+    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
+    assert labels == ['CYP3A4_LGBM_ST']
+
+def test_posthoc_comparison_anvil_bad_label():
+    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
+    label_types = ["bad_label"]
+    comp_obj = PostHocComparison()
+    with pytest.raises(ValueError):
+        model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
+
+def test_posthoc_comparison_json_reader():
     model_stats = [multi_task_json, cyp3a4_json]
     model_tags = ["multitask", "single_task"]
     task_tags = ["cyp3a4_pchembl_value_mean", "pchembl_value_mean"]

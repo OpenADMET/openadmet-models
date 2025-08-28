@@ -66,17 +66,57 @@ class PostHocComparison(ComparisonBase):
         return self._stats_names
 
     def compare(self,
-                training_dir=None,
-                label_types=None,
-                mt_id=None,
-                model_stats_fns=None,
-                labels=None,
-                task_names=None,
-                report=False,
-                output_dir=None):
+                training_dir:str = None,
+                label_types:list = None,
+                mt_id:str = None,
+                model_stats_fns:list = None,
+                labels:list = None,
+                task_names:list = None,
+                report:bool = False,
+                output_dir:bool = None):
         """
-        TODO: new docstring
+        Compare models using post-hoc statistical tests and generate plots and reports.
+
+        Parameters
+        ----------
+        training_dir : str, optional
+            Path to the main training directory containing model subdirectories with
+            `anvil_recipe.yaml` and `cross_validation_metrics.json` files. Required if
+            `model_stats_fns`, `labels`, and `task_names` are not provided.
+        label_types : list of str, optional
+            List of categories from the `anvil_recipe.yaml` file to use for labeling each model.
+            Supported values are 'biotarget', 'model', 'feat', and 'tasks'. Required if
+            `model_stats_fns`, `labels`, and `task_names` are not provided.
+        mt_id : str, optional
+            Identifier for the target column when comparing multitask models. Used to select
+            the appropriate task from the `anvil_recipe.yaml` file.  Must be a unique string
+            not appearing in any target columns for other models in the file. Required if comparing
+            multitask models and `training_dir` is provided.
+        model_stats_fns : list of str, optional
+            List of file paths to JSON files containing model statistics. Required if
+            `training_dir` and `label_types` are not provided.
+        labels : list of str, optional
+            List of tags for the models, used for plotting and reporting. Must be unique.
+            Required if `training_dir` and `label_types` are not provided.
+        task_names : list of str, optional
+            List of task names as they appear in the model statistics JSON files.
+            Required if `training_dir` and `label_types` are not provided.
+        report : bool, optional
+            Whether to generate a PDF report summarizing the comparison results.
+            Default is False.
+        output_dir : str, optional
+            Path to the output directory where plots and reports will be saved.
+            If not provided, plots and reports will not be saved.
         """
+
+        if not (
+            (training_dir is not None and label_types is not None)
+            or (model_stats_fns is not None and labels is not None and task_names is not None)
+        ):
+            raise ValueError(
+                "You must provide either (training_dir and label_types) OR (model_stats_fns, labels, and task_names)."
+            )        
+
         if not model_stats_fns:
             model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(training_dir, label_types, mt_id=mt_id)
 
@@ -128,6 +168,8 @@ class PostHocComparison(ComparisonBase):
 
             full_label = []
             target_cols = anvil['data']['target_cols']
+            if type(target_cols) is str:
+                target_cols = [target_cols]
 
             # NOTE: this logic assumes that if multitask, the tasks will have
             # different biotargets and that # biotargets == # tasks
@@ -159,7 +201,7 @@ class PostHocComparison(ComparisonBase):
                     full_label.append(anvil['metadata']['biotargets'][ind_for_biotarget])
 
                 # sets model label based on the class names of the model, as specified in anvil recipe
-                if lab == 'model':
+                elif lab == 'model':
                     to_remove = ['Regressor', 'Classifier', 'Model', 'Module', 'Lightning']
                     label = anvil['procedure']['model']['type']
                     for r in to_remove:
@@ -170,15 +212,19 @@ class PostHocComparison(ComparisonBase):
                             label = 'Chemeleon'
                     full_label.append(label)
 
-                if lab == 'feat':
+                elif lab == 'feat':
                     raise NotImplementedError("Feature type not yet implemented in posthoc comparison labels")
 
-                if lab == 'tasks':
+                elif lab == 'tasks':
                     num_tasks = len(target_cols)
                     if num_tasks > 1:
                         full_label.append("MT")
                     else:
                         full_label.append("ST")
+                
+                else:
+                    print('here')
+                    raise ValueError(f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']")
 
             all_labels.append('_'.join(full_label))
 
