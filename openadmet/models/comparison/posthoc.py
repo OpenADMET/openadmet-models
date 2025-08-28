@@ -148,7 +148,36 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def label_and_task_name_from_anvil(self, training_dir, label_types, mt_id=None):
+    def label_and_task_name_from_anvil(self, 
+                                       training_dir:str, 
+                                       label_types:list[str], 
+                                       mt_id:str=None):
+        """
+        Extract model statistics file paths, labels, and task names from an Anvil training directory.
+
+        Parameters
+        ----------
+        training_dir : str
+            Path to the main training directory containing model subdirectories with
+            `anvil_recipe.yaml` and `cross_validation_metrics.json` files.
+        label_types : list of str
+            List of categories from the `anvil_recipe.yaml` file to use for labeling each model.
+            Supported values are 'biotarget', 'model', 'feat', and 'tasks'.
+        mt_id : str, optional
+            Identifier for the target column when comparing multitask models. Used to select
+            the appropriate task from the `anvil_recipe.yaml` file.  Must be a unique string
+            not appearing in any target columns for other models in the file. Required if comparing
+            multitask models.
+
+        Returns
+        -------
+        model_stats_fns : list of str
+            List of file paths to JSON files containing model statistics.
+        labels : list of str
+            List of tags for the models, used for plotting and reporting.
+        task_names : list of str
+            List of task names as they appear in the model statistics JSON files.
+        """
 
         all_labels = []
         all_task_names = []
@@ -230,7 +259,10 @@ class PostHocComparison(ComparisonBase):
 
         return(model_stats_fns, all_labels, all_task_names)
 
-    def json_to_df(self, model_stats_fns, labels, task_names):
+    def json_to_df(self, 
+                   model_stats_fns:list[str], 
+                   labels:list[str], 
+                   task_names:list[str]):
         """
         Convert model statistics from cross-validation JSON files into a DataFrame.
 
@@ -263,7 +295,9 @@ class PostHocComparison(ComparisonBase):
             print("Reading in model: " + method_data["method"].values[0], method_data.shape)
         return df
 
-    def levene_test(self, df, labels):
+    def levene_test(self, 
+                    df:pd.DataFrame, 
+                    labels:list[str]):
         """
         Perform Levene's test across models.
 
@@ -286,7 +320,9 @@ class PostHocComparison(ComparisonBase):
             result[m] = {"stat": lev.statistic, "pvalue": lev.pvalue}
         return result
 
-    def normality_plots(self, df, output_dir=None):
+    def normality_plots(self, 
+                        df:pd.DataFrame, 
+                        output_dir:str=None):
         """
         Generate normality plots for each metric in the DataFrame.
         Parameters
@@ -319,7 +355,10 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def anova(self, df, labels, output_dir=None):
+    def anova(self, 
+              df:pd.DataFrame, 
+              labels:list[str], 
+              output_dir:str = None):
         """
         Perform repeated measures ANOVA for each metric and plot means with error bars.
 
@@ -414,7 +453,9 @@ class PostHocComparison(ComparisonBase):
         return fig
 
     @staticmethod
-    def tukey_hsd_by_metric(df, metric, labels):
+    def tukey_hsd_by_metric(df:pd.DataFrame, 
+                            metric:str, 
+                            labels:str):
         """
         Perform Tukey's HSD test for a specific metric across multiple models.
         Parameters
@@ -434,7 +475,10 @@ class PostHocComparison(ComparisonBase):
             *[np.array(df[df["method"] == tag][metric]) for tag in labels]
         )
 
-    def get_tukeys_df(self, df, labels, cl=0.95):
+    def get_tukeys_df(self, 
+                      df:pd.DataFrame, 
+                      labels:list[str], 
+                      cl:float = 0.95):
         """
         Generate a DataFrame with Tukey's HSD results for multiple metrics.
         Parameters
@@ -484,7 +528,10 @@ class PostHocComparison(ComparisonBase):
         )
         return hsd_df
 
-    def mcs_plots(self, df, labels, output_dir=None):
+    def mcs_plots(self, 
+                  df:pd.DataFrame, 
+                  labels:list[str], 
+                  output_dir:str = None):
         """
         Generate and save multiple comparison of means (MCS) plots for each metric.
         Parameters
@@ -576,7 +623,11 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def mean_diff_plots(self, df, labels, cl=None, output_dir=None):
+    def mean_diff_plots(self, 
+                        df:pd.DataFrame, 
+                        labels:list[str], 
+                        cl:float = None, 
+                        output_dir:str = None):
         """
         Generate and save mean difference plots with error bars for each metric.
         Parameters
@@ -635,7 +686,10 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def paired_plots(self, df, labels, output_dir=None):
+    def paired_plots(self, 
+                     df:pd.DataFrame, 
+                     labels:list[str], 
+                     output_dir:str = None):
         """
         Generate and save paired plots comparing all pairs of methods for 'mse' as subplots in a single PDF.
 
@@ -711,17 +765,51 @@ class PostHocComparison(ComparisonBase):
 
         return fig
 
-    def stats_to_json(self, stats_dfs, output_dir):
+    def stats_to_json(self, 
+                      stats_dfs:list[pd.DataFrame], 
+                      output_dir:str):
+        """
+        Save statistical test results to JSON files.
+
+        Parameters
+        ----------
+        stats_dfs : list of pandas.DataFrame
+            List of DataFrames containing statistical test results (e.g., Levene, Tukey HSD).
+        output_dir : str
+            Directory to save the JSON files.
+
+        Returns
+        -------
+        None
+        """
         for stat_df, name in zip(stats_dfs, self.stats_names):
             stat_df.to_json(f"{output_dir}/{name}.json")
 
-    def convert_float_round(self, val):
+    def convert_float_round(self, 
+                            val:float):
+        """
+        Convert a float to scientific notation rounded to 3 decimal places.
+        If conversion fails, return the original value.
+
+        Parameters
+        -------
+        val : float
+            The value to convert.
+
+        Returns
+        -------
+        str
+            The converted value as a string in scientific notation, or the original value if conversion fails.
+        """
         try:
             return str(f"{float(val):0.3e}")
         except ValueError:
             return val
 
-    def report(self, data_dfs, write=False, output_dir=None):
+    def report(self, 
+               data_dfs:list[pd.DataFrame], 
+               write:bool = False, 
+               output_dir:str = None):
         """
         Generate and optionally save a report summarizing the statistical analysis.
 
@@ -741,7 +829,9 @@ class PostHocComparison(ComparisonBase):
         if write:
             self.write_report(data_dfs, output_dir)
 
-    def write_report(self, data_dfs, output_dir):
+    def write_report(self, 
+                     data_dfs:list[pd.DataFrame], 
+                     output_dir:str):
         """
         Generate and save a PDF report summarizing the statistical analysis.
 
@@ -809,9 +899,22 @@ class PostHocComparison(ComparisonBase):
 
         doc.build(elements)
 
-    def print_table(self, levene_df, tukeys_df):
+    def print_table(self, 
+                    levene_df:pd.DataFrame, 
+                    tukeys_df:pd.DataFrame):
         """
         Print a DataFrame as a table
+
+        Parameters
+        ----------
+        levene_df : pandas.DataFrame
+            DataFrame containing Levene's test results.
+        tukeys_df : pandas.DataFrame
+            DataFrame containing Tukey's HSD results.
+
+        Returns
+        -------
+        None
         """
         print("Levene's test results")
         print("-------------------------")
