@@ -80,6 +80,9 @@ class PostHocComparison(ComparisonBase):
         if not model_stats_fns:
             model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(training_dir, label_types, mt_id=mt_id)
 
+        if len(set(labels)) != len(labels):
+            raise ValueError("Labels must be unique")
+
         df = self.json_to_df(model_stats_fns, labels, task_names)
 
         if output_dir and not os.path.exists(output_dir):
@@ -330,8 +333,8 @@ class PostHocComparison(ComparisonBase):
                 if method in best_method: # this line is probably what caused cynthia's issue
                     color = "blue"
                 else:
-                    mask1 = tukey_metric_df["method"] == f"{best_method}-{method}"
-                    mask2 = tukey_metric_df["method"] == f"{method}-{best_method}"
+                    mask1 = tukey_metric_df["method"] == f"{best_method} - {method}"
+                    mask2 = tukey_metric_df["method"] == f"{method} - {best_method}"
                     pvals = tukey_metric_df[mask1 | mask2]["pvalue"]
                     if not pvals.empty and (pvals > 0.05).any():
                         color = "grey"
