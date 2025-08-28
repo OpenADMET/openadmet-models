@@ -315,7 +315,9 @@ class CommitteeRegressor(EnsembleBase):
                 f"Valid options are: {list(_QUERY_STRATEGIES.keys())}"
             )
 
-        return _QUERY_STRATEGIES[query_strategy](self, X, **kwargs)
+        mean, std = self.predict(X, return_std=True, **kwargs)
+
+        return _QUERY_STRATEGIES[query_strategy](mean, std, **kwargs)
 
     def _predict(self, X, return_std=False, **kwargs):
         """
