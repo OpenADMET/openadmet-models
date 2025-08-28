@@ -115,7 +115,7 @@ class PostHocComparison(ComparisonBase):
         ):
             raise ValueError(
                 "You must provide either (training_dir and label_types) OR (model_stats_fns, labels, and task_names)."
-            )        
+            )
 
         if not model_stats_fns:
             model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(training_dir, label_types, mt_id=mt_id)
@@ -221,7 +221,7 @@ class PostHocComparison(ComparisonBase):
                         full_label.append("MT")
                     else:
                         full_label.append("ST")
-                
+
                 else:
                     print('here')
                     raise ValueError(f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']")
