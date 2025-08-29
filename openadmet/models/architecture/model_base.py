@@ -287,11 +287,14 @@ class LightningModelBase(ModelBase):
 
     @classmethod
     def deserialize(
-        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
+        cls,
+        param_path: PathLike = "model.json",
+        serial_path: PathLike = "model.pth",
+        scaler: Any = None,
     ):
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)
-        instance.build()
+        instance.build(scaler=scaler)
         instance.load(serial_path)
         return instance
