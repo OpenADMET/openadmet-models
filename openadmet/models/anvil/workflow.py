@@ -38,6 +38,31 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         return self
 
+    @model_validator(mode="after")
+    def check_no_finetuning(self):
+        # Ensemble specified
+        if self.ensemble:
+            # Fine-tuning paths specified
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
+                self.parent_spec.procedure.ensemble.serial_paths is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized ensemble models is not supported in this workflow."
+                )
+
+        # No ensemble
+        else:
+            # Fine-tuning paths supplied
+            if (self.parent_spec.procedure.model.param_path is not None) or (
+                self.parent_spec.procedure.model.serial_path is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized model is not supported in this workflow."
+                )
+
+        # All fine-tuning paths are None
+        return self
+
     def _train(self, X_train_feat, y_train, output_dir):
         # Build model from scratch
         logger.info("Building model")
@@ -309,6 +334,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model = self.model.deserialize(
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
+                scaler=train_scaler,
             )
             logger.info("Model loaded")
 
@@ -386,6 +412,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.model = self.model.deserialize(
                     self.parent_spec.procedure.ensemble.param_paths[i],
                     self.parent_spec.procedure.ensemble.serial_paths[i],
+                    scaler=bootstrap_scaler,
                 )
                 logger.info(f"Model {i} loaded")
 
