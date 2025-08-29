@@ -39,23 +39,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     def _train(self, X_train_feat, y_train, output_dir):
-        # Load model from disk
-        if (
-            self.parent_spec.procedure.model.param_path is not None
-            and self.parent_spec.procedure.model.serial_path is not None
-        ):
-            logger.info("Loading model from disk, overrides any specified `mod_params`")
-            self.model = self.model.deserialize(
-                self.parent_spec.procedure.model.param_path,
-                self.parent_spec.procedure.model.serial_path,
-            )
-            logger.info("Model loaded")
-
         # Build model from scratch
-        else:
-            logger.info("Building model")
-            self.model.build()
-            logger.info("Model built")
+        logger.info("Building model")
+        self.model.build()
+        logger.info("Model built")
 
         # Pass model to trainer
         logger.info("Setting model in trainer")
@@ -84,25 +71,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
             y_train_bootstrap = y_train.loc[bootstrap_indices]
             logger.info("Data bootstrapped")
 
-            # Load model from disk
-            if (
-                self.parent_spec.procedure.ensemble.param_paths is not None
-                and self.parent_spec.procedure.ensemble.serial_paths is not None
-            ):
-                logger.info(
-                    f"Loading model {i} from disk, overrides any specified `mod_params`"
-                )
-                self.model = self.model.deserialize(
-                    self.parent_spec.procedure.ensemble.param_paths[i],
-                    self.parent_spec.procedure.ensemble.serial_paths[i],
-                )
-                logger.info(f"Model {i} loaded")
-
             # Build model from scratch
-            else:
-                logger.info(f"Building model {i}")
-                self.model = self.model.make_new()
-                logger.info(f"Model {i} built")
+            logger.info(f"Building model {i}")
+            self.model = self.model.make_new()
+            logger.info(f"Model {i} built")
 
             # Train model on bootstrapped data
             logger.info("Training model")
