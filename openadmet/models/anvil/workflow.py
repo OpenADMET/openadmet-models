@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import torch
 import zarr
 from loguru import logger
@@ -13,6 +14,12 @@ from pydantic import model_validator
 
 from openadmet.models.anvil import Drivers
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
+
+
+def _safe_to_numpy(X):
+    if isinstance(X, (pd.Series, pd.DataFrame)):
+        return X.to_numpy()
+    return X
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -64,6 +71,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     def _train(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
         # Build model from scratch
         logger.info("Building model")
         self.model.build()
@@ -80,6 +90,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
         # Bootstrap iterations
         models = []
         for i in range(self.parent_spec.procedure.ensemble.n_models):
@@ -90,10 +103,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train_feat.index, size=len(X_train_feat), replace=True
+                np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
             )
-            X_train_feat_bootstrap = X_train_feat.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
 
             # Build model from scratch
@@ -364,6 +377,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+        # Safely cast to numpy
+        X_train = _safe_to_numpy(X_train)
+        y_train = _safe_to_numpy(y_train)
+
         # Check if there is an output directory
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
@@ -382,10 +399,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train.index, size=len(X_train), replace=True
+                np.arange(len(X_train)), size=len(X_train), replace=True
             )
-            X_train_bootstrap = X_train.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_bootstrap = X_train[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
 
             # Featurize splits
