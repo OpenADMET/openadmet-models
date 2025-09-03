@@ -3,39 +3,70 @@ import torch
 from lightning import pytorch as pl
 from pydantic import field_validator
 from loguru import logger
+from chemprop import models, nn
 
-from openadmet.models.architecture.chemprop import ChemPropModel
 from openadmet.models.architecture.model_base import models as model_registry
+from openadmet.models.architecture.model_base import LightningModelBase
 
-from nepare.nn import LearnedEmbeddingNeuralPairwiseRegressor
+from nepare.nn import NeuralPairwiseRegressor
 
-from typing import ClassVar, Optional, Any
-from collections import OrderedDict
+from typing import ClassVar
 
-@model_registry.register("NepareChemPropModel")
-class NepareChempropModelBase(Model):
+@model_registry.register("NeuralPairwiseRegressorModel")
+class NeuralPairwiseRegressorModel(LightningModelBase):
     """
     NepareChemPropModel is a neural pairwise regression model based on ChemProp.
     It uses learned embeddings for pairwise features.
     """
 
-    type: ClassVar[str] = "NepareChemPropModel"
+    type: ClassVar[str] = "NeuralPairwiseRegressorModel"
+    mod_params: dict = {}
+    monitor_metric: str = "val_loss"
 
-    def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
-        x_1, x_2, y = batch
-        x = torch.cat((x_1, x_2), dim=1)
-        return super()._step((x, y), name)
+    def train(self, dataloader):
+        """
+        Train the model
+        """
+        raise NotImplementedError(
+            "Training not implemented in model class, use a trainer."
+        )
+    
+    @classmethod
+    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
+        """
+        Create a model from parameters
+        """
 
-    def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "training")
+        instance = cls(**class_params, mod_params=mod_params)
+        instance.build()
+        return instance
 
-    def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "validation")
+    def build(self, scaler=None):
+        if not self.estimator:
+            nepare = NeuralPairwiseRegressor(**self.mod_params)
+            self.estimator = nepare
+        else:
+            logger.warning("Model already exists, skipping build")
 
-    def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "testing")
+        return self
 
-    def predict_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
-        x_1, x_2, _ = batch
-        x = torch.cat((x_1, x_2), dim=1)
-        return self(x)
+    def make_new(self) -> "NeuralPairwiseRegressorModel":
+        """
+        Copy parameters to a new model instance without copying the estimator
+        """
+        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
+
+    def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
+
+        if not self.estimator:
+            raise AttributeError("Model not built or trained.")
+        
+        with torch.inference_mode():
+            trainer = pl.Trainer(
+                logger=None,
+                enable_progress_bar=False,
+                accelerator=accelerator,
+                devices=devices,
+            )
+            preds = trainer.predict(self.estimator, dataloader)
+        return torch.cat(preds, dim=0).numpy()
