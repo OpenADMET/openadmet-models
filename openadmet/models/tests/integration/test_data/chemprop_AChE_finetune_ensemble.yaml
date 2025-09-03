@@ -1,7 +1,7 @@
 data:
   cat_entry: null
   input_col: OPENADMET_SMILES
-  resource: ../../unit/test_data/ACEH_chembl_pchembl.csv
+  resource: openadmet/models/tests/unit/test_data/ACEH_chembl_pchembl.csv
   target_cols: pchembl_value_mean
   type: intake
 
@@ -35,14 +35,14 @@ procedure:
   ensemble:
     n_models: 3
     serial_paths: [
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.pth,
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.pth,
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.pth
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth,
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth,
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth
     ]
     param_paths: [
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.json,
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.json,
-      ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.json
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json,
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json,
+      openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json
     ]
     type: CommitteeRegressor
 

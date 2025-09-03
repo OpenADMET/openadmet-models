@@ -1,7 +1,7 @@
 data:
   cat_entry: null
   input_col: OPENADMET_SMILES
-  resource: ../../unit/test_data/ACEH_chembl_pchembl.csv
+  resource: openadmet/models/tests/unit/test_data/ACEH_chembl_pchembl.csv
   target_cols: pchembl_value_mean
   type: intake
 
@@ -30,8 +30,8 @@ procedure:
 
   model:
     type: ChemPropModel
-    serial_path: ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.pth
-    param_path: ../../unit/test_data/aceh_chemprop_anvil_model_dir/model.json
+    serial_path: openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth
+    param_path: openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json
     params: {}
 
   split:
