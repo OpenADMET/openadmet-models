@@ -203,4 +203,9 @@ _QUERY_STRATEGIES = {
     "upper-confidence-bound": upper_confidence_bound,
     "expected-improvement": expected_improvement,
     "probability-improvement": probability_improvement,
+    "ur": max_uncertainty_reduction,
+    "exp": exploitation,
+    "ucb": upper_confidence_bound,
+    "ei": expected_improvement,
+    "pi": probability_improvement,
 }
