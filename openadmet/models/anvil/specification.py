@@ -256,7 +256,7 @@ class EnsembleSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "ensemble"
-    n_models: int = 0
+    n_models: int
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
