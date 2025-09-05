@@ -12,6 +12,13 @@ from openadmet.models.architecture.model_base import LightningModelBase
 
 from typing import ClassVar
 
+
+_METRIC_TO_LOSS = {
+    "mse": nn.metrics.MSE(),
+    "mae": nn.metrics.MAE(),
+    "rmse": nn.metrics.RMSE(),
+}
+
 class NeuralPairwiseRegressorModule(pl.LightningModule):
     def __init__(self, 
                  input_size, 
@@ -43,7 +50,18 @@ class NeuralPairwiseRegressorModule(pl.LightningModule):
         return self._step(batch, "training")
 
     def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "validation")
+        loss = self._step(batch, "validation")
+
+        self.log(
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
+
+        return loss
 
     def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
         return self._step(batch, "testing")

@@ -82,8 +82,11 @@ class PairwiseFeaturizer(FeaturizerBase):
         """
 
         X_feat, _ = self.featurizer.featurize(smiles)
+        X_feat = X_feat.astype(np.float32)
+        if y is not None:
+            y = y.astype(np.float32)
 
-        paired_dataset = PairwiseAugmentedDataset(X_feat, y, how=self.how_to_pair)
+        paired_dataset = PairwiseAugmentedDataset(X_feat, y.values.ravel(), how=self.how_to_pair)
 
         dataloader = DataLoader(
             paired_dataset,
