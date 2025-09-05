@@ -197,7 +197,7 @@ def upper_confidence_bound(mean, std, beta=2.0, **kwargs):
     return ucb
 
 
-_QUERY_STRATEGIES = {
+_ACQUISITION_FUNCTIONS = {
     "max-uncertainty-reduction": max_uncertainty_reduction,
     "exploitation": exploitation,
     "upper-confidence-bound": upper_confidence_bound,
