@@ -269,11 +269,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
             logger.info("Saving model")
             self.model.serialize(
                 [
-                    output_dir / f"bootstrap_{i}" / "model.json"
+                    output_dir / f"bootstrap_{i}" / self.model._model_json_name
                     for i in range(self.model.n_models)
                 ],
                 [
-                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    output_dir / f"bootstrap_{i}" / self.model._model_save_name
                     for i in range(self.model.n_models)
                 ],
             )
