@@ -269,11 +269,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
             logger.info("Saving model")
             self.model.serialize(
                 [
-                    output_dir / f"bootstrap_{i}" / self.model._model_json_name
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
                     for i in range(self.model.n_models)
                 ],
                 [
-                    output_dir / f"bootstrap_{i}" / self.model._model_save_name
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
             )
@@ -284,7 +288,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Save
             logger.info("Saving model")
-            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
             logger.info("Model saved")
 
         # Predict on test set
@@ -596,11 +603,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Saving model")
             self.model.serialize(
                 [
-                    output_dir / f"bootstrap_{i}" / "model.json"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
                     for i in range(self.model.n_models)
                 ],
                 [
-                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
             )
@@ -611,7 +622,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Save
             logger.info("Saving model")
-            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
             logger.info("Model saved")
 
         # Predict on test set
