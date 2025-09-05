@@ -534,7 +534,9 @@ class CommitteeRegressor(EnsembleBase):
 
         # Check lengths match
         if len(param_paths) != len(serial_paths):
-            raise ValueError("Number of parameter files and serial files do not match.")
+            raise ValueError(
+                f"Number of parameter files {len(param_paths)} and serial files {len(serial_paths)} do not match."
+            )
 
         # Deserialize each model
         models = []
