@@ -1,14 +1,14 @@
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
 
-from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSpec
+from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
 from openadmet.models.active_learning.ensemble_base import EnsembleBase
-import numpy as np
-
+from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSpec
 
 
 def load_anvil_model_and_metadata(model_dir):
@@ -63,7 +63,9 @@ def load_anvil_model_and_metadata(model_dir):
             mod_class=model,
         )
         print(loaded_model)
-        logger.info(f"Loaded model ensemble from {model_dir}, with {loaded_model.n_models} models")
+        logger.info(
+            f"Loaded model ensemble from {model_dir}, with {loaded_model.n_models} models"
+        )
 
     # Load single model
     else:
@@ -85,6 +87,7 @@ def predict(
     debug: bool = False,
     accelerator: str = "gpu",
     log: bool = True,
+    aq_fxn_args: dict | None = None,
     **kwargs,
 ):
     """Predict using a trained model"""
@@ -159,7 +162,9 @@ def predict(
 
         # if ensemble, return std as well
         if isinstance(model, EnsembleBase):
-            predictions, std = model.predict(X_feat, accelerator=accelerator, return_std=True)
+            predictions, std = model.predict(
+                X_feat, accelerator=accelerator, return_std=True
+            )
         else:
             predictions = model.predict(X_feat, accelerator=accelerator)
             std = np.full(predictions.shape, np.nan)
@@ -167,7 +172,6 @@ def predict(
         for j, taskname in enumerate(tasknames):
             predictions_tag = f"OADMET_PRED_{metadata.tag}_{taskname}"
             std_tag = f"OADMET_STD_{metadata.tag}_{taskname}"
-            query_tag = f"OADMET_QUERY_{metadata.tag}_{taskname}"
 
             if predictions_tag in data.columns or std_tag in data.columns:
                 raise ValueError(
@@ -180,6 +184,18 @@ def predict(
             logger.info(
                 f"Predictions for model {i} task {j} saved to column '{predictions_tag}', std saved to column '{std_tag}'"
             )
+
+            # Add acquisition function results
+            if aq_fxn_args is not None:
+                for aq_fxn, aq_args in aq_fxn_args.items():
+                    aq_tag = f"OADMET_{aq_fxn.upper()}_{metadata.tag}_{taskname}"
+                    aq_result = _ACQUISITION_FUNCTIONS[aq_fxn](
+                        predictions[:, j], std[:, j], **aq_args
+                    )
+                    data[aq_tag] = pd.Series(aq_result, index=X_indices)
+                    logger.info(
+                        f"Acquisition function '{aq_fxn}' for model {i} task {j} saved to column '{aq_tag}'"
+                    )
 
     logger.info("Finished prediction")
     logger.info(f"Predictions saved to {output_csv}")
