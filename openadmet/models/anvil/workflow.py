@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import torch
 import zarr
 from loguru import logger
@@ -13,6 +14,12 @@ from pydantic import model_validator
 
 from openadmet.models.anvil import Drivers
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
+
+
+def _safe_to_numpy(X):
+    if isinstance(X, (pd.Series, pd.DataFrame)):
+        return X.to_numpy()
+    return X
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -38,8 +45,36 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         return self
 
+    @model_validator(mode="after")
+    def check_no_finetuning(self):
+        # Ensemble specified
+        if self.ensemble:
+            # Fine-tuning paths specified
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
+                self.parent_spec.procedure.ensemble.serial_paths is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized ensemble models is not supported in this workflow."
+                )
+
+        # No ensemble
+        else:
+            # Fine-tuning paths supplied
+            if (self.parent_spec.procedure.model.param_path is not None) or (
+                self.parent_spec.procedure.model.serial_path is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized model is not supported in this workflow."
+                )
+
+        # All fine-tuning paths are None
+        return self
+
     def _train(self, X_train_feat, y_train, output_dir):
-        # Build model
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
+        # Build model from scratch
         logger.info("Building model")
         self.model.build()
         logger.info("Model built")
@@ -55,6 +90,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
         # Bootstrap iterations
         models = []
         for i in range(self.parent_spec.procedure.ensemble.n_models):
@@ -62,17 +100,19 @@ class AnvilWorkflow(AnvilWorkflowBase):
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
 
-            # Make new instances
-            self.model = self.model.make_new()
-
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train_feat.index, size=len(X_train_feat), replace=True
+                np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
             )
-            X_train_feat_bootstrap = X_train_feat.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
+
+            # Build model from scratch
+            logger.info(f"Building model {i}")
+            self.model = self.model.make_new()
+            logger.info(f"Model {i} built")
 
             # Train model on bootstrapped data
             logger.info("Training model")
@@ -298,10 +338,24 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         return self
 
     def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
-        # Build model
-        logger.info("Building model")
-        self.model.build(scaler=train_scaler)
-        logger.info("Model built")
+        # Load model from disk
+        if (
+            self.parent_spec.procedure.model.param_path is not None
+            and self.parent_spec.procedure.model.serial_path is not None
+        ):
+            logger.info("Loading model from disk, overrides any specified `mod_params`")
+            self.model = self.model.deserialize(
+                self.parent_spec.procedure.model.param_path,
+                self.parent_spec.procedure.model.serial_path,
+                scaler=train_scaler,
+            )
+            logger.info("Model loaded")
+
+        # Build model from scratch
+        else:
+            logger.info("Building model")
+            self.model.build(scaler=train_scaler)
+            logger.info("Model built")
 
         # Pass model to trainer
         logger.info("Setting model in trainer")
@@ -323,6 +377,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+        # Safely cast to numpy
+        X_train = _safe_to_numpy(X_train)
+        y_train = _safe_to_numpy(y_train)
+
         # Check if there is an output directory
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
@@ -336,16 +394,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Make new instances
             self.feat = self.feat.make_new()
-            self.model = self.model.make_new()
             self.trainer = self.trainer.make_new()
 
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train.index, size=len(X_train), replace=True
+                np.arange(len(X_train)), size=len(X_train), replace=True
             )
-            X_train_bootstrap = X_train.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_bootstrap = X_train[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
 
             # Featurize splits
@@ -362,10 +419,26 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Data featurized")
 
-            # Build model
-            logger.info("Building model")
-            self.model.build(scaler=bootstrap_scaler)
-            logger.info("Model built")
+            # Load model from disk
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
+                self.parent_spec.procedure.ensemble.param_paths[i] is not None
+            ):
+                logger.info(
+                    f"Loading model {i} from disk, overrides any specified `mod_params`"
+                )
+                self.model = self.model.deserialize(
+                    self.parent_spec.procedure.ensemble.param_paths[i],
+                    self.parent_spec.procedure.ensemble.serial_paths[i],
+                    scaler=bootstrap_scaler,
+                )
+                logger.info(f"Model {i} loaded")
+
+            # Build model from scratch
+            else:
+                logger.info(f"Building model {i}")
+                self.model = self.model.make_new()
+                self.model.build(scaler=bootstrap_scaler)
+                logger.info(f"Model {i} built")
 
             # Pass model to trainer
             logger.info("Setting model in trainer")

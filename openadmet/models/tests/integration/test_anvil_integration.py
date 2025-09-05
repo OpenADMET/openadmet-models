@@ -8,6 +8,8 @@ from openadmet.models.tests.integration.datafiles import (
     catboost_prop_dissimilarity,
     chemeleon_MT,
     chemeleon_MT_ensemble,
+    chemprop_AChE_finetune,
+    chemprop_AChE_finetune_ensemble,
     chemprop_MT,
     chemprop_MT_cpu_single,
     chemprop_ST,
@@ -39,6 +41,8 @@ class TestCPUAnvilConfigs:
             lgbm_mordred_cv_impute,
             rf_scaffold_cv,
             dummy_fp,
+            chemprop_AChE_finetune,
+            chemprop_AChE_finetune_ensemble,
         ],
     )
     def test_configs(self, recipe_file, tmp_path):

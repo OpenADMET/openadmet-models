@@ -232,6 +232,22 @@ class ModelSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "model"
+    param_path: str | None = None
+    serial_path: str | None = None
+
+    @model_validator(mode="after")
+    def check_paths(self):
+        # Both specified
+        if self.param_path and self.serial_path:
+            return self
+
+        # Neither specified
+        if not self.param_path and not self.serial_path:
+            return self
+
+        raise ValueError(
+            "Both `param_path` and `serial_path` must be provided together."
+        )
 
 
 class EnsembleSpec(AnvilSection):
@@ -241,12 +257,41 @@ class EnsembleSpec(AnvilSection):
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int = 0
+    param_paths: list[str] | None = None
+    serial_paths: list[str] | None = None
 
     @field_validator("n_models")
     def check_n_models(cls, value):
         if value < 2:
             raise ValueError("Ensemble must have more than one model.")
         return value
+
+    @model_validator(mode="after")
+    def check_paths(self):
+        # Both specified
+        if self.param_paths and self.serial_paths:
+            # Check lengths match
+            if len(self.param_paths) != len(self.serial_paths):
+                raise ValueError(
+                    "Parameter and serial paths must have the same length."
+                )
+
+            # Check matches model count
+            if len(self.param_paths) != self.n_models:
+                raise ValueError(
+                    f"Number of parameter ({len(self.param_paths)}) and serial paths ({len(self.serial_paths)}) must "
+                    f"match the number of models ({self.n_models})."
+                )
+
+            return self
+
+        # Neither specified
+        if not self.param_paths and not self.serial_paths:
+            return self
+
+        raise ValueError(
+            "Both `param_paths` and `serial_paths` must be provided together."
+        )
 
 
 class TrainerSpec(AnvilSection):
