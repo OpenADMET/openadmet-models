@@ -3,7 +3,7 @@ from typing import ClassVar
 import torch
 from lightning import pytorch as pl
 from loguru import logger
-from mtenn.config import SchNetModelConfig
+from mtenn.config import SchNetRepresentationConfig, ModelConfig
 
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -12,7 +12,7 @@ from openadmet.models.architecture.model_base import models as model_registry
 # TODO: Inherit from LightningModuleBase to expose more configurability
 class MTENNLightningModule(pl.LightningModule):
     def __init__(
-        self, model_config: SchNetModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4, monitor_metric: str = "val_loss"
+        self, model_config: ModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4, monitor_metric: str = "val_loss"
     ):
         super().__init__()
         self.model = model_config.build()
@@ -63,7 +63,8 @@ class MTENNSchNetModel(LightningModelBase):
         Prepare the model
         """
         if not self.estimator:
-            model_config = SchNetModelConfig(**self.mod_params)
+            model_rep = SchNetRepresentationConfig(**self.mod_params)
+            model_config = ModelConfig(representation=model_rep, strategy="delta", pred_readout="pic50")
             self.estimator = MTENNLightningModule(model_config)
         else:
             logger.warning("Model already exists, skipping build.")
