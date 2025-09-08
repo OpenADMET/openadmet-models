@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 
-from openadmet.models.active_learning.acquisition import _QUERY_STRATEGIES
+from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
 from openadmet.models.active_learning.committee import (
     CommitteeRegressor,
 )
@@ -107,7 +107,7 @@ def toy_data():
     product(
         ["lgbm_models", "chemprop_models"],
         ["isotonic-regression", "scaling-factor", None],
-        _QUERY_STRATEGIES.keys(),
+        _ACQUISITION_FUNCTIONS.keys(),
     ),
 )
 def test_committee(request, model_list, calibration_method, query_strategy):
