@@ -42,6 +42,7 @@ from openadmet.models.inference.inference import predict as inference_func
 @click.option(
     "--aq-fxn",
     "aq_fxns",
+    help="Acquisition function(s) to use for active learning.",
     type=click.Choice(["ucb", "ei", "pi"], case_sensitive=False),
     multiple=True,
 )
