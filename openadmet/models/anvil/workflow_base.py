@@ -20,9 +20,7 @@ from openadmet.models.transforms.transform_base import (
 
 
 class AnvilWorkflowBase(BaseModel):
-    """
-    Base class for Anvil workflows.
-    """
+    """Base class for Anvil workflows."""
 
     metadata: Metadata
     data_spec: DataSpec
@@ -39,4 +37,20 @@ class AnvilWorkflowBase(BaseModel):
     @abstractmethod
     def run(
         self, output_dir: PathLike = "anvil_training", debug: bool = False
-    ) -> Any: ...
+    ) -> Any:
+        """Run the workflow.
+
+        Parameters
+        ----------
+        output_dir : PathLike, optional
+            Directory to save outputs, by default "anvil_training"
+        debug : bool, optional
+            Whether to run in debug mode, by default False
+
+        Returns
+        -------
+        Any
+            Result of the workflow run 
+            
+        """
+        ...

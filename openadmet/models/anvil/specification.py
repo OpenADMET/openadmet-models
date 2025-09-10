@@ -37,9 +37,7 @@ _SECTION_CLASS_GETTERS = {
 
 
 class DataSpec(BaseModel):
-    """
-    Data specification for the workflow
-    """
+    """Data specification for the workflow."""
 
     type: str
     resource: str
@@ -54,6 +52,7 @@ class DataSpec(BaseModel):
     @field_validator("target_cols", mode="before")
     @classmethod
     def check_target_cols_input(cls, v):
+        """Ensure target_cols is always a list."""
         if isinstance(v, str):
             return [v]
         else:
@@ -62,24 +61,41 @@ class DataSpec(BaseModel):
     # validator to template the resource with ANVIL_DIR if present
     @model_validator(mode="after")
     def template_resource(self):
+        """Template the resource with ANVIL_DIR if present.
+
+        Returns
+        -------
+        self : DataSpec
+            The DataSpec instance with the templated resource.
+
+        """
         if self.anvil_dir:
             template = jinja2.Template(self.resource)
             self.resource = template.render(ANVIL_DIR=self.anvil_dir)
         return self
 
     def template_anvil_dir(self, anvil_dir: Path):
-        """
-        Template the resource with ANVIL_DIR if present
-        """
+        """Template the resource with ANVIL_DIR if present."""
         self.anvil_dir = anvil_dir
         template = jinja2.Template(self.resource)
         self.resource = template.render(ANVIL_DIR=anvil_dir)
 
     def read(self) -> tuple[pd.Series, pd.Series]:
-        """
-        Read the data from the resource
-        """
+        """Read the data from the resource.
 
+        Returns
+        -------
+        input: pd.Series
+            The input data (e.g., SMILES strings)
+        targets: pd.Series
+            The target data (e.g., properties to predict)
+
+        Raises
+        ------
+        ValueError
+            If the resource type is not supported
+
+        """
         # if YAML, parse as intake catalog
         if self.resource.endswith(".yaml") or self.resource.endswith(".yml"):
             self._catalog = intake.open_catalog(self.resource)
@@ -125,14 +141,44 @@ class DataSpec(BaseModel):
 
     @property
     def catalog(self):
+        """Get the intake catalog if the resource is a YAML file."""
         return self._catalog
 
     def to_yaml(self, path, **storage_options):
+        """Write specification to YAML file.
+
+        Parameters
+        ----------
+        path : str or PathLike
+            The file path to write the YAML content to.
+        storage_options : dict, optional
+            Additional options to pass to the file system (e.g., for S3, GCS).
+
+        Returns
+        -------
+        None
+
+        """
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
 
     @classmethod
     def from_yaml(cls, path, **storage_options):
+        """Load specification from YAML file.
+        
+        Parameters
+        ----------
+        path : str or PathLike
+            The file path to read the YAML content from.
+        storage_options : dict, optional
+            Additional options to pass to the file system (e.g., for S3, GCS).
+        
+        Returns
+        -------
+        instance : DataSpec
+            An instance of the DataSpec class populated with data from the YAML file.
+
+        """
         of = fsspec.open(path, "r", **storage_options)
         with of as stream:
             data = yaml.safe_load(stream)
@@ -140,15 +186,23 @@ class DataSpec(BaseModel):
 
 
 class SpecBase(BaseModel):
-    """
-    Base class for specifications.
-    """
+    """Base class for specifications."""
 
     def to_yaml(self, path, **storage_options):
-        """
-        Write specification to YAML file.
-        """
+        """Write specification to YAML file.
 
+        Parameters
+        ----------
+        path : str or PathLike
+            The file path to write the YAML content to.
+        storage_options : dict, optional
+            Additional options to pass to the file system (e.g., for S3, GCS).
+        
+        Returns
+        -------
+        None
+
+        """
         # Open file stream
         with fsspec.open(path, "w", **storage_options) as stream:
             # Safe dump the model to stream
@@ -156,10 +210,21 @@ class SpecBase(BaseModel):
 
     @classmethod
     def from_yaml(cls, path, **storage_options):
-        """
-        Load specification from YAML file.
-        """
+        """Load specification from YAML file.
 
+        Parameters
+        ----------
+        path : str or PathLike
+            The file path to read the YAML content from.
+        storage_options : dict, optional
+            Additional options to pass to the file system (e.g., for S3, GCS
+
+        Returns
+        -------
+        instance : SpecBase
+            An instance of the specification class populated with data from the YAML file.
+
+        """
         # Open file stream
         with fsspec.open(path, "r", **storage_options) as stream:
             # Safe load the model from stream
@@ -170,9 +235,7 @@ class SpecBase(BaseModel):
 
 
 class Metadata(SpecBase):
-    """
-    Metadata specification.
-    """
+    """Metadata specification."""
 
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
@@ -198,38 +261,43 @@ class Metadata(SpecBase):
 
 
 class AnvilSection(SpecBase):
-    """
-    Anvil specification section base class.
-    """
+    """Anvil specification section base class."""
 
     type: str | None = None
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
 
     def to_class(self):
+        """Convert the specification to the corresponding class instance.
+        
+        Returns
+        -------
+        instance : object
+            An instance of the class corresponding to the section type.
+            
+        Raises
+        ------
+        ValueError
+            If the section_name is invalid or the type is not recognized.
+
+        """
         return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
 
 
 class SplitSpec(AnvilSection):
-    """
-    Data split specification.
-    """
+    """Data split specification."""
 
     section_name: ClassVar[str] = "split"
 
 
 class FeatureSpec(AnvilSection):
-    """
-    Featurization specification.
-    """
+    """Featurization specification."""
 
     section_name: ClassVar[str] = "feat"
 
 
 class ModelSpec(AnvilSection):
-    """
-    Model specification.
-    """
+    """Model specification."""
 
     section_name: ClassVar[str] = "model"
     param_path: str | None = None
@@ -237,6 +305,19 @@ class ModelSpec(AnvilSection):
 
     @model_validator(mode="after")
     def check_paths(self):
+        """Ensure both param_path and serial_path are provided together.
+
+        Returns
+        -------
+        self : ModelSpec
+            The validated ModelSpec instance.
+        
+        Raises
+        ------
+        ValueError
+            If only one of param_path or serial_path is provided.
+
+        """
         # Both specified
         if self.param_path and self.serial_path:
             return self
@@ -251,9 +332,7 @@ class ModelSpec(AnvilSection):
 
 
 class EnsembleSpec(AnvilSection):
-    """
-    Ensemble specification.
-    """
+    """Ensemble specification."""
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int
@@ -262,12 +341,39 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("n_models")
     def check_n_models(cls, value):
+        """Ensure ensemble has more than one model.
+        
+        Parameters
+        ----------
+        value : int
+            The number of models in the ensemble.
+
+        Returns
+        -------
+        value : int
+            The validated number of models.
+
+        """
         if value < 2:
             raise ValueError("Ensemble must have more than one model.")
         return value
 
     @model_validator(mode="after")
     def check_paths(self):
+        """Ensure both param_paths and serial_paths are provided together.
+
+        Returns
+        -------
+        self : EnsembleSpec
+            The validated EnsembleSpec instance.
+
+        Raises
+        ------
+        ValueError
+            If only one of param_paths or serial_paths is provided, or if their lengths do not
+            match the number of models.
+        
+        """
         # Both specified
         if self.param_paths and self.serial_paths:
             # Check lengths match
@@ -295,33 +401,25 @@ class EnsembleSpec(AnvilSection):
 
 
 class TrainerSpec(AnvilSection):
-    """
-    Trainer specification.
-    """
+    """Trainer specification."""
 
     section_name: ClassVar[str] = "train"
 
 
 class EvalSpec(AnvilSection):
-    """
-    Evaluation specification.
-    """
+    """Evaluation specification."""
 
     section_name: ClassVar[str] = "eval"
 
 
 class TransformSpec(AnvilSection):
-    """
-    Transform specification.
-    """
+    """Transform specification."""
 
     section_name: ClassVar[str] = "transform"
 
 
 class ProcedureSpec(SpecBase):
-    """
-    Procedure specification.
-    """
+    """Procedure specification."""
 
     section_name: ClassVar[str] = "procedure"
 
@@ -334,18 +432,14 @@ class ProcedureSpec(SpecBase):
 
 
 class ReportSpec(SpecBase):
-    """
-    Report specification.
-    """
+    """Report specification."""
 
     section_name: ClassVar[str] = "report"
     eval: list[EvalSpec]
 
 
 class AnvilSpecification(BaseModel):
-    """
-    Full specification for Anvil workflow.
-    """
+    """Full specification for Anvil workflow."""
 
     metadata: Metadata
     data: DataSpec
@@ -354,10 +448,7 @@ class AnvilSpecification(BaseModel):
 
     @classmethod
     def from_recipe(cls, yaml_path: PathLike, **storage_options):
-        """
-        Load specification from YAML recipe file.
-        """
-
+        """Load specification from YAML recipe file."""
         # Load YAML file
         of = fsspec.open(yaml_path, "r", **storage_options)
         with of as stream:
@@ -375,10 +466,7 @@ class AnvilSpecification(BaseModel):
         return instance
 
     def to_recipe(self, path, **storage_options):
-        """
-        Write specification to YAML recipe file.
-        """
-
+        """Write specification to YAML recipe file."""
         # Open file stream
         with fsspec.open(path, "w", **storage_options) as stream:
             # Safe dump the model to stream
@@ -393,10 +481,7 @@ class AnvilSpecification(BaseModel):
         report_yaml="eval.yaml",
         **storage_options,
     ):
-        """
-        Load specification from multiple YAML files.
-        """
-
+        """Load specification from multiple YAML files."""
         # Load YAML files
         metadata = Metadata.from_yaml(metadata_yaml, **storage_options)
         data = DataSpec.from_yaml(data_yaml, **storage_options)
@@ -414,10 +499,26 @@ class AnvilSpecification(BaseModel):
         report_yaml="eval.yaml",
         **storage_options,
     ):
+        """Write specification to multiple YAML files.
+        
+        Parameters
+        ----------
+        metadata_yaml : str or PathLike, optional
+            The file path for the metadata YAML file. Default is 'metadata.yaml'.
+        procedure_yaml : str or PathLike, optional
+            The file path for the procedure YAML file. Default is 'procedure.yaml'.
+        data_yaml : str or PathLike, optional
+            The file path for the data YAML file. Default is 'data.yaml'.
+        report_yaml : str or PathLike, optional
+            The file path for the report YAML file. Default is 'eval.yaml'.
+        storage_options : dict, optional
+            Additional options to pass to the file system (e.g., for S3, GCS
+        
+        Returns
+        -------
+        None
+        
         """
-        Write specification to multiple YAML files.
-        """
-
         # Write each section to its own YAML file
         self.metadata.to_yaml(metadata_yaml, **storage_options)
         self.data.to_yaml(data_yaml, **storage_options)
@@ -425,10 +526,7 @@ class AnvilSpecification(BaseModel):
         self.report.to_yaml(report_yaml, **storage_options)
 
     def to_workflow(self):
-        """
-        Convert the specification to a workflow object.
-        """
-
+        """Convert the specification to a workflow object."""
         logger.info("Making workflow from specification")
 
         # Import here to avoid circular import
