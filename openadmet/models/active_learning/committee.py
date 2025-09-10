@@ -224,7 +224,9 @@ class CommitteeRegressor(EnsembleBase):
         for i in range(y.shape[-1]):
             plots.append(
                 uct.viz.plot_calibration(
-                    y_pred_mean.flatten(), y_pred_std.flatten(), y[:, i].flatten()
+                    y_pred_mean[:, i].flatten(),
+                    y_pred_std[:, i].flatten(),
+                    y[:, i].flatten(),
                 )
             )
 
