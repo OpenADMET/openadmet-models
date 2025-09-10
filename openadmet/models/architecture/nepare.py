@@ -7,7 +7,7 @@ from chemprop import models, nn
 from typing import OrderedDict
 
 from openadmet.models.architecture.model_base import models as model_registry
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.architecture.model_base import LightningModuleBase, LightningModelBase
 
 
 from typing import ClassVar
@@ -19,7 +19,7 @@ _METRIC_TO_LOSS = {
     "rmse": nn.metrics.RMSE(),
 }
 
-class NeuralPairwiseRegressorModule(pl.LightningModule):
+class NeuralPairwiseRegressorModule(LightningModuleBase):
     def __init__(self, 
                  input_size, 
                  hidden_size, 
@@ -37,41 +37,26 @@ class NeuralPairwiseRegressorModule(pl.LightningModule):
         _modules["readout"] = torch.nn.Linear(hidden_size, n_targets)
         self.fnn = torch.nn.Sequential(_modules)
         self.lr = lr
-        self.monitor_metric = monitor_metric
         self.save_hyperparameters()
-
-    def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), self.lr)
 
     def forward(self, x: torch.Tensor):
         return self.fnn(x)
 
     def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "training")
+        return self._step(batch, self.monitor_metric)
 
     def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        loss = self._step(batch, "validation")
-
-        self.log(
-            "val_loss",
-            loss,
-            on_step=False,
-            on_epoch=True,
-            prog_bar=True,
-            batch_size=batch.num_graphs,
-        )
-
-        return loss
+        return self._step(batch, self.monitor_metric)
 
     def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
-        return self._step(batch, "testing")
+        return self._step(batch, self.monitor_metric)
     
     def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
         x_1, x_2, y = batch
         x = torch.cat((x_1, x_2), dim=1)
         y_hat = self(x)
         loss = torch.nn.functional.mse_loss(y_hat, y)
-        self.log(f"{name}/loss", loss, prog_bar=True)
+        self.log(f"{name}", loss, prog_bar=True)
         return loss
 
     def predict_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
