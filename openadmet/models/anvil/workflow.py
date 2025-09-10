@@ -164,7 +164,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             Whether to run in debug mode, by default False
         tag : str, optional
             Tag to override the one in the recipe, by default None
-        
+
         Returns
         -------
         Any
@@ -362,12 +362,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     @model_validator(mode="after")
     def check_no_transform(self):
         """Check that no transform step is specified.
-        
+
         Raises
         ------
         ValueError
             If a transform step is specified in the recipe.
-        
+
         """
         # Check that transform is not set
         if self.transform is not None:
@@ -379,12 +379,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     @model_validator(mode="after")
     def check_if_val_needed(self):
         """Check if validation set is needed or not.
-        
+
         Raises
         ------
         ValueError
             If ensemble is specified but no validation set is requested.
-        
+
         """
         # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:

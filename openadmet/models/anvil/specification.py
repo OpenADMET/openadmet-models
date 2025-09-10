@@ -165,14 +165,14 @@ class DataSpec(BaseModel):
     @classmethod
     def from_yaml(cls, path, **storage_options):
         """Load specification from YAML file.
-        
+
         Parameters
         ----------
         path : str or PathLike
             The file path to read the YAML content from.
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS).
-        
+
         Returns
         -------
         instance : DataSpec
@@ -197,7 +197,7 @@ class SpecBase(BaseModel):
             The file path to write the YAML content to.
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS).
-        
+
         Returns
         -------
         None
@@ -269,12 +269,12 @@ class AnvilSection(SpecBase):
 
     def to_class(self):
         """Convert the specification to the corresponding class instance.
-        
+
         Returns
         -------
         instance : object
             An instance of the class corresponding to the section type.
-            
+
         Raises
         ------
         ValueError
@@ -311,7 +311,7 @@ class ModelSpec(AnvilSection):
         -------
         self : ModelSpec
             The validated ModelSpec instance.
-        
+
         Raises
         ------
         ValueError
@@ -342,7 +342,7 @@ class EnsembleSpec(AnvilSection):
     @field_validator("n_models")
     def check_n_models(cls, value):
         """Ensure ensemble has more than one model.
-        
+
         Parameters
         ----------
         value : int
@@ -372,7 +372,7 @@ class EnsembleSpec(AnvilSection):
         ValueError
             If only one of param_paths or serial_paths is provided, or if their lengths do not
             match the number of models.
-        
+
         """
         # Both specified
         if self.param_paths and self.serial_paths:
@@ -500,7 +500,7 @@ class AnvilSpecification(BaseModel):
         **storage_options,
     ):
         """Write specification to multiple YAML files.
-        
+
         Parameters
         ----------
         metadata_yaml : str or PathLike, optional
@@ -513,11 +513,11 @@ class AnvilSpecification(BaseModel):
             The file path for the report YAML file. Default is 'eval.yaml'.
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS
-        
+
         Returns
         -------
         None
-        
+
         """
         # Write each section to its own YAML file
         self.metadata.to_yaml(metadata_yaml, **storage_options)

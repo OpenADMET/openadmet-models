@@ -50,7 +50,7 @@ class AnvilWorkflowBase(BaseModel):
         Returns
         -------
         Any
-            Result of the workflow run 
-            
+            Result of the workflow run
+
         """
         ...
