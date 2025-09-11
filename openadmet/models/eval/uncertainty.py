@@ -56,6 +56,7 @@ class UncertaintyMetrics(EvalBase):
         bins=100,
         resolution=99,
         scaled=True,
+        **kwargs,
     ):
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
@@ -166,7 +167,7 @@ class UncertaintyMetrics(EvalBase):
             wandb.log_artifact(artifact)
 
 
-@evaluators.register("UncertaintyCalibrationPlots")
+@evaluators.register("UncertaintyPlots")
 class UncertaintyPlots(EvalBase):
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
@@ -179,10 +180,10 @@ class UncertaintyPlots(EvalBase):
     def _set_plot_types(self):
         # Specify plots
         self._plots = {
-            "calibration": self.calibration_plot,
+            "uncertainty-calibration-plot": self.calibration_plot,
         }
 
-    def evaluate(self, y_true, y_pred, y_std, target_labels=None):
+    def evaluate(self, y_true, y_pred, y_std, target_labels=None, **kwargs):
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
             raise ValueError("Must provide `y_true`, `y_pred`, and `y_std`")
@@ -214,7 +215,7 @@ class UncertaintyPlots(EvalBase):
         for task_id, task_label in enumerate(target_labels):
             # Enumerate plots
             for plot_tag, plot in self._plots.items():
-                self.plot_data[f"{task_label}_{plot_tag}"] = plot(
+                self._plot_data[f"{task_label}_{plot_tag}"] = plot(
                     y_true[:, task_id],
                     y_pred[:, task_id],
                     y_std[:, task_id],
@@ -226,6 +227,9 @@ class UncertaintyPlots(EvalBase):
 
     @staticmethod
     def calibration_plot(y_true, y_pred, y_std, title="", dpi=300):
+        """
+        Create a calibration plot.
+        """
         # Plot calibration
         fig, ax = plt.subplots(dpi=dpi)
         ax = uct.viz.plot_calibration(
