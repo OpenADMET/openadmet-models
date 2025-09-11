@@ -26,6 +26,14 @@ def mask_nans(y_true: np.ndarray, y_pred: np.ndarray):
     return y_true[mask], y_pred[mask]
 
 
+def mask_nans_std(y_true: np.ndarray, y_pred: np.ndarray, y_std: np.ndarray):
+    """
+    Remove any pairs where either y_true or y_pred is NaN.
+    """
+    mask = ~np.isnan(y_true) & ~np.isnan(y_pred)
+    return y_true[mask], y_pred[mask], y_std[mask]
+
+
 class EvalBase(BaseModel):
     class Config:
         extra = "allow"
