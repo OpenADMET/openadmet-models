@@ -167,7 +167,7 @@ class CommitteeRegressor(EnsembleBase):
         if method not in self._calibration_methods:
             raise ValueError(
                 f"Invalid calibration method: {method}. "
-                f"Valid options are: {self._calibration_methods.keys()}"
+                f"Valid options are: {self._calibration_methods.keys()}."
             )
 
         getattr(self, self._calibration_methods[method])(X, y, **kwargs)
