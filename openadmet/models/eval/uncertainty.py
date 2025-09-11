@@ -6,14 +6,13 @@ import uncertainty_toolbox as uct
 import wandb
 from pydantic import Field
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans_std
 
 
 @evaluators.register("UncertaintyMetrics")
 class UncertaintyMetrics(EvalBase):
     use_wandb: bool = Field(False, description="Whether to use wandb")
     _data: dict = {}
-
     _metrics: dict = {
         "mae": "MAE",
         "rmse": "RMSE",
@@ -87,42 +86,44 @@ class UncertaintyMetrics(EvalBase):
 
         # Enumerate targets
         for task_id, task_label in enumerate(target_labels):
+            # Task target values
+            t_true = y_true[:, task_id].flatten()
+            t_pred = y_pred[:, task_id].flatten()
+            t_std = y_std[:, task_id].flatten()
+
+            # Mask nans
+            t_true, t_pred, t_std = mask_nans_std(t_true, t_pred, t_std)
+
             # Initialize task data
             self._data[task_label] = {}
 
             # Accuracy
             accuracy_metrics = uct.metrics.get_all_accuracy_metrics(
-                y_pred[task_id, :].flatten(), y_true[task_id, :].flatten(), False
+                t_pred, t_true, False
             )
 
             # Calibration
             calibration_metrics = uct.metrics.get_all_average_calibration(
-                y_pred[task_id, :].flatten(),
-                y_std[task_id, :].flatten(),
-                y_true[task_id, :].flatten(),
-                bins,
-                False,
+                t_pred, t_std, t_true, bins, False
             )
 
             # # Adversarial Group Calibration
             # adv_group_cali_metrics = uct.metrics.get_all_adversarial_group_calibration(
-            #     y_pred[task_id, :].flatten(),
-            #     y_std[task_id, :].flatten(),
-            #     y_true[task_id, :].flatten(),
+            #     t_pred,
+            #     t_std,
+            #     t_true,
             #     bins,
             #     False,
             # )
 
             # Sharpness
-            sharpness_metrics = uct.metrics.get_all_sharpness_metrics(
-                y_std[task_id, :].flatten(), False
-            )
+            sharpness_metrics = uct.metrics.get_all_sharpness_metrics(t_std, False)
 
             # Proper Scoring Rules
             scoring_rule_metrics = uct.metrics.get_all_scoring_rule_metrics(
-                y_pred[task_id, :].flatten(),
-                y_std[task_id, :].flatten(),
-                y_true[task_id, :].flatten(),
+                t_pred,
+                t_std,
+                t_true,
                 resolution,
                 scaled,
                 False,
@@ -174,7 +175,7 @@ class UncertaintyPlots(EvalBase):
     _plots: dict = {}
     _plot_data: dict = {}
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context):
         self._set_plot_types()
 
     def _set_plot_types(self):
@@ -213,12 +214,20 @@ class UncertaintyPlots(EvalBase):
 
         # Enumerate targets
         for task_id, task_label in enumerate(target_labels):
+            # Task target values
+            t_true = y_true[:, task_id].flatten()
+            t_pred = y_pred[:, task_id].flatten()
+            t_std = y_std[:, task_id].flatten()
+
+            # Mask nans
+            t_true, t_pred, t_std = mask_nans_std(t_true, t_pred, t_std)
+
             # Enumerate plots
             for plot_tag, plot in self._plots.items():
                 self._plot_data[f"{task_label}_{plot_tag}"] = plot(
-                    y_true[:, task_id],
-                    y_pred[:, task_id],
-                    y_std[:, task_id],
+                    t_true,
+                    t_pred,
+                    t_std,
                     title=f"Uncertainty Calibration\nTask {task_label}",
                     dpi=self.dpi,
                 )
@@ -233,9 +242,9 @@ class UncertaintyPlots(EvalBase):
         # Plot calibration
         fig, ax = plt.subplots(dpi=dpi)
         ax = uct.viz.plot_calibration(
-            y_pred.flatten(),
-            y_std.flatten(),
-            y_true.flatten(),
+            y_pred,
+            y_std,
+            y_true,
             ax=ax,
         )
 
