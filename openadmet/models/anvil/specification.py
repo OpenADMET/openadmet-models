@@ -257,8 +257,18 @@ class EnsembleSpec(AnvilSection):
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int
+    calibration_method: str = "isotonic-regression"
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
+
+    @field_validator("method")
+    def check_method(cls, value):
+        allowed = ["isotonic-regression", "scaling-factor"]
+        if value not in allowed:
+            raise ValueError(
+                f"Invalid calibration method: {value}. Valid options are: {allowed}."
+            )
+        return value
 
     @field_validator("n_models")
     def check_n_models(cls, value):
