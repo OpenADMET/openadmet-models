@@ -24,7 +24,7 @@ from openadmet.models.eval.regression import (
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
-
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 def wrap_ktau(y_true, y_pred):
     return nan_omit_ktau(y_true, y_pred).statistic
@@ -403,8 +403,14 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
             for task_id in range(n_tasks):
-                t_true = y_val[:, task_id]
-                t_pred = y_pred_fold[:, task_id]
+                if y_val.shape[0] != y_pred_fold.shape[0]:
+                    # Generate pairwise true values to match pairwise predictions
+                    N = y_pred.shape[0]
+                    t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
+                    t_pred = y_pred_fold[:, task_id]
+                else:
+                    t_true = y_val[:, task_id]
+                    t_pred = y_pred_fold[:, task_id]
                 # remove Nan values
                 t_true, t_pred = mask_nans(t_true, t_pred)
                 t_label = target_labels[task_id]
@@ -448,14 +454,18 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # now the plots
         for task_id in range(n_tasks):
-            t_true = y_true[:, task_id]
-            t_pred = y_pred[:, task_id]
+            t_label = target_labels[task_id]
+            if y_val.shape[0] != y_pred_fold.shape[0]:
+                # Generate pairwise true values to match pairwise predictions
+                N = y_pred.shape[0]
+                t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
+                t_pred = y_pred_fold[:, task_id]
+            else:
+                t_true = y_val[:, task_id]
+                t_pred = y_pred_fold[:, task_id]
             # remove Nan values
             t_true, t_pred = mask_nans(t_true, t_pred)
-            t_label = target_labels[task_id]
-
             stat_dict = self.get_stat_dict(t_label=t_label)
-
             # create the plots
             for plot_tag, plot in self.plots.items():
                 plot_tag_task = f"{plot_tag}_{t_label}"
