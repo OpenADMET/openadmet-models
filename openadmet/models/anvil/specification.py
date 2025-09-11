@@ -261,7 +261,7 @@ class EnsembleSpec(AnvilSection):
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
-    @field_validator("method")
+    @field_validator("calibration_method")
     def check_method(cls, value):
         allowed = ["isotonic-regression", "scaling-factor"]
         if value not in allowed:
