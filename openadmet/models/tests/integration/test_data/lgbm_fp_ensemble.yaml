@@ -93,3 +93,12 @@ report:
       n_splits: 3
       n_repeats: 2
       title:  True vs Predicted pChEMBL on test set
+  # Generate uncertainty metrics
+  - type: UncertaintyMetrics
+    params:
+      bins: 100
+      resolution: 99
+      scaled: True
+  # Generate uncertainty plots
+  - type: UncertaintyPlots
+    params: {}
