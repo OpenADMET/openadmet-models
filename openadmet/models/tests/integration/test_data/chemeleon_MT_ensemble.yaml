@@ -73,7 +73,7 @@ report:
       min_val: 3
       pXC50: true
       title: Multitask True vs Predicted pChEMBL on test set
-    
+
   - type: UncertaintyMetrics
     params:
       bins: 100
