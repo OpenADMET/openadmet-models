@@ -280,6 +280,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                     / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
@@ -435,7 +436,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Load model from disk
             if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
-                self.parent_spec.procedure.ensemble.param_paths[i] is not None
+                self.parent_spec.procedure.ensemble.serial_paths is not None
             ):
                 logger.info(
                     f"Loading model {i} from disk, overrides any specified `mod_params`"
@@ -614,6 +615,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
