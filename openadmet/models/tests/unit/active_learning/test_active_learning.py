@@ -20,6 +20,11 @@ from openadmet.models.tests.unit.datafiles import (
     anvil_lgbm_trained_model_dir,
 )
 
+# Remove redundant for testing
+_ACQUISITION_FUNCTIONS_SHORTLIST = [
+    x for x in _ACQUISITION_FUNCTIONS.keys() if "-" in x
+]
+
 
 @pytest.fixture
 def chemprop_models():
@@ -107,7 +112,7 @@ def toy_data():
     product(
         ["lgbm_models", "chemprop_models"],
         ["isotonic-regression", "scaling-factor", None],
-        _ACQUISITION_FUNCTIONS.keys(),
+        _ACQUISITION_FUNCTIONS_SHORTLIST,
     ),
 )
 def test_committee(request, model_list, calibration_method, query_strategy):
