@@ -61,6 +61,21 @@ class ChemPropModel(LightningModelBase):
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
+    def _get_output_transform(self, scaler):
+        """
+        Set the output transform
+        """
+        if scaler is not None:
+            output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
+        elif self.normalized_targets:
+            # Expects the targets to be normalized, likely to be loaded from state dict
+            output_transform = nn.UnscaleTransform(
+                [1] * self.n_tasks, [0] * self.n_tasks
+            )
+        else:
+            output_transform = None
+        return output_transform
+
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
@@ -90,14 +105,6 @@ class ChemPropModel(LightningModelBase):
         Prepare the model
         """
         if not self.estimator:
-            if scaler is not None:
-                output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
-            elif self.normalized_targets:
-                # Expects the targets to be normalized, likely to be loaded from state dict
-                output_transform = nn.UnscaleTransform(
-                    [1] * self.n_tasks, [0] * self.n_tasks
-                )
-
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
 
             if self.from_chemeleon:
@@ -148,7 +155,7 @@ class ChemPropModel(LightningModelBase):
                 input_dim=self.message_hidden_dim,
                 hidden_dim=self.ffn_hidden_dim,
                 n_layers=self.ffn_num_layers,
-                output_transform=output_transform,
+                output_transform=self._get_output_transform(scaler),
                 dropout=self.dropout,
             )
 

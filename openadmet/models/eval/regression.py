@@ -286,6 +286,8 @@ class RegressionPlots(EvalBase):
     def regplot(
         y_true,
         y_pred,
+        y_pred_err=None,
+        data_labels=None,
         xlabel="Measured",
         ylabel="Predicted",
         title="",
@@ -294,6 +296,7 @@ class RegressionPlots(EvalBase):
         pXC50=False,
         min_val=None,
         max_val=None,
+        fit_reg=True
     ):
         """
         Create a regression plot
@@ -317,10 +320,32 @@ class RegressionPlots(EvalBase):
             x=np.ravel(y_true),
             y=np.ravel(y_pred),
             kind="reg",
-            joint_kws={"ci": confidence_level * 100},
+            joint_kws={"ci": confidence_level * 100, "fit_reg": fit_reg},
             scatter_kws={"alpha":0.3},
             color="teal",
             height=10)
+
+        if y_pred_err is not None:
+            g.ax_joint.errorbar(
+                x=np.ravel(y_true),
+                y=np.ravel(y_pred),
+                yerr=np.ravel(y_pred_err),
+                fmt='o',
+                color='teal',
+                alpha=0.3
+            )
+
+        if data_labels is not None:
+            for i, label in enumerate(data_labels):
+                g.ax_joint.text(
+                    x=np.ravel(y_true)[i],
+                    y=np.ravel(y_pred)[i],
+                    s=label,
+                    fontsize=6,
+                    color="black",
+                    ha="right",
+                    va="bottom"
+                )
 
         g.figure.suptitle(title, fontsize=title_font)
         g.ax_joint.set_aspect("equal", "box")

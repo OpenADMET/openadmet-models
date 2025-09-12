@@ -18,7 +18,7 @@ metadata:
   biotargets:
   - CYP3A4
   build_number: 0
-  description: basic regression using a XGBoost model
+  description: basic regression using a LightGBM model
   driver: sklearn
   email: cynthia.xu@omsf.io
   name: lgbm_pchembl
@@ -35,25 +35,21 @@ procedure:
   feat:
     # Using the ChemPropFeaturizer (for ChemProp model)
     # See openadmet.models.features
-    type: DescriptorFeaturizer
+    type: FingerprintFeaturizer
     params:
-      descr_type: "mordred"
+        fp_type: "ecfp:4"
 
   # Model specification
   model:
     # Indicate model type
     # See openadmet.models.architecture for all model types
-    type: XGBRegressorModel
-    # Specify model parameters
-    params:
-      alpha: 0.005
-      learning_rate: 0.05
+    type: DummyRegressorModel
 
   # Specify data splits
   split:
     # Specify how data will be split
     # See openadmet.models.split
-    type: ScaffoldSplitter
+    type: ShuffleSplitter
     # Specify split parameters
     params:
       random_state: 42
@@ -63,13 +59,8 @@ procedure:
 
   train:
 
-    type: SKLearnGridSearchTrainer
-    # Specify model parameters
-    params:
-      param_grid:
-        n_estimators: [500]
-        alpha: [0.005]
-        learning_rate: [0.05]
+    type: SKLearnBasicTrainer
+
 
 # Section specifying report generation
 report:

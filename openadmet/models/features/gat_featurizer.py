@@ -146,3 +146,10 @@ class GATGraphFeaturizer(FeaturizerBase):
 
         # Return dataloader, indices, scaler (None for GAT), and dataset (data_objects)
         return dataloader, np.array(successful_indices), None, data_objects
+
+
+    def make_new(self) -> "GATGraphFeaturizer":
+        """
+        Copy parameters to a new GATGraphFeaturizer instance
+        """
+        return self.__class__(**self.dict())

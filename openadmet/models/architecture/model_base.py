@@ -111,7 +111,13 @@ class PickleableModelBase(ModelBase):
 
     def load(self, path: PathLike):
         with open(path, "rb") as f:
-            self._estimator = joblib.load(f)
+            self.estimator = joblib.load(f)
+
+    def make_new(self) -> "PickleableModelBase":
+        """
+        Copy parameters to a new model instance without copying the estimator
+        """
+        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
 
     @classmethod
     def deserialize(
@@ -144,7 +150,6 @@ class LightningModuleBase(pl.LightningModule):
     to preconfigure optimizer and scheduler.
 
     """
-
 
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
@@ -282,11 +287,14 @@ class LightningModelBase(ModelBase):
 
     @classmethod
     def deserialize(
-        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
+        cls,
+        param_path: PathLike = "model.json",
+        serial_path: PathLike = "model.pth",
+        scaler: Any = None,
     ):
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)
-        instance.build()
+        instance.build(scaler=scaler)
         instance.load(serial_path)
         return instance

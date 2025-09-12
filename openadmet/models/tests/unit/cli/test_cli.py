@@ -47,7 +47,7 @@ def test_predict_cli(tmp_path):
             "MY_SMILES",
             "--model-dir",
             anvil_lgbm_trained_model_dir,
-            "--output-path",
+            "--output-csv",
             tmp_path / "predictions.csv",
         ],
     )

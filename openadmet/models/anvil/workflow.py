@@ -1,306 +1,27 @@
 import hashlib
 import uuid
-from abc import abstractmethod
 from datetime import datetime
-from enum import StrEnum
 from os import PathLike
 from pathlib import Path
+
 from typing import Any, ClassVar, Literal, Optional
 
-import fsspec
+
+import numpy as np
+import pandas as pd
 import torch
-import yaml
 import zarr
 from loguru import logger
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import model_validator
 
-from openadmet.models.anvil.data_spec import DataSpec
-from openadmet.models.architecture.model_base import ModelBase, get_mod_class
-from openadmet.models.eval.eval_base import EvalBase, get_eval_class
-from openadmet.models.features.feature_base import FeaturizerBase, get_featurizer_class
-from openadmet.models.registries import *  # noqa: F401, F403
-from openadmet.models.split.split_base import SplitterBase, get_splitter_class
-from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
+from openadmet.models.anvil import Drivers
+from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 
-_SECTION_CLASS_GETTERS = {
-    "feat": get_featurizer_class,
-    "model": get_mod_class,
-    "split": get_splitter_class,
-    "eval": get_eval_class,
-    "train": get_trainer_class,
-    "INVALID": lambda x: None,
-}
 
-
-class SpecBase(BaseModel):
-    """
-    Base class for specifications.
-    """
-
-    def to_yaml(self, path, **storage_options):
-        """
-        Write specification to YAML file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "w", **storage_options) as stream:
-            # Safe dump the model to stream
-            yaml.safe_dump(self.model_dump(), stream)
-
-    @classmethod
-    def from_yaml(cls, path, **storage_options):
-        """
-        Load specification from YAML file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "r", **storage_options) as stream:
-            # Safe load the model from stream
-            data = yaml.safe_load(stream)
-
-        # Pass YAML content to class constructor
-        return cls(**data)
-
-
-class Drivers(StrEnum):
-    """
-    Enum for the drivers.
-    """
-
-    PYTORCH = "pytorch"
-    SKLEARN = "sklearn"
-
-
-class Metadata(SpecBase):
-    """
-    Metadata specification.
-    """
-
-    version: Literal["v1"] = Field(
-        ..., description="The version of the metadata schema."
-    )
-    driver: str = Field(
-        Drivers.SKLEARN.value, description="The driver for the workflow."
-    )
-
-    name: str = Field(..., description="The name of the workflow.")
-    build_number: int = Field(
-        ...,
-        ge=0,
-        description="The build number of the workflow (must be non-negative).",
-    )
-    description: str = Field(..., description="Description of the workflow.")
-    tag: str = Field(..., description="Primary tag for the workflow.")
-    authors: str = Field(..., description="Name of the authors.")
-    email: EmailStr = Field(..., description="Email address of the contact person.")
-    # date_created: datetime = Field(
-    #     ..., alias="date-created", description="Date when the workflow was created."
-    # )
-    biotargets: list[str] = Field(
-        ..., description="List of biotargets associated with the workflow."
-    )
-    tags: list[str] = Field(..., description="Additional tags for the workflow.")
-
-
-class AnvilSection(SpecBase):
-    """
-    Anvil specification section base class.
-    """
-
-    type: str
-    params: dict = {}
-    section_name: ClassVar[str] = "INVALID"
-
-    def to_class(self):
-        return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
-
-
-class SplitSpec(AnvilSection):
-    """
-    Data split specification.
-    """
-
-    section_name: ClassVar[str] = "split"
-
-
-class FeatureSpec(AnvilSection):
-    """
-    Featurization specification.
-    """
-
-    section_name: ClassVar[str] = "feat"
-
-
-class ModelSpec(AnvilSection):
-    """
-    Model specification.
-    """
-
-    section_name: ClassVar[str] = "model"
-
-
-class TrainerSpec(AnvilSection):
-    """
-    Trainer specification.
-    """
-
-    section_name: ClassVar[str] = "train"
-
-
-class EvalSpec(AnvilSection):
-    """
-    Evaluation specification.
-    """
-
-    section_name: ClassVar[str] = "eval"
-
-
-class ProcedureSpec(SpecBase):
-    """
-    Procedure specification.
-    """
-
-    section_name: ClassVar[str] = "procedure"
-
-    split: SplitSpec
-    feat: FeatureSpec
-    model: ModelSpec
-    train: TrainerSpec
-
-
-class ReportSpec(SpecBase):
-    """
-    Report specification.
-    """
-
-    section_name: ClassVar[str] = "report"
-    eval: list[EvalSpec]
-
-
-class AnvilSpecification(BaseModel):
-    """
-    Full specification for Anvil workflow.
-    """
-
-    metadata: Metadata
-    data: DataSpec
-    procedure: ProcedureSpec
-    report: ReportSpec
-
-    # Need repetition of YAML loaders here to properly set `anvil_dir`
-    # and to not expose to_yaml and from_yaml to the user
-    @classmethod
-    def from_recipe(cls, yaml_path: PathLike, **storage_options):
-        """
-        Load specification from YAML recipe file.
-        """
-
-        # Load YAML file
-        of = fsspec.open(yaml_path, "r", **storage_options)
-        with of as stream:
-            data = yaml.safe_load(stream)
-
-        # Parse parent protocol
-        parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
-
-        # Instantiate specification with loaded data
-        instance = cls(**data)
-
-        # Set the anvil_dir
-        instance.data.template_anvil_dir(parent)
-
-        return instance
-
-    def to_recipe(self, path, **storage_options):
-        """
-        Write specification to YAML recipe file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "w", **storage_options) as stream:
-            # Safe dump the model to stream
-            yaml.safe_dump(self.model_dump(), stream)
-
-    @classmethod
-    def from_multi_yaml(
-        cls,
-        metadata_yaml="metadata.yaml",
-        procedure_yaml="procedure.yaml",
-        data_yaml="data.yaml",
-        report_yaml="eval.yaml",
-        **storage_options,
-    ):
-        """
-        Load specification from multiple YAML files.
-        """
-
-        # Load YAML files
-        metadata = Metadata.from_yaml(metadata_yaml, **storage_options)
-        data = DataSpec.from_yaml(data_yaml, **storage_options)
-        procedure = ProcedureSpec.from_yaml(procedure_yaml, **storage_options)
-        report = ReportSpec.from_yaml(report_yaml, **storage_options)
-
-        # Instantiate the class with loaded data
-        return cls(metadata=metadata, data=data, procedure=procedure, report=report)
-
-    def to_multi_yaml(
-        self,
-        metadata_yaml="metadata.yaml",
-        procedure_yaml="procedure.yaml",
-        data_yaml="data.yaml",
-        report_yaml="eval.yaml",
-        **storage_options,
-    ):
-        """
-        Write specification to multiple YAML files.
-        """
-
-        # Write each section to its own YAML file
-        self.metadata.to_yaml(metadata_yaml, **storage_options)
-        self.data.to_yaml(data_yaml, **storage_options)
-        self.procedure.to_yaml(procedure_yaml, **storage_options)
-        self.report.to_yaml(report_yaml, **storage_options)
-
-    def to_workflow(self):
-        """
-        Convert the specification to a workflow object.
-        """
-
-        logger.info("Making workflow from specification")
-
-        return _DRIVER_TO_CLASS[self.metadata.driver](
-            metadata=self.metadata,
-            data_spec=self.data,
-            model=self.procedure.model.to_class(),
-            transform=None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
-            trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
-            parent_spec=self,
-        )
-
-
-class AnvilWorkflowBase(BaseModel):
-    """
-    Base class for Anvil workflows.
-    """
-
-    metadata: Metadata
-    data_spec: DataSpec
-    transform: Any
-    split: SplitterBase
-    feat: FeaturizerBase
-    model: ModelBase
-    trainer: TrainerBase
-    evals: list[EvalBase]
-    parent_spec: AnvilSpecification
-    debug: bool = False
-
-    @abstractmethod
-    def run(
-        self, output_dir: PathLike = "anvil_training", debug: bool = False
-    ) -> Any: ...
+def _safe_to_numpy(X):
+    if isinstance(X, (pd.Series, pd.DataFrame)):
+        return X.to_numpy()
+    return X
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
@@ -311,13 +32,107 @@ class AnvilWorkflow(AnvilWorkflowBase):
     driver: Drivers = Drivers.SKLEARN
 
     @model_validator(mode="after")
-    def check_for_no_val(self):
-        # Check that val_size is set to zero
-        if self.split.val_size != 0:
+    def check_if_val_needed(self):
+        # Ensemble models require a validation set for uncertainty calibration
+        if self.ensemble and self.split.val_size == 0:
             raise ValueError(
-                "Validation set requested, but not supported in this workflow."
+                "Ensemble models require a validation set for uncertainty calibration."
             )
+
+        # Non-ensemble models do not use a validation set
+        elif not self.ensemble and self.split.val_size != 0:
+            raise ValueError(
+                "Validation set requested, but not used in this workflow configuration."
+            )
+
         return self
+
+    @model_validator(mode="after")
+    def check_no_finetuning(self):
+        # Ensemble specified
+        if self.ensemble:
+            # Fine-tuning paths specified
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
+                self.parent_spec.procedure.ensemble.serial_paths is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized ensemble models is not supported in this workflow."
+                )
+
+        # No ensemble
+        else:
+            # Fine-tuning paths supplied
+            if (self.parent_spec.procedure.model.param_path is not None) or (
+                self.parent_spec.procedure.model.serial_path is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized model is not supported in this workflow."
+                )
+
+        # All fine-tuning paths are None
+        return self
+
+    def _train(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
+        # Build model from scratch
+        logger.info("Building model")
+        self.model.build()
+        logger.info("Model built")
+
+        # Pass model to trainer
+        logger.info("Setting model in trainer")
+        self.trainer.model = self.model
+        logger.info("Model set in trainer")
+
+        # Commence model training
+        logger.info("Training model")
+        self.model = self.trainer.train(X_train_feat, y_train)
+        logger.info("Model trained")
+
+    def _train_ensemble(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
+        # Bootstrap iterations
+        models = []
+        for i in range(self.parent_spec.procedure.ensemble.n_models):
+            # Manage bootstrap directory
+            bootstrap_dir = output_dir / f"bootstrap_{i}"
+            bootstrap_dir.mkdir(parents=True, exist_ok=True)
+
+            # Bootstrap train data
+            logger.info("Bootstrapping train data")
+            bootstrap_indices = np.random.choice(
+                np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
+            )
+            X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
+            logger.info("Data bootstrapped")
+
+            # Build model from scratch
+            logger.info(f"Building model {i}")
+            bootstrap_model = self.model.from_params(mod_params=self.model.mod_params)
+            logger.info(f"Model {i} built")
+
+            # Pass model to trainer
+            logger.info(f"Setting model {i} in trainer")
+            self.trainer.model = bootstrap_model
+            logger.info(f"Model {i} set in trainer")
+
+            # Train model on bootstrapped data
+            logger.info(f"Training model {i}")
+            bootstrap_model = self.trainer.train(
+                X_train_feat_bootstrap, y_train_bootstrap
+            )
+            logger.info(f"Model {i} trained")
+
+            # Add model to list
+            models.append(bootstrap_model)
+
+        # Create ensemble from trained models
+        self.model = self.ensemble.from_models(models)
 
     def run(
         self,
@@ -389,55 +204,97 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X, y = self.data_spec.read()
         logger.info("Data loaded")
 
-        # Transform data
-        logger.info("Transforming data")
-        if self.transform:
-            X = self.transform.transform(X)
-            logger.info("Data transformed")
-        else:
-            logger.info("No transform specified, skipping")
-
         # Split data into train, validation, and test sets
         logger.info("Splitting data")
-        X_train, _, X_test, y_train, _, y_test = self.split.split(X, y)
+        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
-        X_test.to_csv(data_dir / "X_test.csv", index=False)
         y_train.to_csv(data_dir / "y_train.csv", index=False)
+
+        # Save val if present
+        if X_val is not None:
+            X_val.to_csv(data_dir / "X_val.csv", index=False)
+            y_val.to_csv(data_dir / "y_val.csv", index=False)
+
+        # Test
+        X_test.to_csv(data_dir / "X_test.csv", index=False)
         y_test.to_csv(data_dir / "y_test.csv", index=False)
 
         logger.info("Data split")
 
         # Featurize splits
         logger.info("Featurizing data")
+        # Train
         X_train_feat, _ = self.feat.featurize(X_train)
         zarr.save(data_dir / "X_train_feat.zarr", X_train_feat)
 
+        # Val
+        if X_val is not None:
+            X_val_feat, _ = self.feat.featurize(X_val)
+            zarr.save(data_dir / "X_val_feat.zarr", X_val_feat)
+
+        # Test
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
 
+        # Transform data
+        if self.transform:
+            # Train
+            X_train_feat = self.transform.transform(X_train_feat)
+            zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
+
+            # Val
+            if X_val is not None:
+                X_val_feat = self.transform.transform(X_val_feat)
+                zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
+
+            # Test
+            X_test_feat = self.transform.transform(X_test_feat)
+            zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
+
+            logger.info("Data transformed")
+        else:
+            logger.info("No transform specified, skipping")
+
         logger.info("Data featurized")
 
-        # Build model
-        logger.info("Building model")
-        self.model.build()
-        logger.info("Model built")
+        # Train the model
+        if self.ensemble:
+            # Ensemble mode
+            self._train_ensemble(X_train_feat, y_train, output_dir)
 
-        # Pass model to trainer
-        logger.info("Setting model in trainer")
-        self.trainer.model = self.model
-        logger.info("Model set in trainer")
+            # Calibrate
+            self.model.calibrate_uncertainty(X_val_feat, y_val)
 
-        # Commence model training
-        logger.info("Training model")
-        self.model = self.trainer.train(X_train_feat, y_train)
-        logger.info("Model trained")
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                [
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
+                    for i in range(self.model.n_models)
+                ],
+                [
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
+                    for i in range(self.model.n_models)
+                ],
+            )
+            logger.info("Model saved")
+        else:
+            # Single-model mode
+            self._train(X_train_feat, y_train, output_dir)
 
-        # Save serialized model
-        logger.info("Saving model")
-        self.model.serialize(output_dir / "model.json", output_dir / "model.pkl")
-        logger.info("Model saved")
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
+            logger.info("Model saved")
 
         # Predict on test set
         logger.info("Predicting")
@@ -476,6 +333,152 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     """
 
     driver: Drivers = Drivers.PYTORCH
+
+    @model_validator(mode="after")
+    def check_no_transform(self):
+        # Check that transform is not set
+        if self.transform is not None:
+            raise ValueError(
+                "Transform step is not supported in this workflow. Please remove it from the recipe."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_if_val_needed(self):
+        # Ensemble models require a validation set for uncertainty calibration
+        if self.ensemble and self.split.val_size == 0:
+            raise ValueError(
+                "Ensemble models require a validation set for uncertainty calibration."
+            )
+
+        return self
+
+    def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
+        # Load model from disk
+        if (
+            self.parent_spec.procedure.model.param_path is not None
+            and self.parent_spec.procedure.model.serial_path is not None
+        ):
+            logger.info("Loading model from disk, overrides any specified `mod_params`")
+            self.model = self.model.deserialize(
+                self.parent_spec.procedure.model.param_path,
+                self.parent_spec.procedure.model.serial_path,
+                scaler=train_scaler,
+            )
+            logger.info("Model loaded")
+
+        # Build model from scratch
+        else:
+            logger.info("Building model")
+            self.model.build(scaler=train_scaler)
+            logger.info("Model built")
+
+        # Pass model to trainer
+        logger.info("Setting model in trainer")
+        self.trainer.model = self.model
+        logger.info("Model set in trainer")
+
+        # Check if there is an output directory
+        if not self.trainer.output_dir:
+            self.trainer.output_dir = output_dir
+
+        # Prepare the trainer
+        logger.info("Preparing trainer")
+        self.trainer.build()
+        logger.info("Trainer prepared")
+
+        # Commence model training
+        logger.info("Training model")
+        self.model = self.trainer.train(train_dataloader, val_dataloader)
+        logger.info("Model trained")
+
+    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+        # Safely cast to numpy
+        X_train = _safe_to_numpy(X_train)
+        y_train = _safe_to_numpy(y_train)
+
+        # Check if there is an output directory
+        if not self.trainer.output_dir:
+            self.trainer.output_dir = output_dir
+
+        # Bootstrap iterations
+        models = []
+        for i in range(self.parent_spec.procedure.ensemble.n_models):
+            # Manage bootstrap directory
+            bootstrap_dir = output_dir / f"bootstrap_{i}"
+            bootstrap_dir.mkdir(parents=True, exist_ok=True)
+
+            # Make new instances
+            self.feat = self.feat.make_new()
+            self.trainer = self.trainer.make_new()
+
+            # Bootstrap train data
+            logger.info("Bootstrapping train data")
+            bootstrap_indices = np.random.choice(
+                np.arange(len(X_train)), size=len(X_train), replace=True
+            )
+            X_train_bootstrap = X_train[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
+            logger.info("Data bootstrapped")
+
+            # Featurize splits
+            logger.info("Featurizing train data")
+            bootstrap_dataloader, _, bootstrap_scaler, bootstrap_dataset = (
+                self.feat.featurize(
+                    X_train_bootstrap,
+                    y_train_bootstrap,
+                )
+            )
+            torch.save(
+                bootstrap_dataloader,
+                bootstrap_dir / "train_dataloader.pth",
+            )
+            logger.info("Data featurized")
+
+            # Load model from disk
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
+                self.parent_spec.procedure.ensemble.param_paths[i] is not None
+            ):
+                logger.info(
+                    f"Loading model {i} from disk, overrides any specified `mod_params`"
+                )
+                self.model = self.model.deserialize(
+                    self.parent_spec.procedure.ensemble.param_paths[i],
+                    self.parent_spec.procedure.ensemble.serial_paths[i],
+                    scaler=bootstrap_scaler,
+                )
+                logger.info(f"Model {i} loaded")
+
+            # Build model from scratch
+            else:
+                logger.info(f"Building model {i}")
+                self.model = self.model.make_new()
+                self.model.build(scaler=bootstrap_scaler)
+                logger.info(f"Model {i} built")
+
+            # Pass model to trainer
+            logger.info("Setting model in trainer")
+            self.trainer.model = self.model
+            logger.info("Model set in trainer")
+
+            # Append bootstrap index to output directory
+            self.trainer.output_dir = bootstrap_dir
+
+            # Prepare the trainer
+            logger.info("Preparing trainer")
+            self.trainer.build()
+            logger.info("Trainer prepared")
+
+            # Commence model training
+            logger.info("Training model")
+            self.model = self.trainer.train(bootstrap_dataloader, val_dataloader)
+            logger.info("Model trained")
+
+            # Add model to list
+            models.append(self.model)
+
+        # Create ensemble from trained models
+        self.model = self.ensemble.from_models(models)
 
     def run(
         self,
@@ -548,14 +551,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         X, y = self.data_spec.read()
         logger.info("Data loaded")
 
-        # Transform data
-        logger.info("Transforming data")
-        if self.transform:
-            X = self.transform.transform(X)
-            logger.info("Data transformed")
-        else:
-            logger.info("No transform specified, skipping")
-
         # Split data into train, validation, and test sets
         logger.info("Splitting data")
         X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
@@ -575,7 +570,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Featurize splits
         logger.info("Featurizing data")
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
-            X_train, y_train,
+            X_train,
+            y_train,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
@@ -592,34 +588,47 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 
-        # Build model
-        logger.info("Building model")
-        self.model.build(scaler=train_scaler)
-        logger.info("Model built")
+        # Train
+        if self.ensemble:
+            # Ensemble mode
+            self._train_ensemble(X_train, y_train, val_dataloader, output_dir)
 
-        # Pass model to trainer
-        logger.info("Setting model in trainer")
-        self.trainer.model = self.model
-        logger.info("Model set in trainer")
+            # Calibrate
+            self.model.calibrate_uncertainty(
+                val_dataloader,
+                y_val,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+            )
 
-        # Check if there is an output directory
-        if not self.trainer.output_dir:
-            self.trainer.output_dir = output_dir
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                [
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
+                    for i in range(self.model.n_models)
+                ],
+                [
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
+                    for i in range(self.model.n_models)
+                ],
+            )
+            logger.info("Model saved")
+        else:
+            # Single-model mode
+            self._train(train_dataloader, val_dataloader, train_scaler, output_dir)
 
-        # Prepare the trainer
-        logger.info("Preparing trainer")
-        self.trainer.build()
-        logger.info("Trainer prepared")
-
-        # Commence model training
-        logger.info("Training model")
-        self.model = self.trainer.train(train_dataloader, val_dataloader)
-        logger.info("Model trained")
-
-        # Save serialized model
-        logger.info("Saving model")
-        self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
-        logger.info("Model saved")
+            # Save
+            logger.info("Saving model")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
+            logger.info("Model saved")
 
         # Predict on test set
         logger.info("Predicting")
@@ -628,7 +637,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             accelerator=self.trainer.accelerator,
             devices=self.trainer.devices,
         )
-
         logger.info("Predictions made")
 
         # Run evaluation on train/test
@@ -636,7 +644,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Get wandb bool from trainer
         use_wandb = self.trainer.use_wandb
-
 
         # Run evaluation on train/test
         for eval in self.evals:

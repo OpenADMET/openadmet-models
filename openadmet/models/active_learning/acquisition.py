@@ -1,8 +1,7 @@
-import numpy as np
 from scipy.stats import norm
 
 
-def max_uncertainty_reduction_query(regressor, X, n_instances=1):
+def max_uncertainty_reduction(mean, std, **kwargs):
     r"""Maximum uncertainty reduction acquisition function. Refines an already well-performing model.
 
     .. math::
@@ -14,17 +13,17 @@ def max_uncertainty_reduction_query(regressor, X, n_instances=1):
 
     Parameters
     ----------
-    regressor : estimator object
-        Regressor with `predict(X, return_std=True)`.
-    X : np.array
-        Pool of examples.
+    mean : np.array
+        Predicted mean values, unused.
+    std : np.array
+        Predicted standard deviation values.
+    kwargs : keyword arguments
+        Additional keyword arguments.
 
     Returns
     -------
-    index : int
-        Query index.
-    X_i : np.array
-        Query instance.
+    np.array
+        Uncertainty values for each instance in `X`.
 
     References
     ----------
@@ -32,45 +31,33 @@ def max_uncertainty_reduction_query(regressor, X, n_instances=1):
     Journal of Artificial Intelligence Research, 4, 129–145.
 
     """
-    # Predict on available points
-    _, std = regressor.predict(X, return_std=True)
 
-    # Take largest N standard devs
-    query_idx = np.argsort(std)[-n_instances:]
-
-    return query_idx, X[query_idx]
+    return std
 
 
-def exploitation_query(regressor, X, n_instances=1):
+def exploitation(mean, std, **kwargs):
     r"""Returns the instances within `X` with highest predicted values.
 
     Parameters
     ----------
-    regressor : estimator object
-        Regressor with `predict(X, return_std=True)`.
-    X : np.array
-        Pool of examples.
-    n_instances : int
-        Number of instances.
+    mean : np.array
+        Predicted mean values.
+    std : np.array
+        Predicted standard deviation values, unused.
+    kwargs : keyword arguments
+        Additional keyword arguments.
 
     Returns
     -------
-    index : int
-        Query index.
-    X_i : np.array
-        Query instance.
+    np.array
+        Predicted values for each instance in `X`.
 
     """
-    # Predict on available points
-    preds, _ = regressor.predict(X, return_std=True)
 
-    # Take largest N predictions
-    query_idx = np.argsort(preds)[-n_instances:]
-
-    return query_idx, X[query_idx]
+    return mean
 
 
-def probability_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
+def probability_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     r"""
     Probability Improvement (PI) acquisition function. Balances exploration and exploitation.
 
@@ -87,23 +74,21 @@ def probability_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
 
     Parameters
     ----------
-    regressor : estimator object
-        Regressor with `predict(X, return_std=True)`.
-    X : np.array
-        Pool of examples.
+    mean : np.array
+        Predicted mean values.
+    std : np.array
+        Predicted standard deviation values.
     best_y : float
         Best observed value so far.
-    n_instances : int
-        Number of instances to select.
     xi : float
         Exploration-exploitation tradeoff parameter.
+    kwargs : keyword arguments
+        Additional keyword arguments.
 
     Returns
     -------
-    query_idx : int
-        Query index.
-    X_i : np.array
-        Query instance.
+    np.array
+        Probability improvement values for each instance in `X`.
 
     References
     ----------
@@ -111,17 +96,15 @@ def probability_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
     presence of noise. Journal of Basic Engineering, 86(1), 97–106.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
+
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     PI = norm.cdf((mean - best_y - xi) / std)
 
-    query_idx = np.argsort(PI)[-n_instances:]
-
-    return query_idx, X[query_idx]
+    return PI
 
 
-def expected_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
+def expected_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     r"""
     Expected Improvement (EI) acquisition function. Balances exploration and exploitation.
 
@@ -141,23 +124,21 @@ def expected_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
 
     Parameters
     ----------
-    regressor : estimator object
-        Regressor with `predict(X, return_std=True)`.
-    X : np.array
-        Pool of examples.
+    mean : np.array
+        Predicted mean values.
+    std : np.array
+        Predicted standard deviation values.
     best_y : float
         Best observed value so far.
-    n_instances : int
-        Number of instances to select.
     xi : float
         Exploration-exploitation tradeoff parameter.
+    kwargs : keyword arguments
+        Additional keyword arguments.
 
     Returns
     -------
-    query_idx : int
-        Query index.
-    X_i : np.array
-        Query instance.
+    np.array
+        Expected improvement values for each instance in `X`.
 
     References
     ----------
@@ -165,19 +146,17 @@ def expected_improvement_query(regressor, X, best_y, n_instances=1, xi=0.01):
     functions. Journal of Global Optimization, 13(4), 455–492.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
+
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     improvement = mean - best_y - xi
     Z = improvement / std
     EI = improvement * norm.cdf(Z) + std * norm.pdf(Z)
 
-    query_idx = np.argsort(EI)[-n_instances:]
-
-    return query_idx, X[query_idx]
+    return EI
 
 
-def upper_confidence_bound_query(regressor, X, n_instances=1, beta=2.0):
+def upper_confidence_bound(mean, std, beta=2.0, **kwargs):
     r"""
     Upper Confidence Bound (UCB) acquisition function. Ensures exploration while still considering high predictions.
 
@@ -192,21 +171,19 @@ def upper_confidence_bound_query(regressor, X, n_instances=1, beta=2.0):
 
     Parameters
     ----------
-    regressor : estimator object
-        Regressor with `predict(X, return_std=True)`.
-    X : np.array
-        Pool of examples.
-    n_instances : int
-        Number of instances to select.
+    mean : np.array
+        Predicted mean values.
+    std : np.array
+        Predicted standard deviation values, unused.
     beta : float
         Tradeoff parameter (higher = more exploration).
+    kwargs : keyword arguments
+        Additional keyword arguments.
 
     Returns
     -------
-    query_idx : int
-        Query index.
-    X_i : np.array
-        Query instance.
+    np.array
+        Upper confidence bound values for each instance in `X`.
 
     References
     ----------
@@ -214,36 +191,21 @@ def upper_confidence_bound_query(regressor, X, n_instances=1, beta=2.0):
     Setting: No Regret and Experimental Design. ICML.
 
     """
-    mean, std = regressor.predict(X, return_std=True)
 
-    ucb = mean + beta * std  # Exploration-exploitation balance
+    ucb = mean + beta * std
 
-    query_idx = np.argsort(ucb)[-n_instances:]
-
-    return query_idx, X[query_idx]
+    return ucb
 
 
-def random_query(regressor, X, n_instances=1):
-    r"""
-    Random acquisition function. Randomly selects points from the pool. Useful as null model.
-
-    Parameters
-    ----------
-    regressor : estimator object
-        Ignored.
-    X : np.array
-        Pool of examples.
-    n_instances : int
-        Number of instances to select.
-
-    Returns
-    -------
-    query_idx : int
-        Query index.ex
-    X_i : np.array
-        Query instance.
-
-    """
-    query_idx = np.random.choice(X.shape[0], n_instances, replace=False)
-
-    return query_idx, X[query_idx]
+_ACQUISITION_FUNCTIONS = {
+    "max-uncertainty-reduction": max_uncertainty_reduction,
+    "exploitation": exploitation,
+    "upper-confidence-bound": upper_confidence_bound,
+    "expected-improvement": expected_improvement,
+    "probability-improvement": probability_improvement,
+    "ur": max_uncertainty_reduction,
+    "exp": exploitation,
+    "ucb": upper_confidence_bound,
+    "ei": expected_improvement,
+    "pi": probability_improvement,
+}

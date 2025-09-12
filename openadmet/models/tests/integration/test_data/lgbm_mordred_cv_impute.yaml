@@ -18,7 +18,7 @@ metadata:
   biotargets:
   - CYP3A4
   build_number: 0
-  description: basic regression using a XGBoost model
+  description: basic regression using a LightGBM model
   driver: sklearn
   email: cynthia.xu@omsf.io
   name: lgbm_pchembl
@@ -37,13 +37,19 @@ procedure:
     # See openadmet.models.features
     type: DescriptorFeaturizer
     params:
-      descr_type: "mordred"
+        descr_type: "mordred"
+
+  transform:
+    # Using the ImputeTransform to handle missing values
+    type: ImputeTransform
+    params:
+      strategy: mean  # or median, most_frequent, etc.
 
   # Model specification
   model:
     # Indicate model type
     # See openadmet.models.architecture for all model types
-    type: XGBRegressorModel
+    type: LGBMRegressorModel
     # Specify model parameters
     params:
       alpha: 0.005
@@ -53,7 +59,7 @@ procedure:
   split:
     # Specify how data will be split
     # See openadmet.models.split
-    type: ScaffoldSplitter
+    type: ShuffleSplitter
     # Specify split parameters
     params:
       random_state: 42
