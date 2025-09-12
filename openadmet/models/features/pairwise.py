@@ -19,10 +19,7 @@ from openadmet.models.features.feature_base import (
 
 @featurizers.register("PairwiseFeaturizer")
 class PairwiseFeaturizer(FeaturizerBase):
-    """
-    PairFeaturizedData is a featurizer that pairs features
-    according to a specified method
-    """
+    """PairFeaturizedData is a featurizer that pairs features according to a specified method."""
 
     how_to_pair: Literal['full', 'ut', 'sut'] = Field(
         "full",
@@ -30,8 +27,8 @@ class PairwiseFeaturizer(FeaturizerBase):
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
         "'rand' for random set of pairs from full, as set by num_pairs.",
     )
-    featurizer: FeaturizerBase = Field(
-        ..., description="List of featurizers to use before pairing"
+    featurizer: type[FeaturizerBase] = Field(
+        ..., description="Featurizer to use before pairing"
     )
     n_jobs: int = Field(
         4, description="Number of jobs to use for featurization"
@@ -45,9 +42,7 @@ class PairwiseFeaturizer(FeaturizerBase):
 
     @model_validator(mode="before")
     def validate_pairwise(cls, values):
-        """
-        Validate the how_to_pair and num_pairs parameters together.
-        """
+        """Validate the how_to_pair and num_pairs parameters together."""
         how_to_pair = values.get("how_to_pair")
         if how_to_pair not in ["full", "ut", "sut"]:
             raise ValueError(
@@ -58,17 +53,21 @@ class PairwiseFeaturizer(FeaturizerBase):
     @field_validator("featurizer", mode="before")
     @classmethod
     def validate_featurizer(cls, value):
-        """
-        If passed a dictionary of parameters, construct the relevant featurizer
-        and return it
-        """
+        """If passed a dictionary of parameters, construct the relevant featurizer and return it."""
         if isinstance(value, dict):
-            for feat_type, feat_params in value.items():
-                feat_class = get_featurizer_class(feat_type)
-                return feat_class(**feat_params)
+            if len(value) != 1:
+                raise ValueError(
+                    "Only a single featurizer can be specified for 'featurizer'. "
+                    f"Received: {list(value.keys())}"
+                )
+            feat_type, feat_params = next(iter(value.items()))
+            feat_class = get_featurizer_class(feat_type)
+            return feat_class(**feat_params)
+        elif isinstance(value, type) and issubclass(value, FeaturizerBase):
+            return value
         else:
             raise TypeError(
-                "Input should be a valid dictionary or instance of FeaturizerBase"
+                "Input should be a valid dictionary of featurizer parameters or a FeaturizerBase subclass"
                 f" [type=model_type, input_value={value}, input_type={type(value)}]"
             )
 
@@ -78,9 +77,29 @@ class PairwiseFeaturizer(FeaturizerBase):
         y: ArrayLike = None,
     ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
-        Featurize a list of SMILES strings. Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
-        """
+        Featurize a list of SMILES strings. 
+        
+        Returns a DataLoader, a list of indices that correspond to the original input, a StandardScaler if any scaling done by featurization, and a Pytorch Dataset
 
+        Parameters
+        ----------
+        smiles: ArrayLike
+            A list or array of SMILES strings to featurize
+        y: ArrayLike, optional
+            A list or array of target values to pair with the features
+
+        Returns
+        -------
+        dataloader: DataLoader
+            A DataLoader containing the paired features and targets
+        indices: np.ndarray
+            An array of indices that correspond to the original input
+        scaler: StandardScaler or None
+            A StandardScaler if any scaling done by featurization, else None
+        dataset: Dataset
+            A Pytorch Dataset containing the paired features and targets
+
+        """
         X_feat, _ = self.featurizer.featurize(smiles)
         X_feat = X_feat.astype(np.float32)
         if y is not None:

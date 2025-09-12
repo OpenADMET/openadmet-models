@@ -404,6 +404,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
             for task_id in range(n_tasks):
                 if y_val.shape[0] != y_pred_fold.shape[0]:
+                    logger.debug("Generating pairwise true values to match pairwise predictions")
                     # Generate pairwise true values to match pairwise predictions
                     N = y_pred.shape[0]
                     t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
@@ -456,6 +457,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             if y_val.shape[0] != y_pred_fold.shape[0]:
+                logger.debug("Generating pairwise true values to match pairwise predictions")
                 # Generate pairwise true values to match pairwise predictions
                 N = y_pred.shape[0]
                 t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
