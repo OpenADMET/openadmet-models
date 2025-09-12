@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
 
+
 @splitters.register("ScaffoldSplitter")
 class ScaffoldSplitter(SplitterBase):
     """
@@ -14,7 +15,6 @@ class ScaffoldSplitter(SplitterBase):
         """
         Split the data into train, validation, and test sets
         """
-
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -26,8 +26,6 @@ class ScaffoldSplitter(SplitterBase):
                 random_state=self.random_state,
             )
             train_idx, val_idx = next(splitter.split(X=X))
-
-
 
             return (
                 safe_index(X, train_idx),
@@ -220,8 +218,10 @@ class MaxDissimilaritySplitter(SplitterBase):
             safe_index(y, test_idx),
         )
 
+
 def safe_index(data, idx):
-    """A helper function for correct indexing depending on whether X and y are numpy arrays or pandas series/dataframes.
+    """
+    A helper function for correct indexing depending on whether X and y are numpy arrays or pandas series/dataframes.
 
     Parameters
     ----------
@@ -234,6 +234,7 @@ def safe_index(data, idx):
     -------
     nd.array or pd.Series
         indexed data
+
     """
     if isinstance(data, (np.ndarray, list)):
         return data[idx]

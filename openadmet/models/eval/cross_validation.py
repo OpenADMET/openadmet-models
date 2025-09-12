@@ -25,7 +25,6 @@ from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 
-
 def wrap_ktau(y_true, y_pred):
     return nan_omit_ktau(y_true, y_pred).statistic
 
@@ -173,7 +172,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
-            "cross_validation_ciplot": RegressionPlots.ciplot
+            "cross_validation_ciplot": RegressionPlots.ciplot,
         }
 
         self.plot_data = {}
@@ -198,25 +197,34 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 )
 
         return self.data
+
     def get_stat_caption(self, t_label):
         if not self._evaluated:
-            raise ValueError(":( You must evaluate the model before the statistics caption can be made.")
-        return _make_stat_caption(data=self.data,
-                                  task_name=t_label,
-                                  metric_names=self.metric_names,
-                                  metrics=self._metrics,
-                                  confidence_level=self.confidence_level,
-                                  cv=True)
+            raise ValueError(
+                ":( You must evaluate the model before the statistics caption can be made."
+            )
+        return _make_stat_caption(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.confidence_level,
+            cv=True,
+        )
 
     def get_stat_dict(self, t_label):
         if not self._evaluated:
-            raise ValueError("R'uh-r'oh! You must evaluate the model before the statistics dict can be made.")
-        return _make_stat_dict(data=self.data,
-                               task_name=t_label,
-                               metric_names=self.metric_names,
-                               metrics=self._metrics,
-                               confidence_level=self.confidence_level,
-                               cv=True)
+            raise ValueError(
+                "R'uh-r'oh! You must evaluate the model before the statistics dict can be made."
+            )
+        return _make_stat_dict(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.confidence_level,
+            cv=True,
+        )
 
     def report(self, write=False, output_dir=None):
         """
@@ -441,7 +449,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
-            "cross_validation_ciplot": RegressionPlots.ciplot
+            "cross_validation_ciplot": RegressionPlots.ciplot,
         }
 
         self.plot_data = {}
@@ -506,17 +514,21 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
     def get_stat_caption(self, t_label):
-        return _make_stat_caption(data=self.data,
-                                  task_name=t_label,
-                                  metric_names=self.metric_names,
-                                  metrics=self._metrics,
-                                  confidence_level=self.confidence_level,
-                                  cv=True)
+        return _make_stat_caption(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.confidence_level,
+            cv=True,
+        )
 
     def get_stat_dict(self, t_label):
-        return _make_stat_dict(data=self.data,
-                               task_name=t_label,
-                               metric_names=self.metric_names,
-                               metrics=self._metrics,
-                               confidence_level=self.confidence_level,
-                               cv=True)
+        return _make_stat_dict(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.confidence_level,
+            cv=True,
+        )

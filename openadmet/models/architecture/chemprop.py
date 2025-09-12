@@ -81,7 +81,6 @@ class ChemPropModel(LightningModelBase):
         """
         Create a model from parameters
         """
-
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance

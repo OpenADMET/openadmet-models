@@ -12,14 +12,17 @@ from openadmet.models.architecture.model_base import models as model_registry
 # TODO: Inherit from LightningModuleBase to expose more configurability
 class MTENNLightningModule(pl.LightningModule):
     def __init__(
-        self, model_config: ModelConfig, loss_fn=torch.nn.MSELoss(), lr=1e-4, monitor_metric: str = "val_loss"
+        self,
+        model_config: ModelConfig,
+        loss_fn=torch.nn.MSELoss(),
+        lr=1e-4,
+        monitor_metric: str = "val_loss",
     ):
         super().__init__()
         self.model = model_config.build()
         self.loss_fn = loss_fn
         self.lr = lr
         self.monitor_metric = monitor_metric
-
 
     def forward(self, data):
         for k, v in data.items():
@@ -64,7 +67,9 @@ class MTENNSchNetModel(LightningModelBase):
         """
         if not self.estimator:
             model_rep = SchNetRepresentationConfig(**self.mod_params)
-            model_config = ModelConfig(representation=model_rep, strategy="delta", pred_readout="pic50")
+            model_config = ModelConfig(
+                representation=model_rep, strategy="delta", pred_readout="pic50"
+            )
             self.estimator = MTENNLightningModule(model_config)
         else:
             logger.warning("Model already exists, skipping build.")
@@ -96,7 +101,6 @@ class MTENNSchNetModel(LightningModelBase):
             )
             preds = trainer.predict(self.estimator, dataloader)
         return torch.cat(preds, dim=0).numpy()
-
 
     def make_new(self) -> "MTENNSchNetModel":
         """

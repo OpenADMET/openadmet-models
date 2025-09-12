@@ -15,9 +15,10 @@ def get_transform_class(trans_type):
     try:
         transf_class = transforms.get_class(trans_type)
     except RegistryKeyError:
-        raise ValueError(f"Transform type {trans_type} not found in transform catalogue")
+        raise ValueError(
+            f"Transform type {trans_type} not found in transform catalogue"
+        )
     return transf_class
-
 
 
 class TransformBase(BaseModel, ABC):

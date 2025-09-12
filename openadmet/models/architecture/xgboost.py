@@ -30,6 +30,7 @@ class XGBoostModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the XGBoost model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -45,6 +46,7 @@ class XGBoostModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
@@ -71,6 +73,7 @@ class XGBoostModelBase(PickleableModelBase):
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -127,10 +130,12 @@ class XGBClassifierModel(XGBoostModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+
         Returns
         -------
         np.ndarray
             Probabilities for each class from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")

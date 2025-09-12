@@ -35,9 +35,7 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
 
     @abstractmethod
-    def run(
-        self, output_dir: PathLike = "anvil_training", debug: bool = False
-    ) -> Any:
+    def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any:
         """
         Run the workflow.
 

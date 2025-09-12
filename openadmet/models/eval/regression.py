@@ -163,24 +163,31 @@ class RegressionMetrics(EvalBase):
 
     def get_stat_caption(self, t_label):
         if not self._evaluated:
-            raise ValueError(":( You must evaluate the model before the statistics caption can be made.")
-        return _make_stat_caption(data=self.data,
-                                  task_name=t_label,
-                                  metric_names=self.metric_names,
-                                  metrics=self._metrics,
-                                  confidence_level=self.bootstrap_confidence_level,
-                                  cv=False)
+            raise ValueError(
+                ":( You must evaluate the model before the statistics caption can be made."
+            )
+        return _make_stat_caption(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.bootstrap_confidence_level,
+            cv=False,
+        )
 
     def get_stat_dict(self, t_label):
         if not self._evaluated:
-            raise ValueError("R'uh-r'oh! You must evaluate the model before the statistics dict can be made.")
-        return _make_stat_dict(data=self.data,
-                               task_name=t_label,
-                               metric_names=self.metric_names,
-                               metrics=self._metrics,
-                               confidence_level=self.bootstrap_confidence_level,
-                               cv=False)
-
+            raise ValueError(
+                "R'uh-r'oh! You must evaluate the model before the statistics dict can be made."
+            )
+        return _make_stat_dict(
+            data=self.data,
+            task_name=t_label,
+            metric_names=self.metric_names,
+            metrics=self._metrics,
+            confidence_level=self.bootstrap_confidence_level,
+            cv=False,
+        )
 
 
 @evaluators.register("RegressionPlots")
@@ -227,10 +234,7 @@ class RegressionPlots(EvalBase):
         if target_labels is None:
             target_labels = [f"task_{i}" for i in range(n_tasks)]
 
-        self.plots = {
-            "regplot": self.regplot,
-            "ciplot": self.ciplot
-        }
+        self.plots = {"regplot": self.regplot, "ciplot": self.ciplot}
 
         self.plot_data = {}
 
@@ -284,7 +288,7 @@ class RegressionPlots(EvalBase):
         pXC50=False,
         min_val=None,
         max_val=None,
-        fit_reg=True
+        fit_reg=True,
     ):
         """
         Create a regression plot
@@ -309,18 +313,19 @@ class RegressionPlots(EvalBase):
             y=np.ravel(y_pred),
             kind="reg",
             joint_kws={"ci": confidence_level * 100, "fit_reg": fit_reg},
-            scatter_kws={"alpha":0.3},
+            scatter_kws={"alpha": 0.3},
             color="teal",
-            height=10)
+            height=10,
+        )
 
         if y_pred_err is not None:
             g.ax_joint.errorbar(
                 x=np.ravel(y_true),
                 y=np.ravel(y_pred),
                 yerr=np.ravel(y_pred_err),
-                fmt='o',
-                color='teal',
-                alpha=0.3
+                fmt="o",
+                color="teal",
+                alpha=0.3,
             )
 
         if data_labels is not None:
@@ -332,16 +337,18 @@ class RegressionPlots(EvalBase):
                     fontsize=6,
                     color="black",
                     ha="right",
-                    va="bottom"
+                    va="bottom",
                 )
 
         g.figure.suptitle(title, fontsize=title_font)
         g.ax_joint.set_aspect("equal", "box")
         g.ax_joint.set_xlim(min_ax, max_ax)
         g.ax_joint.set_ylim(min_ax, max_ax)
-        g.ax_joint.tick_params(axis='both', labelsize=tick_font)
+        g.ax_joint.tick_params(axis="both", labelsize=tick_font)
         # plot y = x line in dashed grey
-        g.ax_joint.plot([min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black")
+        g.ax_joint.plot(
+            [min_ax, max_ax], [min_ax, max_ax], linestyle="--", color="black"
+        )
 
         # if pXC50 measure then plot the 0.5 and 1.0 log range unit
         if pXC50:
@@ -372,7 +379,9 @@ class RegressionPlots(EvalBase):
 
             table_data = []
             # Format the metric values for readability
-            for name, val, low, high in zip(metric_names, values, lower_bounds, upper_bounds):
+            for name, val, low, high in zip(
+                metric_names, values, lower_bounds, upper_bounds
+            ):
                 if None not in (val, low, high):
                     val_str = f"{val:.2f} [{low:.2f}, {high:.2f}]"
                 else:
@@ -381,7 +390,7 @@ class RegressionPlots(EvalBase):
             # Create the table
             table = g.ax_joint.table(
                 cellText=table_data,
-                colLabels=["Metric", f"Value ± {int(conf_level*100)}% CI"],
+                colLabels=["Metric", f"Value ± {int(conf_level * 100)}% CI"],
                 colWidths=[0.2, 0.3],
                 loc="upper left",
                 cellLoc="left",
@@ -399,10 +408,7 @@ class RegressionPlots(EvalBase):
         return g
 
     @staticmethod
-    def ciplot(
-        stat_dict={}
-    ):
-
+    def ciplot(stat_dict={}):
         metrics = stat_dict["metrics"]
         means = stat_dict["means"]
         lower_ci = stat_dict["lower_ci"]
@@ -416,11 +422,11 @@ class RegressionPlots(EvalBase):
 
         padding = 0.2
         y_limits = {
-            "MSE": (0-padding, 1+padding),
-            "MAE": (0-padding, 1+padding),
-            "$R^2$": (-1-padding, 1+padding),
-            "Kendall's $\\tau$": (-1-padding, 1+padding),
-            "Spearman's $\\rho$": (-1-padding, 1+padding)
+            "MSE": (0 - padding, 1 + padding),
+            "MAE": (0 - padding, 1 + padding),
+            "$R^2$": (-1 - padding, 1 + padding),
+            "Kendall's $\\tau$": (-1 - padding, 1 + padding),
+            "Spearman's $\\rho$": (-1 - padding, 1 + padding),
         }
 
         n_metrics = len(metrics)
@@ -435,16 +441,19 @@ class RegressionPlots(EvalBase):
             metric = metrics[i]
             y = means[i]
             yerr = [[y - lower_ci[i]], [upper_ci[i] - y]]
-            ax.errorbar([metric], [y], yerr=yerr, fmt='o', capsize=8, color='green')
-            ax.tick_params(axis='both', labelsize=tick_font)
-            ax.yaxis.grid(True, linestyle='--', color='lightgray', alpha=0.6)
+            ax.errorbar([metric], [y], yerr=yerr, fmt="o", capsize=8, color="green")
+            ax.tick_params(axis="both", labelsize=tick_font)
+            ax.yaxis.grid(True, linestyle="--", color="lightgray", alpha=0.6)
             ax.set_xlim(-0.5, 0.5)
 
             # Set fixed y-limits
             if metric in y_limits:
                 ax.set_ylim(y_limits[metric])
 
-        fig.suptitle(f"Evaluation of {task_name} with {int(conf_level * 100)}% Confidence Intervals", fontsize=title_font)
+        fig.suptitle(
+            f"Evaluation of {task_name} with {int(conf_level * 100)}% Confidence Intervals",
+            fontsize=title_font,
+        )
         fig.tight_layout()
         return fig
 
@@ -460,7 +469,6 @@ class RegressionPlots(EvalBase):
         """
         Write the evaluation report
         """
-
         for plot_tag, plot in self.plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)

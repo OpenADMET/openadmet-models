@@ -33,7 +33,8 @@ def _vendor_build_dataloader(
     shuffle: bool = True,
     **kwargs,
 ):
-    r"""Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`\s
+    r"""
+    Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`\s
 
     Parameters
     ----------
@@ -51,6 +52,7 @@ def _vendor_build_dataloader(
         the random seed to use for shuffling (only used when `shuffle` is `True`).
     shuffle : bool, default=False
         whether to shuffle the data during sampling.
+
     """
     if sampler is not None:
         if class_balance:

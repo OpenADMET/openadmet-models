@@ -13,7 +13,6 @@ from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSp
 
 def load_anvil_model_and_metadata(model_dir):
     """Load the Anvil model from the specified path"""
-
     # Safely cast to Path
     if not isinstance(model_dir, Path):
         model_dir = Path(model_dir)
@@ -91,7 +90,6 @@ def predict(
     **kwargs,
 ):
     """Predict using a trained model"""
-
     if not log:
         logger.remove()
         logger.add(lambda msg: None)

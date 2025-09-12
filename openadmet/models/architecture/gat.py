@@ -38,14 +38,16 @@ class GATv2Module(LightningModuleBase):
     """
 
     # Model architecture hyperparameters
-    input_dim: int = 8 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = 4 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    edge_dim: Optional[int] = (
+        4  # must match that of GATGraphFeaturizer TODO: make this dynamic
+    )
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = True
@@ -79,7 +81,6 @@ class GATv2Module(LightningModuleBase):
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
 
-
     def __init__(
         self,
         input_dim: int = 8,
@@ -103,7 +104,6 @@ class GATv2Module(LightningModuleBase):
         scheduler_patience: int = 10,
         monitor_metric: str = "val_loss",
     ):
-
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -206,6 +206,7 @@ class GATv2Module(LightningModuleBase):
 
         Returns:
             Graph-level predictions [batch_size, output_dim]
+
         """
         x, edge_index, batch = data.x, data.edge_index, data.batch
         edge_attr = getattr(data, "edge_attr", None)
@@ -331,7 +332,6 @@ class GATv2Model(LightningModelBase):
         """
         Create model instance from parameters
         """
-
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
@@ -375,7 +375,6 @@ class GATv2Model(LightningModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-
     def make_new(self) -> "GATv2Model":
         """
         Create a new instance of the model with the same parameters.
@@ -395,7 +394,8 @@ class GATv2Model(LightningModelBase):
             "GAT training is handled by LightningTrainer. "
             "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
-    #change to the lightning trainer
+
+    # change to the lightning trainer
     def predict(
         self, X: torch.utils.data.DataLoader, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
@@ -416,7 +416,6 @@ class GATv2Model(LightningModelBase):
             )
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
-
 
     def get_model_summary(self):
         """

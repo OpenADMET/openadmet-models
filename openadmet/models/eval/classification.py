@@ -167,7 +167,6 @@ class ClassificationPlots(EvalBase):
         """
         Evaluate the classification model
         """
-
         # Cast as numpy arrays
         y_true = np.asarray(y_true)
         y_pred = np.asarray(y_pred)
@@ -265,7 +264,6 @@ class ClassificationPlots(EvalBase):
         """
         Write the evaluation report
         """
-
         for plot_tag, plot in self.plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)

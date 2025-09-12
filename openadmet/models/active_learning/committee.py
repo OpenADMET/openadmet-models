@@ -32,7 +32,6 @@ class CommitteeRegressor(EnsembleBase):
             True if the committee regressor has a calibration model, False otherwise.
 
         """
-
         return self._calibration_model is not None
 
     @classmethod
@@ -46,7 +45,6 @@ class CommitteeRegressor(EnsembleBase):
             A list of committee model members.
 
         """
-
         # Initialize class from model list
         instance = cls(
             models=models,
@@ -72,7 +70,6 @@ class CommitteeRegressor(EnsembleBase):
         None
 
         """
-
         # Reset calibration model
         self._calibration_model = None
 
@@ -120,7 +117,6 @@ class CommitteeRegressor(EnsembleBase):
         None
 
         """
-
         # Reset calibration model
         self._calibration_model = None
 
@@ -162,7 +158,6 @@ class CommitteeRegressor(EnsembleBase):
         None
 
         """
-
         # Validate method selection
         if method not in self._calibration_methods:
             raise ValueError(
@@ -212,7 +207,6 @@ class CommitteeRegressor(EnsembleBase):
             A list of plots for each target dimension.
 
         """
-
         if isinstance(y, (pd.Series, pd.DataFrame)):
             y = y.to_numpy()
 
@@ -267,7 +261,6 @@ class CommitteeRegressor(EnsembleBase):
             An instance of the CommitteeRegressor class.
 
         """
-
         # Verify estimator input
         if mod_class is None:
             raise ValueError("Model type must be provided.")
@@ -307,8 +300,8 @@ class CommitteeRegressor(EnsembleBase):
         -------
         np.array
             Values of the query strategy applied to the input data `X`.
-        """
 
+        """
         if query_strategy.lower() not in _ACQUISITION_FUNCTIONS:
             raise ValueError(
                 f"Invalid query strategy: {query_strategy}. "
@@ -336,8 +329,8 @@ class CommitteeRegressor(EnsembleBase):
         -------
         array-like
             Predicted values or probabilities, depending on the committee's implementation.
-        """
 
+        """
         # Make predictions
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
 
@@ -376,7 +369,6 @@ class CommitteeRegressor(EnsembleBase):
             Predicted values or probabilities, depending on the committee's implementation.
 
         """
-
         if return_std is True and not self.calibrated:
             logger.warning(
                 "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
@@ -412,7 +404,6 @@ class CommitteeRegressor(EnsembleBase):
         None
 
         """
-
         # Check number of paths match
         if self.n_models != len(paths):
             raise ValueError(
@@ -444,7 +435,6 @@ class CommitteeRegressor(EnsembleBase):
             A committee model created from the loaded models.
 
         """
-
         # Check model type
         if models is None:
             raise ValueError("Must provide a list of model instances to load.")
@@ -480,7 +470,6 @@ class CommitteeRegressor(EnsembleBase):
         None
 
         """
-
         # Check number of paths match
         if len(param_paths) != len(serial_paths):
             raise ValueError(
@@ -527,7 +516,6 @@ class CommitteeRegressor(EnsembleBase):
             A committee model created from the deserialized parameters.
 
         """
-
         # Check model type
         if mod_class is None:
             raise ValueError("Must provide a model type to load.")

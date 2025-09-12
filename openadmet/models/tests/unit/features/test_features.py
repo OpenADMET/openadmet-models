@@ -72,7 +72,6 @@ def test_feature_concatenator_failed_diff_positions(one_invalid_smi):
 
 
 def test_feature_concatenator_order_independence(smiles):
-
     desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
     fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
 

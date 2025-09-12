@@ -51,6 +51,7 @@ class PosthocBinaryMetrics(EvalBase):
         Returns
         -------
         None
+
         """
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
@@ -82,6 +83,7 @@ class PosthocBinaryMetrics(EvalBase):
                 Precision value.
             - recall : float
                 Recall value.
+
         """
         pred_class = [y > cutoff for y in y_pred]
         true_class = [y > cutoff for y in y_true]

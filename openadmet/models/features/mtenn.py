@@ -210,7 +210,6 @@ class MTENNFeaturizer(FeaturizerBase):
         # return None for Scaler
         return self._dataloader, indices, None, self._dataset
 
-
     def make_new(self) -> "MTENNFeaturizer":
         """
         Copy parameters to a new MTENNFeaturizer instance

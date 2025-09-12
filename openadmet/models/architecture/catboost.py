@@ -30,6 +30,7 @@ class CatBoostModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the CatBoost model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -45,6 +46,7 @@ class CatBoostModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
@@ -71,6 +73,7 @@ class CatBoostModelBase(PickleableModelBase):
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -101,7 +104,8 @@ class CatBoostRegressorModel(CatBoostModelBase):
 
 @models.register("CatBoostClassifierModel")
 class CatBoostClassifierModel(CatBoostModelBase):
-    """CatBoost classification model
+    """
+    CatBoost classification model
     Common parameters for CatBoost models can be found at:
     https://catboost.ai/docs/en/concepts/python-quickstart
     """
@@ -117,10 +121,12 @@ class CatBoostClassifierModel(CatBoostModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+
         Returns
         -------
         np.ndarray
             Probabilities for each class from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")

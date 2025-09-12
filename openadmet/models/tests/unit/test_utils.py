@@ -1,5 +1,6 @@
 import traceback
 
+
 def click_success(result):
     if result.exit_code != 0:  # -no-cov-  (only occurs on test error)
         print(result.output)

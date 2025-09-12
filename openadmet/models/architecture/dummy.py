@@ -6,8 +6,6 @@ from loguru import logger
 
 
 class DummyModelBase(PickleableModelBase):
-
-
     type: ClassVar[str]
     mod_class: ClassVar[
         type
@@ -26,6 +24,7 @@ class DummyModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the XGBoost model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -41,6 +40,7 @@ class DummyModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
@@ -67,13 +67,11 @@ class DummyModelBase(PickleableModelBase):
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
         return np.expand_dims(self.estimator.predict(X), axis=1)
-
-
-
 
 
 @models.register("DummyRegressorModel")
@@ -84,14 +82,13 @@ class DummyRegressorModel(DummyModelBase):
     Common parameters for dummy models can be found at:
     https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
+
     type: ClassVar[str] = "DummyRegressorModel"
     mod_class: ClassVar[type] = DummyRegressor
     strategy: str = "mean"  # Default strategy for dummy models
 
-
     type: ClassVar[str] = "DummyRegressorModel"
     mod_class: ClassVar[type] = DummyRegressor
-
 
 
 @models.register("DummyClassifierModel")
@@ -102,6 +99,7 @@ class DummyClassifierModel(DummyModelBase):
     Common parameters for dummy models can be found at:
     https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
+
     type: ClassVar[str] = "DummyClassifierModel"
     mod_class: ClassVar[type] = DummyClassifier
     strategy: str = "most_frequent"  # Default strategy for dummy models

@@ -57,7 +57,6 @@ class FeatureConcatenator(FeaturizerBase):
         """
         Concatenate a list of features,
         """
-
         # if the input arrays are 1d, make them 2d
         feats = [
             feat.reshape(1, -1) if len(feat.shape) == 1 else feat for feat in feats

@@ -1,12 +1,13 @@
 def _make_stat_caption(
-        data:dict,
-        task_name:str,
-        metric_names:list,
-        metrics:dict,
-        confidence_level:float,
-        cv:bool
+    data: dict,
+    task_name: str,
+    metric_names: list,
+    metrics: dict,
+    confidence_level: float,
+    cv: bool,
 ) -> str:
-    """A function to generate the stat caption (string) to be printed on the regplot
+    """
+    A function to generate the stat caption (string) to be printed on the regplot
 
     Parameters
     ----------
@@ -32,6 +33,7 @@ def _make_stat_caption(
     ------
     ValueError
         cannot make stat caption unless the model has been evaluated first
+
     """
     stat_caption = ""
 
@@ -47,15 +49,17 @@ def _make_stat_caption(
     stat_caption += f"Confidence level: {confidence_level} \n"
     return stat_caption
 
+
 def _make_stat_dict(
-        data:dict,
-        task_name:str,
-        metric_names:list,
-        metrics:dict,
-        confidence_level:float,
-        cv:bool
+    data: dict,
+    task_name: str,
+    metric_names: list,
+    metrics: dict,
+    confidence_level: float,
+    cv: bool,
 ):
-    """A function to generate a dict of formatted metrics and names to be printed into a table on regplot
+    """
+    A function to generate a dict of formatted metrics and names to be printed into a table on regplot
 
     Parameters
     ----------
@@ -79,15 +83,15 @@ def _make_stat_dict(
     ------
     ValueError
         cannot make stat caption unless the model has been evaluated first
-    """
 
+    """
     stat_dict = {
         "metrics": [],
         "means": [],
         "lower_ci": [],
         "upper_ci": [],
         "conf_level": None,
-        "task_name" : task_name
+        "task_name": task_name,
     }
 
     value_key = "mean" if cv else "value"

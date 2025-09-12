@@ -38,7 +38,6 @@ class EnsembleBase(ModelBase):
         Not needed, as the committee will be built from provided models.
 
         """
-
         pass
 
     def from_params(self):

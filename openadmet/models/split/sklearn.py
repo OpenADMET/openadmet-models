@@ -13,7 +13,6 @@ class ShuffleSplitter(SplitterBase):
         """
         Split the data
         """
-
         # No test set requested
         if self.test_size == 0:
             # Split into train and val

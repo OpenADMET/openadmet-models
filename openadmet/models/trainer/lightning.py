@@ -42,7 +42,6 @@ class LightningTrainer(TrainerBase):
         """
         Build the model trainer
         """
-
         # Initialize logging container
         self._logger = []
 
@@ -110,7 +109,6 @@ class LightningTrainer(TrainerBase):
         """
         Train the model
         """
-
         # Indicate that the model is being trained
         logger.debug(f"Training model {self.model.estimator}")
 
