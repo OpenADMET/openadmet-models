@@ -18,7 +18,6 @@ def load_anvil_model_and_metadata(model_dir):
     if not isinstance(model_dir, Path):
         model_dir = Path(model_dir)
 
-    logger.info(f"Loading model from {model_dir}")
     # Load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
     if not recipe_components_dir.exists():
@@ -62,9 +61,6 @@ def load_anvil_model_and_metadata(model_dir):
             serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
             mod_class=model,
             calibration_path=model_dir / ensemble._calibration_model_save_name,
-        )
-        logger.info(
-            f"Loaded model ensemble from {model_dir}, with {loaded_model.n_models} models"
         )
 
     # Load single model
@@ -141,6 +137,13 @@ def predict(
         model, feat, metadata, data_spec = load_anvil_model_and_metadata(
             Path(model_path)
         )
+
+        if isinstance(model, EnsembleBase):
+            logger.info(
+                f"Loaded model ensemble {i} from {model_path}, with {model.n_models} submodels"
+            )
+        else:
+            logger.info(f"Loaded model {i} from {model_path}")
 
         tasknames = data_spec.target_cols
         logger.info(f"Model {i} has tasks: {tasknames}")
