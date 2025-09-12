@@ -379,7 +379,7 @@ class CommitteeRegressor(EnsembleBase):
 
         if return_std is True and not self.calibrated:
             logger.warning(
-                "Standard deviation not calibrated: consider calling `calibrate_uncertainty` method."
+                "Standard deviation not calibrated: consider calling `calibrate_uncertainty`."
             )
 
         return self._predict(X, return_std=return_std, **kwargs)
@@ -390,15 +390,23 @@ class CommitteeRegressor(EnsembleBase):
             with open(path, "wb") as f:
                 joblib.dump(self._calibration_model, f)
 
+        else:
+            logger.warning(
+                "Standard deviation not calibrated: consider calling `calibrate_uncertainty` before saving."
+            )
+
     def _load_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Load calibration model
-        if path.exists():
-            with open(path, "rb") as f:
-                self._calibration_model = joblib.load(f)
+        with open(path, "rb") as f:
+            self._calibration_model = joblib.load(f)
 
-            logger.info(f"Successfully loaded calibration from {path}")
+        logger.info(f"Successfully loaded calibration from {path}")
 
-    def save(self, paths: list[PathLike]):
+    def save(
+        self,
+        paths: list[PathLike],
+        calibration_path: PathLike = "calibration_model.pkl",
+    ):
         """
         Save the committee model to the provided paths.
 
@@ -424,10 +432,15 @@ class CommitteeRegressor(EnsembleBase):
             model.save(path)
 
         # Save calibration model
-        self._save_calibration_model(paths[0].parent / "calibration_model.pkl")
+        self._save_calibration_model(calibration_path)
 
     @classmethod
-    def load(cls, paths: list[PathLike], models: list[ModelBase] = None):
+    def load(
+        cls,
+        paths: list[PathLike],
+        models: list[ModelBase] = None,
+        calibration_path: PathLike = None,
+    ):
         """
         Load a committee model from the provided paths.
 
@@ -437,6 +450,8 @@ class CommitteeRegressor(EnsembleBase):
             The file paths to the model weights.
         models : list of ModelBase
             Model instances associated with path to weights.
+        calibration_path : PathLike
+            The file path to the calibration model.
 
         Returns
         -------
@@ -460,11 +475,17 @@ class CommitteeRegressor(EnsembleBase):
         instance = cls.from_models(models)
 
         # Load calibration model
-        instance._load_calibration_model(paths[0].parent / "calibration_model.pkl")
+        if calibration_path is not None:
+            instance._load_calibration_model(calibration_path)
 
         return instance
 
-    def serialize(self, param_paths: list[PathLike], serial_paths: list[PathLike]):
+    def serialize(
+        self,
+        param_paths: list[PathLike],
+        serial_paths: list[PathLike],
+        calibration_path: PathLike = "calibration_model.pkl",
+    ):
         """
         Save the model to json files and pickled files.
 
@@ -474,6 +495,8 @@ class CommitteeRegressor(EnsembleBase):
             The file paths to save the model weights.
         serial_paths : list of PathLike
             The file paths to save the model architecture.
+        calibration_path : PathLike
+            The file path to save the calibration model.
 
         Returns
         -------
@@ -500,7 +523,7 @@ class CommitteeRegressor(EnsembleBase):
             model.serialize(param_path, serial_path)
 
         # Save calibration model
-        self._save_calibration_model(param_paths[0].parent / "calibration_model.pkl")
+        self._save_calibration_model(calibration_path)
 
     @classmethod
     def deserialize(
@@ -508,6 +531,7 @@ class CommitteeRegressor(EnsembleBase):
         param_paths: list[PathLike],
         serial_paths: list[PathLike],
         mod_class: ModelBase = None,
+        calibration_path: PathLike = None,
     ):
         """
         Create a model from parameters and a pickled model.
@@ -520,6 +544,8 @@ class CommitteeRegressor(EnsembleBase):
             The file paths to the model serializations.
         mod_class : ModelBase
             Model class to update with the deserialized parameters.
+        calibration_path : PathLike
+            The file path to the calibration model.
 
         Returns
         -------
@@ -547,8 +573,7 @@ class CommitteeRegressor(EnsembleBase):
         instance = cls.from_models(models)
 
         # Load calibration model
-        instance._load_calibration_model(
-            param_paths[0].parent / "calibration_model.pkl"
-        )
+        if calibration_path is not None:
+            instance._load_calibration_model(calibration_path)
 
         return instance
