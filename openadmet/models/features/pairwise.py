@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import ArrayLike
-from typing import Literal
+from typing import Literal, Type, Union
 from random import sample
 from pydantic import Field, field_validator, model_validator
 from torch.utils.data import DataLoader, Dataset
@@ -27,7 +27,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
         "'rand' for random set of pairs from full, as set by num_pairs.",
     )
-    featurizer: type[FeaturizerBase] = Field(
+    featurizer: Union[Type[FeaturizerBase], FeaturizerBase, dict] = Field(
         ..., description="Featurizer to use before pairing"
     )
     n_jobs: int = Field(
@@ -105,7 +105,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         if y is not None:
             y = y.astype(np.float32)
 
-        paired_dataset = PairwiseAugmentedDataset(X_feat, y.values.ravel(), how=self.how_to_pair)
+        paired_dataset = PairwiseAugmentedDataset(X_feat, y, how=self.how_to_pair)
 
         dataloader = DataLoader(
             paired_dataset,
