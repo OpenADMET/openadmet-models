@@ -303,6 +303,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Check if the model has predict_proba method (classification)
         if hasattr(self.model, "predict_proba"):
             y_pred = self.model.predict_proba(X_test_feat)
+            y_std = None
 
         # Otherwise, regression
         else:
