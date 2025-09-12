@@ -63,7 +63,6 @@ def load_anvil_model_and_metadata(model_dir):
             mod_class=model,
             calibration_path=model_dir / ensemble._calibration_model_save_name,
         )
-        print(loaded_model)
         logger.info(
             f"Loaded model ensemble from {model_dir}, with {loaded_model.n_models} models"
         )
