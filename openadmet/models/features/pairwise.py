@@ -27,7 +27,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
         "'rand' for random set of pairs from full, as set by num_pairs.",
     )
-    featurizer: Union[Type[FeaturizerBase], FeaturizerBase, dict] = Field(
+    featurizer: Union[type[FeaturizerBase], FeaturizerBase, dict] = Field(
         ..., description="Featurizer to use before pairing"
     )
     n_jobs: int = Field(
