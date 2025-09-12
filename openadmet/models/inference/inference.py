@@ -61,7 +61,7 @@ def load_anvil_model_and_metadata(model_dir):
             param_paths=list(model_dir.glob(f"*/{model._model_json_name}")),
             serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
             mod_class=model,
-            calibration_path=model_dir / model._calibration_model_save_name,
+            calibration_path=model_dir / ensemble._calibration_model_save_name,
         )
         print(loaded_model)
         logger.info(
