@@ -128,6 +128,9 @@ def test_committee(request, model_list, calibration_method, query_strategy):
             X_feat, y, method=calibration_method, accelerator="cpu"
         )
 
+        # Check model is calibrated
+        assert committee.calibrated
+
     # Query
     y_query = committee.query(X_feat, query_strategy=query_strategy, accelerator="cpu")
 
@@ -145,8 +148,11 @@ def test_committee(request, model_list, calibration_method, query_strategy):
 def test_save_load(request, tmp_path, model_list, calibration_method):
     # Skip calibration on real data until we have true ensemble
     if calibration_method is not None:
+        calibration_model_path = tmp_path / "calibration_model.pkl"
         # Skip the test
         pytest.skip("Skipping calibration test")
+    else:
+        calibration_model_path = None
 
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
@@ -160,6 +166,9 @@ def test_save_load(request, tmp_path, model_list, calibration_method):
             X_feat, y, method=calibration_method, accelerator="cpu"
         )
 
+        # Check model is calibrated
+        assert committee.calibrated
+
     # Predict before saving
     y_pred_mean, y_pred_std = committee.predict(
         X_feat, return_std=True, accelerator="cpu"
@@ -167,7 +176,7 @@ def test_save_load(request, tmp_path, model_list, calibration_method):
 
     # Save
     save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))]
-    committee.save(save_paths)
+    committee.save(save_paths, calibration_path=calibration_model_path)
 
     # Instantiate empty models to "fill"
     models_new = [model.make_new() for model in model_list]
@@ -177,6 +186,7 @@ def test_save_load(request, tmp_path, model_list, calibration_method):
     committee.load(
         save_paths,
         models=models_new,
+        calibration_path=calibration_model_path,
     )
 
     # Predict after loading
@@ -187,6 +197,10 @@ def test_save_load(request, tmp_path, model_list, calibration_method):
     # Check that predictions are the same
     assert_allclose(y_pred_mean, y_pred_mean2)
     assert_allclose(y_pred_std, y_pred_std2)
+
+    # Check that we successfully loaded calibration models
+    if calibration_method is not None:
+        assert committee.calibrated
 
 
 @pytest.mark.parametrize(
@@ -199,8 +213,11 @@ def test_save_load(request, tmp_path, model_list, calibration_method):
 def test_serialization(request, tmp_path, model_list, calibration_method):
     # Skip calibration on real data until we have true ensemble
     if calibration_method is not None:
+        calibration_model_path = tmp_path / "calibration_model.pkl"
         # Skip the test
         pytest.skip("Skipping calibration test")
+    else:
+        calibration_model_path = None
 
     # Unpack models, features
     model_list, X_feat, y = request.getfixturevalue(model_list)
@@ -213,6 +230,9 @@ def test_serialization(request, tmp_path, model_list, calibration_method):
         committee.calibrate_uncertainty(
             X_feat, y, method=calibration_method, accelerator="cpu"
         )
+
+        # Check model is calibrated
+        assert committee.calibrated
 
     # Predict before saving
     y_pred_mean, y_pred_std = committee.predict(
@@ -226,8 +246,15 @@ def test_serialization(request, tmp_path, model_list, calibration_method):
     serial_paths = [
         tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))
     ]
-    committee.serialize(param_paths, serial_paths)
-    committee.deserialize(param_paths, serial_paths, mod_class=model_list[0].__class__)
+    committee.serialize(
+        param_paths, serial_paths, calibration_path=calibration_model_path
+    )
+    committee.deserialize(
+        param_paths,
+        serial_paths,
+        mod_class=model_list[0].__class__,
+        calibration_path=calibration_model_path,
+    )
 
     # Predict after loading
     y_pred_mean2, y_pred_std2 = committee.predict(
@@ -237,6 +264,10 @@ def test_serialization(request, tmp_path, model_list, calibration_method):
     # Check that predictions are the same
     assert_allclose(y_pred_mean, y_pred_mean2)
     assert_allclose(y_pred_std, y_pred_std2)
+
+    # Check that we successfully loaded calibration models
+    if calibration_method is not None:
+        assert committee.calibrated
 
 
 # This test is somewhat redundant and a catch-all, but useful until we have ability to test real-world ensembles
@@ -263,6 +294,12 @@ def test_calibration(tmp_path, toy_data, calibration_method):
     # Calibrate uncertainty
     if calibration_method is not None:
         committee.calibrate_uncertainty(X_val, y_val, method=calibration_method)
+        calibration_model_path = tmp_path / "calibration_model.pkl"
+
+        # Check model is calibrated
+        assert committee.calibrated
+    else:
+        calibration_model_path = None
 
     # Evaluate on test set
     y_pred_mean, y_pred_std = committee.predict(X_test, return_std=True)
@@ -277,8 +314,15 @@ def test_calibration(tmp_path, toy_data, calibration_method):
     serial_paths = [
         tmp_path / "committee_model_{i}.pkl" for i in range(len(committee.models))
     ]
-    committee.serialize(param_paths, serial_paths)
-    committee.deserialize(param_paths, serial_paths, mod_class=LGBMRegressorModel)
+    committee.serialize(
+        param_paths, serial_paths, calibration_path=calibration_model_path
+    )
+    committee.deserialize(
+        param_paths,
+        serial_paths,
+        mod_class=LGBMRegressorModel,
+        calibration_path=calibration_model_path,
+    )
 
     # Evaluate on test set again
     y_pred_mean2, y_pred_std2 = committee.predict(X_test, return_std=True)
@@ -295,7 +339,7 @@ def test_calibration(tmp_path, toy_data, calibration_method):
     save_paths = [
         tmp_path / "committee_model_{i}.pkl" for i in range(len(committee.models))
     ]
-    committee.save(save_paths)
+    committee.save(save_paths, calibration_path=calibration_model_path)
 
     # Instantiate empty models to "fill"
     models_new = [
@@ -307,6 +351,7 @@ def test_calibration(tmp_path, toy_data, calibration_method):
     committee.load(
         save_paths,
         models=models_new,
+        calibration_path=calibration_model_path,
     )
 
     # Evaluate on test set again
