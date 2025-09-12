@@ -25,6 +25,7 @@ class EnsembleBase(ModelBase):
 
     type: ClassVar[str] = "EnsembleBase"
     models: list = []
+    _calibration_model_save_name: ClassVar[str] = "calibration_model.pkl"
 
     @property
     def n_models(self):
