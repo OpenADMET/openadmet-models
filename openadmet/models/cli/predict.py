@@ -36,7 +36,9 @@ from openadmet.models.inference.inference import predict as inference_func
     help="Hardware to use for inference.",
     required=False,
     default="gpu",
-    type=click.Choice(["cpu", "gpu", "tpu", "ipu", "auto"], case_sensitive=False),
+    type=click.Choice(
+        ["cpu", "gpu", "tpu", "ipu", "mps", "auto"], case_sensitive=False
+    ),
     show_default=True,
 )
 @click.option(
