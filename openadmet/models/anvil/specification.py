@@ -61,7 +61,8 @@ class DataSpec(BaseModel):
     # validator to template the resource with ANVIL_DIR if present
     @model_validator(mode="after")
     def template_resource(self):
-        """Template the resource with ANVIL_DIR if present.
+        """
+        Template the resource with ANVIL_DIR if present.
 
         Returns
         -------
@@ -81,7 +82,8 @@ class DataSpec(BaseModel):
         self.resource = template.render(ANVIL_DIR=anvil_dir)
 
     def read(self) -> tuple[pd.Series, pd.Series]:
-        """Read the data from the resource.
+        """
+        Read the data from the resource.
 
         Returns
         -------
@@ -145,7 +147,8 @@ class DataSpec(BaseModel):
         return self._catalog
 
     def to_yaml(self, path, **storage_options):
-        """Write specification to YAML file.
+        """
+        Write specification to YAML file.
 
         Parameters
         ----------
@@ -164,7 +167,8 @@ class DataSpec(BaseModel):
 
     @classmethod
     def from_yaml(cls, path, **storage_options):
-        """Load specification from YAML file.
+        """
+        Load specification from YAML file.
 
         Parameters
         ----------
@@ -189,7 +193,8 @@ class SpecBase(BaseModel):
     """Base class for specifications."""
 
     def to_yaml(self, path, **storage_options):
-        """Write specification to YAML file.
+        """
+        Write specification to YAML file.
 
         Parameters
         ----------
@@ -210,7 +215,8 @@ class SpecBase(BaseModel):
 
     @classmethod
     def from_yaml(cls, path, **storage_options):
-        """Load specification from YAML file.
+        """
+        Load specification from YAML file.
 
         Parameters
         ----------
@@ -268,7 +274,8 @@ class AnvilSection(SpecBase):
     section_name: ClassVar[str] = "INVALID"
 
     def to_class(self):
-        """Convert the specification to the corresponding class instance.
+        """
+        Convert the specification to the corresponding class instance.
 
         Returns
         -------
@@ -305,7 +312,8 @@ class ModelSpec(AnvilSection):
 
     @model_validator(mode="after")
     def check_paths(self):
-        """Ensure both param_path and serial_path are provided together.
+        """
+        Ensure both param_path and serial_path are provided together.
 
         Returns
         -------
@@ -341,7 +349,8 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("n_models")
     def check_n_models(cls, value):
-        """Ensure ensemble has more than one model.
+        """
+        Ensure ensemble has more than one model.
 
         Parameters
         ----------
@@ -360,7 +369,8 @@ class EnsembleSpec(AnvilSection):
 
     @model_validator(mode="after")
     def check_paths(self):
-        """Ensure both param_paths and serial_paths are provided together.
+        """
+        Ensure both param_paths and serial_paths are provided together.
 
         Returns
         -------
@@ -499,7 +509,8 @@ class AnvilSpecification(BaseModel):
         report_yaml="eval.yaml",
         **storage_options,
     ):
-        """Write specification to multiple YAML files.
+        """
+        Write specification to multiple YAML files.
 
         Parameters
         ----------

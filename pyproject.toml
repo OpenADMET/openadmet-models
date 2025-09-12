@@ -84,4 +84,5 @@ default-tag = "0.0.0"
 file = "openadmet/models/_version.py"
 
 [tool.ruff.lint]
-select = ["D"]
+select = ["D", "D213"]
+ignore = ["D212"]

@@ -29,7 +29,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
-        """Check if validation set is needed or not.
+        """
+        Check if validation set is needed or not.
 
         Raises
         ------
@@ -55,7 +56,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_no_finetuning(self):
-        """Check that no fine-tuning paths are specified.
+        """
+        Check that no fine-tuning paths are specified.
 
         Raises
         ------
@@ -154,7 +156,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         debug: bool = False,
         tag: str = None,
     ) -> Any:
-        """Run the workflow.
+        """
+        Run the workflow.
 
         Parameters
         ----------
@@ -361,7 +364,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_no_transform(self):
-        """Check that no transform step is specified.
+        """
+        Check that no transform step is specified.
 
         Raises
         ------
@@ -378,7 +382,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
-        """Check if validation set is needed or not.
+        """
+        Check if validation set is needed or not.
 
         Raises
         ------
@@ -527,7 +532,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         debug: bool = False,
         tag: str = None,
     ) -> Any:
-        """Run the workflow.
+        """
+        Run the workflow.
 
         Parameters
         ----------
@@ -634,7 +640,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             torch.save(val_dataloader, output_dir / "val_dataloader.pth")
         else:
             val_dataloader = None
-            # val_dataset = None
+            val_dataset = None
             logger.warning("Validation set is None, skipping validation dataloader")
 
         # Dataloader, indices, scaler, dataset
