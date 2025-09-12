@@ -98,4 +98,3 @@ class PairwiseFeaturizer(FeaturizerBase):
         indices = np.arange(len(paired_dataset.X))
 
         return dataloader, indices, None, paired_dataset
-

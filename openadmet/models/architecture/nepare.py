@@ -4,7 +4,7 @@ from lightning import pytorch as pl
 from pydantic import field_validator
 from loguru import logger
 from chemprop import models, nn
-from typing import OrderedDict
+from collections import OrderedDict
 
 from openadmet.models.architecture.model_base import models as model_registry
 from openadmet.models.architecture.model_base import LightningModuleBase, LightningModelBase
@@ -20,12 +20,12 @@ _METRIC_TO_LOSS = {
 }
 
 class NeuralPairwiseRegressorModule(LightningModuleBase):
-    def __init__(self, 
-                 input_size, 
-                 hidden_size, 
-                 num_layers, 
-                 activation = torch.nn.ReLU, 
-                 lr: float = 1e-4, 
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 num_layers,
+                 activation = torch.nn.ReLU,
+                 lr: float = 1e-4,
                  n_targets: int = 1,
                  monitor_metric: str = "val_loss"):
         super().__init__()
@@ -50,7 +50,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
 
     def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
         return self._step(batch, self.monitor_metric)
-    
+
     def _step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], name: str):
         x_1, x_2, y = batch
         x = torch.cat((x_1, x_2), dim=1)
@@ -81,7 +81,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer."
         )
-    
+
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
@@ -111,7 +111,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
 
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
-        
+
         with torch.inference_mode():
             trainer = pl.Trainer(
                 logger=None,
