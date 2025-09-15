@@ -22,6 +22,7 @@ class UncertaintyMetrics(EvalBase):
         Stores computed metrics for each task.
     _metrics : dict
         Mapping of metric keys to human-readable names.
+
     """
 
     use_wandb: bool = Field(False, description="Whether to use wandb")
@@ -54,6 +55,7 @@ class UncertaintyMetrics(EvalBase):
         -------
         list of str
             List of metric keys.
+
         """
         return list(self._metrics.keys())
 
@@ -66,6 +68,7 @@ class UncertaintyMetrics(EvalBase):
         -------
         list of str
             List of task names.
+
         """
         return list(self._data.keys())
 
@@ -106,6 +109,7 @@ class UncertaintyMetrics(EvalBase):
         ------
         ValueError
             If required inputs are missing or shapes are inconsistent.
+
         """
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
@@ -204,6 +208,7 @@ class UncertaintyMetrics(EvalBase):
         -------
         dict
             Dictionary of computed metrics.
+
         """
         if write:
             self.write_report(output_dir)
@@ -218,6 +223,7 @@ class UncertaintyMetrics(EvalBase):
         ----------
         output_dir : Path or str
             Directory to write the report to.
+
         """
         # Write to JSON
         json_path = output_dir / "uncertainty_calibration_metrics.json"
@@ -250,6 +256,7 @@ class UncertaintyPlots(EvalBase):
         Mapping of plot tags to plotting functions.
     _plot_data : dict
         Stores generated plot figures.
+
     """
 
     use_wandb: bool = Field(False, description="Whether to use wandb")
@@ -265,6 +272,7 @@ class UncertaintyPlots(EvalBase):
         ----------
         __context : Any
             Pydantic context (unused).
+
         """
         self._set_plot_types()
 
@@ -298,11 +306,12 @@ class UncertaintyPlots(EvalBase):
         -------
         dict
             Dictionary of generated plot figures.
-        
+
         Raises
         ------
         ValueError
             If required inputs are missing or shapes are inconsistent.
+
         """
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
@@ -375,6 +384,7 @@ class UncertaintyPlots(EvalBase):
         -------
         matplotlib.figure.Figure
             The generated calibration plot figure.
+
         """
         # Plot calibration
         fig, ax = plt.subplots(dpi=dpi)
@@ -408,8 +418,8 @@ class UncertaintyPlots(EvalBase):
         -------
         dict
             Dictionary of generated plot figures.
-        """
 
+        """
         if write:
             self.write_report(output_dir)
 
@@ -423,8 +433,8 @@ class UncertaintyPlots(EvalBase):
         ----------
         output_dir : Path or str
             Directory to write the plots to.
-        """
 
+        """
         for plot_tag, plot in self._plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)
