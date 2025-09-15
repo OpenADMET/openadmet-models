@@ -11,6 +11,19 @@ from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans_std
 
 @evaluators.register("UncertaintyMetrics")
 class UncertaintyMetrics(EvalBase):
+    """
+    Evaluator for uncertainty metrics using uncertainty_toolbox.
+
+    Attributes
+    ----------
+    use_wandb : bool
+        Whether to use wandb for logging.
+    _data : dict
+        Stores computed metrics for each task.
+    _metrics : dict
+        Mapping of metric keys to human-readable names.
+    """
+
     use_wandb: bool = Field(False, description="Whether to use wandb")
     _data: dict = {}
     _metrics: dict = {
@@ -35,14 +48,24 @@ class UncertaintyMetrics(EvalBase):
     @property
     def metric_names(self):
         """
-        Return the metric names
+        Get the list of metric keys.
+
+        Returns
+        -------
+        list of str
+            List of metric keys.
         """
         return list(self._metrics.keys())
 
     @property
     def task_names(self):
         """
-        Return the task names
+        Get the list of evaluated task names.
+
+        Returns
+        -------
+        list of str
+            List of task names.
         """
         return list(self._data.keys())
 
@@ -57,6 +80,33 @@ class UncertaintyMetrics(EvalBase):
         scaled=True,
         **kwargs,
     ):
+        """
+        Evaluate uncertainty metrics for each task.
+
+        Parameters
+        ----------
+        y_true : array-like
+            Ground truth values.
+        y_pred : array-like
+            Predicted mean values.
+        y_std : array-like
+            Predicted standard deviations.
+        target_labels : list of str, optional
+            List of target labels for each task.
+        bins : int, default=100
+            Number of bins for calibration metrics.
+        resolution : int, default=99
+            Resolution for scoring rule metrics.
+        scaled : bool, default=True
+            Whether to scale scoring rule metrics.
+        **kwargs
+            Additional keyword arguments.
+
+        Raises
+        ------
+        ValueError
+            If required inputs are missing or shapes are inconsistent.
+        """
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
             raise ValueError("Must provide `y_true`, `y_pred`, and `y_std`")
@@ -141,7 +191,19 @@ class UncertaintyMetrics(EvalBase):
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the evaluation results.
+
+        Parameters
+        ----------
+        write : bool, default=False
+            Whether to write the report to disk.
+        output_dir : Path or str, optional
+            Directory to write the report to.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
         """
         if write:
             self.write_report(output_dir)
@@ -150,7 +212,12 @@ class UncertaintyMetrics(EvalBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the evaluation report to disk and optionally log to wandb.
+
+        Parameters
+        ----------
+        output_dir : Path or str
+            Directory to write the report to.
         """
         # Write to JSON
         json_path = output_dir / "uncertainty_calibration_metrics.json"
@@ -170,21 +237,73 @@ class UncertaintyMetrics(EvalBase):
 
 @evaluators.register("UncertaintyPlots")
 class UncertaintyPlots(EvalBase):
+    """
+    Evaluator for generating uncertainty plots.
+
+    Attributes
+    ----------
+    use_wandb : bool
+        Whether to use wandb for logging.
+    dpi : int
+        DPI for the generated plots.
+    _plots : dict
+        Mapping of plot tags to plotting functions.
+    _plot_data : dict
+        Stores generated plot figures.
+    """
+
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
     _plots: dict = {}
     _plot_data: dict = {}
 
     def model_post_init(self, __context):
+        """
+        Post-initialization hook to set plot types.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic context (unused).
+        """
         self._set_plot_types()
 
     def _set_plot_types(self):
+        """
+        Set the available plot types.
+        """
         # Specify plots
         self._plots = {
             "uncertainty-calibration-plot": self.calibration_plot,
         }
 
     def evaluate(self, y_true, y_pred, y_std, target_labels=None, **kwargs):
+        """
+        Generate uncertainty plots for each task.
+
+        Parameters
+        ----------
+        y_true : array-like
+            Ground truth values.
+        y_pred : array-like
+            Predicted mean values.
+        y_std : array-like
+            Predicted standard deviations.
+        target_labels : list of str, optional
+            List of target labels for each task.
+        **kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary of generated plot figures.
+        
+        Raises
+        ------
+        ValueError
+            If required inputs are missing or shapes are inconsistent.
+        """
         # Check inputs
         if y_true is None or y_pred is None or y_std is None:
             raise ValueError("Must provide `y_true`, `y_pred`, and `y_std`")
@@ -237,7 +356,25 @@ class UncertaintyPlots(EvalBase):
     @staticmethod
     def calibration_plot(y_true, y_pred, y_std, title="", dpi=300):
         """
-        Create a calibration plot.
+        Create a calibration plot for uncertainty estimates.
+
+        Parameters
+        ----------
+        y_true : array-like
+            Ground truth values.
+        y_pred : array-like
+            Predicted mean values.
+        y_std : array-like
+            Predicted standard deviations.
+        title : str, default=""
+            Title for the plot.
+        dpi : int, default=300
+            DPI for the plot.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The generated calibration plot figure.
         """
         # Plot calibration
         fig, ax = plt.subplots(dpi=dpi)
@@ -258,7 +395,19 @@ class UncertaintyPlots(EvalBase):
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the generated plots.
+
+        Parameters
+        ----------
+        write : bool, default=False
+            Whether to write the plots to disk.
+        output_dir : Path or str, optional
+            Directory to write the plots to.
+
+        Returns
+        -------
+        dict
+            Dictionary of generated plot figures.
         """
 
         if write:
@@ -268,7 +417,12 @@ class UncertaintyPlots(EvalBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the generated plots to disk and optionally log to wandb.
+
+        Parameters
+        ----------
+        output_dir : Path or str
+            Directory to write the plots to.
         """
 
         for plot_tag, plot in self._plot_data.items():
