@@ -55,6 +55,8 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         x_1, x_2, y = batch
         x = torch.cat((x_1, x_2), dim=1)
         y_hat = self(x)
+        if y.dim() == 1:
+            y = y.unsqueeze(1)  # Ensure y is [batch_size, 1]
         loss = torch.nn.functional.mse_loss(y_hat, y)
         self.log(f"{name}", loss, prog_bar=True)
         return loss

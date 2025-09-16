@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from numpy.typing import ArrayLike
 from typing import Literal, Type, Union
 from random import sample
@@ -103,6 +104,13 @@ class PairwiseFeaturizer(FeaturizerBase):
         X_feat, _ = self.featurizer.featurize(smiles)
         X_feat = X_feat.astype(np.float32)
         if y is not None:
+            # Convert y to 1D numpy array if it's a DataFrame or Series
+            if isinstance(y, pd.DataFrame):
+                y = y.values.ravel()
+            elif isinstance(y, pd.Series):
+                y = y.values
+            else:
+                y = np.asarray(y)
             y = y.astype(np.float32)
 
         paired_dataset = PairwiseAugmentedDataset(X_feat, y, how=self.how_to_pair)
