@@ -66,7 +66,7 @@ class CatBoostModelBase(PickleableModelBase):
             Data to predict on
         kwargs: dict
             Additional keyword arguments to pass to the predict method of the CatBoost model
-        
+
         Returns
         -------
         np.ndarray
@@ -104,7 +104,7 @@ class CatBoostRegressorModel(CatBoostModelBase):
 class CatBoostClassifierModel(CatBoostModelBase):
     """
     CatBoost classification model.
-    
+
     Common parameters for CatBoost models can be found at:
     https://catboost.ai/docs/en/concepts/python-quickstart
     """
