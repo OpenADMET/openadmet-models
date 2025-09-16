@@ -21,9 +21,7 @@ _METRIC_TO_LOSS = {
 
 @model_registry.register("ChemPropModel")
 class ChemPropModel(LightningModelBase):
-    """
-    ChemProp regression model
-    """
+    """ChemProp regression model."""
 
     type: ClassVar[str] = "ChemPropModel"
     batch_norm: bool = False
@@ -44,9 +42,7 @@ class ChemPropModel(LightningModelBase):
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
-        """
-        Validate the messages parameter
-        """
+        """Validate the messages parameter."""
         if value not in ["bond", "atom"]:
             raise ValueError("Messages must be either 'bond' or 'atom'")
         return value
@@ -54,17 +50,13 @@ class ChemPropModel(LightningModelBase):
     @field_validator("aggregation")
     @classmethod
     def validate_aggregation(cls, value):
-        """
-        Validate the aggregation parameter
-        """
+        """Validate the aggregation parameter."""
         if value not in ["mean", "norm"]:
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
     def _get_output_transform(self, scaler):
-        """
-        Set the output transform
-        """
+        """Set the output transform."""
         if scaler is not None:
             output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
         elif self.normalized_targets:
@@ -79,21 +71,45 @@ class ChemPropModel(LightningModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
+
+        Parameters
+        ----------
+        class_params: dict
+            Parameters for the model class, such as type, mod_class, etc.
+        mod_params: dict
+            Parameters for the ChemProp model class, such as depth, message_hidden_dim,
+            ffn_hidden_dim, ffn_num_layers, messages, aggregation, etc.
+
+        Returns
+        -------
+        ChemPropModel
+            An instance of the ChemPropModel class
+        
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
     def make_new(self) -> "ChemPropModel":
-        """
-        Copy parameters to a new model instance without copying the estimator
-        """
+        """Copy parameters to a new model instance without copying the estimator."""
         return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
 
     def train(self, dataloader, scaler=None):
         """
-        Train the model
+        Train the model.
+
+        Parameters
+        ----------
+        dataloader: torch.utils.data.DataLoader
+            DataLoader for training data
+        scaler: sklearn.preprocessing.StandardScaler, optional
+            Scaler for target normalization, if applicable
+
+        Returns
+        -------
+        None
+
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
@@ -101,7 +117,18 @@ class ChemPropModel(LightningModelBase):
 
     def build(self, scaler=None):
         """
-        Prepare the model
+        Prepare the model.
+
+        Parameters
+        ----------
+        scaler: sklearn.preprocessing.StandardScaler, optional
+            Scaler for target normalization, if applicable
+        
+        Returns
+        -------
+        ChemPropModel
+            The built ChemPropModel instance
+
         """
         if not self.estimator:
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
@@ -174,7 +201,24 @@ class ChemPropModel(LightningModelBase):
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
+
+        Parameters
+        ----------
+        X: np.ndarray
+            Featurized data to predict on
+        accelerator: str
+            Accelerator to use for prediction, options are: 'cpu', 'gpu'
+        devices: int
+            Number of devices to use for prediction
+        kwargs: dict
+            Additional keyword arguments for prediction
+
+        Returns
+        -------
+        np.ndarray
+            Predictions as a numpy array
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")

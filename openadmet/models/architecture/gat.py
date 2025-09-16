@@ -33,9 +33,7 @@ _METRIC_TO_LOSS = {
 
 
 class GATv2Module(LightningModuleBase):
-    """
-    Graph Attention Network v2 (GATv2) Model
-    """
+    """Graph Attention Network v2 (GATv2) Model."""
 
     # Model architecture hyperparameters
     input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
@@ -66,7 +64,7 @@ class GATv2Module(LightningModuleBase):
     @field_validator("pooling")
     @classmethod
     def validate_pooling(cls, value):
-        """Validate pooling method"""
+        """Validate pooling method."""
         allowed = ["mean", "max", "add"]
         if value not in allowed:
             raise ValueError(f"Pooling must be one of {allowed}")
@@ -75,7 +73,7 @@ class GATv2Module(LightningModuleBase):
     @field_validator("loss_function")
     @classmethod
     def validate_loss_function(cls, value):
-        """Validate loss function"""
+        """Validate loss function."""
         allowed = ["mse", "mae", "huber", "bce", "cross_entropy"]
         if value not in allowed:
             raise ValueError(f"Loss function must be one of {allowed}")
@@ -104,6 +102,33 @@ class GATv2Module(LightningModuleBase):
         scheduler_patience: int = 10,
         monitor_metric: str = "val_loss",
     ):
+        """
+        Initialize GATv2 model with given hyperparameters.
+        
+        Args:
+            input_dim (int): Dimension of input node features.
+            hidden_dim (int): Dimension of hidden layers.
+            num_layers (int): Number of GAT layers.
+            num_heads (int): Number of attention heads in each GAT layer.
+            dropout (float): Dropout rate.
+            pooling (str): Pooling method ('mean', 'max', 'add').
+            output_dim (int): Dimension of the output.
+            edge_dim (Optional[int]): Dimension of edge features.
+            concat_heads (bool): Whether to concatenate heads in intermediate layers.
+            add_self_loops (bool): Whether to add self-loops to the graph.
+            share_weights (bool): Whether to share weights across attention heads.
+            bias (bool): Whether to include bias terms in GAT layers.
+            loss_function (str): Loss function to use ('mse', 'mae', '
+                'huber', 'bce', 'cross_entropy').
+            optimizer (str): Optimizer to use ('adam', 'adamw', 'sgd').
+            optimizer_lr (float): Learning rate for the optimizer.
+            optimizer_weight_decay (float): Weight decay for the optimizer.
+            scheduler (str): Learning rate scheduler ('step', 'cosine', 'plateau').
+            scheduler_factor (float): Factor for learning rate reduction.
+            scheduler_patience (int): Patience for learning rate scheduler.
+            monitor_metric (str): Metric to monitor for learning rate scheduler.
+
+        """
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -195,7 +220,7 @@ class GATv2Module(LightningModuleBase):
 
     def forward(self, data):
         """
-        Forward pass
+        Forward pass through network.
 
         Args:
             data: PyTorch Geometric data object containing:
@@ -239,7 +264,22 @@ class GATv2Module(LightningModuleBase):
         return out
 
     def training_step(self, batch: Batch, batch_idx: int):
-        """Training step"""
+        """
+        Training step.
+        
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+        
+        Returns
+        -------
+        loss: torch.Tensor
+            Computed loss for the batch
+        
+        """
         target = batch.y
         pred = self.forward(batch)
 
@@ -262,7 +302,22 @@ class GATv2Module(LightningModuleBase):
         return loss
 
     def validation_step(self, batch: Batch, batch_idx: int):
-        """Validation step"""
+        """
+        Validate step.
+        
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+        
+        Returns
+        -------
+        loss: torch.Tensor
+            Computed loss for the batch
+        
+        """
         target = batch.y
 
         pred = self.forward(batch)
@@ -286,7 +341,22 @@ class GATv2Module(LightningModuleBase):
         return loss
 
     def predict_step(self, batch: Batch, batch_idx: int):
-        """Prediction step"""
+        """
+        Predict step.
+        
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+        
+        Returns
+        -------
+        pred: torch.Tensor
+            Predictions for the batch
+        
+        """
         data = batch
         pred = self.forward(data)
         return pred
