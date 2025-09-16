@@ -85,7 +85,7 @@ class ChemPropModel(LightningModelBase):
         -------
         ChemPropModel
             An instance of the ChemPropModel class
-        
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -123,7 +123,7 @@ class ChemPropModel(LightningModelBase):
         ----------
         scaler: sklearn.preprocessing.StandardScaler, optional
             Scaler for target normalization, if applicable
-        
+
         Returns
         -------
         ChemPropModel

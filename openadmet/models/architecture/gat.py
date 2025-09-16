@@ -104,7 +104,7 @@ class GATv2Module(LightningModuleBase):
     ):
         """
         Initialize GATv2 model with given hyperparameters.
-        
+
         Args:
             input_dim (int): Dimension of input node features.
             hidden_dim (int): Dimension of hidden layers.
@@ -266,19 +266,19 @@ class GATv2Module(LightningModuleBase):
     def training_step(self, batch: Batch, batch_idx: int):
         """
         Training step.
-        
+
         Parameters
         ----------
         batch: Batch
             A batch of graph data
         batch_idx: int
             Index of the batch
-        
+
         Returns
         -------
         loss: torch.Tensor
             Computed loss for the batch
-        
+
         """
         target = batch.y
         pred = self.forward(batch)
@@ -304,19 +304,19 @@ class GATv2Module(LightningModuleBase):
     def validation_step(self, batch: Batch, batch_idx: int):
         """
         Validate step.
-        
+
         Parameters
         ----------
         batch: Batch
             A batch of graph data
         batch_idx: int
             Index of the batch
-        
+
         Returns
         -------
         loss: torch.Tensor
             Computed loss for the batch
-        
+
         """
         target = batch.y
 
@@ -343,19 +343,19 @@ class GATv2Module(LightningModuleBase):
     def predict_step(self, batch: Batch, batch_idx: int):
         """
         Predict step.
-        
+
         Parameters
         ----------
         batch: Batch
             A batch of graph data
         batch_idx: int
             Index of the batch
-        
+
         Returns
         -------
         pred: torch.Tensor
             Predictions for the batch
-        
+
         """
         data = batch
         pred = self.forward(data)
