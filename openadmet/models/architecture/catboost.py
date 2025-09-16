@@ -8,9 +8,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class CatBoostModelBase(PickleableModelBase):
-    """
-    Base class for CatBoost models, allows instantiation from parameters that are passable to the CatBoost model classes.
-    """
+    """Base class for CatBoost models, allows instantiation from parameters that are passable to the CatBoost model classes."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +19,7 @@ class CatBoostModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -38,7 +36,7 @@ class CatBoostModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -52,9 +50,7 @@ class CatBoostModelBase(PickleableModelBase):
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params)
         else:
@@ -62,13 +58,15 @@ class CatBoostModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
-
+        kwargs: dict
+            Additional keyword arguments to pass to the predict method of the CatBoost model
+        
         Returns
         -------
         np.ndarray
@@ -83,7 +81,7 @@ class CatBoostModelBase(PickleableModelBase):
 @models.register("CatBoostRegressorModel")
 class CatBoostRegressorModel(CatBoostModelBase):
     """
-    CatBoost regression model
+    CatBoost regression model.
 
     Common parameters for CatBoost models can be found at:
     https://CatBoost.readthedocs.io/en/stable/python/python_api.html
@@ -105,7 +103,8 @@ class CatBoostRegressorModel(CatBoostModelBase):
 @models.register("CatBoostClassifierModel")
 class CatBoostClassifierModel(CatBoostModelBase):
     """
-    CatBoost classification model
+    CatBoost classification model.
+    
     Common parameters for CatBoost models can be found at:
     https://catboost.ai/docs/en/concepts/python-quickstart
     """
