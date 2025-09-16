@@ -72,3 +72,4 @@ Welcome to openadmet_models's documentation!
    user_guide
    api
    developer_guide
+   anvil_reference
