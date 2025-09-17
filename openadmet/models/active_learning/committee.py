@@ -16,7 +16,19 @@ from openadmet.models.architecture.model_base import ModelBase
 
 @ensemblers.register("CommitteeRegressor")
 class CommitteeRegressor(EnsembleBase):
-    """Committee Regressor."""
+    """
+    Committee Regressor.
+    
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the ensemble model.
+    _calibration_model : Any
+        The calibration model used for uncertainty calibration.
+    _calibration_methods : dict
+        A dictionary mapping calibration method names to their corresponding functions.
+    
+    """
 
     type: ClassVar[str] = "CommitteeRegressor"
     _calibration_model: Any = None
@@ -258,8 +270,6 @@ class CommitteeRegressor(EnsembleBase):
             The parameters to pass to the model.
         n_models : int
             The number of models in the committee, by default 1.
-        trainer : TrainerBase
-            Trainer instance, needed for deep learning models.
 
         Returns
         -------
