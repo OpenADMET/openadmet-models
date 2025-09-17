@@ -192,7 +192,7 @@ class PosthocBinaryMetrics(EvalBase):
         Returns
         -------
         None
-        
+
         """
         stats_df = pd.DataFrame({"precision": precision, "recall": recall}, index=[0])
         if write and stats_df is not None:

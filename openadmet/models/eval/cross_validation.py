@@ -690,7 +690,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         -------
         dict
             Dictionary of statistics for the task.
-            
+
         """
         return _make_stat_dict(
             data=self.data,
