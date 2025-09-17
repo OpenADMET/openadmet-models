@@ -225,6 +225,6 @@ class MTENNSchNetModel(LightningModelBase):
         -------
         MTENNSchNetModel
             A new instance of MTENNSchNetModel with the same parameters.
-            
+
         """
         return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
