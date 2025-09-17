@@ -17,7 +17,7 @@ from .feature_base import FeaturizerBase, featurizers
 class GATGraphFeaturizer(FeaturizerBase):
     """
     Featurizer to convert SMILES strings into graph Data objects suitable for GAT-like models.
-    
+
     Attributes
     ----------
     type : str
@@ -28,7 +28,7 @@ class GATGraphFeaturizer(FeaturizerBase):
         Whether to shuffle the data in the DataLoader.
     num_workers : int
         The number of worker threads for the DataLoader.
-    
+
     """
 
     batch_size: int = 32

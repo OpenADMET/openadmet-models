@@ -103,7 +103,7 @@ def _vendor_build_dataloader(
 class ChemPropFeaturizer(DeepLearningFeaturizer):
     """
     ChemPropFeaturizer featurizer for molecules, relies on chemprop.
-    
+
     Parameters
     ----------
     normalize_targets : bool, optional
@@ -114,7 +114,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Batch size for the DataLoader, by default 128
     shuffle : bool, optional
         Whether to shuffle the data in the DataLoader, by default False
-        
+
     """
 
     normalize_targets: bool = True

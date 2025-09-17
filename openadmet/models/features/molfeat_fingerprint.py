@@ -16,7 +16,7 @@ from openadmet.models.features.feature_base import MolfeatFeaturizer, featurizer
 class FingerprintFeaturizer(MolfeatFeaturizer):
     """
     Fingerprint featurizer for molecules, relies on molfeat backend.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -27,7 +27,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
         The data type to use for the fingerprint (e.g., np.float32).
     n_jobs : int
         The number of jobs to use for featurization, -1 for maximum parallelism.
-    
+
     """
 
     type: ClassVar[str] = "FingerprintFeaturizer"
