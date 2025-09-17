@@ -1,3 +1,5 @@
+"""Molecular descriptor featurizer using molfeat library."""
+
 from collections.abc import Iterable
 from typing import Any, ClassVar
 

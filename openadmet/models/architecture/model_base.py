@@ -1,3 +1,5 @@
+"""Base classes for all models."""
+
 import json
 from abc import ABC, abstractmethod
 from os import PathLike

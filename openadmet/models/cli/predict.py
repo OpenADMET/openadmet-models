@@ -1,3 +1,5 @@
+"""CLI for making predictions with trained models."""
+
 import click
 
 from openadmet.models.inference.inference import predict as inference_func

@@ -1,3 +1,5 @@
+"""CLI entry point for OpenADMET models."""
+
 import click
 
 from openadmet.models.cli.anvil import anvil

@@ -1,3 +1,5 @@
+"""PostHoc multi-model comparison implementation."""
+
 import os
 import matplotlib.pyplot as plt
 import numpy as np

@@ -1,3 +1,5 @@
+"""Combine features from multiple featurizers into a single feature array."""
+
 from functools import reduce
 
 import numpy as np

@@ -1,3 +1,5 @@
+"""Trainers for sklearn models."""
+
 from typing import Any
 
 from loguru import logger

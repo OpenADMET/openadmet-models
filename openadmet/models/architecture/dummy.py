@@ -1,3 +1,5 @@
+"""Dummy model implementations."""
+
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 from typing import ClassVar

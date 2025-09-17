@@ -1,3 +1,5 @@
+"""LightGBM model implementations."""
+
 from typing import ClassVar
 
 import lightgbm as lgb

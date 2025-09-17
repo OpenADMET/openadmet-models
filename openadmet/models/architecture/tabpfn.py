@@ -1,3 +1,5 @@
+"""TabPFN model implementations."""
+
 from typing import ClassVar, Literal, Optional, Union
 
 from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (

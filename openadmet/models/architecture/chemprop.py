@@ -1,3 +1,5 @@
+"""ChemProp and Chemeleon model implementations."""
+
 from pathlib import Path
 from typing import ClassVar
 from urllib.request import urlretrieve

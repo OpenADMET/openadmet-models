@@ -1,3 +1,5 @@
+"""Base class for transforms, allows for arbitrary transformation of input data."""
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 

@@ -1,3 +1,5 @@
+"""Regression metrics and plots for model evaluation."""
+
 import json
 from functools import partial
 

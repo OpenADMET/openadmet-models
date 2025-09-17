@@ -1,3 +1,5 @@
+"""Support Vector Machine (SVM) model implementations."""
+
 from typing import ClassVar
 
 from sklearn.svm import SVR, SVC

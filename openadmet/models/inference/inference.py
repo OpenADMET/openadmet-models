@@ -1,3 +1,5 @@
+"""Inference functions for trained models."""
+
 from pathlib import Path
 from typing import Union
 

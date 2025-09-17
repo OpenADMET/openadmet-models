@@ -1,3 +1,5 @@
+"""Graph Attention Network v2 (GATv2) model implementation."""
+
 from typing import Any, ClassVar, Optional
 
 import numpy as np

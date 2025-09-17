@@ -1,3 +1,5 @@
+"""MTENN model implementation."""
+
 from typing import ClassVar
 
 import torch

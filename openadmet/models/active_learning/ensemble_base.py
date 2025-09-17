@@ -1,3 +1,5 @@
+"""Base class for ensemble models."""
+
 from typing import ClassVar
 
 from class_registry import ClassRegistry, RegistryKeyError

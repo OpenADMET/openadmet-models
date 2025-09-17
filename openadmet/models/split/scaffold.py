@@ -1,3 +1,5 @@
+"""Scaffold-based data splitting implementations."""
+
 from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 import numpy as np

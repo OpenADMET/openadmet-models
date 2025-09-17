@@ -1,3 +1,5 @@
+"""CatBoost model implementations."""
+
 from typing import ClassVar
 
 from catboost import CatBoostClassifier, CatBoostRegressor

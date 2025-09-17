@@ -1,3 +1,5 @@
+"""Base class for Anvil workflows."""
+
 from abc import abstractmethod
 from os import PathLike
 from typing import Any, Optional

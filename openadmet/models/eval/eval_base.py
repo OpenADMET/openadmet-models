@@ -1,3 +1,5 @@
+"""Base class and utilities for evaluation modules."""
+
 from abc import abstractmethod
 from typing import Callable
 

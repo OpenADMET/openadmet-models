@@ -1,3 +1,5 @@
+"""Cross-validation evaluators for regression models."""
+
 import json
 from collections import defaultdict
 

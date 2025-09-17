@@ -1,3 +1,5 @@
+"""Base class for trainers, allows for arbitrary training of models."""
+
 from abc import ABC, abstractmethod
 from typing import Any
 

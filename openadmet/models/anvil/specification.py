@@ -1,3 +1,5 @@
+"""Specification models for Anvil workflows."""
+
 from os import PathLike
 from pathlib import Path
 from typing import ClassVar, Literal, Optional, Union

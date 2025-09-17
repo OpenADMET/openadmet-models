@@ -1,3 +1,5 @@
+"""Committee regressor for active learning with uncertainty estimation."""
+
 from os import PathLike
 from typing import Any, ClassVar
 

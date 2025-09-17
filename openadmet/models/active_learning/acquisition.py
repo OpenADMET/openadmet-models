@@ -1,3 +1,5 @@
+"""Active learning acquisition functions."""
+
 from scipy.stats import norm
 
 

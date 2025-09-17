@@ -1,3 +1,5 @@
+"""XGBoost model implementations."""
+
 from typing import ClassVar
 
 from xgboost import XGBClassifier, XGBRegressor

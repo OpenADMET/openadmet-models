@@ -1,3 +1,5 @@
+"""Sklearn Pipeline model implementations."""
+
 from sklearn.utils.discovery import all_estimators
 
 

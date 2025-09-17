@@ -1,3 +1,5 @@
+"""Sklearn-based data splitting implementations."""
+
 from sklearn.model_selection import train_test_split
 
 from openadmet.models.split.split_base import SplitterBase, splitters

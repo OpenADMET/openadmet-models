@@ -1,3 +1,5 @@
+"""Random Forest model implementations."""
+
 from typing import ClassVar
 
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier

@@ -1,3 +1,5 @@
+"""CLI for comparing model performance."""
+
 import click
 
 from openadmet.models.comparison.posthoc import PostHocComparison

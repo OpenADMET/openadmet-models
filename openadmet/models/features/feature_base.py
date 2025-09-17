@@ -1,3 +1,5 @@
+"""Base classes and utilities for molecular featurizers."""
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 

@@ -1,3 +1,5 @@
+"""Base class for multi-model comparison."""
+
 from abc import ABC, abstractmethod
 
 from class_registry import ClassRegistry, RegistryKeyError

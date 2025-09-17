@@ -1,3 +1,5 @@
+"""MTENN featurizer implementation."""
+
 import warnings
 from collections.abc import Iterable
 from pathlib import Path

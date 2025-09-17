@@ -1,3 +1,5 @@
+"""Classification metrics and plots for model evaluation."""
+
 import json
 
 import matplotlib.pyplot as plt

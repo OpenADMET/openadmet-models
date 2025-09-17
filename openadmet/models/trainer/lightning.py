@@ -1,3 +1,5 @@
+"""PyTorch Lightning trainer implementation."""
+
 from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 

@@ -1,3 +1,5 @@
+"""Graph Attention Network (GAT) featurizer implementation."""
+
 from typing import Optional, List, Any
 from collections.abc import Iterable
 import torch
