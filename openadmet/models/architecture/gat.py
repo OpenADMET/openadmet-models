@@ -364,9 +364,7 @@ class GATv2Module(LightningModuleBase):
 
 @model_registry.register("GATv2Model")
 class GATv2Model(LightningModelBase):
-    """
-    GATv2 model wrapper inheriting from TorchModelBase
-    """
+    """GATv2 model wrapper inheriting from TorchModelBase."""
 
     type: ClassVar[str] = "GATv2Model"
     scaler: Optional[Any] = None
@@ -400,7 +398,20 @@ class GATv2Model(LightningModelBase):
     @classmethod
     def from_params(cls, class_params: dict = None, mod_params: dict = None):
         """
-        Create model instance from parameters
+        Create model instance from parameters.
+
+        Parameters
+        ----------
+        class_params: dict
+            Class parameters for the GATv2Model class.
+        mod_params: dict
+            Model parameters for the GATv2Module class.
+        
+        Returns
+        -------
+        instance: GATv2Model
+            An instance of GATv2Model with the specified parameters.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -408,8 +419,20 @@ class GATv2Model(LightningModelBase):
 
     def build(self, scaler=None, **kwargs):
         """
-        Builds the GATv2 model.
-        'input_dim' is a mandatory parameter.
+        Build the GATv2 model. 'input_dim' is a mandatory parameter.
+
+        Parameters
+        ----------
+        scaler: Optional[Any]
+            Scaler used for target variable normalization.
+        **kwargs: Dict
+            Additional keyword arguments.
+
+
+        Returns
+        -------
+        None
+
         """
         self.scaler = scaler
 
@@ -448,16 +471,16 @@ class GATv2Model(LightningModelBase):
     def make_new(self) -> "GATv2Model":
         """
         Create a new instance of the model with the same parameters.
+
         This does not copy the estimator, only the configuration.
         """
         return self.__class__(**self.dict(exclude={"estimator"}))
 
     def train(self, dataloader):
         """
+        Exists only to satisfy the abstract base class contract.
+
         Just see the mtenn.py for reference.
-
-        This method exists only to satisfy the abstract base class contract.
-
         Use openadmet.models.trainer.lightning.LightningTrainer for training.
         """
         raise NotImplementedError(
@@ -470,7 +493,24 @@ class GATv2Model(LightningModelBase):
         self, X: torch.utils.data.DataLoader, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
+
+        Parameters
+        ----------
+        X: torch.utils.data.DataLoader
+            DataLoader containing the data to predict on.
+        accelerator: str
+            Accelerator to use ('cpu', 'gpu', etc.).
+        devices: int
+            Number of devices to use.
+        **kwargs: Dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        np.ndarray
+            Predictions as a NumPy array.
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")
@@ -488,9 +528,7 @@ class GATv2Model(LightningModelBase):
         return torch.cat(preds).numpy()
 
     def get_model_summary(self):
-        """
-        Get model summary information
-        """
+        """Get model summary information."""
         if not self.estimator:
             return "Model not built"
 
