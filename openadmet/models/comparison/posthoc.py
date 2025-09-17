@@ -798,7 +798,7 @@ class PostHocComparison(ComparisonBase):
         Returns
         -------
         None
-        
+
         """
         print("Levene's test results")
         print("-------------------------")
