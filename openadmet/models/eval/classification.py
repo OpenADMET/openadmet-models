@@ -43,7 +43,21 @@ def pr_auc_score(y_true, y_pred):
 
 @evaluators.register("ClassificationMetrics")
 class ClassificationMetrics(EvalBase):
-    """Compute and report classification metrics such as accuracy, precision, recall, F1, ROC AUC, and PR AUC."""
+    """
+    Compute and report classification metrics such as accuracy, precision, recall, F1, ROC AUC, and PR AUC.
+    
+    Attributes
+    ----------
+    bootstrap_confidence_level : float
+        Confidence level for the bootstrap.
+    use_wandb : bool
+        Whether to log metrics to Weights & Biases.
+    _evaluated : bool
+        Whether the evaluation has been performed.
+    _metrics : dict
+        Dictionary of metrics to compute, with metric functions and properties.
+    
+    """
 
     bootstrap_confidence_level: float = Field(
         0.95, description="Confidence level for the bootstrap"
@@ -222,7 +236,19 @@ class ClassificationMetrics(EvalBase):
 
 @evaluators.register("ClassificationPlots")
 class ClassificationPlots(EvalBase):
-    """Generate and save classification plots such as ROC and PR curves."""
+    """
+    Generate and save classification plots such as ROC and PR curves.
+    
+    Attributes
+    ----------
+    plots : dict
+        Dictionary of plot functions.
+    use_wandb : bool
+        Whether to log plots to Weights & Biases.
+    dpi : int
+        DPI for the plots.
+        
+    """
 
     plots: dict = {}
     use_wandb: bool = Field(False, description="Whether to use wandb")

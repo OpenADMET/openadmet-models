@@ -38,7 +38,29 @@ def wrap_spearmanr(y_true, y_pred):
 
 
 class CrossValidationBase(EvalBase):
-    """Base class for cross-validation evaluators."""
+    """
+    Base class for cross-validation evaluators.
+    
+    Attributes
+    ----------
+    _evaluated : bool
+        Whether the evaluator has been run.
+    axes_labels : list[str]
+        Labels for the axes in plots.
+    title : str
+        Title for the plots.
+    pXC50 : bool
+        Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
+    confidence_level : float
+        Confidence level for the confidence interval.
+    _metrics : dict
+        Dictionary of metrics to evaluate.
+    min_val : float
+        Minimum value for the axes.
+    max_val : float 
+        Maximum value for the axes.
+        
+    """
 
     _evaluated: bool = False
     axes_labels: list[str] = Field(
@@ -79,7 +101,19 @@ class CrossValidationBase(EvalBase):
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
-    """Cross-validation evaluator for sklearn models (single-task regression)."""
+    """
+    Cross-validation evaluator for sklearn models (single-task regression).
+    
+    Attributes
+    ----------
+    n_splits : int
+        Number of splits for cross-validation.
+    n_repeats : int
+        Number of repeats for cross-validation.
+    random_state : int
+        Random state for reproducibility.
+        
+    """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
@@ -331,7 +365,37 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
-    """Cross-validation evaluator for PyTorch Lightning models."""
+    """
+    Cross-validation evaluator for PyTorch Lightning models.
+    
+    Attributes
+    ----------
+    n_splits : int
+        Number of splits for cross-validation.
+    n_repeats : int
+        Number of repeats for cross-validation.
+    random_state : int
+        Random state for reproducibility.
+    _evaluated : bool
+        Whether the evaluator has been run.
+    axes_labels : list[str]
+        Labels for the axes in plots.
+    title : str
+        Title for the plots.
+    pXC50 : bool    
+        Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
+    confidence_level : float
+        Confidence level for the confidence interval.
+    _metrics : dict
+        Dictionary of metrics to evaluate.
+    min_val : float
+        Minimum value for the axes.
+    max_val : float
+        Maximum value for the axes.
+    use_wandb : bool
+        Whether to use wandb for logging.
+        
+    """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")

@@ -22,7 +22,21 @@ nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
-    """Compute and report regression metrics such as MSE, MAE, R2, Kendall's tau, and Spearman's rho."""
+    """
+    Compute and report regression metrics such as MSE, MAE, R2, Kendall's tau, and Spearman's rho.
+    
+    Attributes
+    ----------
+    bootstrap_confidence_level : float
+        Confidence level for the bootstrap.
+    use_wandb : bool
+        Whether to use wandb for logging.
+    _evaluated : bool
+        Whether the model has been evaluated.
+    _metrics : dict
+        Dictionary of metrics to compute.
+    
+    """
 
     bootstrap_confidence_level: float = Field(
         0.95, description="Confidence level for the bootstrap"
@@ -279,7 +293,31 @@ class RegressionMetrics(EvalBase):
 
 @evaluators.register("RegressionPlots")
 class RegressionPlots(EvalBase):
-    """Generate and save regression plots such as regression scatter plots and confidence interval plots."""
+    """
+    Generate and save regression plots such as regression scatter plots and confidence interval plots.
+    
+    Attributes
+    ----------
+    axes_labels : list of str
+        Labels for the axes.
+    title : str
+        Title for the plot.
+    do_stats : bool
+        Whether to compute and display statistics on the plots.
+    pXC50 : bool
+        Whether to highlight pXC50 log unit ranges.
+    plots : dict
+        Dictionary of plot functions.
+    min_val : float
+        Minimum value for the axes.
+    max_val : float
+        Maximum value for the axes.
+    use_wandb : bool
+        Whether to use wandb for logging.
+    dpi : int
+        DPI for the plot.
+    
+    """
 
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"
