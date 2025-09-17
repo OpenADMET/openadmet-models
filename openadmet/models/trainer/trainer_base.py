@@ -42,7 +42,7 @@ class TrainerBase(BaseModel, ABC):
 
     Attributes
     ----------
-    model : ModelBase
+    _model : ModelBase
         The model to be trained.
 
     """
