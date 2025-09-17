@@ -8,9 +8,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class SVMModelBase(PickleableModelBase):
-    """
-    Base class for SVM models, allows instantiation from parameters that are passable to the SVM model classes.
-    """
+    """Base class for SVM models."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +19,7 @@ class SVMModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -38,7 +36,7 @@ class SVMModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -52,9 +50,7 @@ class SVMModelBase(PickleableModelBase):
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params)
         else:
@@ -62,7 +58,7 @@ class SVMModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
@@ -83,7 +79,7 @@ class SVMModelBase(PickleableModelBase):
 @models.register("SVMRegressorModel")
 class SVMRegressorModel(SVMModelBase):
     """
-    SVM regression model
+    SVM regression model.
 
     Common parameters for SVM models can be found at:
     https://scikit-learn.org/stable/modules/svm.html
@@ -105,7 +101,7 @@ class SVMRegressorModel(SVMModelBase):
 @models.register("SVMClassifierModel")
 class SVMClassifierModel(SVMModelBase):
     """
-    SVM classification model
+    SVM classification model.
 
     Common parameters for SVM models can be found at:
     https://scikit-learn.org/stable/modules/svm.html
