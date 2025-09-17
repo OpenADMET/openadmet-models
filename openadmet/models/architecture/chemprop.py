@@ -22,30 +22,97 @@ _METRIC_TO_LOSS = {
 @model_registry.register("ChemPropModel")
 class ChemPropModel(LightningModelBase):
     """
-    ChemProp regression model
+    ChemProp regression model.
+
+    This class implements a ChemProp-based regression model using message passing neural networks (MPNNs)
+    for molecular property prediction. It supports various configurations for message passing, aggregation,
+    and feed-forward network (FFN) layers. Can be initialized from the CheMeleon foundation model [REF], overriding
+    settings for depth, message hidden dim, messages, and aggregation.
+
+    Attributes
+    ----------
+    type : str
+        The type of the model.
+    n_tasks : int
+        Number of prediction tasks.
+    messages : str
+        Type of message passing ("bond" or "atom").
+    aggregation : str
+        Aggregation method ("mean" or "norm").
+    depth : int
+        Number of message passing steps.
+    message_hidden_dim : int
+        Hidden dimension size for message passing.
+    ffn_hidden_dim : int
+        Hidden dimension size for the feed-forward network.
+    ffn_num_layers : int
+        Number of layers in the feed-forward network.
+    scaler : object
+        Scaler used for target normalization.
+    normalized_targets : bool
+        Whether targets are normalized.
+    batch_norm : bool
+        Whether to use batch normalization.
+    dropout : float
+        Dropout rate.
+    from_chemeleon : bool
+        Whether to use the CheMeleon foundation model.
+    monitor_metric : str
+        The metric to monitor during training.
+    metric_list : list
+        List of metrics to use for evaluation.
+    warmup_epochs : int
+        Number of warmup epochs for learning rate scheduling.
+    init_lr : float
+        Initial learning rate.
+    max_lr : float
+        Maximum learning rate.
+    final_lr : float
+        Final learning rate.
+
     """
 
     type: ClassVar[str] = "ChemPropModel"
-    batch_norm: bool = False
-    monitor_metric: str = "val_loss"
-    metric_list: list = ["mse", "mae", "rmse"]
-    mod_params: dict = {}
-    from_chemeleon: bool = False
+    n_tasks: int = 1
+    messages: str = "bond"
+    aggregation: str = "norm"
     depth: int = 3
     message_hidden_dim: int = 300
     ffn_hidden_dim: int = 300
     ffn_num_layers: int = 1
-    messages: str = "bond"
-    aggregation: str = "norm"
+    scaler: object = None
     normalized_targets: bool = True
+    batch_norm: bool = False
     dropout: float = 0.0
-    n_tasks: int = 1
+    from_chemeleon: bool = False
+    monitor_metric: str = "val_loss"
+    metric_list: list = ["mse", "mae", "rmse"]
+    warmup_epochs: int = 2
+    init_lr: float = 1e-4
+    max_lr: float = 1e-3
+    final_lr: float = 1e-4
 
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
         """
-        Validate the messages parameter
+        Validate the messages parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        Raises
+        ------
+        ValueError
+            If value is not "bond" or "atom".
+
         """
         if value not in ["bond", "atom"]:
             raise ValueError("Messages must be either 'bond' or 'atom'")
@@ -55,18 +122,55 @@ class ChemPropModel(LightningModelBase):
     @classmethod
     def validate_aggregation(cls, value):
         """
-        Validate the aggregation parameter
+        Validate the aggregation parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        Raises
+        ------
+        ValueError
+            If value is not "mean" or "norm".
+
         """
         if value not in ["mean", "norm"]:
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
-    def _get_output_transform(self, scaler):
+    def __init__(self, *args, **kwargs):
         """
-        Set the output transform
+        Initialize the ChemPropModel.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments for parent class.
+        **kwargs : dict
+            Keyword arguments for parent class and model configuration.
+
         """
-        if scaler is not None:
-            output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
+        super().__init__(*args, **kwargs)
+        self.build()
+
+    def _get_output_transform(self):
+        """
+        Set the output transform for predictions.
+
+        Returns
+        -------
+        nn.UnscaleTransform or None
+            The output transform to apply to predictions.
+
+        """
+        if self.scaler is not None:
+            output_transform = nn.UnscaleTransform.from_standard_scaler(self.scaler)
         elif self.normalized_targets:
             # Expects the targets to be normalized, likely to be loaded from state dict
             output_transform = nn.UnscaleTransform(
@@ -79,29 +183,71 @@ class ChemPropModel(LightningModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
+
+        .. deprecated:: 1.0
+            Use direct initialization instead.
+
+        Parameters
+        ----------
+        class_params : dict, optional
+            Class-level parameters.
+        mod_params : dict, optional
+            Model-specific parameters.
+
+        Raises
+        ------
+        DeprecationWarning
+            Always raised as this method is deprecated.
+
         """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+        raise DeprecationWarning("Deprecating `from_params` method.")
 
     def make_new(self) -> "ChemPropModel":
         """
-        Copy parameters to a new model instance without copying the estimator
+        Copy parameters to a new model instance without copying the estimator.
+
+        Returns
+        -------
+        ChemPropModel
+            A new instance of ChemPropModel with the same parameters.
+
         """
-        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     def train(self, dataloader, scaler=None):
         """
-        Train the model
+        Train the model.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader for training data.
+        scaler : object, optional
+            Scaler for target normalization.
+
+        Raises
+        ------
+        NotImplementedError
+            Always raised. Use a trainer for training.
+
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
         )
 
-    def build(self, scaler=None):
+    def build(self):
         """
-        Prepare the model
+        Prepare and build the ChemProp model.
+
+        Downloads and loads the CheMeleon foundation model if specified, otherwise
+        constructs a new MPNN model with the given configuration.
+
+        Returns
+        -------
+        self : ChemPropModel
+            The current instance with the estimator built.
+
         """
         if not self.estimator:
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
@@ -154,14 +300,26 @@ class ChemPropModel(LightningModelBase):
                 input_dim=self.message_hidden_dim,
                 hidden_dim=self.ffn_hidden_dim,
                 n_layers=self.ffn_num_layers,
-                output_transform=self._get_output_transform(scaler),
+                output_transform=self._get_output_transform(),
                 dropout=self.dropout,
             )
 
             # Create the MPNN model
-            mpnn = models.MPNN(mp, aggr, ffn, self.batch_norm, metric_list)
+            mpnn = models.MPNN(
+                message_passing=mp,
+                agg=aggr,
+                predictor=ffn,
+                batch_norm=self.batch_norm,
+                metrics=metric_list,
+                warmup_epochs=self.warmup_epochs,
+                init_lr=self.init_lr,
+                max_lr=self.max_lr,
+                final_lr=self.final_lr,
+            )
 
             # Pass monitor metric from "model" to "module"
+            # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
+            # is needed at the "module" level for use in both `configure_optimizers` and `LightningTrainer`
             mpnn.monitor_metric = self.monitor_metric
             self.estimator = mpnn
 
@@ -174,7 +332,29 @@ class ChemPropModel(LightningModelBase):
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the trained model.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Input data for prediction.
+        accelerator : str, optional
+            Accelerator type to use ("gpu" or "cpu").
+        devices : int, optional
+            Number of devices to use for prediction.
+        **kwargs
+            Additional keyword arguments for the trainer.
+
+        Returns
+        -------
+        np.ndarray
+            Model predictions.
+
+        Raises
+        ------
+        AttributeError
+            If the model is not trained or built.
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")
