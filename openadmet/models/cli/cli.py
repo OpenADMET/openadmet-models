@@ -7,7 +7,7 @@ from openadmet.models.cli.predict import predict
 
 @click.group()
 def cli():
-    """OpenADMET CLI"""
+    """OpenADMET CLI."""
     pass
 
 

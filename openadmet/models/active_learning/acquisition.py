@@ -37,7 +37,7 @@ def max_uncertainty_reduction(mean, std, **kwargs):
 
 def exploitation(mean, std, **kwargs):
     r"""
-    Returns the instances within `X` with highest predicted values.
+    Return the instances within `X` with highest predicted values.
 
     Parameters
     ----------
@@ -105,7 +105,7 @@ def probability_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
 
 def expected_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     r"""
-    Expected Improvement (EI) acquisition function. Balances exploration and exploitation.
+    Get expected Improvement (EI) acquisition function. Balances exploration and exploitation.
 
     .. math::
 

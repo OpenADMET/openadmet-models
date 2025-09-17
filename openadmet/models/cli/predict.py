@@ -64,8 +64,8 @@ def predict(
     xi,
     debug,
 ):
+    """Predict using a trained model."""
     aq_fxn_args = _validate_aq_fxns(aq_fxns, beta, best_y, xi)
-    """Predict using a trained model"""
     inference_func(
         input_path=input_path,
         input_col=input_col,
@@ -79,6 +79,7 @@ def predict(
 
 
 def _validate_aq_fxns(aq_fxns, beta, best_y, xi):
+    """Validate acquisition functions."""
     # Tuple to list
     aq_fxns = list(aq_fxns)
     beta = list(beta)

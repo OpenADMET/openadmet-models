@@ -14,6 +14,8 @@ from openadmet.models.architecture.model_base import ModelBase
 
 @ensemblers.register("CommitteeRegressor")
 class CommitteeRegressor(EnsembleBase):
+    """Committee Regressor."""
+
     type: ClassVar[str] = "CommitteeRegressor"
     _calibration_model: Any = None
     _calibration_methods: dict = {
@@ -408,6 +410,8 @@ class CommitteeRegressor(EnsembleBase):
         ----------
         paths : list of PathLike
             The file paths to save the model weights.
+        calibration_path: PathLike
+            Path to save calibration model
 
         Returns
         -------
