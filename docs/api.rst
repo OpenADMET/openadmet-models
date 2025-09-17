@@ -4,4 +4,5 @@ API Documentation
 .. autosummary::
    :toctree: autosummary
 
-   openadmet.models.canvas
+
+   openadmet.models.comparison.posthoc
