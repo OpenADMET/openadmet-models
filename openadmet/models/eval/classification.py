@@ -20,7 +20,20 @@ from openadmet.models.eval.eval_base import EvalBase, evaluators
 
 def pr_auc_score(y_true, y_pred):
     """
-    Calculate the area under the precision-recall curve
+    Calculate the area under the precision-recall curve.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True binary labels or binary label indicators.
+    y_pred : array-like
+        Target scores, probability estimates of the positive class.
+
+    Returns
+    -------
+    float
+        Area under the precision-recall curve.
+
     """
     precision, recall, _ = precision_recall_curve(y_true, y_pred)
     return auc(recall, precision)
@@ -28,14 +41,14 @@ def pr_auc_score(y_true, y_pred):
 
 @evaluators.register("ClassificationMetrics")
 class ClassificationMetrics(EvalBase):
+    """Compute and report classification metrics such as accuracy, precision, recall, F1, ROC AUC, and PR AUC."""
+
     bootstrap_confidence_level: float = Field(
         0.95, description="Confidence level for the bootstrap"
     )
     use_wandb: bool = Field(False, description="Whether to use wandb")
     _evaluated: bool = False
 
-    # tuple of metric, whether it is a scipy statistic, whether it requires class predictions,
-    # and the name to use in the report
     _metrics: dict = {
         "accuracy": (accuracy_score, False, True, "Accuracy"),
         "precision": (precision_score, False, True, "Precision"),
@@ -47,7 +60,26 @@ class ClassificationMetrics(EvalBase):
 
     def evaluate(self, y_true=None, y_pred=None, use_wandb=False, tag=None, **kwargs):
         """
-        Evaluate the classification model
+        Evaluate the classification model and compute metrics.
+
+        Parameters
+        ----------
+        y_true : array-like
+            True labels.
+        y_pred : array-like
+            Predicted probabilities or class labels.
+        use_wandb : bool, optional
+            Whether to log metrics to Weights & Biases.
+        tag : str, optional
+            Tag for the evaluation run.
+        kwargs: Dict
+            Additional keyword arguments
+
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics and confidence intervals.
+
         """
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
@@ -127,13 +159,32 @@ class ClassificationMetrics(EvalBase):
     @property
     def metric_names(self):
         """
-        Return the metric names
+        Return the metric names.
+
+        Returns
+        -------
+        list of str
+            List of metric names.
+
         """
         return list(self._metrics.keys())
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the evaluation results, optionally writing to disk.
+
+        Parameters
+        ----------
+        write : bool, optional
+            Whether to write the report to disk.
+        output_dir : str, optional
+            Output directory for the report.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
+
         """
         if write:
             self.write_report(output_dir)
@@ -141,7 +192,17 @@ class ClassificationMetrics(EvalBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the evaluation report to a JSON file and optionally log to wandb.
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory for the report.
+
+        Returns
+        -------
+        None
+
         """
         # write to JSON
         json_path = output_dir / "classification_metrics.json"
@@ -159,13 +220,31 @@ class ClassificationMetrics(EvalBase):
 
 @evaluators.register("ClassificationPlots")
 class ClassificationPlots(EvalBase):
+    """Generate and save classification plots such as ROC and PR curves."""
+
     plots: dict = {}
     use_wandb: bool = Field(False, description="Whether to use wandb")
     dpi: int = Field(300, description="DPI for the plot")
 
     def evaluate(self, y_true=None, y_pred=None, use_wandb=False, **kwargs):
         """
-        Evaluate the classification model
+        Generate classification plots.
+
+        Parameters
+        ----------
+        y_true : array-like
+            True labels.
+        y_pred : array-like
+            Predicted probabilities or class labels.
+        use_wandb : bool, optional
+            Whether to log plots to Weights & Biases.
+        kwargs : Dict
+            Additional keyword arguments
+
+        Returns
+        -------
+        None
+
         """
         # Cast as numpy arrays
         y_true = np.asarray(y_true)
@@ -199,6 +278,28 @@ class ClassificationPlots(EvalBase):
         ylabel="True Positive Rate",
         title="Receiver Operating Characteristic Curve",
     ):
+        """
+        Plot the ROC curve.
+
+        Parameters
+        ----------
+        y_true : array-like
+            True labels.
+        y_pred : array-like
+            Predicted probabilities or class labels.
+        xlabel : str, optional
+            Label for the x-axis.
+        ylabel : str, optional
+            Label for the y-axis.
+        title : str, optional
+            Title for the plot.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The ROC curve figure.
+
+        """
         # Binary
         if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             fpr, tpr, _ = roc_curve(y_true.ravel(), y_pred[:, 1].ravel())
@@ -227,6 +328,28 @@ class ClassificationPlots(EvalBase):
         ylabel="Precision",
         title="Precision-Recall Curve",
     ):
+        """
+        Plot the precision-recall curve.
+
+        Parameters
+        ----------
+        y_true : array-like
+            True labels.
+        y_pred : array-like
+            Predicted probabilities or class labels.
+        xlabel : str, optional
+            Label for the x-axis.
+        ylabel : str, optional
+            Label for the y-axis.
+        title : str, optional
+            Title for the plot.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The precision-recall curve figure.
+
+        """
         # Binary
         if (y_true.ndim == 1) or (y_true.ndim == 2 and y_true.shape[1] == 1):
             precision, recall, _ = precision_recall_curve(
@@ -254,7 +377,20 @@ class ClassificationPlots(EvalBase):
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the generated plots, optionally writing to disk.
+
+        Parameters
+        ----------
+        write : bool, optional
+            Whether to write the plots to disk.
+        output_dir : str, optional
+            Output directory for the plots.
+
+        Returns
+        -------
+        dict
+            Dictionary of plot figures.
+
         """
         if write:
             self.write_report(output_dir)
@@ -262,7 +398,17 @@ class ClassificationPlots(EvalBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the generated plots to PNG files and optionally log to wandb.
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory for the plots.
+
+        Returns
+        -------
+        None
+        
         """
         for plot_tag, plot in self.plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"

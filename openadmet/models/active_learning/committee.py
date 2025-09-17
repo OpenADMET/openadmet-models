@@ -411,7 +411,7 @@ class CommitteeRegressor(EnsembleBase):
         paths : list of PathLike
             The file paths to save the model weights.
         calibration_path: PathLike
-            Path to save calibration model
+            Path to save calibration model.
 
         Returns
         -------
