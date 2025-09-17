@@ -26,7 +26,7 @@ from openadmet.models.anvil.specification import AnvilSpecification
 def anvil(recipe_path, tag, debug, output_dir):
     """
     Run an Anvil workflow for model building from a recipe.
-    
+
     Parameters
     ----------
     recipe_path : str
@@ -37,7 +37,7 @@ def anvil(recipe_path, tag, debug, output_dir):
         Enable debug mode, by default False.
     output_dir : str, optional
         Output directory path, by default "anvil_training".
-        
+
     """
     spec = AnvilSpecification.from_recipe(recipe_path)
     wf = spec.to_workflow()

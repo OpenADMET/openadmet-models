@@ -68,7 +68,7 @@ def predict(
 ):
     """
     Predict using a trained model.
-    
+
     Parameters
     ----------
     input_path : str
@@ -91,7 +91,7 @@ def predict(
         Exploration parameter for EI and PI acquisition functions.
     debug : bool
         Enable debug mode.
-    
+
     """
     aq_fxn_args = _validate_aq_fxns(aq_fxns, beta, best_y, xi)
     inference_func(
