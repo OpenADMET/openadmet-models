@@ -370,3 +370,49 @@ class ChemPropModel(LightningModelBase):
             )
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
+
+
+def freeze_weights(
+    self, message_passing: bool = True, batch_norm: bool = True, ffn_layers: int = 1
+):
+    """
+    Freeze parts of the model for transfer learning or fine-tuning.
+
+    Parameters
+    ----------
+    message_passing : bool, optional
+        If True, freeze the message passing layers. Default is True.
+    batch_norm : bool, optional
+        If True, freeze the batch normalization layers. Default is True.
+    ffn_layers : int, optional
+        Number of feed-forward network (FFN) layers to freeze. Default is 1.
+
+    Notes
+    -----
+    This method sets the `requires_grad` attribute of the specified layers to False,
+    preventing their weights from being updated during training. It also sets these
+    layers to evaluation mode.
+
+    """
+    # Freeze message passing
+    if message_passing:
+        self.estimator.message_passing.apply(
+            lambda module: module.requires_grad_(False)
+        )
+        self.estimator.message_passing.eval()
+
+    # Freeze batch norm
+    if batch_norm:
+        self.estimator.bn.apply(lambda module: module.requires_grad_(False))
+        self.estimator.bn.eval()
+
+    # Freeze feedforward network
+    for idx in range(ffn_layers):
+        self.estimator.predictor.ffn[idx].requires_grad_(False)
+        self.estimator.predictor.ffn[idx + 1].eval()
+        # What if index out of range?
+
+    # TODO: better logging
+    logger.info(
+        f"Model weights for {message_passing=}, {batch_norm=}, {ffn_layers=} frozen"
+    )
