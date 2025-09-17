@@ -3,21 +3,21 @@
 
 .. automodule:: openadmet.models
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -39,4 +39,3 @@
    registries
    split
    tests
-
