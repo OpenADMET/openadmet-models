@@ -32,7 +32,7 @@ from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 class PostHocComparison(ComparisonBase):
     """
     PostHoc multi-model comparison.
-    
+
     Attributes
     ----------
     _metrics_names : list
@@ -45,7 +45,7 @@ class PostHocComparison(ComparisonBase):
         Confidence level for statistical tests.
     _stats_names : list
         List of statistical tests to perform.
-        
+
     """
 
     _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
