@@ -41,7 +41,7 @@ _SECTION_CLASS_GETTERS = {
 class DataSpec(BaseModel):
     """
     Data specification for the workflow.
-    
+
     Attributes
     ----------
     type : str
@@ -60,7 +60,7 @@ class DataSpec(BaseModel):
         Whether to drop rows with NaN values.
     _catalog : Optional[intake.catalog.Catalog]
         The intake catalog object if the resource is a YAML file.
-        
+
     """
 
     type: str
@@ -267,7 +267,7 @@ class SpecBase(BaseModel):
 class Metadata(SpecBase):
     """
     Metadata specification.
-    
+
     Attributes
     ----------
     version : Literal["v1"]
@@ -290,7 +290,7 @@ class Metadata(SpecBase):
         List of biotargets associated with the workflow.
     tags : list[str]
         Additional tags for the workflow.
-        
+
     """
 
     version: Literal["v1"] = Field(
@@ -319,7 +319,7 @@ class Metadata(SpecBase):
 class AnvilSection(SpecBase):
     """
     Anvil specification section base class.
-    
+
     Attributes
     ----------
     type : Optional[str]
@@ -328,7 +328,7 @@ class AnvilSection(SpecBase):
         The parameters for the section.
     section_name : ClassVar[str]
         The name of the section.
-        
+
     """
 
     type: str | None = None
@@ -368,7 +368,7 @@ class FeatureSpec(AnvilSection):
 class ModelSpec(AnvilSection):
     """
     Model specification.
-    
+
     Attributes
     ----------
     section_name : ClassVar[str]
@@ -377,7 +377,7 @@ class ModelSpec(AnvilSection):
         The path to the model parameters file.
     serial_path : Optional[str]
         The path to the model serialization file.
-        
+
     """
 
     section_name: ClassVar[str] = "model"
@@ -416,7 +416,7 @@ class ModelSpec(AnvilSection):
 class EnsembleSpec(AnvilSection):
     """
     Ensemble specification.
-    
+
     Attributes
     ----------
     section_name : ClassVar[str]
@@ -429,7 +429,7 @@ class EnsembleSpec(AnvilSection):
         The list of parameter file paths for the ensemble models.
     serial_paths : Optional[list[str]]
         The list of serialization file paths for the ensemble models.
-    
+
     """
 
     section_name: ClassVar[str] = "ensemble"

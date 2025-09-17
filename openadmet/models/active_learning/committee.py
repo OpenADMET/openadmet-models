@@ -18,7 +18,7 @@ from openadmet.models.architecture.model_base import ModelBase
 class CommitteeRegressor(EnsembleBase):
     """
     Committee Regressor.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -27,7 +27,7 @@ class CommitteeRegressor(EnsembleBase):
         The calibration model used for uncertainty calibration.
     _calibration_methods : dict
         A dictionary mapping calibration method names to their corresponding functions.
-    
+
     """
 
     type: ClassVar[str] = "CommitteeRegressor"

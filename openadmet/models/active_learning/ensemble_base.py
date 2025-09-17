@@ -24,7 +24,7 @@ def get_ensemble_class(ensemble_type):
 class EnsembleBase(ModelBase):
     """
     Base class for ensemble models.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -33,7 +33,7 @@ class EnsembleBase(ModelBase):
         The list of models in the ensemble.
     _calibration_model_save_name : ClassVar[str]
         The name of the calibration model save file.
-        
+
     """
 
     type: ClassVar[str] = "EnsembleBase"

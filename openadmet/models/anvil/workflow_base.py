@@ -24,7 +24,7 @@ from openadmet.models.transforms.transform_base import (
 class AnvilWorkflowBase(BaseModel):
     """
     Base class for Anvil workflows.
-    
+
     Attributes
     ----------
     metadata : Metadata
@@ -49,7 +49,7 @@ class AnvilWorkflowBase(BaseModel):
         The parent specification for the workflow.
     debug : bool
         Whether to run in debug mode.
-    
+
     """
 
     metadata: Metadata
