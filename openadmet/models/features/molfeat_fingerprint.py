@@ -12,9 +12,7 @@ from openadmet.models.features.feature_base import MolfeatFeaturizer, featurizer
 
 @featurizers.register("FingerprintFeaturizer")
 class FingerprintFeaturizer(MolfeatFeaturizer):
-    """
-    Fingerprint featurizer for molecules, relies on molfeat backend
-    """
+    """Fingerprint featurizer for molecules, relies on molfeat backend."""
 
     type: ClassVar[str] = "FingerprintFeaturizer"
     fp_type: str = Field(
@@ -32,9 +30,7 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
     )
 
     def _prepare(self):
-        """
-        Prepare the featurizer
-        """
+        """Prepare the featurizer."""
         vec_featurizer = FPVecTransformer(self.fp_type, dtype=self.dtype)
         self._transformer = MoleculeTransformer(
             vec_featurizer,
@@ -46,7 +42,20 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
 
     def featurize(self, smiles: Iterable[str]) -> tuple[np.ndarray, np.ndarray]:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings.
+        
+        Parameters
+        ----------
+        smiles : Iterable[str]
+            List or iterable of SMILES strings to featurize.
+
+        Returns
+        -------
+        tuple
+            Tuple of (features, indices). Features is a 2D numpy array of shape (
+            n_samples, n_features) and indices is a 1D numpy array of the indices of the
+            successfully featurized molecules.
+
         """
         with dm.without_rdkit_log():
             feat, indices = self._transformer(smiles, ignore_errors=True)

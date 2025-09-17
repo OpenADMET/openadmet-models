@@ -34,7 +34,7 @@ def _vendor_build_dataloader(
     **kwargs,
 ):
     r"""
-    Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`\s
+    Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`.
 
     Parameters
     ----------
@@ -87,9 +87,7 @@ def _vendor_build_dataloader(
 
 @featurizers.register("ChemPropFeaturizer")
 class ChemPropFeaturizer(DeepLearningFeaturizer):
-    """
-    ChemPropFeaturizer featurizer for molecules, relies on chemprop
-    """
+    """ChemPropFeaturizer featurizer for molecules, relies on chemprop."""
 
     normalize_targets: bool = True
     n_jobs: int = 4
@@ -97,9 +95,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
     shuffle: bool = False
 
     def _prepare(self):
-        """
-        Prepare the featurizer
-        """
+        """Prepare the featurizer."""
 
     def featurize(
         self, smiles: Iterable[str], y: Iterable[Any] = None
@@ -110,7 +106,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
     ]:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings.
 
         #TODO: we likely want to separate the scaling from the featurization
         """
@@ -154,7 +150,26 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         **kwargs,
     ) -> DataLoader:
         """
-        Convert a MoleculeDataset to a DataLoader
+        Convert a MoleculeDataset to a PyTorch DataLoader.
+
+        Parameters
+        ----------
+        dataset : MoleculeDataset
+            The dataset containing the molecules to load.
+        batch_size : int, optional
+            Number of samples per batch to load (default is 128).
+        shuffle : bool, optional
+            Whether to shuffle the data at every epoch (default is False).
+        sampler : torch.utils.data.Sampler, optional
+            Custom sampler to use for loading data (default is None).
+        **kwargs
+            Additional keyword arguments passed to the DataLoader.
+
+        Returns
+        -------
+        DataLoader
+            A PyTorch DataLoader for the given MoleculeDataset.
+            
         """
         return _vendor_build_dataloader(
             dataset,
@@ -165,7 +180,5 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         )
 
     def make_new(self) -> "ChemPropFeaturizer":
-        """
-        Copy parameters to a new ChemPropFeaturizer instance
-        """
+        """Copy parameters to a new ChemPropFeaturizer instance."""
         return self.__class__(**self.dict())

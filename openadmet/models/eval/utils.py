@@ -7,7 +7,7 @@ def _make_stat_caption(
     cv: bool,
 ) -> str:
     """
-    A function to generate the stat caption (string) to be printed on the regplot
+    Generate the stat caption (string) to be printed on the regplot.
 
     Parameters
     ----------
@@ -59,7 +59,7 @@ def _make_stat_dict(
     cv: bool,
 ):
     """
-    A function to generate a dict of formatted metrics and names to be printed into a table on regplot
+    Generate a dict of formatted metrics and names to be printed into a table on regplot.
 
     Parameters
     ----------
