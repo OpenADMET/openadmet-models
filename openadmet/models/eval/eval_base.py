@@ -88,7 +88,7 @@ class EvalBase(BaseModel):
 
     class Config:
         """Pydantic configuration for the EvalBase class."""
-        
+
         extra = "allow"
 
     @abstractmethod
