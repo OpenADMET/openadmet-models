@@ -643,7 +643,7 @@ class RegressionPlots(EvalBase):
         Returns
         -------
         None
-        
+
         """
         for plot_tag, plot in self.plot_data.items():
             plot_path = output_dir / f"{plot_tag}.png"

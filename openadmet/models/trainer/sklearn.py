@@ -13,14 +13,14 @@ class SKlearnBasicTrainer(TrainerBase):
     def train(self, X: Any, y: Any):
         """
         Train the model.
-        
+
         Parameters
         ----------
         X : Any
             Feature data.
         y : Any
             Target data.
-        
+
         Returns
         -------
         ModelBase
@@ -74,7 +74,7 @@ class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
     ----------
     param_grid : dict
         The parameter grid for grid search.
-    
+
     """
 
     param_grid: dict = {}
@@ -89,7 +89,7 @@ class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
             Featurized data.
         y : Any
             Target data.
-        
+
         Returns
         -------
         ModelBase

@@ -19,7 +19,7 @@ class ScaffoldSplitter(SplitterBase):
             List or iterable of SMILES strings to split.
         y : Iterable[float] or pd.Series
             List or iterable of target values corresponding to the SMILES strings.
-        
+
         Returns
         -------
         tuple
@@ -189,7 +189,7 @@ class MaxDissimilaritySplitter(SplitterBase):
     def split(self, X, y):
         """
         Split the data into train, validation, and test sets.
-        
+
         Parameters
         ----------
         X : Iterable[str]
@@ -207,7 +207,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             - y_train: Training set target values.
             - y_val: Validation set target values (or None if val_size=0).
             - y_test: Test set target values (or None if test_size=0).
-            
+
         """
         # No test set requested
         if self.test_size == 0:

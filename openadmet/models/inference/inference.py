@@ -14,17 +14,17 @@ from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSp
 def load_anvil_model_and_metadata(model_dir):
     """
     Load the Anvil model from the specified path.
-    
+
     Parameters
     ----------
     model_dir : Union[str, Path]
         Path to the directory containing the trained model and its metadata.
-    
+
     Returns
     -------
     tuple
         A tuple containing the loaded model, feature object, metadata, and data specification.
-        
+
     """
     # Safely cast to Path
     if not isinstance(model_dir, Path):
@@ -100,7 +100,7 @@ def predict(
 ):
     """
     Predict using a trained model.
-    
+
     Parameters
     ----------
     input_path : Union[str, Path, pd.DataFrame]
@@ -125,12 +125,12 @@ def predict(
         additional metrics. Default is None.
     **kwargs
         Additional keyword arguments.
-        
+
     Returns
     -------
     pd.DataFrame
         DataFrame containing the input data along with prediction results.
-        
+
     """
     if not log:
         logger.remove()

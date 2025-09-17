@@ -169,7 +169,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         -------
         DataLoader
             A PyTorch DataLoader for the given MoleculeDataset.
-            
+
         """
         return _vendor_build_dataloader(
             dataset,

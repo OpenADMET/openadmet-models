@@ -10,12 +10,12 @@ splitters = ClassRegistry(unique=True)
 def get_splitter_class(feat_type):
     """
     Retrieve a splitter class from the registry by type.
-    
+
     Parameters
     ----------
     feat_type : str
         The type of splitter to retrieve.
-    
+
     Returns
     -------
     SplitterBase
@@ -68,14 +68,14 @@ class SplitterBase(BaseModel, ABC):
     def split(self, X: Iterable, Y: Iterable) -> tuple[Iterable, Iterable]:
         """
         Split the data.
-        
+
         Parameters
         ----------
         X : Iterable
             Feature data.
         Y : Iterable
             Target data.
-        
+
         Returns
         -------
         tuple

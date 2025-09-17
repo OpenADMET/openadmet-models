@@ -12,17 +12,17 @@ trainers = ClassRegistry(unique=True)
 def get_trainer_class(model_type):
     """
     Retrieve a trainer class from the registry by type.
-    
+
     Parameters
     ----------
     model_type : str
         The type of trainer to retrieve.
-    
+
     Returns
     -------
     TrainerBase
         The trainer class corresponding to the given type.
-        
+
     """
     try:
         feat_class = trainers.get_class(model_type)
@@ -42,7 +42,7 @@ class TrainerBase(BaseModel, ABC):
     ----------
     model : ModelBase
         The model to be trained.
-    
+
     """
 
     _model: ModelBase

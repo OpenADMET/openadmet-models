@@ -117,7 +117,7 @@ class MolfeatFeaturizer(FeaturizerBase):
             Additional positional arguments.
         **kwargs
             Additional keyword arguments.
-        
+
         """
         super().__init__(*args, **kwargs)
         self._prepare()

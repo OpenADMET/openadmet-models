@@ -17,7 +17,7 @@ class ShuffleSplitter(SplitterBase):
             Feature data.
         y : array-like
             Target data.
-        
+
         Returns
         -------
         tuple
@@ -28,7 +28,7 @@ class ShuffleSplitter(SplitterBase):
             - y_train: Training set target values.
             - y_val: Validation set target values (or None if val_size=0).
             - y_test: Test set target values (or None if test_size=0).
-            
+
         """
         # No test set requested
         if self.test_size == 0:

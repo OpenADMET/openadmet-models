@@ -167,7 +167,7 @@ class EvalBase(BaseModel):
         -------
         tuple
             Tuple of (metric, lower confidence bound, upper confidence bound).
-            
+
         """
         # calculate the metric and confidence intervals
         if is_scipy_statistic:

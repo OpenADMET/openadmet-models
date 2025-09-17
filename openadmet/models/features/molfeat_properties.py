@@ -66,19 +66,19 @@ class DescriptorFeaturizer(MolfeatFeaturizer):
     def featurize(self, smiles: Iterable[str]) -> tuple[np.ndarray, np.ndarray]:
         """
         Featurize a list of SMILES strings.
-        
+
         Parameters
         ----------
         smiles : Iterable[str]
             List or iterable of SMILES strings to featurize.
-        
+
         Returns
         -------
         tuple
             Tuple of (features, indices). Features is a 2D numpy array of shape (
             n_samples, n_features) and indices is a 1D numpy array of the indices
             of the successfully featurized molecules.
-            
+
         """
         with dm.without_rdkit_log():
             feat, indices = self._transformer(smiles, ignore_errors=True)

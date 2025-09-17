@@ -15,7 +15,7 @@ from openadmet.models.features.feature_base import (
 class FeatureConcatenator(FeaturizerBase):
     """
     Concatenate features from multiple featurizers into a single feature array.
-    
+
     Attributes
     ----------
     featurizers : list of FeaturizerBase
@@ -102,7 +102,7 @@ class FeatureConcatenator(FeaturizerBase):
         -------
         tuple
             Tuple of (concatenated feature array, common indices).
-            
+
         """
         # if the input arrays are 1d, make them 2d
         feats = [

@@ -23,7 +23,7 @@ def get_atomic_number(element: str) -> int:
     ----------
     element : str
         The element symbol, e.g. 'C', 'O', 'N'.
-    
+
     Returns
     -------
     int
@@ -98,7 +98,7 @@ class MTENNDataset(Dataset):
     ):
         """
         Load the complexes into MDAnalysis.
-        
+
         Parameters
         ----------
         complexes : Iterable[Path]
@@ -107,12 +107,12 @@ class MTENNDataset(Dataset):
             The residue name(s) of the ligand in the PDB files.
         ignore_h : bool, optional
             Whether to ignore hydrogen atoms in the complexes. Default is True.
-        
+
         Returns
         -------
         tuple
             Tuple of lists: (positions, atomic numbers, B-factors, ligand masks)
-        
+
         """
         all_pos = []
         all_Z = []

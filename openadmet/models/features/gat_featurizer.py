@@ -31,7 +31,7 @@ class GATGraphFeaturizer(FeaturizerBase):
             The SMILES string of the molecule.
         y_val : Optional[float]
             The target value for the molecule, if available.
-        
+
         Returns
         -------
         Optional[Data]
