@@ -312,6 +312,8 @@ class RegressionPlots(EvalBase):
             Whether to log plots to Weights & Biases.
         target_labels : list of str, optional
             List of target names.
+        kwargs : Dict
+            Additional keyword arguments.
 
         Returns
         -------

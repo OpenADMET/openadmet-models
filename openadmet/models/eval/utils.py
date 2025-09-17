@@ -16,7 +16,7 @@ def _make_stat_caption(
     ----------
     data : dict
         a dict of task_names, metric_names, metrics, bootstrap_confidence_level, evaluated parameters filled out after evaluating the regression model
-    task_names : list or str
+    task_name : list or str
         a list of all the tasks, i.e. the predicted target columns, OR str for single task
     metric_names : dict
         a dict of the names of the metrics
