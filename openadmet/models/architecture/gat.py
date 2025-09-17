@@ -406,7 +406,7 @@ class GATv2Model(LightningModelBase):
             Class parameters for the GATv2Model class.
         mod_params: dict
             Model parameters for the GATv2Module class.
-        
+
         Returns
         -------
         instance: GATv2Model

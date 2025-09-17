@@ -28,7 +28,7 @@ class LGBMModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the LightGBM model class, such as n_estimators, max_depth,
             learning_rate, etc.
-        
+
         Returns
         -------
         instance: LGBMModelBase
@@ -49,7 +49,7 @@ class LGBMModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data values
-        
+
         Returns
         -------
         None
@@ -75,7 +75,7 @@ class LGBMModelBase(PickleableModelBase):
             Featurized data to predict on
         kwargs: dict
             Additional keyword arguments to pass to the predict method of the LightGBM model
-        
+
         Returns
         -------
         np.ndarray

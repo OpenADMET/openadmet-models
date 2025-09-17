@@ -50,7 +50,7 @@ class ModelBase(BaseModel, ABC):
         mod_params: dict
             Parameters for the model class, such as n_estimators, max_depth,
             learning_rate, etc.
-        
+
         Returns
         -------
         instance: ModelBase
@@ -68,12 +68,12 @@ class ModelBase(BaseModel, ABC):
     def save(self, path: PathLike):
         """
         Save the model, abstract method to be implemented by subclasses.
-        
+
         Parameters
         ----------
         path: PathLike
             Path to save the model to
-        
+
         Returns
         -------
         None
@@ -90,7 +90,7 @@ class ModelBase(BaseModel, ABC):
         ----------
         path: PathLike
             Path to load the model from
-        
+
         Returns
         -------
         None
@@ -109,7 +109,7 @@ class ModelBase(BaseModel, ABC):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the model serialization to
-        
+
         Returns
         -------
         None
@@ -128,7 +128,7 @@ class ModelBase(BaseModel, ABC):
             Path to load the model parameters from
         serial_path: PathLike
             Path to load the model serialization from
-        
+
         Returns
         -------
         None
@@ -149,7 +149,7 @@ class ModelBase(BaseModel, ABC):
         ----------
         input: Any
             Input data to predict on
-        
+
         Returns
         -------
         None
@@ -178,12 +178,12 @@ class PickleableModelBase(ModelBase):
     def save(self, path: PathLike):
         """
         Save the model to a pickle file.
-        
+
         Parameters
         ----------
         path: PathLike
             Path to save the model to
-        
+
         Returns
         -------
         None
@@ -203,7 +203,7 @@ class PickleableModelBase(ModelBase):
         ----------
         path: PathLike
             Path to load the model from
-        
+
         Returns
         -------
         None
@@ -229,7 +229,7 @@ class PickleableModelBase(ModelBase):
             Path to load the model parameters from
         serial_path: PathLike
             Path to load the pickled model from
-        
+
         Returns
         -------
         instance: PickleableModelBase
@@ -255,7 +255,7 @@ class PickleableModelBase(ModelBase):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the pickled model to
-    
+
         Returns
         -------
         None
@@ -403,7 +403,7 @@ class LightningModelBase(ModelBase):
         ----------
         path: PathLike
             Path to save the model to
-        
+
         Returns
         -------
         None
@@ -428,9 +428,7 @@ class LightningModelBase(ModelBase):
         self.estimator.load_state_dict(torch.load(path))
 
     def serialize(
-        self, 
-        param_path: PathLike = "model.json", 
-        serial_path: PathLike = "model.pth"
+        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
     ):
         """
         Save the model to a json file and a serialized file.
@@ -441,7 +439,7 @@ class LightningModelBase(ModelBase):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the serialized model to
-        
+
         Returns
         -------
         None
@@ -469,7 +467,7 @@ class LightningModelBase(ModelBase):
             Path to load the serialized model from
         scaler: Any, optional
             Scaler for target normalization, if applicable
-        
+
         Returns
         -------
         instance: LightningModelBase
