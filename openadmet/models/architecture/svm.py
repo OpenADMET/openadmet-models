@@ -66,6 +66,8 @@ class SVMModelBase(PickleableModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+        **kwargs
+            Additional keyword arguments for the predict method.
 
         Returns
         -------

@@ -50,10 +50,22 @@ def _vendor_build_dataloader(
         Whether to perform class balancing (i.e., use an equal number of positive and negative
         molecules). Class balance is only available for single task classification datasets. Set
         shuffle to True in order to get a random subset of the larger class.
-    seed : int, default=None
-        the random seed to use for shuffling (only used when `shuffle` is `True`).
-    shuffle : bool, default=False
-        whether to shuffle the data during sampling.
+    sampler : torch.utils.data.Sampler, optional
+        Custom sampler to use for loading data (default is None). If this is specified, it
+        overrides class_balance and shuffle.
+    seed : int, optional
+        Random seed for shuffling and class balancing (default is None).
+    shuffle : bool, default=True
+        Whether to shuffle the data at every epoch. If a sampler is specified, this is ignored
+        (i.e., the sampler determines the shuffling). If class_balance is True, this is also ignored
+        (i.e., class balancing determines the shuffling).
+    **kwargs
+        Additional keyword arguments passed to the DataLoader.
+
+    Returns
+    -------
+    DataLoader
+        A PyTorch DataLoader for the given MoleculeDataset, ReactionDataset, or MulticomponentDataset.
 
     """
     if sampler is not None:

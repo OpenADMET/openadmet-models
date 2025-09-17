@@ -352,6 +352,7 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("calibration_method")
     def check_method(cls, value):
+        """Validate the calibration method."""
         allowed = ["isotonic-regression", "scaling-factor"]
         if value not in allowed:
             raise ValueError(
@@ -361,41 +362,14 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("n_models")
     def check_n_models(cls, value):
-        """
-        Ensure ensemble has more than one model.
-
-        Parameters
-        ----------
-        value : int
-            The number of models in the ensemble.
-
-        Returns
-        -------
-        value : int
-            The validated number of models.
-
-        """
+        """Ensure ensemble has more than one model."""
         if value < 2:
             raise ValueError("Ensemble must have more than one model.")
         return value
 
     @model_validator(mode="after")
     def check_paths(self):
-        """
-        Ensure both param_paths and serial_paths are provided together.
-
-        Returns
-        -------
-        self : EnsembleSpec
-            The validated EnsembleSpec instance.
-
-        Raises
-        ------
-        ValueError
-            If only one of param_paths or serial_paths is provided, or if their lengths do not
-            match the number of models.
-
-        """
+        """Ensure both param_paths and serial_paths are provided together."""
         # Both specified
         if self.param_paths and self.serial_paths:
             # Check lengths match

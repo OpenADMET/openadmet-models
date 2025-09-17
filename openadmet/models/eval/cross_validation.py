@@ -406,6 +406,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             Whether to use Weights & Biases logging.
         target_labels : list of str, optional
             List of target names.
+        kwargs : Dict
+            Additional keyword arguments.
 
         Returns
         -------
