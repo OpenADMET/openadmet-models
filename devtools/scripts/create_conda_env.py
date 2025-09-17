@@ -1,3 +1,5 @@
+"""Script to create a conda environment for openadmet-models."""
+
 import argparse
 import os
 import re
