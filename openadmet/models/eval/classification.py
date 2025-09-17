@@ -45,7 +45,7 @@ def pr_auc_score(y_true, y_pred):
 class ClassificationMetrics(EvalBase):
     """
     Compute and report classification metrics such as accuracy, precision, recall, F1, ROC AUC, and PR AUC.
-    
+
     Attributes
     ----------
     bootstrap_confidence_level : float
@@ -56,7 +56,7 @@ class ClassificationMetrics(EvalBase):
         Whether the evaluation has been performed.
     _metrics : dict
         Dictionary of metrics to compute, with metric functions and properties.
-    
+
     """
 
     bootstrap_confidence_level: float = Field(
@@ -238,7 +238,7 @@ class ClassificationMetrics(EvalBase):
 class ClassificationPlots(EvalBase):
     """
     Generate and save classification plots such as ROC and PR curves.
-    
+
     Attributes
     ----------
     plots : dict
@@ -247,7 +247,7 @@ class ClassificationPlots(EvalBase):
         Whether to log plots to Weights & Biases.
     dpi : int
         DPI for the plots.
-        
+
     """
 
     plots: dict = {}

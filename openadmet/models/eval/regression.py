@@ -24,7 +24,7 @@ nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 class RegressionMetrics(EvalBase):
     """
     Compute and report regression metrics such as MSE, MAE, R2, Kendall's tau, and Spearman's rho.
-    
+
     Attributes
     ----------
     bootstrap_confidence_level : float
@@ -35,7 +35,7 @@ class RegressionMetrics(EvalBase):
         Whether the model has been evaluated.
     _metrics : dict
         Dictionary of metrics to compute.
-    
+
     """
 
     bootstrap_confidence_level: float = Field(
@@ -295,7 +295,7 @@ class RegressionMetrics(EvalBase):
 class RegressionPlots(EvalBase):
     """
     Generate and save regression plots such as regression scatter plots and confidence interval plots.
-    
+
     Attributes
     ----------
     axes_labels : list of str
@@ -316,7 +316,7 @@ class RegressionPlots(EvalBase):
         Whether to use wandb for logging.
     dpi : int
         DPI for the plot.
-    
+
     """
 
     axes_labels: list[str] = Field(

@@ -40,7 +40,7 @@ def wrap_spearmanr(y_true, y_pred):
 class CrossValidationBase(EvalBase):
     """
     Base class for cross-validation evaluators.
-    
+
     Attributes
     ----------
     _evaluated : bool
@@ -57,9 +57,9 @@ class CrossValidationBase(EvalBase):
         Dictionary of metrics to evaluate.
     min_val : float
         Minimum value for the axes.
-    max_val : float 
+    max_val : float
         Maximum value for the axes.
-        
+
     """
 
     _evaluated: bool = False
@@ -103,7 +103,7 @@ class CrossValidationBase(EvalBase):
 class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     """
     Cross-validation evaluator for sklearn models (single-task regression).
-    
+
     Attributes
     ----------
     n_splits : int
@@ -112,7 +112,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         Number of repeats for cross-validation.
     random_state : int
         Random state for reproducibility.
-        
+
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
@@ -367,7 +367,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     """
     Cross-validation evaluator for PyTorch Lightning models.
-    
+
     Attributes
     ----------
     n_splits : int
@@ -382,7 +382,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         Labels for the axes in plots.
     title : str
         Title for the plots.
-    pXC50 : bool    
+    pXC50 : bool
         Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
     confidence_level : float
         Confidence level for the confidence interval.
@@ -394,7 +394,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         Maximum value for the axes.
     use_wandb : bool
         Whether to use wandb for logging.
-        
+
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
