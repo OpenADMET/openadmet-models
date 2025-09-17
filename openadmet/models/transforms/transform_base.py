@@ -14,17 +14,17 @@ transforms = ClassRegistry(unique=True)
 def get_transform_class(trans_type):
     """
     Retrieve a transform class from the registry by type.
-    
+
     Parameters
     ----------
     trans_type : str
         The type of transform to retrieve.
-    
+
     Returns
     -------
     TransformBase
         The transform class corresponding to the given type.
-    
+
     """
     try:
         transf_class = transforms.get_class(trans_type)
@@ -51,11 +51,11 @@ class TransformBase(BaseModel, ABC):
             Additional positional arguments.
         **kwargs
             Additional keyword arguments.
-        
+
         Returns
         -------
         Any
             Transformed data in an appropriate format for the model (e.g., numpy arrays, dataloaders, etc.)
             and optional processing info.
-            
+
         """

@@ -20,7 +20,7 @@ class ImputeTransform(TransformBase):
         'iterative' for IterativeImputer.
     random_state : Optional[int]
         Random state for reproducibility when using IterativeImputer.
-    
+
     """
 
     strategy: str = (
