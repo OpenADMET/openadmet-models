@@ -25,7 +25,7 @@ _METRIC_TO_LOSS = {
 class ChemPropModel(LightningModelBase):
     """
     ChemProp regression model.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -59,7 +59,7 @@ class ChemPropModel(LightningModelBase):
         The dropout rate.
     n_tasks : int
         The number of tasks (outputs).
-    
+
     """
 
     type: ClassVar[str] = "ChemPropModel"

@@ -37,7 +37,7 @@ _METRIC_TO_LOSS = {
 class GATv2Module(LightningModuleBase):
     """
     Graph Attention Network v2 (GATv2) Model.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -82,7 +82,7 @@ class GATv2Module(LightningModuleBase):
         Patience for learning rate scheduler.
     monitor_metric : str
         Metric to monitor for learning rate scheduler.
-    
+
     """
 
     # Model architecture hyperparameters
@@ -416,7 +416,7 @@ class GATv2Module(LightningModuleBase):
 class GATv2Model(LightningModelBase):
     """
     GATv2 model wrapper inheriting from TorchModelBase.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -465,7 +465,7 @@ class GATv2Model(LightningModelBase):
         Patience for learning rate scheduler.
     monitor_metric : str
         Metric to monitor for learning rate scheduler.
-        
+
     """
 
     type: ClassVar[str] = "GATv2Model"

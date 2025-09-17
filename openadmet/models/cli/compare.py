@@ -45,7 +45,7 @@ def compare(
 ):
     """
     Compare two or more models from summary statistics.
-    
+
     Parameters
     ----------
     model_stats : list
@@ -58,7 +58,7 @@ def compare(
         Path to output directory, by default None
     report : bool, optional
         Whether to write summary pdf to output-dir, by default False
-    
+
     """
     comp = PostHocComparison()
     comp.compare(

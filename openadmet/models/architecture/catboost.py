@@ -12,7 +12,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class CatBoostModelBase(PickleableModelBase):
     """
     Base class for CatBoost models, allows instantiation from parameters that are passable to the CatBoost model classes.
-    
+
     Attributes
     ----------
     type : ClassVar[str]
@@ -23,7 +23,7 @@ class CatBoostModelBase(PickleableModelBase):
     mod_params : dict
         Parameters for the CatBoost model class, such as n_estimators, max_depth,
         learning_rate, etc.
-    
+
     """
 
     type: ClassVar[str]
