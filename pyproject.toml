@@ -86,3 +86,6 @@ file = "openadmet/models/_version.py"
 [tool.ruff.lint]
 select = ["D", "D213"]
 ignore = ["D212"]
+
+[tool.ruff.per-file-ignores]
+"**/__init__.py" = ["D104"] # Ignore D104 (Missing docstring in public package) specifically for __init__.py files
