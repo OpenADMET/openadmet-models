@@ -23,7 +23,44 @@ _METRIC_TO_LOSS = {
 
 @model_registry.register("ChemPropModel")
 class ChemPropModel(LightningModelBase):
-    """ChemProp regression model."""
+    """
+    ChemProp regression model.
+    
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    batch_norm : bool
+        Whether to use batch normalization.
+    monitor_metric : str
+        The metric to monitor during training.
+    metric_list : list
+        List of metrics to use for evaluation.
+    mod_params : dict
+        Parameters for the ChemProp model class, such as depth, message_hidden_dim,
+        ffn_hidden_dim, ffn_num_layers, messages, aggregation, etc.
+    from_chemeleon : bool
+        Whether to initialize the model from the CheMeleon foundation model.
+    depth : int
+        The depth of the message passing network.
+    message_hidden_dim : int
+        The hidden dimension of the message passing network.
+    ffn_hidden_dim : int
+        The hidden dimension of the feed-forward network.
+    ffn_num_layers : int
+        The number of layers in the feed-forward network.
+    messages : str
+        The type of messages to use, either 'bond' or 'atom'.
+    aggregation : str
+        The type of aggregation to use, either 'mean' or 'norm'.
+    normalized_targets : bool
+        Whether the targets are normalized.
+    dropout : float
+        The dropout rate.
+    n_tasks : int
+        The number of tasks (outputs).
+    
+    """
 
     type: ClassVar[str] = "ChemPropModel"
     batch_norm: bool = False

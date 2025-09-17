@@ -35,7 +35,55 @@ _METRIC_TO_LOSS = {
 
 
 class GATv2Module(LightningModuleBase):
-    """Graph Attention Network v2 (GATv2) Model."""
+    """
+    Graph Attention Network v2 (GATv2) Model.
+    
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    input_dim : int
+        Dimension of input node features.
+    hidden_dim : int
+        Dimension of hidden layers.
+    num_layers : int
+        Number of GAT layers.
+    num_heads : int
+        Number of attention heads in each GAT layer.
+    dropout : float
+        Dropout rate.
+    pooling : str
+        Pooling method ('mean', 'max', 'add').
+    output_dim : int
+        Dimension of the output.
+    edge_dim : Optional[int]
+        Dimension of edge features.
+    concat_heads : bool
+        Whether to concatenate heads in intermediate layers.
+    add_self_loops : bool
+        Whether to add self-loops to the graph.
+    share_weights : bool
+        Whether to share weights across attention heads.
+    bias : bool
+        Whether to include bias terms in GAT layers.
+    loss_function : str
+        Loss function to use ('mse', 'mae', 'huber', 'bce', 'cross_entropy').
+    optimizer : str
+        Optimizer to use ('adam', 'adamw', 'sgd').
+    optimizer_lr : float
+        Learning rate for the optimizer.
+    optimizer_weight_decay : float
+        Weight decay for the optimizer.
+    scheduler : str
+        Learning rate scheduler ('step', 'cosine', 'plateau').
+    scheduler_factor : float
+        Factor for learning rate reduction.
+    scheduler_patience : int
+        Patience for learning rate scheduler.
+    monitor_metric : str
+        Metric to monitor for learning rate scheduler.
+    
+    """
 
     # Model architecture hyperparameters
     input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
@@ -366,7 +414,59 @@ class GATv2Module(LightningModuleBase):
 
 @model_registry.register("GATv2Model")
 class GATv2Model(LightningModelBase):
-    """GATv2 model wrapper inheriting from TorchModelBase."""
+    """
+    GATv2 model wrapper inheriting from TorchModelBase.
+    
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    scaler : Optional[Any]
+        Scaler used for target variable normalization.
+    mod_params : dict
+        Parameters for the GATv2Module class.
+    input_dim : Optional[int]
+        Dimension of input node features.
+    hidden_dim : int
+        Dimension of hidden layers.
+    num_layers : int
+        Number of GAT layers.
+    num_heads : int
+        Number of attention heads in each GAT layer.
+    dropout : float
+        Dropout rate.
+    pooling : str
+        Pooling method ('mean', 'max', 'add').
+    output_dim : int
+        Dimension of the output.
+    edge_dim : Optional[int]
+        Dimension of edge features.
+    concat_heads : bool
+        Whether to concatenate heads in intermediate layers.
+    add_self_loops : bool
+        Whether to add self-loops to the graph.
+    share_weights : bool
+        Whether to share weights across attention heads.
+    bias : bool
+        Whether to include bias terms in GAT layers.
+    loss_function : str
+        Loss function to use ('mse', 'mae', 'huber', 'bce', 'cross_entropy').
+    optimizer : str
+        Optimizer to use ('adam', 'adamw', 'sgd').
+    optimizer_lr : float
+        Learning rate for the optimizer.
+    optimizer_weight_decay : float
+        Weight decay for the optimizer.
+    scheduler : str
+        Learning rate scheduler ('step', 'cosine', 'plateau').
+    scheduler_factor : float
+        Factor for learning rate reduction.
+    scheduler_patience : int
+        Patience for learning rate scheduler.
+    monitor_metric : str
+        Metric to monitor for learning rate scheduler.
+        
+    """
 
     type: ClassVar[str] = "GATv2Model"
     scaler: Optional[Any] = None
