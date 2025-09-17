@@ -232,10 +232,6 @@ class MTENNFeaturizer(FeaturizerBase):
     shuffle : bool
         Whether to shuffle the data during sampling.
 
-    Returns
-    -------
-    None
-
     """
 
     ligand_resname: Union[str, list[str]] = "LIG"
