@@ -81,24 +81,24 @@ class MTENNSchNetModel(LightningModelBase):
         if not self.estimator:
             model_rep = SchNetRepresentationConfig(
                 hidden_channels=self.hidden_channels,
-                num_filters=self.num_filters, 
-                num_interactions=self.num_interactions, 
-                num_gaussians=self.num_gaussians, 
+                num_filters=self.num_filters,
+                num_interactions=self.num_interactions,
+                num_gaussians=self.num_gaussians,
                 cutoff=self.cutoff,
-                max_num_neighbors=self.max_num_neighbors, 
+                max_num_neighbors=self.max_num_neighbors,
                 readout=self.readout,
             )
             model_config = ModelConfig(
-                representation=model_rep, 
-                strategy=self.strategy, 
-                pred_readout=self.pred_readout, 
+                representation=model_rep,
+                strategy=self.strategy,
+                pred_readout=self.pred_readout,
                 weights_path=self.weights_path,
             )
             self.estimator = MTENNLightningModule(model_config)
         else:
             logger.warning("Model already exists, skipping build.")
 
-    #Deprecated now; remove from anvil workflow eventually? 
+    # Deprecated now; remove from anvil workflow eventually?
     def from_params(self, params):
         pass
 
