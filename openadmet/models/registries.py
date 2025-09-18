@@ -1,3 +1,5 @@
+"""Registry imports for all model components."""
+
 # IMPORTANT: order matters here, make sure to import all the registered classes first
 # before importing the registry classes
 # there must be a better way to do this, but for now this works

@@ -1,3 +1,5 @@
+"""Imputation transforms for handling missing data."""
+
 from openadmet.models.transforms.transform_base import TransformBase, transforms
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
@@ -10,6 +12,17 @@ from typing import Optional, Literal
 class ImputeTransform(TransformBase):
     """
     Impute missing values in the dataset using a specified strategy.
+
+    Attributes
+    ----------
+    strategy : str
+        The imputation strategy to use. Options are 'mean', 'median', 'most_frequent', or 'constant'.
+    imputer : str
+        The type of imputer to use. Options are 'simple' for SimpleImputer or
+        'iterative' for IterativeImputer.
+    random_state : Optional[int]
+        Random state for reproducibility when using IterativeImputer.
+
     """
 
     strategy: str = (
@@ -20,9 +33,7 @@ class ImputeTransform(TransformBase):
 
     @field_validator("strategy")
     def validate_strategy(cls, value):
-        """
-        Validate the strategy parameter.
-        """
+        """Validate the strategy parameter."""
         if value not in ["mean", "median", "most_frequent", "constant"]:
             raise ValueError(
                 "Strategy must be one of 'mean', 'median', 'most_frequent', or 'constant'"
@@ -31,9 +42,7 @@ class ImputeTransform(TransformBase):
 
     @field_validator("imputer")
     def validate_imputer(cls, value):
-        """
-        Validate the imputer type.
-        """
+        """Validate the imputer type."""
         if value not in ["simple", "iterative"]:
             raise ValueError("Imputer must be either 'simple' or 'iterative'")
         return value
@@ -46,6 +55,10 @@ class ImputeTransform(TransformBase):
         ----------
         X: np.ndarray
             Input data with potential missing values
+        *args
+            Additional positional arguments (not used).
+        **kwargs
+            Additional keyword arguments (not used).
 
         Returns
         -------

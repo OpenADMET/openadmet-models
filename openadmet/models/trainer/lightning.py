@@ -1,3 +1,5 @@
+"""PyTorch Lightning trainer implementation."""
+
 from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 
@@ -12,7 +14,58 @@ from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 @trainers.register("LightningTrainer")
 class LightningTrainer(TrainerBase):
     """
-    Trainer for sklearn models with grid search
+    Trainer for sklearn models with grid search.
+
+    Attributes
+    ----------
+    max_epochs : int
+        The maximum number of epochs to train for.
+    accelerator : str
+        The accelerator to use, e.g. 'cpu', 'gpu'.
+    devices : int
+        The number of devices to use, e.g. 1 for single GPU, -1
+        for all available GPUs.
+    use_wandb : bool
+        Whether to use Weights & Biases for logging.
+    output_dir : Path
+        The output directory to save logs and models.
+    wandb_project : str
+        The Weights & Biases project name.
+    early_stopping : bool
+        Whether to use early stopping.
+    early_stopping_patience : int
+        The number of epochs with no improvement after which
+        training will be stopped.
+    early_stopping_mode : str
+        The mode for early stopping, either 'min' or 'max'.
+    early_stopping_min_delta : float
+        The minimum change in the monitored quantity to qualify
+        as an improvement.
+    gradient_clip_val : float
+        The value to clip gradients at.
+    precision : int
+        The precision to use, e.g. 32, 16, or 'bf16'.
+    accumulate_grad_batches : int
+        The number of batches to accumulate gradients over.
+    deterministic : bool
+        Whether to use deterministic algorithms.
+    fast_dev_run : bool
+        Whether to run a single batch for debugging.
+    limit_train_batches : float
+        The fraction of training batches to use, e.g. 1.0 for all,
+        0.5 for half, or an integer for a fixed number.
+    limit_val_batches : float
+        The fraction of validation batches to use, e.g. 1.0 for all,
+        0.5 for half, or an integer for a fixed number. Default is 1.0.
+    wandb_logger : Any
+        The Weights & Biases logger.
+    _logger : Any
+        The logger.
+    _trainer : Any
+        The PyTorch Lightning trainer.
+    _callbacks : Any
+        The callbacks.
+
     """
 
     max_epochs: int = 20
@@ -39,9 +92,7 @@ class LightningTrainer(TrainerBase):
     _callbacks: Any = None
 
     def build(self):
-        """
-        Build the model trainer
-        """
+        """Build the model trainer."""
         # Initialize logging container
         self._logger = []
 
@@ -107,7 +158,20 @@ class LightningTrainer(TrainerBase):
 
     def train(self, train_dataloader, val_dataloader):
         """
-        Train the model
+        Train the model.
+
+        Parameters
+        ----------
+        train_dataloader : DataLoader
+            The training data loader.
+        val_dataloader : DataLoader
+            The validation data loader.
+
+        Returns
+        -------
+        model : TrainerBase
+            The trained model.
+
         """
         # Indicate that the model is being trained
         logger.debug(f"Training model {self.model.estimator}")
@@ -118,7 +182,5 @@ class LightningTrainer(TrainerBase):
         return self.model
 
     def make_new(self) -> "LightningTrainer":
-        """
-        Copy parameters to a new LightningTrainer instance
-        """
+        """Copy parameters to a new LightningTrainer instance."""
         return self.__class__(**self.__dict__)

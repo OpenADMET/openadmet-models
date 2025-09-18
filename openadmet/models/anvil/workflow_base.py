@@ -1,3 +1,5 @@
+"""Base class for Anvil workflows."""
+
 from abc import abstractmethod
 from os import PathLike
 from typing import Any, Optional
@@ -20,7 +22,35 @@ from openadmet.models.transforms.transform_base import (
 
 
 class AnvilWorkflowBase(BaseModel):
-    """Base class for Anvil workflows."""
+    """
+    Base class for Anvil workflows.
+
+    Attributes
+    ----------
+    metadata : Metadata
+        Metadata for the workflow.
+    data_spec : DataSpec
+        Data specification for the workflow.
+    transform : Optional[TransformBase]
+        Optional transform step.
+    split : SplitterBase
+        Data splitting strategy.
+    feat : FeaturizerBase
+        Feature extraction method.
+    model : ModelBase
+        The model to be used.
+    ensemble : Optional[EnsembleBase]
+        Optional ensemble model.
+    trainer : TrainerBase
+        The trainer for the model.
+    evals : list[EvalBase]
+        List of evaluation metrics.
+    parent_spec : AnvilSpecification
+        The parent specification for the workflow.
+    debug : bool
+        Whether to run in debug mode.
+
+    """
 
     metadata: Metadata
     data_spec: DataSpec

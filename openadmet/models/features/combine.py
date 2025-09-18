@@ -1,3 +1,5 @@
+"""Combine features from multiple featurizers into a single feature array."""
+
 from functools import reduce
 
 import numpy as np
@@ -13,6 +15,16 @@ from openadmet.models.features.feature_base import (
 
 @featurizers.register("FeatureConcatenator")
 class FeatureConcatenator(FeaturizerBase):
+    """
+    Concatenate features from multiple featurizers into a single feature array.
+
+    Attributes
+    ----------
+    featurizers : list of FeaturizerBase
+        List of featurizer instances to concatenate.
+
+    """
+
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"
     )
@@ -21,8 +33,21 @@ class FeatureConcatenator(FeaturizerBase):
     @classmethod
     def validate_featurizers(cls, value):
         """
+        Validate and construct the list of featurizers.
+
         If passed a dictionary of parameters, construct the relevant featurizers
-        and pack them into the featurizers list
+        and pack them into the featurizers list. If a list is provided, use it directly.
+
+        Parameters
+        ----------
+        value : dict or list
+            Dictionary of featurizer types and parameters, or a list of featurizer instances.
+
+        Returns
+        -------
+        list
+            Sorted list of featurizer instances.
+
         """
         processed_featurizers = []
         if isinstance(value, dict):
@@ -41,7 +66,18 @@ class FeatureConcatenator(FeaturizerBase):
 
     def featurize(self, smiles: list[str]) -> np.ndarray:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings using all featurizers and concatenate the results.
+
+        Parameters
+        ----------
+        smiles : list of str
+            List of SMILES strings to featurize.
+
+        Returns
+        -------
+        np.ndarray
+            Concatenated feature array for all SMILES.
+
         """
         features = []
         indices = []
@@ -55,7 +91,20 @@ class FeatureConcatenator(FeaturizerBase):
     @staticmethod
     def concatenate(feats: list[ArrayLike], indices: list[np.ndarray]) -> np.ndarray:
         """
-        Concatenate a list of features,
+        Concatenate a list of feature arrays, keeping only features present in all datasets.
+
+        Parameters
+        ----------
+        feats : list of array-like
+            List of feature arrays to concatenate.
+        indices : list of np.ndarray
+            List of index arrays indicating valid entries for each feature array.
+
+        Returns
+        -------
+        tuple
+            Tuple of (concatenated feature array, common indices).
+
         """
         # if the input arrays are 1d, make them 2d
         feats = [

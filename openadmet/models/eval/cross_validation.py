@@ -1,3 +1,5 @@
+"""Cross-validation evaluators for regression models."""
+
 import json
 from collections import defaultdict
 
@@ -26,16 +28,38 @@ from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 
 def wrap_ktau(y_true, y_pred):
+    """Wrap ktau nan omission."""
     return nan_omit_ktau(y_true, y_pred).statistic
 
 
 def wrap_spearmanr(y_true, y_pred):
+    """Wrap spearmanR nan omission."""
     return nan_omit_spearmanr(y_true, y_pred).correlation
 
 
 class CrossValidationBase(EvalBase):
     """
-    Base class for cross-validation
+    Base class for cross-validation evaluators.
+
+    Attributes
+    ----------
+    _evaluated : bool
+        Whether the evaluator has been run.
+    axes_labels : list[str]
+        Labels for the axes in plots.
+    title : str
+        Title for the plots.
+    pXC50 : bool
+        Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
+    confidence_level : float
+        Confidence level for the confidence interval.
+    _metrics : dict
+        Dictionary of metrics to evaluate.
+    min_val : float
+        Minimum value for the axes.
+    max_val : float
+        Maximum value for the axes.
+
     """
 
     _evaluated: bool = False
@@ -64,7 +88,13 @@ class CrossValidationBase(EvalBase):
     @property
     def metric_names(self):
         """
-        Return the metric names
+        Get the list of metric names.
+
+        Returns
+        -------
+        list of str
+            List of metric names.
+
         """
         return list(self._metrics.keys())
 
@@ -72,7 +102,17 @@ class CrossValidationBase(EvalBase):
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     """
-    Cross-validation evaluator for sklearn models, this is aimed at single task regression models currently
+    Cross-validation evaluator for sklearn models (single-task regression).
+
+    Attributes
+    ----------
+    n_splits : int
+        Number of splits for cross-validation.
+    n_repeats : int
+        Number of repeats for cross-validation.
+    random_state : int
+        Random state for reproducibility.
+
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
@@ -91,7 +131,32 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         **kwargs,
     ):
         """
-        Evaluate the regression model
+        Evaluate the regression model using repeated K-fold cross-validation.
+
+        Parameters
+        ----------
+        model : sklearn-like estimator
+            The regression model to evaluate.
+        X_train : array-like
+            Training features.
+        y_train : array-like
+            Training targets.
+        y_pred : array-like
+            Predicted values (not used in cross-validation, but required for interface).
+        y_true : array-like
+            True values (not used in cross-validation, but required for interface).
+        tag : str, optional
+            Tag for the evaluation run.
+        target_labels : list of str, optional
+            List of target names.
+        kwargs : Dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary containing cross-validation metrics and confidence intervals.
+
         """
         if (
             model is None
@@ -199,6 +264,20 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         return self.data
 
     def get_stat_caption(self, t_label):
+        """
+        Get a formatted statistics caption for a given task.
+
+        Parameters
+        ----------
+        t_label : str
+            Task label.
+
+        Returns
+        -------
+        str
+            Caption string with statistics.
+
+        """
         if not self._evaluated:
             raise ValueError(
                 ":( You must evaluate the model before the statistics caption can be made."
@@ -213,6 +292,20 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         )
 
     def get_stat_dict(self, t_label):
+        """
+        Get a statistics dictionary for a given task.
+
+        Parameters
+        ----------
+        t_label : str
+            Task label.
+
+        Returns
+        -------
+        dict
+            Dictionary of statistics for the task.
+
+        """
         if not self._evaluated:
             raise ValueError(
                 "R'uh-r'oh! You must evaluate the model before the statistics dict can be made."
@@ -228,7 +321,20 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the evaluation results, optionally writing to disk.
+
+        Parameters
+        ----------
+        write : bool, optional
+            Whether to write the report to disk.
+        output_dir : str, optional
+            Output directory for the report.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
+
         """
         if write:
             self.write_report(output_dir)
@@ -236,7 +342,17 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the evaluation report and plots to disk.
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory for the report and plots.
+
+        Returns
+        -------
+        None
+
         """
         # write to JSON
         with open(output_dir / "cross_validation_metrics.json", "w") as f:
@@ -250,7 +366,35 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     """
-    Cross-validation evaluator for Pytorch Lightning models.
+    Cross-validation evaluator for PyTorch Lightning models.
+
+    Attributes
+    ----------
+    n_splits : int
+        Number of splits for cross-validation.
+    n_repeats : int
+        Number of repeats for cross-validation.
+    random_state : int
+        Random state for reproducibility.
+    _evaluated : bool
+        Whether the evaluator has been run.
+    axes_labels : list[str]
+        Labels for the axes in plots.
+    title : str
+        Title for the plots.
+    pXC50 : bool
+        Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
+    confidence_level : float
+        Confidence level for the confidence interval.
+    _metrics : dict
+        Dictionary of metrics to evaluate.
+    min_val : float
+        Minimum value for the axes.
+    max_val : float
+        Maximum value for the axes.
+    use_wandb : bool
+        Whether to use wandb for logging.
+
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
@@ -297,10 +441,45 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         target_labels=None,
         **kwargs,
     ):
+        """
+        Evaluate the regression model using repeated K-fold cross-validation with PyTorch Lightning.
+
+        Parameters
+        ----------
+        model : LightningModelBase
+            The PyTorch Lightning model to evaluate.
+        X_train : array-like
+            Training features.
+        y_true : array-like
+            True values for the full dataset.
+        y_pred : array-like
+            Predicted values for the full dataset.
+        y_train : array-like
+            Training targets.
+        X_train_raw : array-like
+            Raw training features (before featurization).
+        y_train_raw : array-like
+            Raw training targets (before featurization).
+        featurizer : object
+            Featurizer instance for data preprocessing.
+        trainer : LightningTrainer
+            Trainer instance for model training.
+        tag : str, optional
+            Tag for the evaluation run.
+        use_wandb : bool, optional
+            Whether to use Weights & Biases logging.
+        target_labels : list of str, optional
+            List of target names.
+        kwargs : Dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary containing cross-validation metrics and confidence intervals.
+
+        """
         logger.info("Starting cross-validation")
-        """
-        Evaluate the regression model
-        """
         if (
             model is None
             or X_train is None
@@ -487,7 +666,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     @property
     def task_names(self):
         """
-        Return the task names
+        Get the task names after evaluation.
+
+        Returns
+        -------
+        list of str
+            List of task names.
+
         """
         if not self._evaluated:
             raise ValueError("Must evaluate before getting task names")
@@ -495,7 +680,20 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
     def report(self, write=False, output_dir=None):
         """
-        Report the evaluation
+        Report the evaluation results, optionally writing to disk.
+
+        Parameters
+        ----------
+        write : bool, optional
+            Whether to write the report to disk.
+        output_dir : str, optional
+            Output directory for the report.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
+
         """
         if write:
             self.write_report(output_dir)
@@ -503,7 +701,17 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
     def write_report(self, output_dir):
         """
-        Write the evaluation report
+        Write the evaluation report and plots to disk.
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory for the report and plots.
+
+        Returns
+        -------
+        None
+
         """
         # write to JSON
         with open(output_dir / "cross_validation_metrics.json", "w") as f:
@@ -514,6 +722,20 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
     def get_stat_caption(self, t_label):
+        """
+        Get a formatted statistics caption for a given task.
+
+        Parameters
+        ----------
+        t_label : str
+            Task label.
+
+        Returns
+        -------
+        str
+            Caption string with statistics.
+
+        """
         return _make_stat_caption(
             data=self.data,
             task_name=t_label,
@@ -524,6 +746,20 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         )
 
     def get_stat_dict(self, t_label):
+        """
+        Get a statistics dictionary for a given task.
+
+        Parameters
+        ----------
+        t_label : str
+            Task label.
+
+        Returns
+        -------
+        dict
+            Dictionary of statistics for the task.
+
+        """
         return _make_stat_dict(
             data=self.data,
             task_name=t_label,

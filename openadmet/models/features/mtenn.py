@@ -1,3 +1,5 @@
+"""MTENN featurizer implementation."""
+
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -17,7 +19,18 @@ ptable = GetPeriodicTable()
 
 def get_atomic_number(element: str) -> int:
     """
-    Get the atomic number of an element
+    Get the atomic number of an element.
+
+    Parameters
+    ----------
+    element : str
+        The element symbol, e.g. 'C', 'O', 'N'.
+
+    Returns
+    -------
+    int
+        The atomic number of the element.
+
     """
     try:
         return ptable.GetAtomicNumber(element)
@@ -29,9 +42,7 @@ atomic_number_vfunc = np.vectorize(get_atomic_number)
 
 
 class MTENNDataset(Dataset):
-    """
-    Custom dataset for MTENN models
-    """
+    """Custom dataset for MTENN models."""
 
     def __init__(
         self,
@@ -40,7 +51,27 @@ class MTENNDataset(Dataset):
         ligand_resname: Union[str, list[str]] = "LIG",
         ignore_h: bool = True,
     ):
-        """ """
+        """
+        MTENNDataset for loading protein-ligand complexes.
+
+        Parameters
+        ----------
+        complexes : Iterable[Path]
+            List or iterable of paths to PDB files of protein-ligand complexes.
+        y : Iterable[Any]
+            List or iterable of target values corresponding to the complexes.
+        ligand_resname : Union[str, list[str]], optional
+            The residue name(s) of the ligand in the PDB files. If a single string
+            is provided, it will be used for all complexes. If a list is provided,
+            it must be the same length as complexes. Default is "LIG".
+        ignore_h : bool, optional
+            Whether to ignore hydrogen atoms in the complexes. Default is True.
+
+        Returns
+        -------
+        None
+
+        """
         self.complexes = complexes
         if isinstance(ligand_resname, str):
             ligand_resname = [ligand_resname] * len(complexes)
@@ -68,7 +99,23 @@ class MTENNDataset(Dataset):
         complexes: Iterable[Path], ligand_resname, ignore_h: bool = True
     ):
         """
-        Load the complexes into MDAnalysis"""
+        Load the complexes into MDAnalysis.
+
+        Parameters
+        ----------
+        complexes : Iterable[Path]
+            List or iterable of paths to PDB files of protein-ligand complexes.
+        ligand_resname : Union[str, list[str]]
+            The residue name(s) of the ligand in the PDB files.
+        ignore_h : bool, optional
+            Whether to ignore hydrogen atoms in the complexes. Default is True.
+
+        Returns
+        -------
+        tuple
+            Tuple of lists: (positions, atomic numbers, B-factors, ligand masks)
+
+        """
         all_pos = []
         all_Z = []
         all_B = []
@@ -131,9 +178,11 @@ class MTENNDataset(Dataset):
         return all_pos, all_Z, all_B, all_lig_mask
 
     def __len__(self):
+        """Get length of dataset."""
         return len(self.complexes)
 
     def __getitem__(self, idx):
+        """Get item at index idx."""
         pos = self.pos[idx]
         Z = self.Z[idx]
         B = self.B[idx]
@@ -144,6 +193,7 @@ class MTENNDataset(Dataset):
 
 
 def _mtenn_collate_fn(batch):
+    """Given a list of dataset items, collate them into a batch."""
     data_list = []
     targets = []
 
@@ -165,7 +215,23 @@ def _mtenn_collate_fn(batch):
 @featurizers.register("MTENNFeaturizer")
 class MTENNFeaturizer(FeaturizerBase):
     """
-    MTENNFeaturizer featurizer for molecules for downstream use in MTENN
+    MTENNFeaturizer featurizer for molecules for downstream use in MTENN.
+
+    Attributes
+    ----------
+    ligand_resname : Union[str, list[str]]
+        The residue name(s) of the ligand in the PDB files. If a single string
+        is provided, it will be used for all complexes. If a list is provided,
+        it must be the same length as complexes. Default is "LIG".
+    ignore_h : bool
+        Whether to ignore hydrogen atoms in the complexes. Default is True.
+    n_jobs : int
+        The number of jobs to use for featurization, -1 for maximum parallelism.
+    batch_size : int
+        The batch size to use for the DataLoader.
+    shuffle : bool
+        Whether to shuffle the data during sampling.
+
     """
 
     ligand_resname: Union[str, list[str]] = "LIG"
@@ -178,13 +244,28 @@ class MTENNFeaturizer(FeaturizerBase):
     _dataloader: DataLoader = None
 
     def _prepare(self):
-        """
-        Prepare the featurizer
-        """
+        """Prepare the featurizer."""
 
     def featurize(self, complexes: Iterable[Path], y: Iterable[Any]) -> DataLoader:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings.
+
+        Parameters
+        ----------
+        complexes : Iterable[Path]
+            List or iterable of paths to PDB files of protein-ligand complexes.
+        y : Iterable[Any]
+            List or iterable of target values corresponding to the complexes.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - DataLoader: PyTorch DataLoader for the dataset.
+            - np.ndarray: Array of indices corresponding to the original input.
+            - StandardScaler: Scaler used for any scaling during featurization (None for MTENN).
+            - Dataset: PyTorch Dataset containing the features and targets.
+
         """
         # if a pandas dataframe or series
         if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):
@@ -211,7 +292,5 @@ class MTENNFeaturizer(FeaturizerBase):
         return self._dataloader, indices, None, self._dataset
 
     def make_new(self) -> "MTENNFeaturizer":
-        """
-        Copy parameters to a new MTENNFeaturizer instance
-        """
+        """Copy parameters to a new MTENNFeaturizer instance."""
         return self.__class__(**self.dict())
