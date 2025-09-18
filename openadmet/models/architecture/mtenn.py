@@ -59,8 +59,21 @@ class MTENNSchNetModel(LightningModelBase):
     """
 
     type: ClassVar[str] = "MTENNSchNetModel"
-    mod_params: dict = {}
 
+    #Expose Schnet Representation hyper params
+    hidden_channels: int = 128
+    num_filters: int = 128
+    num_interactions: int = 6
+    num_gaussians: int = 50
+    cutoff: float = 10.0
+    max_num_neighbors: int = 32
+    readout: str = "add"
+
+    #Expose Model Config params (when adding other representations I will add param here; other params available)
+    strategy : str = "concat"
+    pred_readout: str = None
+    weights_path: str= None
+    
     def build(self, scaler=None):
         """
         Prepare the model
