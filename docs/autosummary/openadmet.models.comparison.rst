@@ -2,5 +2,3 @@
 ===========================
 
 .. automodule:: openadmet.models.comparison
-
-
