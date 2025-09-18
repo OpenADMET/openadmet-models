@@ -131,4 +131,4 @@ class MTENNSchNetModel(LightningModelBase):
         """
         Copy parameters to a new model instance without copying the estimator
         """
-        return self.__class__(**self.dict(exclude={"estimator"}))
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
