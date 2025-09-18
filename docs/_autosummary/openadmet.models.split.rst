@@ -1,6 +1,6 @@
 ﻿openadmet.models.split
 ======================
 
-.. currentmodule:: openadmet.models.split
+.. currentmodule:: openadmet.models
 
-.. automodule:: openadmet.models.split
+.. automodule:: split

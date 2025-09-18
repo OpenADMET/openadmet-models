@@ -1,6 +1,6 @@
 ﻿openadmet.models.eval
 =====================
 
-.. currentmodule:: openadmet.models.eval
+.. currentmodule:: openadmet.models
 
-.. automodule:: openadmet.models.eval
+.. automodule:: eval

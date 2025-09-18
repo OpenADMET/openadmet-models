@@ -1,6 +1,6 @@
 ﻿openadmet.models.features
 =========================
 
-.. currentmodule:: openadmet.models.features
+.. currentmodule:: openadmet.models
 
-.. automodule:: openadmet.models.features
+.. automodule:: features

@@ -1,6 +1,6 @@
 ﻿openadmet.models.architecture
 =============================
 
-.. currentmodule:: openadmet.models.architecture
+.. currentmodule:: openadmet.models
 
-.. automodule:: openadmet.models.architecture
+.. automodule:: architecture
