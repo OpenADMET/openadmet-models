@@ -3,10 +3,10 @@
 
 .. automodule:: openadmet.models.comparison.posthoc
 
-   
+
    .. rubric:: Classes
 
    .. autosummary::
-   
+
       PostHocComparison
-   
+

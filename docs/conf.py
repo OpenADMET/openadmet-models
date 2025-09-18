@@ -183,8 +183,10 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
+
 def skip_classmethods(app, what, name, obj, skip, options):
     import inspect
+
     if inspect.isclass(obj):
         return skip
     if inspect.ismethod(obj) and getattr(obj, "__self__", None) is not None:
@@ -192,6 +194,7 @@ def skip_classmethods(app, what, name, obj, skip, options):
         if getattr(obj, "__self__") is not None and isinstance(obj.__self__, type):
             return True
     return skip
+
 
 def setup(app):
     app.connect("autodoc-skip-member", skip_classmethods)
