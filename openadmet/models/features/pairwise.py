@@ -125,3 +125,23 @@ class PairwiseFeaturizer(FeaturizerBase):
         indices = np.arange(len(paired_dataset.X))
 
         return dataloader, indices, None, paired_dataset
+
+    def make_new(self) -> "PairwiseFeaturizer":
+        """
+        Copy parameters to a new PairwiseFeaturizer instance,
+        ensuring the featurizer field is in the correct format.
+        """
+        # Get the featurizer type name
+        feat = self.featurizer
+        if hasattr(feat, "__class__"):
+            feat_type = feat.__class__.__name__
+            # Remove private fields and methods from dict
+            feat_params = {k: v for k, v in feat.__dict__.items() if not k.startswith("_")}
+            featurizer_field = {feat_type: feat_params}
+        else:
+            featurizer_field = feat
+
+        # Build the new config dict
+        config = self.dict()
+        config["featurizer"] = featurizer_field
+        return self.__class__(**config)
