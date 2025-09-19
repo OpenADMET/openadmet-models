@@ -9,8 +9,22 @@ from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
 
-# TODO: Inherit from LightningModuleBase to expose more configurability
 class MTENNLightningModule(pl.LightningModule):
+    """
+    PyTorch Lightning wrapper for MTENN models.
+
+    Parameters
+    ----------
+    model_config : ModelConfig
+        MTENN ModelConfig instance containing representation, strategy,and readout configuration.
+    loss_fn : torch.nn.Module, default=torch.nn.MSELoss()
+        Loss function used for training.
+    lr : float, default=1e-4
+        Learning rate
+    monitor_metric : str, default="val_loss"
+        The metric to monitor during training/validation.
+    """ 
+
     def __init__(
         self,
         model_config: ModelConfig,
@@ -25,12 +39,14 @@ class MTENNLightningModule(pl.LightningModule):
         self.monitor_metric = monitor_metric
 
     def forward(self, data):
+        """Run forward pass through the MTENN model"""
         for k, v in data.items():
             data[k] = v.to(self.device)
         pred, _ = self.model(data)
         return pred
 
     def training_step(self, batch, batch_idx):
+        """Compute and return batch loss"""
         data_batch, target_batch = batch
         batch_loss = 0.0
 
@@ -44,11 +60,13 @@ class MTENNLightningModule(pl.LightningModule):
         return avg_loss
 
     def predict_step(self, batch, batch_idx):
+        """ Prediction step for Lightning Trainer."""
         data_batch, _ = batch
         preds = [self(data) for data in data_batch]
         return torch.cat(preds)
 
     def configure_optimizers(self):
+        ""Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase"""
         return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
 
 
@@ -56,6 +74,34 @@ class MTENNLightningModule(pl.LightningModule):
 class MTENNSchNetModel(LightningModelBase):
     """
     MTENN SchNet Model Implementation
+
+    Class to implement a MTENN based model, specifically one using the SchNet Representation. 
+    This exposes the hyperparameters and model-level options directly to the anvil workflow.  
+    Future versions of this class will enable other types of representations. 
+
+    Parameters
+    ----------
+    hidden_channels : int, default=128
+        Hidden embedding size of SchNet.
+    num_filters : int, default=128
+        Number of filters in cfconv layers.
+    num_interactions : int, default=6
+        Number of interaction blocks.
+    num_gaussians : int, default=50
+        Number of Gaussians for distance expansion.
+    cutoff : float, default=10.0
+        Cutoff distance for interactions.
+    max_num_neighbors : int, default=32
+        Maximum neighbors considered per atom.
+    readout : str, default="add"
+        Global aggregation method ("add" or "mean").
+
+    strategy : str, default="concat"
+        MTENN strategy for combining representations ("delta", "concat", "complex").
+    pred_readout : str or None, default=None
+        Readout function for predictions ("pic50", "pki", or None).
+    weights_path : str or None, default=None
+        Optional path to load pretrained weights.
     """
 
     type: ClassVar[str] = "MTENNSchNetModel"
@@ -69,14 +115,19 @@ class MTENNSchNetModel(LightningModelBase):
     max_num_neighbors: int = 32
     readout: str = "add"
 
-    # Expose Model Config params (when adding other representations I will add param here; other params available)
+    # Expose Model Config params 
     strategy: str = "concat"
     pred_readout: str = None
     weights_path: str = None
 
     def build(self, scaler=None):
         """
-        Prepare the model
+        Prepare the model 
+
+        Parameters
+        ----------
+        scaler : optional
+           Set for compatability; currently unused. 
         """
         if not self.estimator:
             model_rep = SchNetRepresentationConfig(
@@ -100,11 +151,17 @@ class MTENNSchNetModel(LightningModelBase):
 
     # Deprecated now; remove from anvil workflow eventually?
     def from_params(self, params):
+        """Set for compatability with anvil workflow. Method deprecated."""
         pass
 
     def train(self, dataloader):
         """
         Train the model
+
+        Raises
+        ------
+        NotImplementedError
+            Training is not implemented in the model class; use LightningTrainer.
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer."
@@ -112,7 +169,21 @@ class MTENNSchNetModel(LightningModelBase):
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
-        Use model for prediction
+        Run predictions using the built estimator.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            Torch dataloader for inference.
+        accelerator : str, default="gpu"
+            Device type to use ("gpu" or "cpu").
+        devices : int, default=1
+            Number of devices to use.
+
+        Returns
+        -------
+        np.ndarray
+            Concatenated predictions from all batches.
         """
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
