@@ -185,6 +185,7 @@ texinfo_documents = [
 
 
 def skip_classmethods(app, what, name, obj, skip, options):
+    """Skip classmethods in the documentation."""
     import inspect
 
     if inspect.isclass(obj):
@@ -197,4 +198,5 @@ def skip_classmethods(app, what, name, obj, skip, options):
 
 
 def setup(app):
+    """Set up the Sphinx app and skip classmethods."""
     app.connect("autodoc-skip-member", skip_classmethods)
