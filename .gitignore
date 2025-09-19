@@ -70,7 +70,6 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-docs/_autosummrary/
 
 # DS Store
 .DS_Store
