@@ -1,3 +1,5 @@
+"""ChemProp featurizer implementation."""
+
 from collections.abc import Iterable
 from typing import Any, Union
 import numpy as np
@@ -34,7 +36,7 @@ def _vendor_build_dataloader(
     **kwargs,
 ):
     r"""
-    Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`\s
+    Return a :obj:`~torch.utils.data.DataLoader` for :class:`MolGraphDataset`.
 
     Parameters
     ----------
@@ -48,10 +50,22 @@ def _vendor_build_dataloader(
         Whether to perform class balancing (i.e., use an equal number of positive and negative
         molecules). Class balance is only available for single task classification datasets. Set
         shuffle to True in order to get a random subset of the larger class.
-    seed : int, default=None
-        the random seed to use for shuffling (only used when `shuffle` is `True`).
-    shuffle : bool, default=False
-        whether to shuffle the data during sampling.
+    sampler : torch.utils.data.Sampler, optional
+        Custom sampler to use for loading data (default is None). If this is specified, it
+        overrides class_balance and shuffle.
+    seed : int, optional
+        Random seed for shuffling and class balancing (default is None).
+    shuffle : bool, default=True
+        Whether to shuffle the data at every epoch. If a sampler is specified, this is ignored
+        (i.e., the sampler determines the shuffling). If class_balance is True, this is also ignored
+        (i.e., class balancing determines the shuffling).
+    **kwargs
+        Additional keyword arguments passed to the DataLoader.
+
+    Returns
+    -------
+    DataLoader
+        A PyTorch DataLoader for the given MoleculeDataset, ReactionDataset, or MulticomponentDataset.
 
     """
     if sampler is not None:
@@ -88,7 +102,19 @@ def _vendor_build_dataloader(
 @featurizers.register("ChemPropFeaturizer")
 class ChemPropFeaturizer(DeepLearningFeaturizer):
     """
-    ChemPropFeaturizer featurizer for molecules, relies on chemprop
+    ChemPropFeaturizer featurizer for molecules, relies on chemprop.
+
+    Parameters
+    ----------
+    normalize_targets : bool, optional
+        Whether to normalize the targets using StandardScaler, by default True
+    n_jobs : int, optional
+        Number of parallel workers to use, by default 4
+    batch_size : int, optional
+        Batch size for the DataLoader, by default 128
+    shuffle : bool, optional
+        Whether to shuffle the data in the DataLoader, by default False
+
     """
 
     normalize_targets: bool = True
@@ -97,9 +123,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
     shuffle: bool = False
 
     def _prepare(self):
-        """
-        Prepare the featurizer
-        """
+        """Prepare the featurizer."""
 
     def featurize(
         self, smiles: Iterable[str], y: Iterable[Any] = None
@@ -110,7 +134,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
     ]:
         """
-        Featurize a list of SMILES strings
+        Featurize a list of SMILES strings.
 
         #TODO: we likely want to separate the scaling from the featurization
         """
@@ -154,7 +178,26 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         **kwargs,
     ) -> DataLoader:
         """
-        Convert a MoleculeDataset to a DataLoader
+        Convert a MoleculeDataset to a PyTorch DataLoader.
+
+        Parameters
+        ----------
+        dataset : MoleculeDataset
+            The dataset containing the molecules to load.
+        batch_size : int, optional
+            Number of samples per batch to load (default is 128).
+        shuffle : bool, optional
+            Whether to shuffle the data at every epoch (default is False).
+        sampler : torch.utils.data.Sampler, optional
+            Custom sampler to use for loading data (default is None).
+        **kwargs
+            Additional keyword arguments passed to the DataLoader.
+
+        Returns
+        -------
+        DataLoader
+            A PyTorch DataLoader for the given MoleculeDataset.
+
         """
         return _vendor_build_dataloader(
             dataset,
@@ -165,7 +208,5 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         )
 
     def make_new(self) -> "ChemPropFeaturizer":
-        """
-        Copy parameters to a new ChemPropFeaturizer instance
-        """
+        """Copy parameters to a new ChemPropFeaturizer instance."""
         return self.__class__(**self.dict())

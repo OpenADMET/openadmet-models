@@ -1,3 +1,5 @@
+"""Sklearn Pipeline model implementations."""
+
 from sklearn.utils.discovery import all_estimators
 
 
@@ -6,7 +8,7 @@ from sklearn.utils.discovery import all_estimators
 
 def get_sklearn_estimators_as_dict(type_filter: str = None):
     """
-    Get the sklearn estimators
+    Get the sklearn estimators.
 
     Parameters
     ----------

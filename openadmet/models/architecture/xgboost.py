@@ -1,3 +1,5 @@
+"""XGBoost model implementations."""
+
 from typing import ClassVar
 
 from xgboost import XGBClassifier, XGBRegressor
@@ -8,9 +10,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class XGBoostModelBase(PickleableModelBase):
-    """
-    Base class for XGBoost models, allows instantiation from parameters that are passable to the XGBoost model classes.
-    """
+    """Base class for XGBoost models."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +21,7 @@ class XGBoostModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -38,7 +38,7 @@ class XGBoostModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -52,9 +52,7 @@ class XGBoostModelBase(PickleableModelBase):
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params)
         else:
@@ -62,12 +60,14 @@ class XGBoostModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
+        kwargs: Dict
+            Keyword arguments for model
 
         Returns
         -------
@@ -83,7 +83,7 @@ class XGBoostModelBase(PickleableModelBase):
 @models.register("XGBRegressorModel")
 class XGBRegressorModel(XGBoostModelBase):
     """
-    XGBoost regression model
+    XGBoost regression model.
 
     Common parameters for XGBoost models can be found at:
     https://xgboost.readthedocs.io/en/stable/python/python_api.html
@@ -105,7 +105,7 @@ class XGBRegressorModel(XGBoostModelBase):
 @models.register("XGBClassifierModel")
 class XGBClassifierModel(XGBoostModelBase):
     """
-    XGBoost classification model
+    XGBoost classification model.
 
     Common parameters for XGBoost models can be found at:
     https://xgboost.readthedocs.io/en/stable/python/python_api.html

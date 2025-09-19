@@ -84,5 +84,9 @@ default-tag = "0.0.0"
 file = "openadmet/models/_version.py"
 
 [tool.ruff.lint]
-select = ["D", "D213"]
+select = ["D", "D213", "D101"]
 ignore = ["D212"]
+
+[tool.ruff.per-file-ignores]
+"**/__init__.py" = ["D104"] # Ignore D104 (Missing docstring in public package) specifically for __init__.py files
+"**/tests/**.py" = ["D"] # Ignore all D and S101 (Use of assert detected) and S311 (Standard pseudo-random generators are not suitable for security/cryptographic purposes) and D103 (Missing docstring in public function) specifically for test files

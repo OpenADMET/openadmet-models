@@ -1,3 +1,5 @@
+"""Sklearn-based data splitting implementations."""
+
 from sklearn.model_selection import train_test_split
 
 from openadmet.models.split.split_base import SplitterBase, splitters
@@ -5,13 +7,30 @@ from openadmet.models.split.split_base import SplitterBase, splitters
 
 @splitters.register("ShuffleSplitter")
 class ShuffleSplitter(SplitterBase):
-    """
-    Vanilla splitter, uses sklearn's train_test_split which wraps ShuffleSplit
-    """
+    """Vanilla splitter, uses sklearn's train_test_split which wraps ShuffleSplit."""
 
     def split(self, X, y):
         """
-        Split the data
+        Split the data.
+
+        Parameters
+        ----------
+        X : array-like
+            Feature data.
+        y : array-like
+            Target data.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - X_train: Training set features.
+            - X_val: Validation set features (or None if val_size=0).
+            - X_test: Test set features (or None if test_size=0).
+            - y_train: Training set target values.
+            - y_val: Validation set target values (or None if val_size=0).
+            - y_test: Test set target values (or None if test_size=0).
+
         """
         # No test set requested
         if self.test_size == 0:

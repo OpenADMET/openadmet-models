@@ -1,3 +1,5 @@
+"""MTENN model implementation."""
+
 from typing import ClassVar
 
 import torch
@@ -32,6 +34,21 @@ class MTENNLightningModule(pl.LightningModule):
         lr=1e-4,
         monitor_metric: str = "val_loss",
     ):
+        """
+        Initialize the MTENN Lightning Module.
+
+        Parameters
+        ----------
+        model_config : ModelConfig
+            Configuration for the MTENN model.
+        loss_fn : callable, optional
+            Loss function to use (default: torch.nn.MSELoss()).
+        lr : float, optional
+            Learning rate (default: 1e-4).
+        monitor_metric : str, optional
+            Metric to monitor during training, can be "val_loss" or "train_loss" (default: "val_loss").
+
+        """
         super().__init__()
         self.model = model_config.build()
         self.loss_fn = loss_fn
@@ -39,14 +56,42 @@ class MTENNLightningModule(pl.LightningModule):
         self.monitor_metric = monitor_metric
 
     def forward(self, data):
-        """Run forward pass through the MTENN model"""
+        """
+        Forward pass.
+
+        Parameters
+        ----------
+        data : dict
+            Input data as a dictionary of tensors.
+
+        Returns
+        -------
+        torch.Tensor
+            Model predictions.
+
+        """
         for k, v in data.items():
             data[k] = v.to(self.device)
         pred, _ = self.model(data)
         return pred
 
     def training_step(self, batch, batch_idx):
-        """Compute and return batch loss"""
+        """
+        Perform a training step.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple containing a batch of input data and targets.
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        torch.Tensor
+            The average loss for the batch.
+
+        """
         data_batch, target_batch = batch
         batch_loss = 0.0
 
@@ -60,13 +105,35 @@ class MTENNLightningModule(pl.LightningModule):
         return avg_loss
 
     def predict_step(self, batch, batch_idx):
-        """ Prediction step for Lightning Trainer."""
+        """ 
+        Prediction step for Lightning Trainer.
+
+        Parameters
+        ----------
+        batch : tuple
+            Tuple containing a batch of input data and targets.
+        batch_idx : int
+            Index of the batch.
+
+        Returns
+        -------
+        torch.Tensor
+            Concatenated predictions for the batch.
+
+        """
         data_batch, _ = batch
         preds = [self(data) for data in data_batch]
         return torch.cat(preds)
 
     def configure_optimizers(self):
-        ""Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase"""
+        """
+        Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase
+  
+        Returns
+        -------
+        torch.optim.Optimizer
+            The optimizer for training.
+        """
         return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
 
 
@@ -122,12 +189,13 @@ class MTENNSchNetModel(LightningModelBase):
 
     def build(self, scaler=None):
         """
-        Prepare the model 
+        Prepare and build the model.
 
         Parameters
         ----------
-        scaler : optional
-           Set for compatability; currently unused. 
+        scaler : object, optional
+            Scaler for data normalization (default: None).
+
         """
         if not self.estimator:
             model_rep = SchNetRepresentationConfig(
@@ -156,7 +224,12 @@ class MTENNSchNetModel(LightningModelBase):
 
     def train(self, dataloader):
         """
-        Train the model
+        Train the model.
+
+        Parameters
+        ----------
+        dataloader : torch.utils.data.DataLoader
+            DataLoader for training data.
 
         Raises
         ------
@@ -169,21 +242,27 @@ class MTENNSchNetModel(LightningModelBase):
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
-        Run predictions using the built estimator.
+        Use the model for prediction.
 
         Parameters
         ----------
-        dataloader : DataLoader
-            Torch dataloader for inference.
-        accelerator : str, default="gpu"
-            Device type to use ("gpu" or "cpu").
-        devices : int, default=1
-            Number of devices to use.
+        dataloader : torch.utils.data.DataLoader
+            DataLoader for prediction data.
+        accelerator : str, optional
+            Accelerator type, e.g., "gpu" or "cpu" (default: "gpu").
+        devices : int, optional
+            Number of devices to use (default: 1).
 
         Returns
         -------
         np.ndarray
             Concatenated predictions from all batches.
+
+        Raises
+        ------
+        AttributeError
+            If the model is not built or trained.
+
         """
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
@@ -200,6 +279,12 @@ class MTENNSchNetModel(LightningModelBase):
 
     def make_new(self) -> "MTENNSchNetModel":
         """
-        Copy parameters to a new model instance without copying the estimator
+        Copy parameters to a new model instance without copying the estimator.
+
+        Returns
+        -------
+        MTENNSchNetModel
+            A new instance of MTENNSchNetModel with the same parameters.
+
         """
         return self.__class__(**self.model_dump(exclude={"estimator"}))

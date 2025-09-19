@@ -1,3 +1,5 @@
+"""Graph Attention Network (GAT) featurizer implementation."""
+
 from typing import Optional, List, Any
 from collections.abc import Iterable
 import torch
@@ -15,7 +17,18 @@ from .feature_base import FeaturizerBase, featurizers
 class GATGraphFeaturizer(FeaturizerBase):
     """
     Featurizer to convert SMILES strings into graph Data objects suitable for GAT-like models.
-    It extracts atom features and bond features using RDKit.
+
+    Attributes
+    ----------
+    type : str
+        The type of the featurizer.
+    batch_size : int
+        The batch size for the DataLoader.
+    shuffle : bool
+        Whether to shuffle the data in the DataLoader.
+    num_workers : int
+        The number of worker threads for the DataLoader.
+
     """
 
     batch_size: int = 32
@@ -26,7 +39,21 @@ class GATGraphFeaturizer(FeaturizerBase):
         self, smiles: str, y_val: Optional[float] = None
     ) -> Optional[Data]:
         """
-        Converts a single SMILES string to a PyTorch Geometric Data object.
+        Convert a single SMILES string to a PyTorch Geometric Data object.
+
+        Parameters
+        ----------
+        smiles : str
+            The SMILES string of the molecule.
+        y_val : Optional[float]
+            The target value for the molecule, if available.
+
+        Returns
+        -------
+        Optional[Data]
+            A PyTorch Geometric Data object representing the molecule, or None if the SMILES is
+            invalid or cannot be processed.
+
         """
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
@@ -97,11 +124,16 @@ class GATGraphFeaturizer(FeaturizerBase):
         """
         Featurize a list of SMILES strings into a PyTorch Geometric DataLoader.
 
-        Args:
-            smiles: An iterable of SMILES strings.
-            y: Optional iterable of target values. Values will be attempted to be cast to float.
+        Parameters
+        ----------
+        smiles : Iterable[str]
+            List or iterable of SMILES strings to featurize.
+        y : Optional[Iterable[Any]]
+            Optional list or iterable of target values corresponding to the SMILES strings.
 
-        Returns:
+        Returns
+        -------
+        tuple
             Tuple of (DataLoader, indices, None, List[Data]). The DataLoader for training,
             indices of successfully featurized molecules, scaler (None for graphs), and the list of Data objects.
             Invalid SMILES or problematic molecules will be skipped (a warning will be logged).
@@ -162,7 +194,5 @@ class GATGraphFeaturizer(FeaturizerBase):
         return dataloader, np.array(successful_indices), None, data_objects
 
     def make_new(self) -> "GATGraphFeaturizer":
-        """
-        Copy parameters to a new GATGraphFeaturizer instance
-        """
+        """Copy parameters to a new GATGraphFeaturizer instance."""
         return self.__class__(**self.dict())

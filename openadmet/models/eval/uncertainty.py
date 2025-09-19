@@ -1,3 +1,5 @@
+"""Evaluators for uncertainty quantification metrics and plots."""
+
 import json
 
 import matplotlib.pyplot as plt
@@ -277,9 +279,7 @@ class UncertaintyPlots(EvalBase):
         self._set_plot_types()
 
     def _set_plot_types(self):
-        """
-        Set the available plot types.
-        """
+        """Set the available plot types."""
         # Specify plots
         self._plots = {
             "uncertainty-calibration-plot": self.calibration_plot,
