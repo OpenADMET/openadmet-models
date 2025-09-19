@@ -25,7 +25,8 @@ class MTENNLightningModule(pl.LightningModule):
         Learning rate
     monitor_metric : str, default="val_loss"
         The metric to monitor during training/validation.
-    """ 
+
+    """
 
     def __init__(
         self,
@@ -105,7 +106,7 @@ class MTENNLightningModule(pl.LightningModule):
         return avg_loss
 
     def predict_step(self, batch, batch_idx):
-        """ 
+        """
         Prediction step for Lightning Trainer.
 
         Parameters
@@ -128,11 +129,12 @@ class MTENNLightningModule(pl.LightningModule):
     def configure_optimizers(self):
         """
         Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase
-  
+
         Returns
         -------
         torch.optim.Optimizer
             The optimizer for training.
+
         """
         return torch.optim.AdamW(self.model.parameters(), lr=self.lr)
 
@@ -142,9 +144,9 @@ class MTENNSchNetModel(LightningModelBase):
     """
     MTENN SchNet Model Implementation
 
-    Class to implement a MTENN based model, specifically one using the SchNet Representation. 
-    This exposes the hyperparameters and model-level options directly to the anvil workflow.  
-    Future versions of this class will enable other types of representations. 
+    Class to implement a MTENN based model, specifically one using the SchNet Representation.
+    This exposes the hyperparameters and model-level options directly to the anvil workflow.
+    Future versions of this class will enable other types of representations.
 
     Parameters
     ----------
@@ -169,6 +171,7 @@ class MTENNSchNetModel(LightningModelBase):
         Readout function for predictions ("pic50", "pki", or None).
     weights_path : str or None, default=None
         Optional path to load pretrained weights.
+
     """
 
     type: ClassVar[str] = "MTENNSchNetModel"
@@ -182,7 +185,7 @@ class MTENNSchNetModel(LightningModelBase):
     max_num_neighbors: int = 32
     readout: str = "add"
 
-    # Expose Model Config params 
+    # Expose Model Config params
     strategy: str = "concat"
     pred_readout: str = None
     weights_path: str = None
@@ -235,6 +238,7 @@ class MTENNSchNetModel(LightningModelBase):
         ------
         NotImplementedError
             Training is not implemented in the model class; use LightningTrainer.
+
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer."
