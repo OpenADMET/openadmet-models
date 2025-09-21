@@ -403,12 +403,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
             for task_id in range(n_tasks):
-                if y_val.shape[0] != y_pred_fold.shape[0]:
-                    logger.debug("Generating pairwise true values to match pairwise predictions")
+                if y_true.shape[0] != y_pred.shape[0]:
                     # Generate pairwise true values to match pairwise predictions
-                    N = y_pred.shape[0]
-                    t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
-                    t_pred = y_pred_fold[:, task_id]
+                    N = y_true.shape[0]
+                    t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                    t_pred = y_pred[:, task_id]
                 else:
                     t_true = y_val[:, task_id]
                     t_pred = y_pred_fold[:, task_id]
@@ -456,12 +455,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # now the plots
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
-            if y_val.shape[0] != y_pred_fold.shape[0]:
-                logger.debug("Generating pairwise true values to match pairwise predictions")
+            if y_true.shape[0] != y_pred.shape[0]:
                 # Generate pairwise true values to match pairwise predictions
-                N = y_pred.shape[0]
-                t_true = np.array([y_val[i, task_id] - y_val[j, task_id] for i in range(N) for j in range(N)])
-                t_pred = y_pred_fold[:, task_id]
+                N = y_true.shape[0]
+                t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                t_pred = y_pred[:, task_id]
             else:
                 t_true = y_val[:, task_id]
                 t_pred = y_pred_fold[:, task_id]
