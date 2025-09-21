@@ -1,4 +1,4 @@
-openadmet.models.tests.unit.test\_data package
+openadmet.models.tests.unit.test\_data 
 ==============================================
 
 Module contents

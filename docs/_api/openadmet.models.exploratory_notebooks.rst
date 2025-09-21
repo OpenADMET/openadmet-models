@@ -1,4 +1,4 @@
-openadmet.models.exploratory\_notebooks package
+openadmet.models.exploratory\_notebooks 
 ===============================================
 
 Module contents

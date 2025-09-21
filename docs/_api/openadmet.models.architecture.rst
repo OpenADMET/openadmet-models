@@ -1,4 +1,4 @@
-openadmet.models.architecture package
+openadmet.models.architecture 
 =====================================
 
 Submodules

@@ -1,4 +1,4 @@
-openadmet.models.tests.unit.active\_learning package
+openadmet.models.tests.unit.active\_learning 
 ====================================================
 
 Submodules

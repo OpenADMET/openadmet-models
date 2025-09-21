@@ -1,4 +1,4 @@
-openadmet.models.active\_learning package
+openadmet.models.active\_learning 
 =========================================
 
 Submodules

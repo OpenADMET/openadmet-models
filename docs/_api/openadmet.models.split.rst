@@ -1,4 +1,4 @@
-openadmet.models.split package
+openadmet.models.split 
 ==============================
 
 Submodules

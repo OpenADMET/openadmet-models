@@ -1,7 +1,7 @@
-openadmet.models.tests.unit package
+openadmet.models.tests.unit 
 ===================================
 
-Subpackages
+Subs
 -----------
 
 .. toctree::

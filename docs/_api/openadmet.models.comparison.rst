@@ -1,4 +1,4 @@
-openadmet.models.comparison package
+openadmet.models.comparison 
 ===================================
 
 Submodules

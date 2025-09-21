@@ -1,4 +1,4 @@
-openadmet.models.inference package
+openadmet.models.inference 
 ==================================
 
 Submodules

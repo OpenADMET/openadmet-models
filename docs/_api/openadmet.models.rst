@@ -1,7 +1,7 @@
-openadmet.models package
+openadmet.models 
 ========================
 
-Subpackages
+Subs
 -----------
 
 .. toctree::

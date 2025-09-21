@@ -1,7 +1,7 @@
-openadmet package
+openadmet 
 =================
 
-Subpackages
+Subs
 -----------
 
 .. toctree::

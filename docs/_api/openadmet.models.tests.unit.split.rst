@@ -1,4 +1,4 @@
-openadmet.models.tests.unit.split package
+openadmet.models.tests.unit.split 
 =========================================
 
 Submodules
