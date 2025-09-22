@@ -8,3 +8,6 @@ OpenADMET Models API Reference
 
     active_learning/index
     anvil/index
+    featurization/index
+    inference/index
+    architecture/index
