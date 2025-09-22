@@ -1,4 +1,4 @@
-scikit-learn splitting strategies
+scikit-learn Splitting Strategies
 =================================
 
 .. automodule:: openadmet.models.split.sklearn

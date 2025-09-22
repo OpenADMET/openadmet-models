@@ -1,6 +1,7 @@
 Molecule Featurization
 ======================
 
+Featurizers for input data for anvil models.
 
 .. toctree::
    :maxdepth: 1

@@ -1,6 +1,7 @@
 Machine Learning Model Architectures
 ====================================
 
+Anvil implemenations of various architectures.
 
 .. toctree::
    :maxdepth: 1

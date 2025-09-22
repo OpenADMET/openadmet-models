@@ -1,5 +1,5 @@
 
-Anvil Workflow specifications
+Anvil Workflow Specifications
 ==============================
 
 .. automodule:: openadmet.models.anvil.specification

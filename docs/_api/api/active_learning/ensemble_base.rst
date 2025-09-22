@@ -1,4 +1,4 @@
-Ensemble base classes
+Ensemble Base Classes
 =====================
 
 .. automodule:: openadmet.models.active_learning.ensemble_base

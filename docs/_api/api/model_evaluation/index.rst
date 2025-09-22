@@ -1,6 +1,7 @@
 Model Evaluation
 =================
 
+Single-model evaluation for trained anvil models.
 
 .. toctree::
    :maxdepth: 1

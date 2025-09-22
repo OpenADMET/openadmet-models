@@ -1,7 +1,7 @@
 Splitting Strategies
 ====================
 
-
+Train/test/eval splitters for anvil models.
 
 .. toctree::
    :maxdepth: 1

@@ -1,4 +1,4 @@
-Query and prediction by committee
+Query and Prediction by Committee
 =================================
 
 .. automodule:: openadmet.models.active_learning.committee
