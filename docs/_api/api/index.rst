@@ -15,4 +15,3 @@ OpenADMET Models API Reference
     model_evaluation/index
     inference/index
     comparison/index
-

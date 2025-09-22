@@ -9,4 +9,3 @@ API Reference for Anvil AutoML workflows
    anvil_workflow
    specification
    workflow_base
-

@@ -5,4 +5,3 @@ Query and prediction by committee
    :members:
    :show-inheritance:
    :undoc-members:
-

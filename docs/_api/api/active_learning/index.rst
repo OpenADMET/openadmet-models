@@ -8,4 +8,3 @@ Active Learning
    acquisition_functions
    committee
    ensemble_base
-

@@ -9,4 +9,3 @@ This contains details of the Python API as well as a reference to the command li
    :maxdepth: 2
 
    _api/index.rst
-
