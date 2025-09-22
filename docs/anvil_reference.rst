@@ -1,5 +1,5 @@
-Anvil YAML Reference
-====================
+Anvil Reference
+================
 
 To initiate the ``anvil`` workflow, a recipe yaml file must be provided. 
 There are many configuration options available..
@@ -32,24 +32,50 @@ Metadata specification available to ensure organized workflow.
      tags: [openadmet, chemprop]
      version: v1
 
-**Parameters:**
+**Parameters**
 
-- ``authors`` (str | list[str]) — Author(s) of the workflow.
-- ``email`` (str) — Contact email.
-- ``biotargets`` (list[str]) — List of biotargets associated with the workflow.
-- ``build_number`` (int) — Iteration number of the workflow.
-- ``description`` (str) — Short description of the workflow.
-- ``driver`` (str) — Backend framework for the workflow (ex. ``pytorch`` or ``sklearn``).
-- ``name`` (str) — Workflow name.
-- ``tag`` (str) — Main tag for the workflow.
-- ``tags`` (list[str]) — Additional tags associated with the workflow description.
-- ``version`` (str) — Version of the metadata schema. 
+.. list-table::
+   :header-rows: 1
+   :widths: 20 25 55
+
+   * - Name
+     - Type
+     - Description
+   * - authors
+     - str | list[str]
+     - Author(s) of the workflow.
+   * - email
+     - str
+     - Contact email.
+   * - biotargets
+     - list[str]
+     - List of biotargets associated with the workflow.
+   * - build_number
+     - int
+     - Iteration number of the workflow.
+   * - description
+     - str
+     - Short description of the workflow.
+   * - driver
+     - str
+     - Backend framework for the workflow (e.g., ``pytorch`` or ``sklearn``).
+   * - name
+     - str
+     - Workflow name.
+   * - tag
+     - str
+     - Main tag for the workflow.
+   * - tags
+     - list[str]
+     - Additional tags associated with the workflow description.
+   * - version
+     - str
+     - Version of the metadata schema.
 
 Data 
 -----
 
 Data specification for the workflow. 
-###Need to add optional values for specs
 
 .. code-block:: yaml
 
@@ -62,23 +88,42 @@ Data specification for the workflow.
      - target_column_name2
      dropna: false
 
-**Parameters:**
+**Parameters**
 
-- ``resource`` (str)  
-  Path to dataset file. Allowed filetypes are ####. check with featurizer  
+.. list-table::
+   :header-rows: 1
+   :widths: 20 25 55
 
-- ``type`` (str, default: ``intake``)  
-  Loader type. Must be set to ``intake``. #Explain why 
+   * - Name
+     - Type
+     - Description
+   * - resource
+     - str
+     - Path to dataset file. Allowed filetypes: YAML, CSV, parquet.
+   * - type
+     - str, default: ``intake``
+     - Loader type. Must be ``intake``. Uses the `Intake`_ data catalog
+       system to read datasets.
+   * - input_col
+     - str
+     - Column name containing molecular input.
+   * - target_cols
+     - Union[str, list[str]]
+     - Name(s) of the target column(s) for the model to predict.
+   * - dropna
+     - Optional[bool]
+     - Whether to drop rows with missing values (``NaN``) in the input or
+       target columns.
+   * - cat_entry
+     - Optional[str]
+     - Used when ``resource`` is a YAML file, to specify which
+       catalog entry to load.
+   * - anvil_dir
+     - Optional[str] 
+     - Allows for ``resource`` to point to a directory path.
+       Useful for flexible dataset locations.
 
-- ``input_col`` (str)  
-  Column containing model input. Allowed format is SMILES, ####  check with featurizer (maybe jsut has to be str)
-
-- ``target_cols`` (list[str])  
-  One or more target columns for prediction.  ####Modify explanation to be more robust
-
-- ``dropna`` (bool, default: ``false``)  
-  Whether to drop rows with NaN targets. #### Modify explanation to include situations where you might want Nan
-
+.. _Intake: https://intake.readthedocs.io/
 
 Procedure 
 ----------
