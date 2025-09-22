@@ -12,4 +12,3 @@ Featurizers for input data for anvil models.
    descriptors
    mtenn
    feature_base
-
