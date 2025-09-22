@@ -18,6 +18,9 @@ lgbm_mordred_cv_impute = (_data_ref / "lgbm_mordred_cv_impute.yaml").as_posix()
 # LGBM with properties and scaffold splitting and cross-validation
 lgbm_prop_cv = (_data_ref / "lgbm_prop_scaffold_cv.yaml").as_posix()
 
+# LGBM model ensemble
+lgbm_fp_ensemble = (_data_ref / "lgbm_fp_ensemble.yaml").as_posix()
+
 # Single epoch ChemProp with multitask
 chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 

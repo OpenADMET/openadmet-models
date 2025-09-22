@@ -1,3 +1,5 @@
+"""Support Vector Machine (SVM) model implementations."""
+
 from typing import ClassVar
 
 from sklearn.svm import SVR, SVC
@@ -8,9 +10,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class SVMModelBase(PickleableModelBase):
-    """
-    Base class for SVM models, allows instantiation from parameters that are passable to the SVM model classes.
-    """
+    """Base class for SVM models."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +21,7 @@ class SVMModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -30,6 +30,7 @@ class SVMModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the XGBoost model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -37,7 +38,7 @@ class SVMModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -45,14 +46,13 @@ class SVMModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params)
         else:
@@ -60,17 +60,20 @@ class SVMModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
+        **kwargs
+            Additional keyword arguments for the predict method.
 
         Returns
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -80,7 +83,7 @@ class SVMModelBase(PickleableModelBase):
 @models.register("SVMRegressorModel")
 class SVMRegressorModel(SVMModelBase):
     """
-    SVM regression model
+    SVM regression model.
 
     Common parameters for SVM models can be found at:
     https://scikit-learn.org/stable/modules/svm.html
@@ -102,7 +105,7 @@ class SVMRegressorModel(SVMModelBase):
 @models.register("SVMClassifierModel")
 class SVMClassifierModel(SVMModelBase):
     """
-    SVM classification model
+    SVM classification model.
 
     Common parameters for SVM models can be found at:
     https://scikit-learn.org/stable/modules/svm.html
@@ -127,10 +130,12 @@ class SVMClassifierModel(SVMModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+
         Returns
         -------
         np.ndarray
             Probabilities for each class from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")

@@ -1,8 +1,11 @@
+"""Active learning acquisition functions."""
+
 from scipy.stats import norm
 
 
 def max_uncertainty_reduction(mean, std, **kwargs):
-    r"""Maximum uncertainty reduction acquisition function. Refines an already well-performing model.
+    r"""
+    Maximum uncertainty reduction acquisition function. Refines an already well-performing model.
 
     .. math::
 
@@ -31,12 +34,12 @@ def max_uncertainty_reduction(mean, std, **kwargs):
     Journal of Artificial Intelligence Research, 4, 129–145.
 
     """
-
     return std
 
 
 def exploitation(mean, std, **kwargs):
-    r"""Returns the instances within `X` with highest predicted values.
+    r"""
+    Return the instances within `X` with highest predicted values.
 
     Parameters
     ----------
@@ -53,7 +56,6 @@ def exploitation(mean, std, **kwargs):
         Predicted values for each instance in `X`.
 
     """
-
     return mean
 
 
@@ -96,7 +98,6 @@ def probability_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     presence of noise. Journal of Basic Engineering, 86(1), 97–106.
 
     """
-
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     PI = norm.cdf((mean - best_y - xi) / std)
@@ -106,7 +107,7 @@ def probability_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
 
 def expected_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     r"""
-    Expected Improvement (EI) acquisition function. Balances exploration and exploitation.
+    Get expected Improvement (EI) acquisition function. Balances exploration and exploitation.
 
     .. math::
 
@@ -146,7 +147,6 @@ def expected_improvement(mean, std, best_y=0, xi=0.01, **kwargs):
     functions. Journal of Global Optimization, 13(4), 455–492.
 
     """
-
     std = std.clip(min=1e-9)  # Avoid division by zero
 
     improvement = mean - best_y - xi
@@ -191,16 +191,20 @@ def upper_confidence_bound(mean, std, beta=2.0, **kwargs):
     Setting: No Regret and Experimental Design. ICML.
 
     """
-
     ucb = mean + beta * std
 
     return ucb
 
 
-_QUERY_STRATEGIES = {
+_ACQUISITION_FUNCTIONS = {
     "max-uncertainty-reduction": max_uncertainty_reduction,
     "exploitation": exploitation,
     "upper-confidence-bound": upper_confidence_bound,
     "expected-improvement": expected_improvement,
     "probability-improvement": probability_improvement,
+    "ur": max_uncertainty_reduction,
+    "exp": exploitation,
+    "ucb": upper_confidence_bound,
+    "ei": expected_improvement,
+    "pi": probability_improvement,
 }

@@ -1,3 +1,5 @@
+"""Base classes for all models."""
+
 import json
 from abc import ABC, abstractmethod
 from os import PathLike
@@ -13,6 +15,7 @@ models = ClassRegistry(unique=True)
 
 
 def get_mod_class(model_type):
+    """Get the model class from the registry."""
     try:
         feat_class = models.get_class(model_type)
     except RegistryKeyError:
@@ -21,88 +24,173 @@ def get_mod_class(model_type):
 
 
 class ModelBase(BaseModel, ABC):
+    """Base class for all models."""
+
     _estimator: Any = None
 
     _model_json_name: ClassVar[str] = "model.json"
 
     @property
     def estimator(self):
+        """Get the model estimator."""
         return self._estimator
 
     @estimator.setter
     def estimator(self, value):
+        """Set the model estimator."""
         self._estimator = value
 
     @abstractmethod
     def from_params(cls, class_params: dict, mod_params: dict):
         """
-        Create a model from parameters, abstract method to be implemented by subclasses
+        Create a model from parameters, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        class_params: dict
+            Parameters for the model class, such as type, mod_class, etc.
+        mod_params: dict
+            Parameters for the model class, such as n_estimators, max_depth,
+            learning_rate, etc.
+
+        Returns
+        -------
+        instance: ModelBase
+            An instance of the ModelBase class
+
         """
         pass
 
     @abstractmethod
     def build(self):
-        """
-        Prepare the model, abstract method to be implemented by subclasses
-        """
+        """Prepare the model, abstract method to be implemented by subclasses."""
         pass
 
     @abstractmethod
     def save(self, path: PathLike):
         """
-        Save the model, abstract method to be implemented by subclasses
+        Save the model, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        Returns
+        -------
+        None
+
         """
         pass
 
     @abstractmethod
     def load(self, path: PathLike):
         """
-        Load the model, abstract method to be implemented by subclasses
+        Load the model, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        Returns
+        -------
+        None
+
         """
         pass
 
     @abstractmethod
     def serialize(self, param_path: PathLike, serial_path: PathLike):
         """
-        Serialize the model, abstract method to be implemented by subclasses
+        Serialize the model, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to save the model parameters to
+        serial_path: PathLike
+            Path to save the model serialization to
+
+        Returns
+        -------
+        None
+
         """
         pass
 
     @abstractmethod
     def deserialize(self, param_path: PathLike, serial_path: PathLike):
         """
-        Deserialize the model, abstract method to be implemented by subclasses
+        Deserialize the model, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to load the model parameters from
+        serial_path: PathLike
+            Path to load the model serialization from
+
+        Returns
+        -------
+        None
+
         """
         pass
 
     @abstractmethod
     def train(self):
-        """
-        Train the model, abstract method to be implemented by subclasses
-        """
+        """Train the model, abstract method to be implemented by subclasses."""
 
     @abstractmethod
     def predict(self, input: Any):
         """
-        Predict using the model, abstract method to be implemented by subclasses
+        Predict using the model, abstract method to be implemented by subclasses.
+
+        Parameters
+        ----------
+        input: Any
+            Input data to predict on
+
+        Returns
+        -------
+        None
+
         """
         pass
 
     def __call__(self, *args, **kwargs):
+        """Call the predict method when the model instance is called."""
         return self.predict(*args, **kwargs)
 
     def __eq__(self, value):
+        """Compare two model instances for equality, ignoring the model itself."""
         # exclude model from comparison
         return self.dict(exclude={"model"}) == value.dict(exclude={"model"})
 
 
 class PickleableModelBase(ModelBase):
+    """A model that can be pickled using joblib."""
+
     # classvar for pickleable model
     pickleable: ClassVar[bool] = True
 
     _model_save_name: ClassVar[str] = "model.pkl"
 
     def save(self, path: PathLike):
+        """
+        Save the model to a pickle file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        Returns
+        -------
+        None
+
+        """
         if self.estimator is None:
             raise ValueError("Model is not built, cannot save")
 
@@ -110,13 +198,24 @@ class PickleableModelBase(ModelBase):
             joblib.dump(self.estimator, f)
 
     def load(self, path: PathLike):
+        """
+        Load the model from a pickle file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        Returns
+        -------
+        None
+
+        """
         with open(path, "rb") as f:
             self.estimator = joblib.load(f)
 
     def make_new(self) -> "PickleableModelBase":
-        """
-        Copy parameters to a new model instance without copying the estimator
-        """
+        """Copy parameters to a new model instance without copying the estimator."""
         return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
 
     @classmethod
@@ -124,7 +223,20 @@ class PickleableModelBase(ModelBase):
         cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
     ):
         """
-        Create a model from parameters and a pickled model
+        Create a model from parameters and a pickled model.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to load the model parameters from
+        serial_path: PathLike
+            Path to load the pickled model from
+
+        Returns
+        -------
+        instance: PickleableModelBase
+            An instance of the PickleableModelBase class
+
         """
         with open(param_path) as f:
             mod_params = json.load(f)
@@ -137,7 +249,19 @@ class PickleableModelBase(ModelBase):
         self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
     ):
         """
-        Save the model to a json file and a pickled file
+        Save the model to a json file and a pickled file.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to save the model parameters to
+        serial_path: PathLike
+            Path to save the pickled model to
+
+        Returns
+        -------
+        None
+
         """
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
@@ -146,9 +270,10 @@ class PickleableModelBase(ModelBase):
 
 class LightningModuleBase(pl.LightningModule):
     """
+    Lightning module base class.
+
     A PyTorch lightning model may inherit this instead of pl.LightningModule
     to preconfigure optimizer and scheduler.
-
     """
 
     # Optimizer and scheduler configuration
@@ -167,9 +292,7 @@ class LightningModuleBase(pl.LightningModule):
     @field_validator("monitor_metric")
     @classmethod
     def check_monitor_metric(cls, value):
-        """
-        Check if the monitor metric is valid
-        """
+        """Check if the monitor metric is valid."""
         allowed = ["val_loss", "train_loss"]
         if value.lower() not in allowed:
             raise ValueError(f"Monitored metric must be one of {allowed}")
@@ -178,6 +301,7 @@ class LightningModuleBase(pl.LightningModule):
     @field_validator("optimizer")
     @classmethod
     def validate_optimizer(cls, value):
+        """Validate the optimizer parameter."""
         allowed = {"adamw", "adam", "sgd"}
         if value.lower() not in allowed:
             raise ValueError(f"Optimizer must be one of {allowed}")
@@ -186,15 +310,14 @@ class LightningModuleBase(pl.LightningModule):
     @field_validator("scheduler")
     @classmethod
     def validate_scheduler(cls, value):
+        """Validate the scheduler parameter."""
         allowed = {"cosine", "reduce_on_plateau", "none", None}
         if (value.lower() not in allowed) and (value is not None):
             raise ValueError(f"Scheduler must be one of {allowed}")
         return value
 
     def configure_optimizers(self):
-        """
-        Returns optimizer and scheduler configuration for Lightning's configure_optimizers.
-        """
+        """Return optimizer and scheduler configuration for Lightning's configure_optimizers."""
         # Adamw optimizer
         if self.optimizer.lower() == "adamw":
             optimizer = torch.optim.AdamW(
@@ -270,17 +393,60 @@ class LightningModuleBase(pl.LightningModule):
 
 
 class LightningModelBase(ModelBase):
+    """A model that uses PyTorch Lightning."""
+
     _model_save_name: ClassVar[str] = "model.pth"
 
     def save(self, path: PathLike):
+        """
+        Save the model to a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        Returns
+        -------
+        None
+
+        """
         torch.save(self.estimator.state_dict(), path)
 
     def load(self, path: PathLike):
+        """
+        Load the model from a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        Returns
+        -------
+        None
+
+        """
         self.estimator.load_state_dict(torch.load(path))
 
     def serialize(
         self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"
     ):
+        """
+        Save the model to a json file and a serialized file.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to save the model parameters to
+        serial_path: PathLike
+            Path to save the serialized model to
+
+        Returns
+        -------
+        None
+
+        """
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
         self.save(serial_path)
@@ -292,6 +458,24 @@ class LightningModelBase(ModelBase):
         serial_path: PathLike = "model.pth",
         scaler: Any = None,
     ):
+        """
+        Create a model from parameters and a serialized model.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to load the model parameters from
+        serial_path: PathLike
+            Path to load the serialized model from
+        scaler: Any, optional
+            Scaler for target normalization, if applicable
+
+        Returns
+        -------
+        instance: LightningModelBase
+            An instance of the LightningModelBase class
+
+        """
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)

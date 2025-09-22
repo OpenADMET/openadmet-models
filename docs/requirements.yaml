@@ -1,21 +1,65 @@
 name: docs_openadmet_models
 channels:
-
   - conda-forge
-
   - defaults
+
 dependencies:
     # Base depends
-  - python
+  - ase
+  - catboost
+  - chemprop >= 2.1.1
+  - codecov
+  - datamol
+  - e3nn
+  - h5py
+  - hyperopt
+  - intake
+  - intake-parquet
+  - joblib
+  - jupyterlab
+  - lightgbm
+  - loguru
+  - matplotlib
+  - mdanalysis
+  - modal
+  - molfeat
+  - mordredcommunity
+  - numpy
+  - pandas
+  - pingouin
   - pip
+  - python >= 3.12
+  - pytorch
+  - pytorch-lightning
+  - pytorch_cluster
+  - pytorch_geometric
+  - pytorch_scatter
+  - pytorch_sparse
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - rdkit
+  - rich
+  - scikit-learn
+  - seaborn
+  - splito
+  - statsmodels
+  # - tabpfn
+  - tabulate
+  - umap-learn
+  - uncertainty-toolbox
+  - wandb
+  - xgboost
+  - zarr >=3.0.0
 
   - pydata-sphinx-theme
   - sphinx-design
   - sphinx-copybutton
 
-
-
-
-    # Pip-only installs
   - pip:
+    - email-validator
+    - git+https://github.com/OpenADMET/mtenn.git@main
+    - phx-class-registry
+    - tabpfn-extensions
+    - git+https://github.com/PriorLabs/TabPFN.git@main
     - -e ../
