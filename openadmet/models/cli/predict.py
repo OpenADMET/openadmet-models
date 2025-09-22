@@ -1,3 +1,5 @@
+"""CLI for making predictions with trained models."""
+
 import click
 
 from openadmet.models.inference.inference import predict as inference_func
@@ -36,7 +38,9 @@ from openadmet.models.inference.inference import predict as inference_func
     help="Hardware to use for inference.",
     required=False,
     default="gpu",
-    type=click.Choice(["gpu", "cpu", "mls"], case_sensitive=False),
+    type=click.Choice(
+        ["cpu", "gpu", "tpu", "ipu", "mps", "auto"], case_sensitive=False
+    ),
     show_default=True,
 )
 @click.option(
@@ -62,8 +66,34 @@ def predict(
     xi,
     debug,
 ):
+    """
+    Predict using a trained model.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to the input CSV file or SDF containing structures.
+    input_col : str
+        Column name in the CSV file containing input structure or OPENADMET_SMILES.
+    model_dir : str
+        Path to a trained model directory as trained by `openadmet anvil`.
+    output_csv : str
+        Path to the output CSV file for predictions.
+    accelerator : str
+        Hardware to use for inference.
+    aq_fxns : list
+        Acquisition function(s) to use for active learning.
+    beta : list
+        Beta values for UCB acquisition function.
+    best_y : list
+        Best observed values for EI and PI acquisition functions.
+    xi : list
+        Exploration parameter for EI and PI acquisition functions.
+    debug : bool
+        Enable debug mode.
+
+    """
     aq_fxn_args = _validate_aq_fxns(aq_fxns, beta, best_y, xi)
-    """Predict using a trained model"""
     inference_func(
         input_path=input_path,
         input_col=input_col,
@@ -77,6 +107,7 @@ def predict(
 
 
 def _validate_aq_fxns(aq_fxns, beta, best_y, xi):
+    """Validate acquisition functions."""
     # Tuple to list
     aq_fxns = list(aq_fxns)
     beta = list(beta)

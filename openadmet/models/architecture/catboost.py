@@ -1,3 +1,5 @@
+"""CatBoost model implementations."""
+
 from typing import ClassVar
 
 from catboost import CatBoostClassifier, CatBoostRegressor
@@ -10,6 +12,18 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class CatBoostModelBase(PickleableModelBase):
     """
     Base class for CatBoost models, allows instantiation from parameters that are passable to the CatBoost model classes.
+
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    mod_class : ClassVar[type]
+        To specify the CatBoost model class (e.g., CatBoostRegressor or CatBoost
+        Classifier)
+    mod_params : dict
+        Parameters for the CatBoost model class, such as n_estimators, max_depth,
+        learning_rate, etc.
+
     """
 
     type: ClassVar[str]
@@ -21,7 +35,7 @@ class CatBoostModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -30,6 +44,7 @@ class CatBoostModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the CatBoost model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -37,7 +52,7 @@ class CatBoostModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -45,14 +60,13 @@ class CatBoostModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params)
         else:
@@ -60,17 +74,20 @@ class CatBoostModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
+        kwargs: dict
+            Additional keyword arguments to pass to the predict method of the CatBoost model
 
         Returns
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -80,7 +97,7 @@ class CatBoostModelBase(PickleableModelBase):
 @models.register("CatBoostRegressorModel")
 class CatBoostRegressorModel(CatBoostModelBase):
     """
-    CatBoost regression model
+    CatBoost regression model.
 
     Common parameters for CatBoost models can be found at:
     https://CatBoost.readthedocs.io/en/stable/python/python_api.html
@@ -101,7 +118,9 @@ class CatBoostRegressorModel(CatBoostModelBase):
 
 @models.register("CatBoostClassifierModel")
 class CatBoostClassifierModel(CatBoostModelBase):
-    """CatBoost classification model
+    """
+    CatBoost classification model.
+
     Common parameters for CatBoost models can be found at:
     https://catboost.ai/docs/en/concepts/python-quickstart
     """
@@ -117,10 +136,12 @@ class CatBoostClassifierModel(CatBoostModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+
         Returns
         -------
         np.ndarray
             Probabilities for each class from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")

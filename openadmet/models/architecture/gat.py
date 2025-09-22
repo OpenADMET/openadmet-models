@@ -1,3 +1,5 @@
+"""Graph Attention Network v2 (GATv2) model implementation."""
+
 from typing import Any, ClassVar, Optional
 
 import numpy as np
@@ -34,18 +36,66 @@ _METRIC_TO_LOSS = {
 
 class GATv2Module(LightningModuleBase):
     """
-    Graph Attention Network v2 (GATv2) Model
+    Graph Attention Network v2 (GATv2) Model.
+
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    input_dim : int
+        Dimension of input node features.
+    hidden_dim : int
+        Dimension of hidden layers.
+    num_layers : int
+        Number of GAT layers.
+    num_heads : int
+        Number of attention heads in each GAT layer.
+    dropout : float
+        Dropout rate.
+    pooling : str
+        Pooling method ('mean', 'max', 'add').
+    output_dim : int
+        Dimension of the output.
+    edge_dim : Optional[int]
+        Dimension of edge features.
+    concat_heads : bool
+        Whether to concatenate heads in intermediate layers.
+    add_self_loops : bool
+        Whether to add self-loops to the graph.
+    share_weights : bool
+        Whether to share weights across attention heads.
+    bias : bool
+        Whether to include bias terms in GAT layers.
+    loss_function : str
+        Loss function to use ('mse', 'mae', 'huber', 'bce', 'cross_entropy').
+    optimizer : str
+        Optimizer to use ('adam', 'adamw', 'sgd').
+    optimizer_lr : float
+        Learning rate for the optimizer.
+    optimizer_weight_decay : float
+        Weight decay for the optimizer.
+    scheduler : str
+        Learning rate scheduler ('step', 'cosine', 'plateau').
+    scheduler_factor : float
+        Factor for learning rate reduction.
+    scheduler_patience : int
+        Patience for learning rate scheduler.
+    monitor_metric : str
+        Metric to monitor for learning rate scheduler.
+
     """
 
     # Model architecture hyperparameters
-    input_dim: int = 8 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = 4 # must match that of GATGraphFeaturizer TODO: make this dynamic
+    edge_dim: Optional[int] = (
+        4  # must match that of GATGraphFeaturizer TODO: make this dynamic
+    )
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = True
@@ -64,7 +114,7 @@ class GATv2Module(LightningModuleBase):
     @field_validator("pooling")
     @classmethod
     def validate_pooling(cls, value):
-        """Validate pooling method"""
+        """Validate pooling method."""
         allowed = ["mean", "max", "add"]
         if value not in allowed:
             raise ValueError(f"Pooling must be one of {allowed}")
@@ -73,12 +123,11 @@ class GATv2Module(LightningModuleBase):
     @field_validator("loss_function")
     @classmethod
     def validate_loss_function(cls, value):
-        """Validate loss function"""
+        """Validate loss function."""
         allowed = ["mse", "mae", "huber", "bce", "cross_entropy"]
         if value not in allowed:
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
-
 
     def __init__(
         self,
@@ -103,7 +152,33 @@ class GATv2Module(LightningModuleBase):
         scheduler_patience: int = 10,
         monitor_metric: str = "val_loss",
     ):
+        """
+        Initialize GATv2 model with given hyperparameters.
 
+        Args:
+            input_dim (int): Dimension of input node features.
+            hidden_dim (int): Dimension of hidden layers.
+            num_layers (int): Number of GAT layers.
+            num_heads (int): Number of attention heads in each GAT layer.
+            dropout (float): Dropout rate.
+            pooling (str): Pooling method ('mean', 'max', 'add').
+            output_dim (int): Dimension of the output.
+            edge_dim (Optional[int]): Dimension of edge features.
+            concat_heads (bool): Whether to concatenate heads in intermediate layers.
+            add_self_loops (bool): Whether to add self-loops to the graph.
+            share_weights (bool): Whether to share weights across attention heads.
+            bias (bool): Whether to include bias terms in GAT layers.
+            loss_function (str): Loss function to use ('mse', 'mae', '
+                'huber', 'bce', 'cross_entropy').
+            optimizer (str): Optimizer to use ('adam', 'adamw', 'sgd').
+            optimizer_lr (float): Learning rate for the optimizer.
+            optimizer_weight_decay (float): Weight decay for the optimizer.
+            scheduler (str): Learning rate scheduler ('step', 'cosine', 'plateau').
+            scheduler_factor (float): Factor for learning rate reduction.
+            scheduler_patience (int): Patience for learning rate scheduler.
+            monitor_metric (str): Metric to monitor for learning rate scheduler.
+
+        """
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -195,7 +270,7 @@ class GATv2Module(LightningModuleBase):
 
     def forward(self, data):
         """
-        Forward pass
+        Forward pass through network.
 
         Args:
             data: PyTorch Geometric data object containing:
@@ -206,6 +281,7 @@ class GATv2Module(LightningModuleBase):
 
         Returns:
             Graph-level predictions [batch_size, output_dim]
+
         """
         x, edge_index, batch = data.x, data.edge_index, data.batch
         edge_attr = getattr(data, "edge_attr", None)
@@ -238,7 +314,22 @@ class GATv2Module(LightningModuleBase):
         return out
 
     def training_step(self, batch: Batch, batch_idx: int):
-        """Training step"""
+        """
+        Training step.
+
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+
+        Returns
+        -------
+        loss: torch.Tensor
+            Computed loss for the batch
+
+        """
         target = batch.y
         pred = self.forward(batch)
 
@@ -261,7 +352,22 @@ class GATv2Module(LightningModuleBase):
         return loss
 
     def validation_step(self, batch: Batch, batch_idx: int):
-        """Validation step"""
+        """
+        Validate step.
+
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+
+        Returns
+        -------
+        loss: torch.Tensor
+            Computed loss for the batch
+
+        """
         target = batch.y
 
         pred = self.forward(batch)
@@ -285,7 +391,22 @@ class GATv2Module(LightningModuleBase):
         return loss
 
     def predict_step(self, batch: Batch, batch_idx: int):
-        """Prediction step"""
+        """
+        Predict step.
+
+        Parameters
+        ----------
+        batch: Batch
+            A batch of graph data
+        batch_idx: int
+            Index of the batch
+
+        Returns
+        -------
+        pred: torch.Tensor
+            Predictions for the batch
+
+        """
         data = batch
         pred = self.forward(data)
         return pred
@@ -294,7 +415,57 @@ class GATv2Module(LightningModuleBase):
 @model_registry.register("GATv2Model")
 class GATv2Model(LightningModelBase):
     """
-    GATv2 model wrapper inheriting from TorchModelBase
+    GATv2 model wrapper inheriting from TorchModelBase.
+
+    Attributes
+    ----------
+    type : ClassVar[str]
+        The type of the model.
+    scaler : Optional[Any]
+        Scaler used for target variable normalization.
+    mod_params : dict
+        Parameters for the GATv2Module class.
+    input_dim : Optional[int]
+        Dimension of input node features.
+    hidden_dim : int
+        Dimension of hidden layers.
+    num_layers : int
+        Number of GAT layers.
+    num_heads : int
+        Number of attention heads in each GAT layer.
+    dropout : float
+        Dropout rate.
+    pooling : str
+        Pooling method ('mean', 'max', 'add').
+    output_dim : int
+        Dimension of the output.
+    edge_dim : Optional[int]
+        Dimension of edge features.
+    concat_heads : bool
+        Whether to concatenate heads in intermediate layers.
+    add_self_loops : bool
+        Whether to add self-loops to the graph.
+    share_weights : bool
+        Whether to share weights across attention heads.
+    bias : bool
+        Whether to include bias terms in GAT layers.
+    loss_function : str
+        Loss function to use ('mse', 'mae', 'huber', 'bce', 'cross_entropy').
+    optimizer : str
+        Optimizer to use ('adam', 'adamw', 'sgd').
+    optimizer_lr : float
+        Learning rate for the optimizer.
+    optimizer_weight_decay : float
+        Weight decay for the optimizer.
+    scheduler : str
+        Learning rate scheduler ('step', 'cosine', 'plateau').
+    scheduler_factor : float
+        Factor for learning rate reduction.
+    scheduler_patience : int
+        Patience for learning rate scheduler.
+    monitor_metric : str
+        Metric to monitor for learning rate scheduler.
+
     """
 
     type: ClassVar[str] = "GATv2Model"
@@ -329,17 +500,41 @@ class GATv2Model(LightningModelBase):
     @classmethod
     def from_params(cls, class_params: dict = None, mod_params: dict = None):
         """
-        Create model instance from parameters
-        """
+        Create model instance from parameters.
 
+        Parameters
+        ----------
+        class_params: dict
+            Class parameters for the GATv2Model class.
+        mod_params: dict
+            Model parameters for the GATv2Module class.
+
+        Returns
+        -------
+        instance: GATv2Model
+            An instance of GATv2Model with the specified parameters.
+
+        """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
 
     def build(self, scaler=None, **kwargs):
         """
-        Builds the GATv2 model.
-        'input_dim' is a mandatory parameter.
+        Build the GATv2 model. 'input_dim' is a mandatory parameter.
+
+        Parameters
+        ----------
+        scaler: Optional[Any]
+            Scaler used for target variable normalization.
+        **kwargs: Dict
+            Additional keyword arguments.
+
+
+        Returns
+        -------
+        None
+
         """
         self.scaler = scaler
 
@@ -375,32 +570,49 @@ class GATv2Model(LightningModelBase):
         else:
             logger.warning("Model already exists, skipping build")
 
-
     def make_new(self) -> "GATv2Model":
         """
         Create a new instance of the model with the same parameters.
+
         This does not copy the estimator, only the configuration.
         """
         return self.__class__(**self.dict(exclude={"estimator"}))
 
     def train(self, dataloader):
         """
+        Exists only to satisfy the abstract base class contract.
+
         Just see the mtenn.py for reference.
-
-        This method exists only to satisfy the abstract base class contract.
-
         Use openadmet.models.trainer.lightning.LightningTrainer for training.
         """
         raise NotImplementedError(
             "GAT training is handled by LightningTrainer. "
             "Use: trainer = LightningTrainer(); trainer.train(model, dataloader)"
         )
-    #change to the lightning trainer
+
+    # change to the lightning trainer
     def predict(
         self, X: torch.utils.data.DataLoader, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
+
+        Parameters
+        ----------
+        X: torch.utils.data.DataLoader
+            DataLoader containing the data to predict on.
+        accelerator: str
+            Accelerator to use ('cpu', 'gpu', etc.).
+        devices: int
+            Number of devices to use.
+        **kwargs: Dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        np.ndarray
+            Predictions as a NumPy array.
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")
@@ -417,11 +629,8 @@ class GATv2Model(LightningModelBase):
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
 
-
     def get_model_summary(self):
-        """
-        Get model summary information
-        """
+        """Get model summary information."""
         if not self.estimator:
             return "Model not built"
 

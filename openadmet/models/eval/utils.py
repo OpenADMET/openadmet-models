@@ -1,18 +1,22 @@
+"""Utility functions for evaluation modules."""
+
+
 def _make_stat_caption(
-        data:dict,
-        task_name:str,
-        metric_names:list,
-        metrics:dict,
-        confidence_level:float,
-        cv:bool
+    data: dict,
+    task_name: str,
+    metric_names: list,
+    metrics: dict,
+    confidence_level: float,
+    cv: bool,
 ) -> str:
-    """A function to generate the stat caption (string) to be printed on the regplot
+    """
+    Generate the stat caption (string) to be printed on the regplot.
 
     Parameters
     ----------
     data : dict
         a dict of task_names, metric_names, metrics, bootstrap_confidence_level, evaluated parameters filled out after evaluating the regression model
-    task_names : list or str
+    task_name : list or str
         a list of all the tasks, i.e. the predicted target columns, OR str for single task
     metric_names : dict
         a dict of the names of the metrics
@@ -32,6 +36,7 @@ def _make_stat_caption(
     ------
     ValueError
         cannot make stat caption unless the model has been evaluated first
+
     """
     stat_caption = ""
 
@@ -47,28 +52,32 @@ def _make_stat_caption(
     stat_caption += f"Confidence level: {confidence_level} \n"
     return stat_caption
 
+
 def _make_stat_dict(
-        data:dict,
-        task_name:str,
-        metric_names:list,
-        metrics:dict,
-        confidence_level:float,
-        cv:bool
+    data: dict,
+    task_name: str,
+    metric_names: list,
+    metrics: dict,
+    confidence_level: float,
+    cv: bool,
 ):
-    """A function to generate a dict of formatted metrics and names to be printed into a table on regplot
+    """
+    Generate a dict of formatted metrics and names to be printed into a table on regplot.
 
     Parameters
     ----------
     data : dict
         a dict of task_names, metric_names, metrics, bootstrap_confidence_level, evaluated parameters filled out after evaluating the regression model
-    task_names : list or str
+    task_name : list or str
         a list of all the tasks, i.e. the predicted target columns, OR str for single task
     metric_names : dict
         a dict of the names of the metrics
     metrics : dict
         a dict of tuples of (metric value, whether the value is a scipy statistic, name of metric to use in the report)
-    evaluated : bool
-        whether or not the model has been evaluated
+    confidence_level : float
+        conficence level for the bootstrap
+    cv : bool
+        whether or not you are doing cross validation for evaluation
 
     Returns
     -------
@@ -79,15 +88,15 @@ def _make_stat_dict(
     ------
     ValueError
         cannot make stat caption unless the model has been evaluated first
-    """
 
+    """
     stat_dict = {
         "metrics": [],
         "means": [],
         "lower_ci": [],
         "upper_ci": [],
         "conf_level": None,
-        "task_name" : task_name
+        "task_name": task_name,
     }
 
     value_key = "mean" if cv else "value"

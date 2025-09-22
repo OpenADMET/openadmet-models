@@ -1,3 +1,5 @@
+"""Workflow implementations for Anvil models."""
+
 import hashlib
 import uuid
 from datetime import datetime
@@ -25,14 +27,23 @@ def _safe_to_numpy(X):
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
-    """
-    Workflow for running basic Anvil configuration.
-    """
+    """Workflow for running basic Anvil configuration."""
 
     driver: Drivers = Drivers.SKLEARN
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
+        """
+        Check if validation set is needed or not.
+
+        Raises
+        ------
+        ValueError
+            If ensemble is specified but no validation set is requested.
+        ValueError
+            If validation set is requested but no ensemble is specified.
+
+        """
         # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
@@ -49,6 +60,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_no_finetuning(self):
+        """
+        Check that no fine-tuning paths are specified.
+
+        Raises
+        ------
+        ValueError
+            If fine-tuning paths are specified for either ensemble or single model.
+
+        """
         # Ensemble specified
         if self.ensemble:
             # Fine-tuning paths specified
@@ -142,8 +162,22 @@ class AnvilWorkflow(AnvilWorkflowBase):
     ) -> Any:
         """
         Run the workflow.
-        """
 
+        Parameters
+        ----------
+        output_dir : PathLike, optional
+            Directory to save outputs, by default "anvil_training"
+        debug : bool, optional
+            Whether to run in debug mode, by default False
+        tag : str, optional
+            Tag to override the one in the recipe, by default None
+
+        Returns
+        -------
+        Any
+            Result of the workflow run
+
+        """
         # Override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
@@ -265,7 +299,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self._train_ensemble(X_train_feat, y_train, output_dir)
 
             # Calibrate
-            self.model.calibrate_uncertainty(X_val_feat, y_val)
+            self.model.calibrate_uncertainty(
+                X_val_feat,
+                y_val,
+                method=self.parent_spec.procedure.ensemble.calibration_method,
+            )
 
             # Save
             logger.info("Saving model")
@@ -282,6 +320,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                     / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
@@ -301,10 +340,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Check if the model has predict_proba method (classification)
         if hasattr(self.model, "predict_proba"):
             y_pred = self.model.predict_proba(X_test_feat)
+            y_std = None
 
         # Otherwise, regression
         else:
-            y_pred = self.model.predict(X_test_feat)
+            if self.ensemble:
+                y_pred, y_std = self.model.predict(X_test_feat, return_std=True)
+            else:
+                y_pred = self.model.predict(X_test_feat)
+                y_std = None
         logger.info("Predictions made")
 
         # Run evaluation on train/test
@@ -314,6 +358,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             eval.evaluate(
                 y_true=y_test,
                 y_pred=y_pred,
+                y_std=y_std,
                 model=self.model,
                 X_train=X_train_feat,
                 y_train=y_train,
@@ -328,14 +373,21 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
-    """
-    Workflow for running deep learning Anvil configuration.
-    """
+    """Workflow for running deep learning Anvil configuration."""
 
     driver: Drivers = Drivers.PYTORCH
 
     @model_validator(mode="after")
     def check_no_transform(self):
+        """
+        Check that no transform step is specified.
+
+        Raises
+        ------
+        ValueError
+            If a transform step is specified in the recipe.
+
+        """
         # Check that transform is not set
         if self.transform is not None:
             raise ValueError(
@@ -345,6 +397,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
+        """
+        Check if validation set is needed or not.
+
+        Raises
+        ------
+        ValueError
+            If ensemble is specified but no validation set is requested.
+
+        """
         # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
@@ -437,7 +498,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Load model from disk
             if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
-                self.parent_spec.procedure.ensemble.param_paths[i] is not None
+                self.parent_spec.procedure.ensemble.serial_paths is not None
             ):
                 logger.info(
                     f"Loading model {i} from disk, overrides any specified `mod_params`"
@@ -487,9 +548,23 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         tag: str = None,
     ) -> Any:
         """
-        Run the workflow
-        """
+        Run the workflow.
 
+        Parameters
+        ----------
+        output_dir : PathLike, optional
+            Directory to save outputs, by default "anvil_training"
+        debug : bool, optional
+            Whether to run in debug mode, by default False
+        tag : str, optional
+            Tag to override the one in the recipe, by default None
+
+        Returns
+        -------
+        Any
+            Result of the workflow run
+
+        """
         # Override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
@@ -597,6 +672,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 val_dataloader,
                 y_val,
+                method=self.parent_spec.procedure.ensemble.calibration_method,
                 accelerator=self.trainer.accelerator,
                 devices=self.trainer.devices,
             )
@@ -616,6 +692,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
@@ -632,11 +709,20 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Predict on test set
         logger.info("Predicting")
-        y_pred = self.model.predict(
-            test_dataloader,
-            accelerator=self.trainer.accelerator,
-            devices=self.trainer.devices,
-        )
+        if self.ensemble:
+            y_pred, y_std = self.model.predict(
+                test_dataloader,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+                return_std=True,
+            )
+        else:
+            y_pred = self.model.predict(
+                test_dataloader,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+            )
+            y_std = None
         logger.info("Predictions made")
 
         # Run evaluation on train/test
@@ -651,6 +737,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             eval.evaluate(
                 y_true=y_test,
                 y_pred=y_pred,
+                y_std=y_std,
                 model=self.model,
                 X_train=train_dataloader,
                 y_train=train_dataloader,

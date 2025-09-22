@@ -1,3 +1,5 @@
+"""PostHoc multi-model comparison implementation."""
+
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,6 +30,24 @@ from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
+    """
+    PostHoc multi-model comparison.
+
+    Attributes
+    ----------
+    _metrics_names : list
+        List of metrics to compare.
+    _direction_dict : dict
+        Dictionary indicating whether to minimize or maximize each metric.
+    _sig_levels : list
+        List of significance levels for statistical tests.
+    _confidence_level : float
+        Confidence level for statistical tests.
+    _stats_names : list
+        List of statistical tests to perform.
+
+    """
+
     _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
 
     _direction_dict: dict = {
@@ -46,25 +66,37 @@ class PostHocComparison(ComparisonBase):
 
     @property
     def metrics(self):
+        """Get metrics."""
         return self._metrics_names
 
     @property
     def direction_dict(self):
+        """Get direction dictionary."""
         return self._direction_dict
 
     @property
     def sig_levels(self):
+        """Get significance levels."""
         return self._sig_levels
 
     @property
     def cl(self):
+        """Get confidence level."""
         return self._confidence_level
 
     @property
     def stats_names(self):
+        """Get statistics names."""
         return self._stats_names
 
-    def compare(self, model_stats_fns, model_tags, task_names=['task_0'], report=False, output_dir=None):
+    def compare(
+        self,
+        model_stats_fns,
+        model_tags,
+        task_names=["task_0"],
+        report=False,
+        output_dir=None,
+    ):
         """
         Perform post-hoc statistical comparison of model performance metrics.
 
@@ -120,19 +152,32 @@ class PostHocComparison(ComparisonBase):
 
     def json_to_df(self, model_stats_fns, model_tags, task_names):
         """
-        Convert model statistics from cross-validation JSON files into a DataFrame.
+        Load and aggregate model statistics from cross-validation JSON files into a single DataFrame.
+
+        Each JSON file should contain metrics for a specific model and task. This function extracts
+        the specified metrics for each model and task, and combines them into a DataFrame suitable
+        for statistical comparison and plotting.
 
         Parameters
         ----------
         model_stats_fns : list of str
-            List of file paths to JSON files with model statistics.
+            List of file paths to JSON files containing cross-validation metrics for each model.
         model_tags : list of str
-            List of tags for the models, used for plotting and reporting.
+            List of model names or tags corresponding to each file in `model_stats_fns`.
+        task_names : list of str
+            List of task names from multi-task models. Should be the same length as `model_tags`.
 
         Returns
         -------
         df : pandas.DataFrame
-            DataFrame containing the extracted statistics for each model.
+            DataFrame containing the extracted statistics for each model and task, with columns for
+            each metric and a 'method' column indicating the model tag.
+
+        Raises
+        ------
+        ValueError
+            If a specified task or metric is not found in the JSON data.
+
         """
         df = pd.DataFrame()
         for model, tag, task in zip(model_stats_fns, model_tags, task_names):
@@ -165,6 +210,7 @@ class PostHocComparison(ComparisonBase):
         -------
         result : pandas.DataFrame
             DataFrame with Levene's test statistic and p-value for each metric.
+
         """
         result = pd.DataFrame()
         lev_vecs = [df[df["method"] == tag] for tag in model_tags]
@@ -176,16 +222,19 @@ class PostHocComparison(ComparisonBase):
     def normality_plots(self, df, output_dir=None):
         """
         Generate normality plots for each metric in the DataFrame.
+
         Parameters
         ----------
         df : pandas.DataFrame
             DataFrame containing the extracted statistics for each model.
         output_dir : str, optional
             Directory to save the plots. If None, plots are not saved.
+
         Returns
         -------
         fig : matplotlib.figure.Figure
             Figure object containing the normality plots.
+
         """
         fig, axes = plt.subplots(2, len(self.metrics), figsize=(20, 10))
 
@@ -223,10 +272,15 @@ class PostHocComparison(ComparisonBase):
         -------
         fig : matplotlib.figure.Figure
             Figure object containing the ANOVA plots for each metric.
+
         """
         # Assume df is already balanced: each method has the same number of cv_cycles per metric
         fig, axes = plt.subplots(
-            len(self.metrics), 1, sharex=False, sharey=False, figsize=(8, 4 * len(self.metrics))
+            len(self.metrics),
+            1,
+            sharex=False,
+            sharey=False,
+            figsize=(8, 4 * len(self.metrics)),
         )
         if len(self.metrics) == 1:
             axes = [axes]
@@ -274,12 +328,14 @@ class PostHocComparison(ComparisonBase):
                 bar_colors.append(color)
 
             # Plot means with error bars
-            for j, (mean, se, color) in enumerate(zip(means.values, ses.values, bar_colors)):
+            for j, (mean, se, color) in enumerate(
+                zip(means.values, ses.values, bar_colors)
+            ):
                 ax.errorbar(
                     x=mean,
                     y=j,
                     xerr=se,
-                    fmt='o',
+                    fmt="o",
                     capsize=0,
                     color=color,
                     ecolor=color,
@@ -304,6 +360,7 @@ class PostHocComparison(ComparisonBase):
     def tukey_hsd_by_metric(df, metric, model_tags):
         """
         Perform Tukey's HSD test for a specific metric across multiple models.
+
         Parameters
         ----------
         df : pandas.DataFrame
@@ -312,10 +369,12 @@ class PostHocComparison(ComparisonBase):
             The metric for which to perform Tukey's HSD test.
         model_tags : list of str
             List of tags for the models, used to group data for the test.
+
         Returns
         -------
         hsd : TukeyHSDResults
             Results of Tukey's HSD test, including statistics and p-values.
+
         """
         return tukey_hsd(
             *[np.array(df[df["method"] == tag][metric]) for tag in model_tags]
@@ -324,6 +383,7 @@ class PostHocComparison(ComparisonBase):
     def get_tukeys_df(self, df, model_tags, cl=0.95):
         """
         Generate a DataFrame with Tukey's HSD results for multiple metrics.
+
         Parameters
         ----------
         df : pandas.DataFrame
@@ -332,11 +392,13 @@ class PostHocComparison(ComparisonBase):
             List of tags for the models, used to group data for the test.
         cl : float, optional
             Confidence level for the Tukey's HSD test. Default is 0.95.
+
         Returns
         -------
         hsd_df : pandas.DataFrame
             DataFrame containing the results of Tukey's HSD test, including method comparisons,
             metric names, statistics, error bars, and p-values.
+
         """
         tukeys = [
             self.tukey_hsd_by_metric(df, metric, model_tags) for metric in self.metrics
@@ -374,6 +436,7 @@ class PostHocComparison(ComparisonBase):
     def mcs_plots(self, df, model_tags, output_dir=None):
         """
         Generate and save multiple comparison of means (MCS) plots for each metric.
+
         Parameters
         ----------
         df : pandas.DataFrame
@@ -382,10 +445,12 @@ class PostHocComparison(ComparisonBase):
             List of tags for the models, used for grouping and labeling.
         output_dir : str, optional
             Directory to save the MCS plots. If None, plots are not saved.
+
         Returns
         -------
         fig : matplotlib.figure.Figure
             Figure object containing the MCS plots for each metric.
+
         """
         figsize = (20, 10)
         nrow = -(-len(self.metrics) // 3)
@@ -466,6 +531,7 @@ class PostHocComparison(ComparisonBase):
     def mean_diff_plots(self, df, model_tags, cl=None, output_dir=None):
         """
         Generate and save mean difference plots with error bars for each metric.
+
         Parameters
         ----------
         df : pandas.DataFrame
@@ -476,10 +542,12 @@ class PostHocComparison(ComparisonBase):
             Confidence level for the error bars. Default is 0.95.
         output_dir : str, optional
             Directory to save the mean difference plots. If None, plots are not saved.
+
         Returns
         -------
         fig : matplotlib.figure.Figure
             Figure object containing the mean difference plots for each metric.
+
         """
         fig, axes = plt.subplots(
             len(self.metrics), 1, figsize=(8, 2 * len(self.metrics)), sharex=False
@@ -539,6 +607,7 @@ class PostHocComparison(ComparisonBase):
         -------
         fig : matplotlib.figure.Figure
             Figure object containing all paired plots as subplots.
+
         """
         import warnings
         from itertools import product
@@ -573,15 +642,19 @@ class PostHocComparison(ComparisonBase):
                     title_color = "black"
                 else:
                     title_color = "red"
-                    if np.mean(tmp_df[tmp_df["method"] == method1][metric]) > np.mean(tmp_df[tmp_df["method"] == method2][metric]):
+                    if np.mean(tmp_df[tmp_df["method"] == method1][metric]) > np.mean(
+                        tmp_df[tmp_df["method"] == method2][metric]
+                    ):
                         title = "<-  " + title
                     else:
                         title = title + "  ->"
 
                 ax = axes[plot_idx]
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', category=FutureWarning)
-                    plot_paired(data=tmp_df, dv=metric, within="method", subject="cycle", ax=ax)
+                    warnings.filterwarnings("ignore", category=FutureWarning)
+                    plot_paired(
+                        data=tmp_df, dv=metric, within="method", subject="cycle", ax=ax
+                    )
                 ax.set_title(title, color=title_color)
                 ax.set_xlabel("Method")
                 ax.set_ylabel(metric.upper())
@@ -599,10 +672,40 @@ class PostHocComparison(ComparisonBase):
         return fig
 
     def stats_to_json(self, stats_dfs, output_dir):
+        """
+        Save statistical test results to JSON files.
+
+        Parameters
+        ----------
+        stats_dfs : list of pandas.DataFrame
+            List of DataFrames containing statistical test results (e.g., Levene, Tukey HSD).
+        output_dir : str
+            Directory to save the JSON files.
+
+        Returns
+        -------
+        None
+
+        """
         for stat_df, name in zip(stats_dfs, self.stats_names):
             stat_df.to_json(f"{output_dir}/{name}.json")
 
     def convert_float_round(self, val):
+        """
+        Convert a value to a string in scientific notation with 3 decimal places.
+
+        Parameters
+        ----------
+        val : float or any
+            Value to convert.
+
+        Returns
+        -------
+        str or original type
+            String representation in scientific notation if conversion is possible,
+            otherwise returns the original value.
+
+        """
         try:
             return str(f"{float(val):0.3e}")
         except ValueError:
@@ -624,6 +727,7 @@ class PostHocComparison(ComparisonBase):
         Returns
         -------
         None
+
         """
         if write:
             self.write_report(data_dfs, output_dir)
@@ -642,6 +746,7 @@ class PostHocComparison(ComparisonBase):
         Returns
         -------
         None
+
         """
         doc = SimpleDocTemplate(
             f"{output_dir}/posthoc.pdf",
@@ -698,12 +803,35 @@ class PostHocComparison(ComparisonBase):
 
     def print_table(self, levene_df, tukeys_df):
         """
-        Print a DataFrame as a table
+        Print Levene's test and Tukey's HSD results as formatted tables.
+
+        Parameters
+        ----------
+        levene_df : pandas.DataFrame
+            DataFrame containing Levene's test statistics for each metric.
+        tukeys_df : pandas.DataFrame
+            DataFrame containing Tukey's HSD test results, including method comparisons,
+            metrics, values, error bars, and p-values.
+
+        Returns
+        -------
+        None
+
         """
         print("Levene's test results")
         print("-------------------------")
-        print(tabulate.tabulate(levene_df, headers=self._metrics_names, tablefmt="psql", showindex=False))
+        print(
+            tabulate.tabulate(
+                levene_df, headers=self._metrics_names, tablefmt="psql", showindex=False
+            )
+        )
         print("\nTukey's HSD results")
         print("-------------------------")
-        print(tabulate.tabulate(tukeys_df, headers=['method', 'metric', 'value', 'errorbars', 'p-value'],
-                                tablefmt="psql", showindex=False))
+        print(
+            tabulate.tabulate(
+                tukeys_df,
+                headers=["method", "metric", "value", "errorbars", "p-value"],
+                tablefmt="psql",
+                showindex=False,
+            )
+        )

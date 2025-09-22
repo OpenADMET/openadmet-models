@@ -1,3 +1,5 @@
+"""Base class for multi-model comparison."""
+
 from abc import ABC, abstractmethod
 
 from class_registry import ClassRegistry, RegistryKeyError
@@ -7,6 +9,7 @@ comparisons = ClassRegistry(unique=True)
 
 
 def get_comparison_class(compare_type):
+    """Get comparison class."""
     try:
         compare_class = comparisons.get_class(compare_type)
     except RegistryKeyError:
@@ -17,10 +20,12 @@ def get_comparison_class(compare_type):
 
 
 class ComparisonBase(BaseModel, ABC):
+    """Base class for multi-model comparison."""
+
     @abstractmethod
     def compare(model_stats_fns: list[str], model_tags: list[str]):
         """
-        Compare two model runs
+        Compare two model runs.
 
         Parameters
         ----------

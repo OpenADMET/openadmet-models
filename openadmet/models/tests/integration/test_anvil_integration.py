@@ -101,7 +101,8 @@ class TestGPUAnvilConfigs:
 
 
 class TestStructuralModelGPUAnvilConfigs:
-    """Test for MTENN Anvil configuration with GPU support
+    """
+    Test for MTENN Anvil configuration with GPU support
 
     We need to generate the poses data dynamically for the test, as the original
     mtenn_anvil.yaml file expects a CSV with poses and a folder with PDB files in a static location.
