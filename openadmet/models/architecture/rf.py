@@ -1,3 +1,5 @@
+"""Random Forest model implementations."""
+
 from typing import ClassVar
 
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
@@ -8,9 +10,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class RFModelBase(PickleableModelBase):
-    """
-    Base class for Sklearn Random Forest models, allows instantiation from parameters that are passable to the RF model classes.
-    """
+    """Base class for Sklearn Random Forest models."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +21,7 @@ class RFModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -38,7 +38,7 @@ class RFModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -52,9 +52,7 @@ class RFModelBase(PickleableModelBase):
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params, n_jobs=-1)
         else:
@@ -62,12 +60,14 @@ class RFModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
+        **kwargs
+            Additional keyword arguments for the predict method.
 
         Returns
         -------
@@ -82,9 +82,7 @@ class RFModelBase(PickleableModelBase):
 
 @models.register("RFRegressorModel")
 class RFRegressorModel(RFModelBase):
-    """
-    Random Forest regression model
-    """
+    """Random Forest regression model."""
 
     type: ClassVar[str] = "RFRegressorModel"
     mod_class: ClassVar[type] = RandomForestRegressor
@@ -92,7 +90,7 @@ class RFRegressorModel(RFModelBase):
 
 @models.register("RFClassifierModel")
 class RFClassifierModel(RFModelBase):
-    """ """
+    """RF classifier model."""
 
     type: ClassVar[str] = "RFClassifierModel"
     mod_class: ClassVar[type] = RandomForestClassifier

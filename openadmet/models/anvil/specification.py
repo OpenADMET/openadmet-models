@@ -1,3 +1,5 @@
+"""Specification models for Anvil workflows."""
+
 from os import PathLike
 from pathlib import Path
 from typing import ClassVar, Literal, Optional, Union
@@ -37,7 +39,29 @@ _SECTION_CLASS_GETTERS = {
 
 
 class DataSpec(BaseModel):
-    """Data specification for the workflow."""
+    """
+    Data specification for the workflow.
+
+    Attributes
+    ----------
+    type : str
+        The type of data source (e.g., 'csv', 'yaml').
+    resource : str
+        The path or URL to the data resource.
+    cat_entry : Optional[str]
+        The catalog entry name if the resource is a YAML catalog.
+    target_cols : Union[str, list[str]]
+        The target column(s) in the dataset.
+    input_col : str
+        The input column in the dataset.
+    anvil_dir : Optional[str]
+        The base directory for relative paths.
+    dropna : Optional[bool]
+        Whether to drop rows with NaN values.
+    _catalog : Optional[intake.catalog.Catalog]
+        The intake catalog object if the resource is a YAML file.
+
+    """
 
     type: str
     resource: str
@@ -241,7 +265,33 @@ class SpecBase(BaseModel):
 
 
 class Metadata(SpecBase):
-    """Metadata specification."""
+    """
+    Metadata specification.
+
+    Attributes
+    ----------
+    version : Literal["v1"]
+        The version of the metadata schema.
+    driver : str
+        The driver for the workflow.
+    name : str
+        The name of the workflow.
+    build_number : int
+        The build number of the workflow (must be non-negative).
+    description : str
+        Description of the workflow.
+    tag : str
+        Primary tag for the workflow.
+    authors : str
+        Name of the authors.
+    email : EmailStr
+        Email address of the contact person.
+    biotargets : list[str]
+        List of biotargets associated with the workflow.
+    tags : list[str]
+        Additional tags for the workflow.
+
+    """
 
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
@@ -267,7 +317,19 @@ class Metadata(SpecBase):
 
 
 class AnvilSection(SpecBase):
-    """Anvil specification section base class."""
+    """
+    Anvil specification section base class.
+
+    Attributes
+    ----------
+    type : Optional[str]
+        The type of the section.
+    params : dict
+        The parameters for the section.
+    section_name : ClassVar[str]
+        The name of the section.
+
+    """
 
     type: str | None = None
     params: dict = {}
@@ -304,7 +366,19 @@ class FeatureSpec(AnvilSection):
 
 
 class ModelSpec(AnvilSection):
-    """Model specification."""
+    """
+    Model specification.
+
+    Attributes
+    ----------
+    section_name : ClassVar[str]
+        The name of the section.
+    param_path : Optional[str]
+        The path to the model parameters file.
+    serial_path : Optional[str]
+        The path to the model serialization file.
+
+    """
 
     section_name: ClassVar[str] = "model"
     param_path: str | None = None
@@ -340,7 +414,23 @@ class ModelSpec(AnvilSection):
 
 
 class EnsembleSpec(AnvilSection):
-    """Ensemble specification."""
+    """
+    Ensemble specification.
+
+    Attributes
+    ----------
+    section_name : ClassVar[str]
+        The name of the section.
+    n_models : int
+        The number of models in the ensemble.
+    calibration_method : str
+        The calibration method to use.
+    param_paths : Optional[list[str]]
+        The list of parameter file paths for the ensemble models.
+    serial_paths : Optional[list[str]]
+        The list of serialization file paths for the ensemble models.
+
+    """
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int
@@ -350,6 +440,7 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("calibration_method")
     def check_method(cls, value):
+        """Validate the calibration method."""
         allowed = ["isotonic-regression", "scaling-factor"]
         if value not in allowed:
             raise ValueError(
@@ -359,41 +450,14 @@ class EnsembleSpec(AnvilSection):
 
     @field_validator("n_models")
     def check_n_models(cls, value):
-        """
-        Ensure ensemble has more than one model.
-
-        Parameters
-        ----------
-        value : int
-            The number of models in the ensemble.
-
-        Returns
-        -------
-        value : int
-            The validated number of models.
-
-        """
+        """Ensure ensemble has more than one model."""
         if value < 2:
             raise ValueError("Ensemble must have more than one model.")
         return value
 
     @model_validator(mode="after")
     def check_paths(self):
-        """
-        Ensure both param_paths and serial_paths are provided together.
-
-        Returns
-        -------
-        self : EnsembleSpec
-            The validated EnsembleSpec instance.
-
-        Raises
-        ------
-        ValueError
-            If only one of param_paths or serial_paths is provided, or if their lengths do not
-            match the number of models.
-
-        """
+        """Ensure both param_paths and serial_paths are provided together."""
         # Both specified
         if self.param_paths and self.serial_paths:
             # Check lengths match

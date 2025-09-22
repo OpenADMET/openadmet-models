@@ -1,3 +1,5 @@
+"""Posthoc binary metrics evaluation."""
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.metrics import (
@@ -13,6 +15,8 @@ from openadmet.models.eval.eval_base import EvalBase, evaluators
 @evaluators.register("PosthocBinaryMetrics")
 class PosthocBinaryMetrics(EvalBase):
     """
+    Posthoc binary metrics.
+
     Intended to be used for regression-based models to calculate
     precision and recall metrics for user-input cutoffs
 
@@ -96,7 +100,23 @@ class PosthocBinaryMetrics(EvalBase):
         self, y_true: list, y_pred: list, cutoff: float, output_dir: str = None
     ):
         """
-        Plot the confusion matrix for a given cutoff
+        Plot the confusion matrix for a given cutoff.
+
+        Parameters
+        ----------
+        y_true : list or array-like
+            True values or labels.
+        y_pred : list or array-like
+            Predicted values or labels.
+        cutoff : float
+            Cutoff value to binarize predictions and true values.
+        output_dir : str, optional
+            Directory to save the confusion matrix plot. If None, the plot is not saved.
+
+        Returns
+        -------
+        None
+
         """
         pred_class = [y > cutoff for y in y_pred]
         true_class = [y > cutoff for y in y_true]
@@ -110,7 +130,23 @@ class PosthocBinaryMetrics(EvalBase):
         self, y_true: list, y_pred: list, cutoff: float, output_dir: str = None
     ):
         """
-        Plot the classification of the model with a given cutoff
+        Plot the post-hoc classification scatter plot with cutoff lines.
+
+        Parameters
+        ----------
+        y_true : list or array-like
+            True values or labels.
+        y_pred : list or array-like
+            Predicted values or labels.
+        cutoff : float
+            Cutoff value to draw threshold lines.
+        output_dir : str, optional
+            Directory to save the classification plot. If None, the plot is not saved.
+
+        Returns
+        -------
+        None
+
         """
         fig, ax = plt.subplots()
         plt.scatter(y_true, y_pred)
@@ -124,13 +160,41 @@ class PosthocBinaryMetrics(EvalBase):
 
     def stats_to_json(self, data_df, output_dir):
         """
-        Convert the precision-recall dataframe to json
+        Save the precision-recall DataFrame to a JSON file.
+
+        Parameters
+        ----------
+        data_df : pandas.DataFrame
+            DataFrame containing precision and recall metrics.
+        output_dir : str
+            Directory to save the JSON file.
+
+        Returns
+        -------
+        None
+
         """
         data_df.to_json(f"{output_dir}/posthoc_binary_eval.json")
 
     def report(self, write=False, output_dir=None, precision=None, recall=None):
         """
-        Report the evaluation
+        Report the evaluation results, optionally saving them to JSON.
+
+        Parameters
+        ----------
+        write : bool, optional
+            Whether to write the results to a JSON file. Default is False.
+        output_dir : str, optional
+            Directory to save the JSON file if write is True.
+        precision : float or array-like, optional
+            Precision value(s) to report.
+        recall : float or array-like, optional
+            Recall value(s) to report.
+
+        Returns
+        -------
+        None
+
         """
         stats_df = pd.DataFrame({"precision": precision, "recall": recall}, index=[0])
         if write and stats_df is not None:

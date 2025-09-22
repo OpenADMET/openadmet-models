@@ -1,3 +1,5 @@
+"""CLI for running Anvil workflows."""
+
 import click
 
 from openadmet.models.anvil.specification import AnvilSpecification
@@ -22,7 +24,21 @@ from openadmet.models.anvil.specification import AnvilSpecification
     "--tag", required=False, help="User-defined model tag to help ID this model"
 )
 def anvil(recipe_path, tag, debug, output_dir):
-    """Run an Anvil workflow for model building from a recipe"""
+    """
+    Run an Anvil workflow for model building from a recipe.
+
+    Parameters
+    ----------
+    recipe_path : str
+        Path to the recipe YAML file.
+    tag : str, optional
+        User-defined model tag to help ID this model, by default None.
+    debug : bool, optional
+        Enable debug mode, by default False.
+    output_dir : str, optional
+        Output directory path, by default "anvil_training".
+
+    """
     spec = AnvilSpecification.from_recipe(recipe_path)
     wf = spec.to_workflow()
     click.echo(f"Workflow initialized successfully with recipe: {recipe_path}")

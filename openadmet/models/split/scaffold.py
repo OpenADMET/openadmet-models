@@ -1,3 +1,5 @@
+"""Scaffold-based data splitting implementations."""
+
 from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 import numpy as np
@@ -7,13 +9,30 @@ from openadmet.models.split.split_base import SplitterBase, splitters
 
 @splitters.register("ScaffoldSplitter")
 class ScaffoldSplitter(SplitterBase):
-    """
-    Splits the data based on the scaffold of the molecules
-    """
+    """Splits the data based on the scaffold of the molecules."""
 
     def split(self, X, y):
         """
-        Split the data into train, validation, and test sets
+        Split the data into train, validation, and test sets.
+
+        Parameters
+        ----------
+        X : Iterable[str]
+            List or iterable of SMILES strings to split.
+        y : Iterable[float] or pd.Series
+            List or iterable of target values corresponding to the SMILES strings.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - X_train: Training set SMILES strings.
+            - X_val: Validation set SMILES strings (or None if val_size=0).
+            - X_test: Test set SMILES strings (or None if test_size=0).
+            - y_train: Training set target values.
+            - y_val: Validation set target values (or None if val_size=0).
+            - y_test: Test set target values (or None if test_size=0).
+
         """
         # No test set requested
         if self.test_size == 0:
@@ -79,13 +98,30 @@ class ScaffoldSplitter(SplitterBase):
 
 @splitters.register("PerimeterSplitter")
 class PerimeterSplitter(SplitterBase):
-    """
-    Splits the data based on the perimeter of the molecules
-    """
+    """Splits the data based on the perimeter of the molecules."""
 
     def split(self, X, y):
         """
-        Split the data into train, validation, and test sets
+        Split the data into train, validation, and test sets.
+
+        Parameters
+        ----------
+        X : Iterable[str]
+            List or iterable of SMILES strings to split.
+        y : Iterable[float] or pd.Series
+            List or iterable of target values corresponding to the SMILES strings.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - X_train: Training set SMILES strings.
+            - X_val: Validation set SMILES strings (or None if val_size=0).
+            - X_test: Test set SMILES strings (or None if test_size=0).
+            - y_train: Training set target values.
+            - y_val: Validation set target values (or None if val_size=0).
+            - y_test: Test set target values (or None if test_size=0).
+
         """
         # No test set requested
         if self.test_size == 0:
@@ -150,13 +186,30 @@ class PerimeterSplitter(SplitterBase):
 
 @splitters.register("MaxDissimilaritySplitter")
 class MaxDissimilaritySplitter(SplitterBase):
-    """
-    Splits the data based on maximum dissimilarity
-    """
+    """Splits the data based on maximum dissimilarity."""
 
     def split(self, X, y):
         """
-        Split the data into train, validation, and test sets
+        Split the data into train, validation, and test sets.
+
+        Parameters
+        ----------
+        X : Iterable[str]
+            List or iterable of SMILES strings to split.
+        y : Iterable[float] or pd.Series
+            List or iterable of target values corresponding to the SMILES strings.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - X_train: Training set SMILES strings.
+            - X_val: Validation set SMILES strings (or None if val_size=0).
+            - X_test: Test set SMILES strings (or None if test_size=0).
+            - y_train: Training set target values.
+            - y_val: Validation set target values (or None if val_size=0).
+            - y_test: Test set target values (or None if test_size=0).
+
         """
         # No test set requested
         if self.test_size == 0:
@@ -221,7 +274,7 @@ class MaxDissimilaritySplitter(SplitterBase):
 
 def safe_index(data, idx):
     """
-    A helper function for correct indexing depending on whether X and y are numpy arrays or pandas series/dataframes.
+    Correct indexing depending on whether X and y are numpy arrays or pandas series/dataframes.
 
     Parameters
     ----------

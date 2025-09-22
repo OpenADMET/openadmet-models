@@ -1,3 +1,5 @@
+"""Script to create a conda environment for openadmet-models."""
+
 import argparse
 import os
 import re
@@ -48,7 +50,7 @@ except ImportError:
 
 @contextmanager
 def temp_cd():
-    """Temporary CD Helper"""
+    """Temporary CD Helper."""
     cwd = os.getcwd()
     with TemporaryDirectory() as td:
         try:
