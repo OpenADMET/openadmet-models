@@ -29,8 +29,8 @@ The development version of `openadmet-models` can be installed directly from the
 First install the package dependencies using `mamba`:
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml 
-# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml 
+mamba env create -f devtools/conda-envs/openadmet-models.yaml
+# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml
 ```
 
 The `openadmet-models` library can then be installed via:
@@ -61,7 +61,7 @@ Additionally, we ship the ability to robustly compare multiple models trained wi
 openadmet compare --model-stats my_model-1/cross_validation_metrics.json --taskname cyp3a4_pchembl --model-stats my_model-2/cross_validation_metrics.json --taskname cyp3a4_pchembl --output-dir compare_plots --report report.pdf
 ```
 
-Some examples of `Anvil` specifications are provided in the Tutorials and Documentation. 
+Some examples of `Anvil` specifications are provided in the Tutorials and Documentation.
 
 
 ## Getting started
