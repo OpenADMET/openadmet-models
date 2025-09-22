@@ -18,25 +18,22 @@ from openadmet.models.features.feature_base import (
     get_featurizer_class,
 )
 
+
 @featurizers.register("PairwiseFeaturizer")
 class PairwiseFeaturizer(FeaturizerBase):
     """PairFeaturizedData is a featurizer that pairs features according to a specified method."""
 
-    how_to_pair: Literal['full', 'ut', 'sut'] = Field(
+    how_to_pair: Literal["full", "ut", "sut"] = Field(
         "full",
-        description="How to pair the features, options are 'full' for all pairs, " \
+        description="How to pair the features, options are 'full' for all pairs, "
         "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
         "'rand' for random set of pairs from full, as set by num_pairs.",
     )
     featurizer: Union[type[FeaturizerBase], FeaturizerBase, dict] = Field(
         ..., description="Featurizer to use before pairing"
     )
-    n_jobs: int = Field(
-        4, description="Number of jobs to use for featurization"
-    )
-    batch_size: int = Field(
-        128, description="Batch size to use for DataLoader"
-    )
+    n_jobs: int = Field(4, description="Number of jobs to use for featurization")
+    batch_size: int = Field(128, description="Batch size to use for DataLoader")
     shuffle: bool = Field(
         False, description="Whether to shuffle the data in the DataLoader"
     )
@@ -46,9 +43,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         """Validate the how_to_pair and num_pairs parameters together."""
         how_to_pair = values.get("how_to_pair")
         if how_to_pair not in ["full", "ut", "sut"]:
-            raise ValueError(
-                "how_to_pair must be one of 'full', 'ut', or 'sut'"
-            )
+            raise ValueError("how_to_pair must be one of 'full', 'ut', or 'sut'")
         return values
 
     @field_validator("featurizer", mode="before")
@@ -136,7 +131,9 @@ class PairwiseFeaturizer(FeaturizerBase):
         if hasattr(feat, "__class__"):
             feat_type = feat.__class__.__name__
             # Remove private fields and methods from dict
-            feat_params = {k: v for k, v in feat.__dict__.items() if not k.startswith("_")}
+            feat_params = {
+                k: v for k, v in feat.__dict__.items() if not k.startswith("_")
+            }
             featurizer_field = {feat_type: feat_params}
         else:
             featurizer_field = feat

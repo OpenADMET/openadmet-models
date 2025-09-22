@@ -7,6 +7,7 @@ from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
 
+
 @pytest.fixture()
 def smiles():
     return ["CCO", "CCN", "CCO"]
@@ -83,6 +84,7 @@ def test_feature_concatenator_order_independence(smiles):
 
     assert_array_equal(X1, X2)
     assert_array_equal(idx1, idx2)
+
 
 def test_pairwise_featurizer(smiles):
     featurizer = PairwiseFeaturizer(

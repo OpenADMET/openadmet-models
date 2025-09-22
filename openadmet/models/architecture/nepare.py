@@ -7,7 +7,10 @@ from chemprop import models, nn
 from collections import OrderedDict
 
 from openadmet.models.architecture.model_base import models as model_registry
-from openadmet.models.architecture.model_base import LightningModuleBase, LightningModelBase
+from openadmet.models.architecture.model_base import (
+    LightningModuleBase,
+    LightningModelBase,
+)
 
 
 from typing import ClassVar
@@ -19,20 +22,25 @@ _METRIC_TO_LOSS = {
     "rmse": nn.metrics.RMSE(),
 }
 
+
 class NeuralPairwiseRegressorModule(LightningModuleBase):
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 num_layers,
-                 activation = torch.nn.ReLU,
-                 lr: float = 1e-4,
-                 n_targets: int = 1,
-                 monitor_metric: str = "val_loss"):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        num_layers,
+        activation=torch.nn.ReLU,
+        lr: float = 1e-4,
+        n_targets: int = 1,
+        monitor_metric: str = "val_loss",
+    ):
         super().__init__()
         input_size = input_size * 2
         _modules = OrderedDict()
         for i in range(num_layers):
-            _modules[f"hidden_{i}"] = torch.nn.Linear(input_size if i == 0 else hidden_size, hidden_size)
+            _modules[f"hidden_{i}"] = torch.nn.Linear(
+                input_size if i == 0 else hidden_size, hidden_size
+            )
             _modules[f"{activation.__name__.lower()}_{i}"] = activation()
         _modules["readout"] = torch.nn.Linear(hidden_size, n_targets)
         self.fnn = torch.nn.Sequential(_modules)
@@ -66,6 +74,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         x = torch.cat((x_1, x_2), dim=1)
         return self(x)
 
+
 @model_registry.register("NeuralPairwiseRegressorModel")
 class NeuralPairwiseRegressorModel(LightningModelBase):
     """
@@ -89,7 +98,6 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         """
         Create a model from parameters
         """
-
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
         return instance
@@ -110,7 +118,6 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
-
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
 

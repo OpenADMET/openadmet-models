@@ -112,7 +112,13 @@ class RegressionMetrics(EvalBase):
             if y_true.shape[0] != y_pred.shape[0]:
                 # Generate pairwise true values to match pairwise predictions
                 N = y_true.shape[0]
-                t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                t_true = np.array(
+                    [
+                        y_true[i, task_id] - y_true[j, task_id]
+                        for i in range(N)
+                        for j in range(N)
+                    ]
+                )
                 t_pred = y_pred[:, task_id]
             else:
                 t_true = y_true[:, task_id]
@@ -394,7 +400,13 @@ class RegressionPlots(EvalBase):
             if y_true.shape[0] != y_pred.shape[0]:
                 # Generate pairwise true values to match pairwise predictions
                 N = y_true.shape[0]
-                t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                t_true = np.array(
+                    [
+                        y_true[i, task_id] - y_true[j, task_id]
+                        for i in range(N)
+                        for j in range(N)
+                    ]
+                )
                 t_pred = y_pred[:, task_id]
             else:
                 t_true = y_true[:, task_id]

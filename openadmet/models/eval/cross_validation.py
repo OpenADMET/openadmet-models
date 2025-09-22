@@ -28,6 +28,7 @@ from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 from openadmet.models.features.pairwise import PairwiseFeaturizer
 
+
 def wrap_ktau(y_true, y_pred):
     """Wrap ktau nan omission."""
     return nan_omit_ktau(y_true, y_pred).statistic
@@ -594,7 +595,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 if y_true.shape[0] != y_pred.shape[0]:
                     # Generate pairwise true values to match pairwise predictions
                     N = y_true.shape[0]
-                    t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                    t_true = np.array(
+                        [
+                            y_true[i, task_id] - y_true[j, task_id]
+                            for i in range(N)
+                            for j in range(N)
+                        ]
+                    )
                     t_pred = y_pred[:, task_id]
                 else:
                     t_true = y_val[:, task_id]
@@ -646,7 +653,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             if y_true.shape[0] != y_pred.shape[0]:
                 # Generate pairwise true values to match pairwise predictions
                 N = y_true.shape[0]
-                t_true = np.array([y_true[i, task_id] - y_true[j, task_id] for i in range(N) for j in range(N)])
+                t_true = np.array(
+                    [
+                        y_true[i, task_id] - y_true[j, task_id]
+                        for i in range(N)
+                        for j in range(N)
+                    ]
+                )
                 t_pred = y_pred[:, task_id]
             else:
                 t_true = y_val[:, task_id]

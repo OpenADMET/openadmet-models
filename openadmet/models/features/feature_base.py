@@ -55,6 +55,7 @@ class FeaturizerBase(BaseModel, ABC):
         """
         pass
 
+
 class DeepLearningFeaturizer(FeaturizerBase):
     """
     Base class for deep learning featurizers.
