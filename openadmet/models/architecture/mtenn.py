@@ -142,7 +142,7 @@ class MTENNLightningModule(pl.LightningModule):
 @model_registry.register("MTENNSchNetModel")
 class MTENNSchNetModel(LightningModelBase):
     """
-    MTENN SchNet Model Implementation
+    MTENN SchNet Model Implementation.
 
     Class to implement a MTENN based model, specifically one using the SchNet Representation.
     This exposes the hyperparameters and model-level options directly to the anvil workflow.
