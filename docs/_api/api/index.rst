@@ -10,4 +10,5 @@ OpenADMET Models API Reference
     anvil/index
     featurization/index
     inference/index
-    architecture/index
+    model_architectures/index
+
