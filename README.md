@@ -1,4 +1,4 @@
-openadmet-models
+`openadmet-models` 
 ==============================
 [//]: # (Badges)
 [![Logo](https://img.shields.io/badge/OSMF-OpenADMET-%23002f4a)](https://openadmet.org/)
@@ -8,6 +8,30 @@ openadmet-models
 
 
 Implementations of machine learning architectures used in the OpenADMET project within a consistent framework for rapid development and prototyping of ML models for ADMET
+
+
+## License
+
+This library is made available under the [MIT](https://opensource.org/licenses/MIT) open source license.
+
+
+## Install
+
+### Development version
+
+The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
+
+First install the package dependencies using `mamba`:
+
+```bash
+mamba env create -f environment.yml
+```
+
+The openfe library can then be installed via:
+
+```
+python -m pip install --no-deps .
+```
 
 
 ## Examples
@@ -32,7 +56,6 @@ openadmet compare --model-stats my_model-1/cross_validation_metrics.json --taskn
 ```
 
 
-
 >[!NOTE]
 > This repo is under very active development, we make no guarantees about stability or correctness.
 
@@ -44,12 +67,17 @@ openadmet compare --model-stats my_model-1/cross_validation_metrics.json --taskn
 > When it is available, you will be able to read the documentation here: https://openadmet-models.readthedocs.io/en/latest/, watch this space!
 
 
+
+## Authors
+
+The OpenFE development team.
+
+
 ### Copyright
 
 Copyright (c) 2025, OpenADMET Models Contributors
 
 
-#### Acknowledgements
+## Acknowledgements
 
-Project based on the
-[Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.10.
+OpenFE is an [Open Molecular Software Foundation](https://omsf.io/) hosted project.
