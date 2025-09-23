@@ -21,7 +21,26 @@ from openadmet.models.features.feature_base import (
 
 @featurizers.register("PairwiseFeaturizer")
 class PairwiseFeaturizer(FeaturizerBase):
-    """PairFeaturizedData is a featurizer that pairs features according to a specified method."""
+    """
+    PairFeaturizedData is a featurizer that pairs features according to a specified method.
+    
+    Attributes
+    ----------
+    how_to_pair : str
+        Method to pair features. Options are 'full' for all pairs, 'ut' for
+        upper triangular pairs, 'sut' for symmetric upper triangular pairs.
+    featurizer : Union[type[FeaturizerBase], FeaturizerBase, dict
+        Featurizer to use before pairing. Can be a FeaturizerBase subclass,
+        an instance of a FeaturizerBase subclass, or a dictionary of parameters
+        to construct a FeaturizerBase subclass.
+    n_jobs : int
+        Number of jobs to use for featurization.
+    batch_size : int
+        Batch size to use for DataLoader.
+    shuffle : bool
+        Whether to shuffle the data in the DataLoader.
+        
+    """
 
     how_to_pair: Literal["full", "ut", "sut"] = Field(
         "full",
@@ -123,8 +142,13 @@ class PairwiseFeaturizer(FeaturizerBase):
 
     def make_new(self) -> "PairwiseFeaturizer":
         """
-        Copy parameters to a new PairwiseFeaturizer instance,
-        ensuring the featurizer field is in the correct format.
+        Copy parameters to a new PairwiseFeaturizer instance, ensuring the featurizer field is in the correct format.
+
+        Returns
+        -------
+        PairwiseFeaturizer
+            A new instance of PairwiseFeaturizer with the same parameters.
+        
         """
         # Get the featurizer type name
         feat = self.featurizer
