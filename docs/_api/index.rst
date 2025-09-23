@@ -1,11 +1,10 @@
-API Documentation
-=================
-
+Reference
+=========
 
 This contains details of the Python API as well as a reference to the command line interface.
 
-
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   _api/index.rst
+    api/index
+    cli/index

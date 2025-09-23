@@ -82,7 +82,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "tests", "tests/**"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "default"
@@ -182,3 +182,21 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+
+
+def skip_classmethods(app, what, name, obj, skip, options):
+    """Skip classmethods in the documentation."""
+    import inspect
+
+    if inspect.isclass(obj):
+        return skip
+    if inspect.ismethod(obj) and getattr(obj, "__self__", None) is not None:
+        # Skip classmethods
+        if getattr(obj, "__self__") is not None and isinstance(obj.__self__, type):
+            return True
+    return skip
+
+
+def setup(app):
+    """Set up the Sphinx app and skip classmethods."""
+    app.connect("autodoc-skip-member", skip_classmethods)
