@@ -49,8 +49,6 @@ class ChemPropModel(LightningModelBase):
         Hidden dimension size for the feed-forward network.
     ffn_num_layers : int
         Number of layers in the feed-forward network.
-    scaler : object
-        Scaler used for target normalization.
     normalized_targets : bool
         Whether targets are normalized.
     batch_norm : bool
@@ -82,7 +80,6 @@ class ChemPropModel(LightningModelBase):
     message_hidden_dim: int = 300
     ffn_hidden_dim: int = 300
     ffn_num_layers: int = 1
-    scaler: object = None
     normalized_targets: bool = True
     batch_norm: bool = False
     dropout: float = 0.0
@@ -159,11 +156,15 @@ class ChemPropModel(LightningModelBase):
 
         """
         super().__init__(*args, **kwargs)
-        self.build()
 
-    def _get_output_transform(self):
+    def _get_output_transform(self, scaler):
         """
-        Set the output transform for predictions.
+        Convert scaler to the output transform needed for predictions.
+
+        Parameters
+        ----------
+        scaler : object
+            The scaler to use for unscaling predictions.
 
         Returns
         -------
@@ -171,8 +172,8 @@ class ChemPropModel(LightningModelBase):
             The output transform to apply to predictions.
 
         """
-        if self.scaler is not None:
-            output_transform = nn.UnscaleTransform.from_standard_scaler(self.scaler)
+        if scaler is not None:
+            output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
         elif self.normalized_targets:
             # Expects the targets to be normalized, likely to be loaded from state dict
             output_transform = nn.UnscaleTransform(
@@ -182,68 +183,17 @@ class ChemPropModel(LightningModelBase):
             output_transform = None
         return output_transform
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        .. deprecated:: 1.0
-            Use direct initialization instead.
-
-        Parameters
-        ----------
-        class_params : dict, optional
-            Class-level parameters.
-        mod_params : dict, optional
-            Model-specific parameters.
-
-        Raises
-        ------
-        DeprecationWarning
-            Always raised as this method is deprecated.
-
-        """
-        raise DeprecationWarning("Deprecating `from_params` method.")
-
-    def make_new(self) -> "ChemPropModel":
-        """
-        Copy parameters to a new model instance without copying the estimator.
-
-        Returns
-        -------
-        ChemPropModel
-            A new instance of ChemPropModel with the same parameters.
-
-        """
-        return self.__class__(**self.model_dump(exclude={"estimator"}))
-
-    def train(self, dataloader, scaler=None):
-        """
-        Train the model.
-
-        Parameters
-        ----------
-        dataloader : DataLoader
-            DataLoader for training data.
-        scaler : object, optional
-            Scaler for target normalization.
-
-        Raises
-        ------
-        NotImplementedError
-            Always raised. Use a trainer for training.
-
-        """
-        raise NotImplementedError(
-            "Training not implemented in model class, use a trainer"
-        )
-
-    def build(self):
+    def build(self, scaler=None):
         """
         Prepare and build the ChemProp model.
 
         Downloads and loads the CheMeleon foundation model if specified, otherwise
         constructs a new MPNN model with the given configuration.
+
+        Parameters
+        ----------
+        scaler : object, optional
+            Scaler for target normalization.
 
         Returns
         -------
@@ -302,7 +252,7 @@ class ChemPropModel(LightningModelBase):
                 input_dim=self.message_hidden_dim,
                 hidden_dim=self.ffn_hidden_dim,
                 n_layers=self.ffn_num_layers,
-                output_transform=self._get_output_transform(),
+                output_transform=self._get_output_transform(scaler),
                 dropout=self.dropout,
             )
 
@@ -329,6 +279,39 @@ class ChemPropModel(LightningModelBase):
             logger.warning("Model already exists, skipping build")
 
         return self
+
+    def make_new(self) -> "ChemPropModel":
+        """
+        Copy parameters to a new model instance without copying the estimator.
+
+        Returns
+        -------
+        ChemPropModel
+            A new instance of ChemPropModel with the same parameters.
+
+        """
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
+
+    def train(self, dataloader, scaler=None):
+        """
+        Train the model.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader for training data.
+        scaler : object, optional
+            Scaler for target normalization.
+
+        Raises
+        ------
+        NotImplementedError
+            Always raised. Use a trainer for training.
+
+        """
+        raise NotImplementedError(
+            "Training not implemented in model class, use a trainer"
+        )
 
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
@@ -373,48 +356,65 @@ class ChemPropModel(LightningModelBase):
             preds = trainer.predict(self.estimator, X)
         return torch.cat(preds).numpy()
 
+    def freeze_weights(
+        self, message_passing: bool = True, batch_norm: bool = True, ffn_layers: int = 0
+    ):
+        """
+        Freeze parts of the model for transfer learning or fine-tuning.
 
-def freeze_weights(
-    self, message_passing: bool = True, batch_norm: bool = True, ffn_layers: int = 1
-):
-    """
-    Freeze parts of the model for transfer learning or fine-tuning.
+        Parameters
+        ----------
+        message_passing : bool, optional
+            If True, freeze the message passing layers. Default is True.
+        batch_norm : bool, optional
+            If True, freeze the batch normalization layers. Default is True.
+        ffn_layers : int, optional
+            Number of feed-forward network (FFN) layers to freeze. Default is 0.
 
-    Parameters
-    ----------
-    message_passing : bool, optional
-        If True, freeze the message passing layers. Default is True.
-    batch_norm : bool, optional
-        If True, freeze the batch normalization layers. Default is True.
-    ffn_layers : int, optional
-        Number of feed-forward network (FFN) layers to freeze. Default is 1.
+        Notes
+        -----
+        This method sets the `requires_grad` attribute of the specified layers to False,
+        preventing their weights from being updated during training. It also sets these
+        layers to evaluation mode.
 
-    Notes
-    -----
-    This method sets the `requires_grad` attribute of the specified layers to False,
-    preventing their weights from being updated during training. It also sets these
-    layers to evaluation mode.
+        """
+        # Check number of layers
+        if ffn_layers > self.ffn_num_layers:
+            raise ValueError(
+                f"Requested to freeze {ffn_layers} feedforward network layer(s), "
+                f"but only {self.ffn_num_layers} available."
+            )
 
-    """
-    # Freeze message passing
-    if message_passing:
-        self.estimator.message_passing.apply(
-            lambda module: module.requires_grad_(False)
-        )
-        self.estimator.message_passing.eval()
+        # Freeze message passing
+        if message_passing:
+            # No gradient updates
+            self.estimator.message_passing.apply(
+                lambda module: module.requires_grad_(False)
+            )
+            # Set to evaluation mode
+            self.estimator.message_passing.eval()
 
-    # Freeze batch norm
-    if batch_norm:
-        self.estimator.bn.apply(lambda module: module.requires_grad_(False))
-        self.estimator.bn.eval()
+            # Log for message passing
+            logger.info(f"Model weights for message passing frozen.")
 
-    # Freeze feedforward network
-    for idx in range(ffn_layers):
-        self.estimator.predictor.ffn[idx].requires_grad_(False)
-        self.estimator.predictor.ffn[idx + 1].eval()
-        # What if index out of range?
+        # Freeze batch norm
+        if batch_norm:
+            # No gradient updates
+            self.estimator.bn.apply(lambda module: module.requires_grad_(False))
+            # Evaluation mode
+            self.estimator.bn.eval()
+            # Log for batch normalization
+            logger.info(f"Model weights for batch normalization frozen.")
 
-    # TODO: better logging
-    logger.info(
-        f"Model weights for {message_passing=}, {batch_norm=}, {ffn_layers=} frozen"
-    )
+        # Freeze feedforward network
+        if ffn_layers > 0:
+            for idx in range(ffn_layers):
+                # No gradient updates
+                self.estimator.predictor.ffn[idx].requires_grad_(False)
+                # Evaluation mode
+                self.estimator.predictor.ffn[idx + 1].eval()
+
+            # Log for feedforward network
+            logger.info(
+                f"Model weights for {ffn_layers} feedforward network layer(s) frozen."
+            )
