@@ -56,7 +56,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         monitor_metric : str, optional
             Metric to monitor during training, can be "val_loss" or "train_loss" (
             default: "val_loss").
-        
+
         """
         super().__init__()
         input_size = input_size * 2
@@ -74,7 +74,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
     def forward(self, x: torch.Tensor):
         """
         Forward pass.
-        
+
         Parameters
         ----------
         x : torch.Tensor
@@ -98,7 +98,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             Tuple containing a batch of input data and targets.
         batch_idx : int
             Index of the batch.
-        
+
         Returns
         -------
         torch.Tensor
@@ -117,7 +117,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             Tuple containing a batch of input data and targets.
         batch_idx : int
             Index of the batch.
-        
+
         Returns
         -------
         torch.Tensor
@@ -136,7 +136,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             Tuple containing a batch of input data and targets.
         batch_idx : int
             Index of the batch.
-        
+
         Returns
         -------
         torch.Tensor
@@ -155,7 +155,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             Tuple containing a batch of input data and targets.
         name : str
             Name of the metric to log.
-        
+
         Returns
         -------
         torch.Tensor
@@ -179,7 +179,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         ----------
         batch : tuple
             Tuple containing a batch of input data and targets.
-        
+
         Returns
         -------
         torch.Tensor
@@ -227,7 +227,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             Parameters for the model class (default: {}).
         mod_params : dict, optional
             Parameters for the model module (default: {}).
-        
+
         Returns
         -------
         NeuralPairwiseRegressorModel
@@ -241,17 +241,17 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
     def build(self, scaler=None):
         """
         Prepare and build the model.
-        
+
         Parameters
         ----------
         scaler : object, optional
             Scaler for data normalization (default: None).
-        
+
         Returns
         -------
         self : NeuralPairwiseRegressorModel
             The built model instance.
-            
+
         """
         if not self.estimator:
             nepare = NeuralPairwiseRegressorModule(**self.mod_params)
@@ -277,12 +277,12 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             Accelerator type (default: "gpu").
         devices : int, optional
             Number of devices to use (default: 1).
-        
+
         Returns
         -------
         np.ndarray
             Predictions as a NumPy array.
-            
+
         """
         if not self.estimator:
             raise AttributeError("Model not built or trained.")

@@ -23,7 +23,7 @@ from openadmet.models.features.feature_base import (
 class PairwiseFeaturizer(FeaturizerBase):
     """
     PairFeaturizedData is a featurizer that pairs features according to a specified method.
-    
+
     Attributes
     ----------
     how_to_pair : str
@@ -39,7 +39,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         Batch size to use for DataLoader.
     shuffle : bool
         Whether to shuffle the data in the DataLoader.
-        
+
     """
 
     how_to_pair: Literal["full", "ut", "sut"] = Field(
@@ -148,7 +148,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         -------
         PairwiseFeaturizer
             A new instance of PairwiseFeaturizer with the same parameters.
-        
+
         """
         # Get the featurizer type name
         feat = self.featurizer
