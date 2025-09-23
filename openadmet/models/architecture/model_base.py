@@ -41,27 +41,6 @@ class ModelBase(BaseModel, ABC):
         self._estimator = value
 
     @abstractmethod
-    def from_params(cls, class_params: dict, mod_params: dict):
-        """
-        Create a model from parameters, abstract method to be implemented by subclasses.
-
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        Returns
-        -------
-        instance: ModelBase
-            An instance of the ModelBase class
-
-        """
-        pass
-
-    @abstractmethod
     def build(self):
         """Prepare the model, abstract method to be implemented by subclasses."""
         pass
@@ -76,10 +55,6 @@ class ModelBase(BaseModel, ABC):
         path: PathLike
             Path to save the model to
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -92,10 +67,6 @@ class ModelBase(BaseModel, ABC):
         ----------
         path: PathLike
             Path to load the model from
-
-        Returns
-        -------
-        None
 
         """
         pass
@@ -112,10 +83,6 @@ class ModelBase(BaseModel, ABC):
         serial_path: PathLike
             Path to save the model serialization to
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -130,10 +97,6 @@ class ModelBase(BaseModel, ABC):
             Path to load the model parameters from
         serial_path: PathLike
             Path to load the model serialization from
-
-        Returns
-        -------
-        None
 
         """
         pass
@@ -152,10 +115,6 @@ class ModelBase(BaseModel, ABC):
         input: Any
             Input data to predict on
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -166,7 +125,9 @@ class ModelBase(BaseModel, ABC):
     def __eq__(self, value):
         """Compare two model instances for equality, ignoring the model itself."""
         # exclude model from comparison
-        return self.dict(exclude={"model"}) == value.dict(exclude={"model"})
+        return self.model_dump(exclude={"estimator"}) == value.model_dump(
+            exclude={"estimator"}
+        )
 
 
 class PickleableModelBase(ModelBase):
@@ -186,10 +147,6 @@ class PickleableModelBase(ModelBase):
         path: PathLike
             Path to save the model to
 
-        Returns
-        -------
-        None
-
         """
         if self.estimator is None:
             raise ValueError("Model is not built, cannot save")
@@ -206,17 +163,13 @@ class PickleableModelBase(ModelBase):
         path: PathLike
             Path to load the model from
 
-        Returns
-        -------
-        None
-
         """
         with open(path, "rb") as f:
             self.estimator = joblib.load(f)
 
     def make_new(self) -> "PickleableModelBase":
         """Copy parameters to a new model instance without copying the estimator."""
-        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     @classmethod
     def deserialize(
@@ -257,10 +210,6 @@ class PickleableModelBase(ModelBase):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the pickled model to
-
-        Returns
-        -------
-        None
 
         """
         with open(param_path, "w") as f:
@@ -406,10 +355,6 @@ class LightningModelBase(ModelBase):
         path: PathLike
             Path to save the model to
 
-        Returns
-        -------
-        None
-
         """
         torch.save(self.estimator.state_dict(), path)
 
@@ -421,10 +366,6 @@ class LightningModelBase(ModelBase):
         ----------
         path: PathLike
             Path to load the model from
-
-        Returns
-        -------
-        None
 
         """
         self.estimator.load_state_dict(torch.load(path))
@@ -441,10 +382,6 @@ class LightningModelBase(ModelBase):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the serialized model to
-
-        Returns
-        -------
-        None
 
         """
         with open(param_path, "w") as f:
