@@ -26,12 +26,11 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         input_dim,
         hidden_dim,
         num_layers,
-        activation:str = 'relu',
+        activation: str = "relu",
         lr: float = 1e-4,
         n_targets: int = 1,
         monitor_metric: str = "val_loss",
         scaler=None,
-
     ):
         """
         Initialize the Neural Pairwise Regressor Module.
@@ -59,9 +58,9 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         """
         super().__init__()
         input_dim = input_dim * 2
-        if activation == 'relu':
+        if activation == "relu":
             activation = torch.nn.ReLU
-        elif activation == 'gelu':
+        elif activation == "gelu":
             activation = torch.nn.GELU
         _modules = OrderedDict()
         for i in range(num_layers):
@@ -206,14 +205,14 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
     input_dim: int = 1028
     hidden_dim: int = 128
     num_layers: int = 3
-    activation: str = 'relu'
+    activation: str = "relu"
     lr: float = 1e-4
     n_targets: int = 1
     monitor_metric: str = "val_loss"
     scaler: Optional[Any] = None
 
     @classmethod
-    def from_params(cls, params:dict = None):
+    def from_params(cls, params: dict = None):
         """
         Load model parameters from a dictionary.
 
@@ -226,7 +225,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         instance = cls(**params)
         instance.build()
         return instance
-    
+
     def train(self, dataloader):
         """
         Train the model.
@@ -256,7 +255,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         -------
         self : NeuralPairwiseRegressorModel
             The built model instance.
-        
+
         """
         self.scaler = scaler if scaler is not None else self.scaler
         self.input_dim = input_dim if input_dim is not None else self.input_dim

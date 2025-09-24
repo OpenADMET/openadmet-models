@@ -414,7 +414,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         return self
 
-    def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=None):
+    def _train(
+        self, train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=None
+    ):
         # Load model from disk
         if (
             self.parent_spec.procedure.model.param_path is not None
@@ -673,7 +675,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Train
         if self.ensemble:
             # Ensemble mode
-            self._train_ensemble(X_train, y_train, val_dataloader, output_dir, input_dim=input_dim)
+            self._train_ensemble(
+                X_train, y_train, val_dataloader, output_dir, input_dim=input_dim
+            )
 
             # Calibrate
             self.model.calibrate_uncertainty(
@@ -704,7 +708,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Model saved")
         else:
             # Single-model mode
-            self._train(train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=input_dim)
+            self._train(
+                train_dataloader,
+                val_dataloader,
+                train_scaler,
+                output_dir,
+                input_dim=input_dim,
+            )
 
             # Save
             logger.info("Saving model")
