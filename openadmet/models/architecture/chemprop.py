@@ -107,11 +107,6 @@ class ChemPropModel(LightningModelBase):
         str
             The validated value.
 
-        Raises
-        ------
-        ValueError
-            If value is not "bond" or "atom".
-
         """
         if value not in ["bond", "atom"]:
             raise ValueError("Messages must be either 'bond' or 'atom'")
@@ -132,11 +127,6 @@ class ChemPropModel(LightningModelBase):
         -------
         str
             The validated value.
-
-        Raises
-        ------
-        ValueError
-            If value is not "mean" or "norm".
 
         """
         if value not in ["mean", "norm"]:
@@ -303,11 +293,6 @@ class ChemPropModel(LightningModelBase):
         scaler : object, optional
             Scaler for target normalization.
 
-        Raises
-        ------
-        NotImplementedError
-            Always raised. Use a trainer for training.
-
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
@@ -334,11 +319,6 @@ class ChemPropModel(LightningModelBase):
         -------
         np.ndarray
             Model predictions.
-
-        Raises
-        ------
-        AttributeError
-            If the model is not trained or built.
 
         """
         if not self.estimator:
