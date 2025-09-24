@@ -5,7 +5,7 @@ from typing import ClassVar
 import torch
 from lightning import pytorch as pl
 from loguru import logger
-from mtenn.config import SchNetRepresentationConfig, ModelConfig
+from mtenn.config import ModelConfig, SchNetRepresentationConfig
 
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -128,7 +128,7 @@ class MTENNLightningModule(pl.LightningModule):
 
     def configure_optimizers(self):
         """
-        Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase
+        Configure AdamW optimizer for training. This will eventually run through calling LightningModuleBase.
 
         Returns
         -------
