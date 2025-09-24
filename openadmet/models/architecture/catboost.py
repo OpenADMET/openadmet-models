@@ -2,9 +2,10 @@
 
 from typing import ClassVar
 
-from catboost import CatBoostClassifier, CatBoostRegressor
 import numpy as np
+from catboost import CatBoostClassifier, CatBoostRegressor
 from loguru import logger
+from pydantic import ConfigDict
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -20,35 +21,36 @@ class CatBoostModelBase(PickleableModelBase):
     mod_class : ClassVar[type]
         To specify the CatBoost model class (e.g., CatBoostRegressor or CatBoost
         Classifier)
-    mod_params : dict
-        Parameters for the CatBoost model class, such as n_estimators, max_depth,
-        learning_rate, etc.
 
     """
 
-    type: ClassVar[str]
-    mod_class: ClassVar[
-        type
-    ]  # To specify the CatBoost model class (e.g., XGBMRegressor or XGBMClassifier)
-    mod_params: dict = {}
+    # Allow extra arguments
+    model_config = ConfigDict(extra="allow")
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
+    # Meta-parameters for this class
+    type: ClassVar[str]
+    mod_class: ClassVar[type]
+
+    def __init__(self, *args, **kwargs):
         """
-        Create a model from parameters.
+        Initialize the CatBoostModelBase.
 
         Parameters
         ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the CatBoost model class, such as n_estimators, max_depth,
-            learning_rate, etc.
+        *args : tuple
+            Positional arguments for parent class.
+        **kwargs : dict
+            Keyword arguments for parent class and model configuration.
 
         """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+        super().__init__(*args, **kwargs)
+
+    def build(self):
+        """Prepare the model."""
+        if not self.estimator:
+            self.estimator = self.mod_class(**self.model_dump())
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -64,13 +66,6 @@ class CatBoostModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
-
-    def build(self):
-        """Prepare the model."""
-        if not self.estimator:
-            self.estimator = self.mod_class(**self.mod_params)
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -100,7 +95,7 @@ class CatBoostRegressorModel(CatBoostModelBase):
     CatBoost regression model.
 
     Common parameters for CatBoost models can be found at:
-    https://CatBoost.readthedocs.io/en/stable/python/python_api.html
+    https://catboost.ai/docs/en/concepts/python-quickstart
 
     Common parameters that you might want to set include:
     - n_estimators: Number of trees in the ensemble
