@@ -2,12 +2,12 @@ Anvil Reference
 ================
 
 To initiate the ``anvil`` workflow, a recipe yaml file must be provided. 
-There are many configuration options available..
-Each workflow consists of four main sections: ``data``, ``metadata``,
+There are many configuration options available.
+Each workflow consists of four main sections: ``metadata``, ``data``,
 ``procedure``, and ``report``.
 
 This guide should help you navigate the ``anvil`` workflow and understand the parameters 
-you can set, their types, and how they interact across models and trainers.
+you can set, their types, and how they interact across models and trainers. 
 
 .. contents::
    :local:
@@ -16,20 +16,22 @@ you can set, their types, and how they interact across models and trainers.
 Metadata 
 ---------
 
-Metadata specification available to ensure organized workflow.
+The ``metadata`` section provides essential information about the workflow, such as authorship,
+versioning, and descriptive tags. This section ensures that workflows are well-documented 
+and easily identifiable.
 
 .. code-block:: yaml
 
    metadata:
      authors: Author Name
      email: author@email.org
-     biotargets: [CYP3A4, CYP2D6]
+     biotargets: [target_1, target_2]
      build_number: 0
      description: description of run
      driver: driver_name
      name: workflow_name
-     tag: chemprop
-     tags: [openadmet, chemprop]
+     tag: main_tag
+     tags: [sub_tag_1, sub_tag_2]
      version: v1
 
 **Parameters**
@@ -75,7 +77,9 @@ Metadata specification available to ensure organized workflow.
 Data 
 -----
 
-Data specification for the workflow. 
+The ``data`` section defines how input data is loaded and which columns are 
+used for modeling. You must specify the dataset location, input column, target columns, 
+and optional preprocessing steps.
 
 .. code-block:: yaml
 
@@ -128,18 +132,49 @@ Data specification for the workflow.
 Procedure 
 ----------
 
-The ``procedure`` section defines featurization, model, splitting, and training.
-# Split these sections into subsections? 
+The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined, 
+data splits are configured, and training parameters are set. Each subsection provides 
+details on the available options and their configurations:
+
+- **Featurization**: Defines how molecular data is transformed into numerical representations 
+  using various available featurizers.
+- **Models**: Specifies the model to be used.
+- **Splits**: Configures how the dataset is divided into training, validation, and test sets 
+  using assigned splitter.
+- **Training**: Sets up the training process, including the trainer type  
+  and training parameters.
+
+Each subsection provides examples and parameter descriptions to help you configure the workflow 
+according to your requirements.
 
 Featurization
 ~~~~~~~~~~~~~
+The ``features`` module provides a variety of featurizers which map 
+molecular data into suitable input formats for the specified model. 
+Below are the available options. Each featurizer has its own set of parameters 
+which can be found in the linked OpenADMET API documentation.
 
-- ``ChemPropFeaturizer`` — SMILES graph featurizer for ChemProp  
-- ``GATGraphFeaturizer`` — Graph attention featurizer for GAT models
-- ``MTENNFeaturizer`` - Masked PDB featurizer for MTENN models
-- ``DescriptorFeaturizer`` — Uses RDKit descriptors (e.g. ``desc2d``).  
-- ``FingerprintFeaturizer`` — Generates fingerprints (e.g. ``ecfp:4``).  
-- ``FeatureConcatenator`` — Combines multiple featurizers 
+.. list-table::
+  :header-rows: 1
+  :widths: 20 80
+
+  * - Featurizer
+    - Description
+  * - :doc:`ChemPropFeaturizer </_api/api/featurization/chemprop>`
+    - Converts the dataset into a PyTorch DataLoader.
+  * - :doc:`GATGraphFeaturizer </_api/api/featurization/GAT>`
+    - Converts SMILES strings into graph Data objects for GAT-like models.
+  * - :doc:`MTENNFeaturizer </_api/api/featurization/mtenn>`
+    - Creates masked PDB features suitable for downstream use in MTENN models.
+  * - :doc:`DescriptorFeaturizer </_api/api/featurization/descriptors>`
+    - Uses the  `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular descriptors.
+  * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
+    - Uses the `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular fingerprints.
+  * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
+    - Combines multiple featurizers into a single feature array. 
+
+Example
+^^^^^^^
 
 .. code-block:: yaml
 
@@ -151,33 +186,108 @@ Featurization
            descr_type: desc2d
          FingerprintFeaturizer:
            fp_type: ecfp:4
+           radius: 2
+
 
 Models
 ~~~~~~
 
-#Go into more detail of each model? or provide a source for the models code or paper? 
+The ``models`` section specifies the model to be used in the workflow. 
+It allows you to define the type of model, its parameters, and any additional configurations 
+required for training and evaluation. Each model type has its own set of options, enabling 
+customization to suit specific tasks and datasets. Refer to the linked OpenADMET API documentation for detailed information 
+on each model's implementation and usage.
 
-# Got key params from canonical recipes. will visit code to ensure all options are listed
 
-Supported model types:
+### Add Nepare 
 
-- ``ChemPropModel`` — Description of chemprop  Message Passing NeuralNet
-  - Key params: ``depth``, ``ffn_hidden_dim``, ``message_hidden_dim``, ``dropout``, ``batch_norm``, ``n_tasks``, ``from_chemeleon``.  
-- ``GATv2Model`` — Graph Attention Network  
-  - Key params: ``input_dim``, ``edge_dim``, ``hidden_dim``, ``num_layers``, ``num_heads``, ``gat_dropout``, ``pooling``, ``output_dim``.  
-- ``CatBoostRegressorModel`` — Gradient boosting on decision trees .  
-  - Key params: ``n_estimators``.  
-- ``LGBMRegressorModel`` — LightGBM regressor 
-  - Key params: ``n_estimators``, ``learning_rate``, ``alpha``.  
-- ``XGBRegressorModel`` — XGBoost regressor  
-  - Key params: ``n_estimators``, ``learning_rate``, ``alpha``.  
-- ``RFRegressorModel`` — Random Forest regressor  
-  - Key params: ``n_estimators``, ``max_depth``.  
-- ``TabPFNRegressorModel`` — Transformer-based probabilistic forest  
-  - Key params: ``ignore_pretraining_limits``, ``device``.  
 
-Splits
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
+
+  * - Model Type
+    - Description
+  * - :doc:`ChemPropModel </_api/api/model_architectures/chemprop>`
+    - `ChemProp <https://github.com/chemprop/chemprop>`_ Message Passing Neural Network. Also, used when implementing `Chemeleon <https://github.com/JacksonBurns/chemeleon>`_. 
+  * - :doc:`GATv2Model </_api/api/model_architectures/GAT>`
+    - Graph Attention Network v2 (`GATv2 <https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GATv2Conv.html#torch_geometric.nn.conv.GATv2Conv>`_) model implementation.
+  * - :doc:`CatBoostClassifierModel </_api/api/model_architectures/catboost>`
+    - Gradient boosting on decision trees for classification using `CatBoost <https://catboost.ai/docs/en/>`_. 
+  * - :doc:`CatBoostRegressorModel </_api/api/model_architectures/catboost>`
+    - Gradient boosting on decision trees for regression using `CatBoost <https://catboost.ai/docs/en/>`_. 
+  * - :doc:`LGBMClassifierModel </_api/api/model_architectures/lgbm>`
+    - `LightGBM <https://lightgbm.readthedocs.io/en/stable/>`_ classifier.
+  * - :doc:`LGBMRegressorModel </_api/api/model_architectures/lgbm>`
+    - `LightGBM <https://lightgbm.readthedocs.io/en/stable/>`_ regressor.
+  * - :doc:`XGBClassifierModel </_api/api/model_architectures/xgboost>`
+    - `XGBoost <https://xgboost.readthedocs.io/en/latest/python/>`_ classifier model implementation
+  * - :doc:`XGBRegressorModel </_api/api/model_architectures/xgboost>`
+    - `XGBoost <https://xgboost.readthedocs.io/en/latest/python/>`_ regressor model implementation
+  * - :doc:`RFClassifierModel </_api/api/model_architectures/random_forest>`
+    - scikit-learn `Random Forest classifier <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html>`_ .
+  * - :doc:`RFRegressorModel </_api/api/model_architectures/random_forest>`
+    - scikit-learn `Random Forest regressor <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html>`_ .
+  * - :doc:`TabPFNClassifierModel </_api/api/model_architectures/tabpfn>`
+    - TabPFN classification model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
+  * - :doc:`TabPFNRegressorModel </_api/api/model_architectures/tabpfn>`
+    - TabPFN regression model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
+  * - :doc:`TabPFNPostHocClassifierModel </_api/api/model_architectures/tabpfn>`
+    - TabPFN classification model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
+  * - :doc:`TabPFNPostHocRegressorModel </_api/api/model_architectures/tabpfn>`
+    - TabPFN regression model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
+  * - :doc:`MTENNSchNetModel </_api/api/model_architectures/mtenn>`
+    - Modular Training and Evaluation of Neural Networks (`MTENN <https://github.com/choderalab/mtenn>`_) `SchNet <https://github.com/atomistic-machine-learning/SchNet>`_ implementation. 
+  * - :doc:`DummyClassifierModel </_api/api/model_architectures/dummy>`
+    - scikit-learn `Dummy Classifier <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html#sklearn.dummy.DummyClassifier>`_ for baseline comparisons.
+  * - :doc:`DummyRegressorModel </_api/api/model_architectures/dummy>`
+    - scikit-learn  `Dummy Regressor <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyRegressor.html#sklearn.dummy.DummyRegressor>`_  for baseline comparisons.
+  * - :doc:`SVMClassifierModel </_api/api/model_architectures/svm>`
+    - scikit-learn Support Vector Machine classifier `(SVC) <https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html>`_ .
+  * - :doc:`SVMRegressorModel </_api/api/model_architectures/svm>`
+    - scikit-learn Support Vector Machine regressor `(SVR) <https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html>`_ .
+
+Example
+^^^^^^^
+.. code-block:: yaml
+
+  model:
+    type: ChemPropModel
+    params:
+      depth: 4
+      ffn_hidden_dim: 1024
+      ffn_hidden_num_layers: 4
+      message_hidden_dim: 2048
+      dropout: 0.2
+      batch_norm: True
+      messages: bond
+      n_tasks: 1 
+      from_chemeleon: False
+
+
+Split
 ~~~~~~
+
+The ``split`` section defines how the dataset is divided into training, validation, and test sets. 
+You can choose from different splitter types, each with its own parameters to control the splitting behavior. 
+
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
+
+  * - Splitter
+    - Description
+  * - :doc:`ShuffleSplitter </_api/api/splitting/sklearn>`
+    - Randomly shuffles and splits the dataset into training, validation, and test sets based on specified proportions.
+  * - :doc:`ScaffoldSplitter </_api/api/splitting/data_driven>`
+    - Splits the dataset based on molecular scaffolds to ensure that similar compounds are grouped together in the same set.
+  * - :doc:`MaxDissimilaritySplitter </_api/api/splitting/data_driven>`
+    - Splits the dataset based on maximum dissimilarity between training, validation, and test sets, promoting diversity in each set.
+  * - :doc:`PerimeterSplitter </_api/api/splitting/data_driven>`
+    - Splits the dataset by selecting compounds at the periphery of the chemical space, ensuring that edge cases are included in the training set.
+
+Example
+^^^^^^^
 
 .. code-block:: yaml
 
@@ -189,52 +299,111 @@ Splits
        test_size: 0.2
        random_state: 42
 
-**Splitter options:**
-- ``ShuffleSplitter`` — Random shuffling into train/val/test.  
-- ``ScaffoldSplitter`` — Scaffold-based chemical splits.  
 
 Training
 ~~~~~~~~
 
-## Need to be more thorough; how far of explanations? 
+The ``training`` section configures the training process for the selected model.
+It allows you to specify the trainer type and various training parameters to control the training workflow.      
 
-Trainer types:
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
 
-- ``LightningTrainer`` — For PyTorch models (Chemprop, Chemeleon, GAT, MTENN) 
-- ``SKLearnBasicTrainer`` — For sklearn-compatible models (RF, LGBM, CatBoost, XGBoost, TabPFN)   
-- ``SKLearnGridSearchTrainer`` — Hyperparameter tuning with grid search.  
+  * - Trainer
+    - Description
+  * - :doc:`LightningTrainer </_api/api/training/lightning>`
+    - Trainer for deep learning models using `PyTorch Lightning <https://www.pytorchlightning.ai/>`_.
+  * - :doc:`SKLearnBasicTrainer </_api/api/training/sklearn>`
+    - Basic trainer for sklearn models.
+  * - :doc:`SKLearnGridSearchTrainer </_api/api/training/sklearn>`
+    - Trainer that performs hyperparameter tuning using specifically grid search for sklearn models (`GridSearchCV <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html>`_).    
+  * - :doc:`SKLearnSearchTrainer </_api/api/training/sklearn>`
+    - Trainer that performs hyperparameter tuning using specified search object for sklearn models.
 
-Training parameters include:
 
-- ``accelerator`` (``cpu`` | ``gpu``)  
-- ``early_stopping`` (bool), ``early_stopping_patience`` (int), ``early_stopping_mode`` (``min``/``max``), ``early_stopping_min_delta`` (float)  
-- ``max_epochs`` (int)  
-- ``monitor_metric`` (str)  
-- ``use_wandb`` (bool), ``wandb_project`` (str)  
+Example
+^^^^^^^     
+.. code-block:: yaml
 
-Report Section
+  train:
+    type: LightningTrainer
+    params:
+      accelerator: gpu
+      early_stopping: true
+      early_stopping_patience: 10
+      early_stopping_mode: min
+      early_stopping_min_delta: 0.001
+      max_epochs: 50
+      monitor_metric: val_loss
+      use_wandb: false
+      wandb_project: demos
+
+Ensemble
+~~~~~~~~
+There is also an optional ``ensemble`` section that allows you to specify if you want to train an ensemble of models.
+You can define the number of models in the ensemble and the calibration method to be used.
+Currently we only offer a :doc:`CommitteeRegressor </_api/api/active_learning/committee>` to measure disagreement among the models in the ensemble.
+
+Example
+^^^^^^^
+.. code-block:: yaml
+
+  ensemble:
+    type: CommitteeRegressor
+    n_models: 10
+    calibration_method: scaling-factor
+
+Report 
 --------------
 
-##This should be its own section. I need to comb through the code a bit more and be more thorough
+The ``report`` section specifies the evaluations to be performed after training the model.
+You can choose from various evaluation types, each with its own parameters to customize the output.
 
-Evaluations are defined as a list of tasks:
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
 
-- ``RegressionMetrics`` — Computes regression statistics.  
-- ``RegressionPlots`` — Generates plots of predicted vs true  
-- ``SKLearnRepeatedKFoldCrossValidation`` — Cross-validation for sklearn models  
-- ``PytorchLightningRepeatedKFoldCrossValidation`` — Cross-validation for Lightning models  
+  * - Evaluation
+    - Description
+  * - :doc:`RegressionMetrics </_api/api/model_evaluation/regression>`
+    - Computes regression statistics.    
+  * - :doc:`RegressionPlots </_api/api/model_evaluation/regression>`
+    - Generates plots of predicted vs true values for regression tasks.
+  * - :doc:`ClassificationMetrics </_api/api/model_evaluation/classification>`
+    - Computes classification statistics.
+  * - :doc:`ClassificationPlots </_api/api/model_evaluation/classification>`
+    - Generates plots such as ROC and precision-recall curves for classification tasks.
+  * - :doc:`SKLearnRepeatedKFoldCrossValidation </_api/api/model_evaluation/cross_validation>`
+    - Performs repeated K-Fold cross-validation for sklearn models. It should be noted that performing cross-validation can be computationally expensive.
+  * - :doc:`PytorchLightningRepeatedKFoldCrossValidation </_api/api/model_evaluation/cross_validation>`
+    - Performs repeated K-Fold cross-validation for PyTorch Lightning models. It should be noted that performing cross-validation can be computationally expensive.
+  * - :doc:`PosthocBinaryMetrics </_api/api/model_evaluation/binary>`
+    - Compute posthoc binary metrics. Intended to be used for regression-based models to calculate precision and recall metrics for user-input cutoffs. Not intended for binary models.
+  * - :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>`
+    - Evaluate uncertainty metrics using `uncertainty_toolbox <https://github.com/uncertainty-toolbox/uncertainty-toolbox>`_.
+  * - :doc:`UncertaintyPlots </_api/api/model_evaluation/uncertainty>`
+    - Generates uncertainty plots.
 
-Each evaluation has a ``params`` dict. Common options:  
+Example
+^^^^^^^
+.. code-block:: yaml  
 
-- ``axes_labels`` (list[str]) — Labels for plots.  
-- ``n_splits`` (int) — Number of CV splits.  
-- ``n_repeats`` (int) — Number of CV repeats.  
-- ``random_state`` (int) — Seed for reproducibility.  
-- ``title`` (str) — Title for plot or report.  
-- ``max_val`` / ``min_val`` (float) — Plot value ranges.  
-- ``pXC50`` (bool) — Whether to plot on pAC50 scale.  
-
+  report:
+    eval:
+    - type: RegressionMetrics
+      params: {}
+    - type: PytorchLightningRepeatedKFoldCrossValidation
+      params:
+        axes_labels:
+        - True LogAC50
+        - Predicted LogAC50
+        n_repeats: 5
+        n_splits: 2
+        random_state: 42
+        pXC50: true
+        title: True vs Predicted LogAC50 on test set
 ----
 
-This page should be updated as new models, featurizers, and trainers are added.
+This page should be updated as new models, featurizers, trainers, and evaluators are added.
 
