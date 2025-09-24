@@ -1,3 +1,5 @@
+"""Neural Pairwise Regressor Model implementation."""
+
 import numpy as np
 import torch
 from lightning import pytorch as pl
@@ -14,13 +16,6 @@ from openadmet.models.architecture.model_base import (
 
 
 from typing import ClassVar
-
-
-_METRIC_TO_LOSS = {
-    "mse": nn.metrics.MSE(),
-    "mae": nn.metrics.MAE(),
-    "rmse": nn.metrics.RMSE(),
-}
 
 
 class NeuralPairwiseRegressorModule(LightningModuleBase):
@@ -238,7 +233,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         instance.build()
         return instance
 
-    def build(self, scaler=None):
+    def build(self, scaler=None, input_dim=None, **kwargs):
         """
         Prepare and build the model.
 
@@ -253,8 +248,14 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             The built model instance.
 
         """
+
+        self.scaler = kwargs.get("scaler", None)
+        self.input_size = kwargs.get("input_size", None)
+
         if not self.estimator:
-            nepare = NeuralPairwiseRegressorModule(**self.mod_params)
+            nepare = NeuralPairwiseRegressorModule(
+                scaler=self.scaler,
+                input_size=self.input_size,)
             self.estimator = nepare
         else:
             logger.warning("Model already exists, skipping build")
