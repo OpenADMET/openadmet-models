@@ -248,14 +248,14 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             The built model instance.
 
         """
-
         self.scaler = kwargs.get("scaler", None)
         self.input_size = kwargs.get("input_size", None)
 
         if not self.estimator:
             nepare = NeuralPairwiseRegressorModule(
                 scaler=self.scaler,
-                input_size=self.input_size,)
+                input_size=self.input_size,
+            )
             self.estimator = nepare
         else:
             logger.warning("Model already exists, skipping build")
