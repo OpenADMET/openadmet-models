@@ -223,6 +223,9 @@ class LightningModuleBase(pl.LightningModule):
     to preconfigure optimizer and scheduler.
     """
 
+    # Meta parameters for this class
+    type: ClassVar[str]
+
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
     optimizer_lr: float = 1e-3
@@ -342,6 +345,8 @@ class LightningModuleBase(pl.LightningModule):
 class LightningModelBase(ModelBase):
     """A model that uses PyTorch Lightning."""
 
+    # Meta parameters for this class
+    type: ClassVar[str]
     _model_save_name: ClassVar[str] = "model.pth"
 
     def save(self, path: PathLike):
