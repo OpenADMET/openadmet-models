@@ -1,23 +1,23 @@
 Anvil Reference
 ================
 
-To initiate the ``anvil`` workflow, a recipe yaml file must be provided. 
+To initiate the ``anvil`` workflow, a recipe yaml file must be provided.
 There are many configuration options available.
 Each workflow consists of four main sections: ``metadata``, ``data``,
 ``procedure``, and ``report``.
 
-This guide should help you navigate the ``anvil`` workflow and understand the parameters 
-you can set, their types, and how they interact across models and trainers. 
+This guide should help you navigate the ``anvil`` workflow and understand the parameters
+you can set, their types, and how they interact across models and trainers.
 
 .. contents::
    :local:
    :depth: 2
 
-Metadata 
+Metadata
 ---------
 
 The ``metadata`` section provides essential information about the workflow, such as authorship,
-versioning, and descriptive tags. This section ensures that workflows are well-documented 
+versioning, and descriptive tags. This section ensures that workflows are well-documented
 and easily identifiable.
 
 .. code-block:: yaml
@@ -74,11 +74,11 @@ and easily identifiable.
      - str
      - Version of the metadata schema.
 
-Data 
+Data
 -----
 
-The ``data`` section defines how input data is loaded and which columns are 
-used for modeling. You must specify the dataset location, input column, target columns, 
+The ``data`` section defines how input data is loaded and which columns are
+used for modeling. You must specify the dataset location, input column, target columns,
 and optional preprocessing steps.
 
 .. code-block:: yaml
@@ -123,35 +123,35 @@ and optional preprocessing steps.
      - Used when ``resource`` is a YAML file, to specify which
        catalog entry to load.
    * - anvil_dir
-     - Optional[str] 
+     - Optional[str]
      - Allows for ``resource`` to point to a directory path.
        Useful for flexible dataset locations.
 
 .. _Intake: https://intake.readthedocs.io/
 
-Procedure 
+Procedure
 ----------
 
-The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined, 
-data splits are configured, and training parameters are set. Each subsection provides 
+The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined,
+data splits are configured, and training parameters are set. Each subsection provides
 details on the available options and their configurations:
 
-- **Featurization**: Defines how molecular data is transformed into numerical representations 
+- **Featurization**: Defines how molecular data is transformed into numerical representations
   using various available featurizers.
 - **Models**: Specifies the model to be used.
-- **Splits**: Configures how the dataset is divided into training, validation, and test sets 
+- **Splits**: Configures how the dataset is divided into training, validation, and test sets
   using assigned splitter.
-- **Training**: Sets up the training process, including the trainer type  
+- **Training**: Sets up the training process, including the trainer type
   and training parameters.
 
-Each subsection provides examples and parameter descriptions to help you configure the workflow 
+Each subsection provides examples and parameter descriptions to help you configure the workflow
 according to your requirements.
 
 Featurization
 ~~~~~~~~~~~~~
-The ``features`` module provides a variety of featurizers which map 
-molecular data into suitable input formats for the specified model. 
-Below are the available options. Each featurizer has its own set of parameters 
+The ``features`` module provides a variety of featurizers which map
+molecular data into suitable input formats for the specified model.
+Below are the available options. Each featurizer has its own set of parameters
 which can be found in the linked OpenADMET API documentation.
 
 .. list-table::
@@ -171,7 +171,7 @@ which can be found in the linked OpenADMET API documentation.
   * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
     - Uses the `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular fingerprints.
   * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
-    - Combines multiple featurizers into a single feature array. 
+    - Combines multiple featurizers into a single feature array.
 
 Example
 ^^^^^^^
@@ -192,14 +192,14 @@ Example
 Models
 ~~~~~~
 
-The ``models`` section specifies the model to be used in the workflow. 
-It allows you to define the type of model, its parameters, and any additional configurations 
-required for training and evaluation. Each model type has its own set of options, enabling 
-customization to suit specific tasks and datasets. Refer to the linked OpenADMET API documentation for detailed information 
+The ``models`` section specifies the model to be used in the workflow.
+It allows you to define the type of model, its parameters, and any additional configurations
+required for training and evaluation. Each model type has its own set of options, enabling
+customization to suit specific tasks and datasets. Refer to the linked OpenADMET API documentation for detailed information
 on each model's implementation and usage.
 
 
-### Add Nepare 
+### Add Nepare
 
 
 .. list-table::
@@ -209,13 +209,13 @@ on each model's implementation and usage.
   * - Model Type
     - Description
   * - :doc:`ChemPropModel </_api/api/model_architectures/chemprop>`
-    - `ChemProp <https://github.com/chemprop/chemprop>`_ Message Passing Neural Network. Also, used when implementing `Chemeleon <https://github.com/JacksonBurns/chemeleon>`_. 
+    - `ChemProp <https://github.com/chemprop/chemprop>`_ Message Passing Neural Network. Also, used when implementing `Chemeleon <https://github.com/JacksonBurns/chemeleon>`_.
   * - :doc:`GATv2Model </_api/api/model_architectures/GAT>`
     - Graph Attention Network v2 (`GATv2 <https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GATv2Conv.html#torch_geometric.nn.conv.GATv2Conv>`_) model implementation.
   * - :doc:`CatBoostClassifierModel </_api/api/model_architectures/catboost>`
-    - Gradient boosting on decision trees for classification using `CatBoost <https://catboost.ai/docs/en/>`_. 
+    - Gradient boosting on decision trees for classification using `CatBoost <https://catboost.ai/docs/en/>`_.
   * - :doc:`CatBoostRegressorModel </_api/api/model_architectures/catboost>`
-    - Gradient boosting on decision trees for regression using `CatBoost <https://catboost.ai/docs/en/>`_. 
+    - Gradient boosting on decision trees for regression using `CatBoost <https://catboost.ai/docs/en/>`_.
   * - :doc:`LGBMClassifierModel </_api/api/model_architectures/lgbm>`
     - `LightGBM <https://lightgbm.readthedocs.io/en/stable/>`_ classifier.
   * - :doc:`LGBMRegressorModel </_api/api/model_architectures/lgbm>`
@@ -237,7 +237,7 @@ on each model's implementation and usage.
   * - :doc:`TabPFNPostHocRegressorModel </_api/api/model_architectures/tabpfn>`
     - TabPFN regression model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
   * - :doc:`MTENNSchNetModel </_api/api/model_architectures/mtenn>`
-    - Modular Training and Evaluation of Neural Networks (`MTENN <https://github.com/choderalab/mtenn>`_) `SchNet <https://github.com/atomistic-machine-learning/SchNet>`_ implementation. 
+    - Modular Training and Evaluation of Neural Networks (`MTENN <https://github.com/choderalab/mtenn>`_) `SchNet <https://github.com/atomistic-machine-learning/SchNet>`_ implementation.
   * - :doc:`DummyClassifierModel </_api/api/model_architectures/dummy>`
     - scikit-learn `Dummy Classifier <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html#sklearn.dummy.DummyClassifier>`_ for baseline comparisons.
   * - :doc:`DummyRegressorModel </_api/api/model_architectures/dummy>`
@@ -261,15 +261,15 @@ Example
       dropout: 0.2
       batch_norm: True
       messages: bond
-      n_tasks: 1 
+      n_tasks: 1
       from_chemeleon: False
 
 
 Split
 ~~~~~~
 
-The ``split`` section defines how the dataset is divided into training, validation, and test sets. 
-You can choose from different splitter types, each with its own parameters to control the splitting behavior. 
+The ``split`` section defines how the dataset is divided into training, validation, and test sets.
+You can choose from different splitter types, each with its own parameters to control the splitting behavior.
 
 .. list-table::
   :header-rows: 1
@@ -304,7 +304,7 @@ Training
 ~~~~~~~~
 
 The ``training`` section configures the training process for the selected model.
-It allows you to specify the trainer type and various training parameters to control the training workflow.      
+It allows you to specify the trainer type and various training parameters to control the training workflow.
 
 .. list-table::
   :header-rows: 1
@@ -317,13 +317,13 @@ It allows you to specify the trainer type and various training parameters to con
   * - :doc:`SKLearnBasicTrainer </_api/api/training/sklearn>`
     - Basic trainer for sklearn models.
   * - :doc:`SKLearnGridSearchTrainer </_api/api/training/sklearn>`
-    - Trainer that performs hyperparameter tuning using specifically grid search for sklearn models (`GridSearchCV <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html>`_).    
+    - Trainer that performs hyperparameter tuning using specifically grid search for sklearn models (`GridSearchCV <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html>`_).
   * - :doc:`SKLearnSearchTrainer </_api/api/training/sklearn>`
     - Trainer that performs hyperparameter tuning using specified search object for sklearn models.
 
 
 Example
-^^^^^^^     
+^^^^^^^
 .. code-block:: yaml
 
   train:
@@ -354,7 +354,7 @@ Example
     n_models: 10
     calibration_method: scaling-factor
 
-Report 
+Report
 --------------
 
 The ``report`` section specifies the evaluations to be performed after training the model.
@@ -367,7 +367,7 @@ You can choose from various evaluation types, each with its own parameters to cu
   * - Evaluation
     - Description
   * - :doc:`RegressionMetrics </_api/api/model_evaluation/regression>`
-    - Computes regression statistics.    
+    - Computes regression statistics.
   * - :doc:`RegressionPlots </_api/api/model_evaluation/regression>`
     - Generates plots of predicted vs true values for regression tasks.
   * - :doc:`ClassificationMetrics </_api/api/model_evaluation/classification>`
@@ -387,7 +387,7 @@ You can choose from various evaluation types, each with its own parameters to cu
 
 Example
 ^^^^^^^
-.. code-block:: yaml  
+.. code-block:: yaml
 
   report:
     eval:
@@ -406,4 +406,3 @@ Example
 ----
 
 This page should be updated as new models, featurizers, trainers, and evaluators are added.
-
