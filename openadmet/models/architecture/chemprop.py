@@ -72,7 +72,10 @@ class ChemPropModel(LightningModelBase):
 
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "ChemPropModel"
+
+    # ChemProp parameters
     n_tasks: int = 1
     messages: str = "bond"
     aggregation: str = "norm"
