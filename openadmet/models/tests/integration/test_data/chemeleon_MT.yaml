@@ -32,14 +32,14 @@ procedure:
   feat:
     type: ChemPropFeaturizer
     params: {}
-    
+
   model:
     type: ChemPropModel
     params:
       messages: bond
       n_tasks: 4
       from_chemeleon: True
-    
+
   split:
     type: ShuffleSplitter
     params:
@@ -47,7 +47,7 @@ procedure:
       test_size: 0.2
       train_size: 0.7
       val_size: 0.1
-    
+
   train:
     type: LightningTrainer
     params:

@@ -32,7 +32,7 @@ procedure:
           descr_type: mordred
         FingerprintFeaturizer:
           fp_type: ecfp:6
-    
+
   model:
     type: XGBRegressorModel
     params:
@@ -45,7 +45,7 @@ procedure:
       random_state: 42
       test_size: 0.3
       train_size: 0.7
-    
+
   train:
     type: SKLearnGridSearchTrainer
     params:
@@ -61,7 +61,7 @@ report:
   eval:
   - type: RegressionMetrics
     params: {}
-    
+
   - type: RegressionPlots
     params:
       axes_labels:

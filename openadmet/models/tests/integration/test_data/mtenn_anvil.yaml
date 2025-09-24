@@ -48,7 +48,7 @@ report:
   eval:
   - params: {}
     type: RegressionMetrics
-  
+
   - params:
       axes_labels:
       - True pChEMBL
@@ -58,7 +58,7 @@ report:
       pXC50: true
       title: Multitask True vs Predicted pChEMBL on test set
     type: RegressionPlots
-  
+
   - params:
       axes_labels:
       - True pChEMBL

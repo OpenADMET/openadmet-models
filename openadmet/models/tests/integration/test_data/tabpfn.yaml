@@ -29,20 +29,20 @@ procedure:
     type: DescriptorFeaturizer
     params:
       descr_type: desc2d
-  
+
   model:
     type: TabPFNRegressorModel
     params:
       ignore_pretraining_limits: True
       device: cuda
-  
+
   split:
     type: ShuffleSplitter
     params:
       random_state: 42
       test_size: 0.3
       train_size: 0.7
-  
+
   train:
     type: SKLearnBasicTrainer
 
@@ -50,7 +50,7 @@ report:
   eval:
   - type: RegressionMetrics
     params: {}
-  
+
   - type: RegressionPlots
     params:
       axes_labels:
@@ -60,7 +60,7 @@ report:
       min_val: 3
       pXC50: true
       title: CYP3A4 True vs Predicted pChEMBL on test set
-  
+
   - type: SKLearnRepeatedKFoldCrossValidation
     params:
       axes_labels:
