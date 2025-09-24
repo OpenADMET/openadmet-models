@@ -2,14 +2,14 @@
 
 from typing import ClassVar, Literal, Optional, Union
 
-from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
-    AutoTabPFNRegressor,
-    AutoTabPFNClassifier,
-)
-from tabpfn import TabPFNRegressor, TabPFNClassifier
 import numpy as np
 from loguru import logger
-from pydantic import field_validator, Field
+from pydantic import Field, field_validator
+from tabpfn import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
+    AutoTabPFNClassifier,
+    AutoTabPFNRegressor,
+)
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -40,28 +40,26 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 
     """
 
+    # Meta parameters for this class
     type: ClassVar[str]
     mod_class: ClassVar[type]
 
+    # TabPFN parameters
     max_time: Optional[int] = Field(
         default=None,
         description="The maximum time to spend on fitting the post hoc ensemble.",
     )
-
     accelerator: Literal["cpu", "gpu", "auto"] = Field(
         default="auto", description="The device to use for training and prediction."
     )
-
     random_state: int = Field(
         default=42,
         description="Controls both the randomness of base models and the post hoc ensembling method.",
     )
-
     ignore_pretraining_limits: bool = Field(
         default=False,
         description="Whether to ignore the pretraining limits of the TabPFN base models.",
     )
-
     phe_init_args: Optional[dict] = Field(
         default=None,
         description="The initialization arguments for the post hoc ensemble predictor. "
@@ -84,38 +82,25 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         str
             The validated accelerator value.
 
-        Raises
-        ------
-        ValueError
-            If the accelerator is not one of 'cpu', 'gpu', or 'auto'.
-
         """
         if value not in ["cpu", "gpu", "auto"]:
             raise ValueError("Accelerator must be either 'cpu' or 'gpu' or 'auto'")
 
         return value
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params : dict, optional
-            Class-level parameters.
-        mod_params : dict, optional
-            Model-specific parameters.
-
-        Returns
-        -------
-        TabPFNExtensionModelBase
-            An instance of the model.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare and build the model instance."""
+        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
+        if not self.estimator:
+            self.estimator = self.mod_class(
+                max_time=self.max_time,
+                device=accelerator,
+                random_state=self.random_state,
+                ignore_pretraining_limits=self.ignore_pretraining_limits,
+                phe_init_args=self.phe_init_args,
+            )
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -131,20 +116,6 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y)
-
-    def build(self):
-        """Prepare and build the model instance."""
-        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
-        if not self.estimator:
-            self.estimator = self.mod_class(
-                max_time=self.max_time,
-                device=accelerator,
-                random_state=self.random_state,
-                ignore_pretraining_limits=self.ignore_pretraining_limits,
-                phe_init_args=self.phe_init_args,
-            )
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -162,11 +133,6 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         np.ndarray
             Model predictions with shape (n_samples, 1).
 
-        Raises
-        ------
-        ValueError
-            If the model is not trained.
-
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -177,6 +143,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
     """TabPFN regression model using `tabpfn-extensions` with posthoc ensembling."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocRegressorModel"
     mod_class: ClassVar[type] = AutoTabPFNRegressor
 
@@ -185,6 +152,7 @@ class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
 class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
     """TabPFN classification model using `tabpfn-extensions` with posthoc ensembling."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocClassifierModel"
     mod_class: ClassVar[type] = AutoTabPFNClassifier
 
@@ -202,11 +170,6 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
         np.ndarray
             Predicted class probabilities.
 
-        Raises
-        ------
-        ValueError
-            If the model is not trained.
-
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -215,7 +178,7 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
 
 class TabPFNModelBase(PickleableModelBase):
     """
-    Base class for TabPFN models using the basic tabpfn implementation.
+    Base class for TabPFN models using the basic TabPFN implementation.
 
     Attributes
     ----------
@@ -228,31 +191,26 @@ class TabPFNModelBase(PickleableModelBase):
 
     """
 
+    # Meta parameters for this class
+    type: ClassVar[str]
+    mod_class: ClassVar[type]
+
+    # TabPFN parameters
     accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
     random_state: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params : dict, optional
-            Class-level parameters.
-        mod_params : dict, optional
-            Model-specific parameters.
-
-        Returns
-        -------
-        TabPFNModelBase
-            An instance of the model.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare and build the model instance."""
+        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
+        if not self.estimator:
+            self.estimator = self.mod_class(
+                device=accelerator,
+                random_state=self.random_state,
+                ignore_pretraining_limits=self.ignore_pretraining_limits,
+            )
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -268,18 +226,6 @@ class TabPFNModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y)
-
-    def build(self):
-        """Prepare and build the model instance."""
-        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
-        if not self.estimator:
-            self.estimator = self.mod_class(
-                device=accelerator,
-                random_state=self.random_state,
-                ignore_pretraining_limits=self.ignore_pretraining_limits,
-            )
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -312,6 +258,7 @@ class TabPFNModelBase(PickleableModelBase):
 class TabPFNRegressorModel(TabPFNModelBase):
     """TabPFN regression model using the basic `tabpfn` implementation."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "TabPFNRegressorModel"
     mod_class: ClassVar[type] = TabPFNRegressor
 
@@ -320,5 +267,6 @@ class TabPFNRegressorModel(TabPFNModelBase):
 class TabPFNClassifierModel(TabPFNModelBase):
     """TabPFN classification model using the basic `tabpfn` implementation."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "TabPFNClassifierModel"
     mod_class: ClassVar[type] = TabPFNClassifier
