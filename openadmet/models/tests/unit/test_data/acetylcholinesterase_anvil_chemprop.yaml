@@ -14,7 +14,6 @@ metadata:
     - "openadmet"
     - "test"
     - "pchembl"
-
   driver: pytorch
 
 data:
@@ -23,10 +22,7 @@ data:
   input_col: "OPENADMET_SMILES"
   target_cols: ["pchembl_value_mean"]
 
-  transform:
-
 procedure:
-
   split:
     type: ShuffleSplitter
     params:
@@ -37,7 +33,6 @@ procedure:
 
   feat:
     type: ChemPropFeaturizer
-
 
   model:
     type: ChemPropModel
@@ -50,11 +45,7 @@ procedure:
       use_wandb: false
       wandb_project: "openadmet-testing"
 
-
-
-
 report:
-
   eval:
     - type: RegressionMetrics
     - type: RegressionPlots

@@ -43,7 +43,7 @@ procedure:
       output_dim: 1
 
   train:
-    type: "GATv2LightningTrainer"
+    type: "LightningTrainer"
     params:
       max_epochs: 3
       accelerator: "cpu"

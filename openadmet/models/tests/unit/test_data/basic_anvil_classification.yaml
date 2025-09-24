@@ -20,7 +20,6 @@ data:
   cat_entry: "AChE_Landrum"
   input_col: "canonical_smiles"
   target_cols: "pchembl_active"
-  transform: None
 
 procedure:
   split:
@@ -38,12 +37,11 @@ procedure:
   model:
     type: LGBMClassifierModel
     params:
-      mod_params:
-        objective: "binary"
-        metric: "binary_error"
-        boosting_type: "gbdt"
-        learning_rate: 0.1
-        num_leaves: 31
+      objective: "binary"
+      metric: "binary_error"
+      boosting_type: "gbdt"
+      learning_rate: 0.1
+      num_leaves: 31
 
   train:
     type: SKLearnBasicTrainer
