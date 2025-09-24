@@ -13,7 +13,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class DummyModelBase(PickleableModelBase):
     """Base class for Dummy models, allows instantiation from parameters that are passable to the Dummy model classes."""
 
-    # Meta-parameters for this class
+    # Meta parameters for this class
     type: ClassVar[str]
     mod_class: ClassVar[type]
 
@@ -84,8 +84,11 @@ class DummyRegressorModel(DummyModelBase):
     https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "DummyRegressorModel"
     mod_class: ClassVar[type] = DummyRegressor
+
+    # DummyRegressor parameters
     strategy: str = "mean"  # Default strategy for dummy models
     constant: float = None  # Default constant value for dummy models
     quantile: float = None  # Default quantile value for dummy models
@@ -100,8 +103,11 @@ class DummyClassifierModel(DummyModelBase):
     https://scikit-learn.org/stable/api/sklearn.dummy.html
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "DummyClassifierModel"
     mod_class: ClassVar[type] = DummyClassifier
+
+    # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
     random_state: int = None  # Default random state for dummy models
     constant: int | str = None  # Default constant value for dummy models

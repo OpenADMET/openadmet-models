@@ -27,7 +27,7 @@ class CatBoostModelBase(PickleableModelBase):
     # Allow extra arguments
     model_config = ConfigDict(extra="allow")
 
-    # Meta-parameters for this class
+    # Meta parameters for this class
     type: ClassVar[str]
     mod_class: ClassVar[type]
 
@@ -107,6 +107,7 @@ class CatBoostRegressorModel(CatBoostModelBase):
     - tree_method: Specify the tree construction algorithm used in CatBoost
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "CatBoostRegressorModel"
     mod_class: ClassVar[type] = CatBoostRegressor
 
@@ -120,6 +121,7 @@ class CatBoostClassifierModel(CatBoostModelBase):
     https://catboost.ai/docs/en/concepts/python-quickstart
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "CatBoostClassifierModel"
     mod_class: ClassVar[type] = CatBoostClassifier
 

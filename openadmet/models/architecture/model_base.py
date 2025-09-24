@@ -27,7 +27,6 @@ class ModelBase(BaseModel, ABC):
     """Base class for all models."""
 
     _estimator: Any = None
-
     _model_json_name: ClassVar[str] = "model.json"
 
     @property
@@ -133,9 +132,8 @@ class ModelBase(BaseModel, ABC):
 class PickleableModelBase(ModelBase):
     """A model that can be pickled using joblib."""
 
-    # classvar for pickleable model
+    # ClassVar for pickleable model
     pickleable: ClassVar[bool] = True
-
     _model_save_name: ClassVar[str] = "model.pkl"
 
     def save(self, path: PathLike):

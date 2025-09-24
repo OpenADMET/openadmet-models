@@ -12,7 +12,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class LGBMModelBase(PickleableModelBase):
     """Base class for LightGBM models."""
 
-    # Meta-parameters for this class
+    # Meta parameters for this class
     type: ClassVar[str]
     mod_class: ClassVar[type]
 
@@ -99,6 +99,7 @@ class LGBMModelBase(PickleableModelBase):
 class LGBMRegressorModel(LGBMModelBase):
     """LightGBM regression model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "LGBMRegressorModel"
     mod_class: ClassVar[type] = lgb.LGBMRegressor
 
@@ -107,6 +108,7 @@ class LGBMRegressorModel(LGBMModelBase):
 class LGBMClassifierModel(LGBMModelBase):
     """LightGBM classification model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "LGBMClassifierModel"
     mod_class: ClassVar[type] = lgb.LGBMClassifier
 
