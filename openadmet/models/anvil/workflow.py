@@ -414,7 +414,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         return self
 
-    def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
+    def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=None):
         # Load model from disk
         if (
             self.parent_spec.procedure.model.param_path is not None
@@ -425,13 +425,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
                 scaler=train_scaler,
+                input_dim=input_dim,
             )
             logger.info("Model loaded")
 
         # Build model from scratch
         else:
             logger.info("Building model")
-            self.model.build(scaler=train_scaler)
+            self.model.build(scaler=train_scaler, input_dim=input_dim)
             logger.info("Model built")
 
         # Pass model to trainer
@@ -663,10 +664,16 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 
+        if self.parent_spec.procedure.feat == "PairwiseFeaturizer":
+            input_dim = train_dataset[0][0].shape[-1]
+            logger.info(f"Input dim inferred as {input_dim}")
+        else:
+            input_dim = None
+
         # Train
         if self.ensemble:
             # Ensemble mode
-            self._train_ensemble(X_train, y_train, val_dataloader, output_dir)
+            self._train_ensemble(X_train, y_train, val_dataloader, output_dir, input_dim=input_dim)
 
             # Calibrate
             self.model.calibrate_uncertainty(
@@ -697,7 +704,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Model saved")
         else:
             # Single-model mode
-            self._train(train_dataloader, val_dataloader, train_scaler, output_dir)
+            self._train(train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=input_dim)
 
             # Save
             logger.info("Saving model")

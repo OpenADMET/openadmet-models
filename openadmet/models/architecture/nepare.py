@@ -15,7 +15,7 @@ from openadmet.models.architecture.model_base import (
 )
 
 
-from typing import ClassVar
+from typing import ClassVar, Any, Optional
 
 
 class NeuralPairwiseRegressorModule(LightningModuleBase):
@@ -23,27 +23,29 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
 
     def __init__(
         self,
-        input_size,
-        hidden_size,
+        input_dim,
+        hidden_dim,
         num_layers,
-        activation=torch.nn.ReLU,
+        activation:str = 'relu',
         lr: float = 1e-4,
         n_targets: int = 1,
         monitor_metric: str = "val_loss",
+        scaler=None,
+
     ):
         """
         Initialize the Neural Pairwise Regressor Module.
 
         Attributes
         ----------
-        input_size : int
+        input_dim : int
             Size of the input features for a single molecule.
-        hidden_size : int
+        hidden_dim : int
             Size of the hidden layers.
         num_layers : int
             Number of hidden layers.
-        activation : callable, optional
-            Activation function to use (default: torch.nn.ReLU).
+        activation : str, optional
+            Activation function to use, options are relu or gelu.
         lr : float, optional
             Learning rate (default: 1e-4).
         n_targets : int, optional
@@ -51,17 +53,23 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         monitor_metric : str, optional
             Metric to monitor during training, can be "val_loss" or "train_loss" (
             default: "val_loss").
+        scaler : object, optional
+            Scaler for data normalization (default: None).
 
         """
         super().__init__()
-        input_size = input_size * 2
+        input_dim = input_dim * 2
+        if activation == 'relu':
+            activation = torch.nn.ReLU
+        elif activation == 'gelu':
+            activation = torch.nn.GELU
         _modules = OrderedDict()
         for i in range(num_layers):
             _modules[f"hidden_{i}"] = torch.nn.Linear(
-                input_size if i == 0 else hidden_size, hidden_size
+                input_dim if i == 0 else hidden_dim, hidden_dim
             )
             _modules[f"{activation.__name__.lower()}_{i}"] = activation()
-        _modules["readout"] = torch.nn.Linear(hidden_size, n_targets)
+        _modules["readout"] = torch.nn.Linear(hidden_dim, n_targets)
         self.fnn = torch.nn.Sequential(_modules)
         self.lr = lr
         self.save_hyperparameters()
@@ -73,7 +81,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, input_size * 2).
+            Input tensor of shape (batch_size, input_dim * 2).
 
         Returns
         -------
@@ -195,8 +203,30 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
     """
 
     type: ClassVar[str] = "NeuralPairwiseRegressorModel"
-    mod_params: dict = {}
+    input_dim: int = 1028
+    hidden_dim: int = 128
+    num_layers: int = 3
+    activation: str = 'relu'
+    lr: float = 1e-4
+    n_targets: int = 1
+    monitor_metric: str = "val_loss"
+    scaler: Optional[Any] = None
 
+    @classmethod
+    def from_params(cls, params:dict = None):
+        """
+        Load model parameters from a dictionary.
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary of model parameters.
+
+        """
+        instance = cls(**params)
+        instance.build()
+        return instance
+    
     def train(self, dataloader):
         """
         Train the model.
@@ -211,29 +241,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             "Training not implemented in model class, use a trainer."
         )
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params : dict, optional
-            Parameters for the model class (default: {}).
-        mod_params : dict, optional
-            Parameters for the model module (default: {}).
-
-        Returns
-        -------
-        NeuralPairwiseRegressorModel
-            An instance of the model.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
-
-    def build(self, scaler=None, input_dim=None, **kwargs):
+    def build(self, scaler=None, input_dim=None):
         """
         Prepare and build the model.
 
@@ -241,18 +249,27 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         ----------
         scaler : object, optional
             Scaler for data normalization (default: None).
+        input_dim : int, optional
+            Size of the input features for a single molecule (default: None).
 
         Returns
         -------
         self : NeuralPairwiseRegressorModel
             The built model instance.
-
+        
         """
-        self.scaler = kwargs.get("scaler", None)
-        self.input_size = kwargs.get("input_size", None)
+        self.scaler = scaler if scaler is not None else self.scaler
+        self.input_dim = input_dim if input_dim is not None else self.input_dim
 
         if not self.estimator:
-            nepare = NeuralPairwiseRegressorModule(
+            self.estimator = NeuralPairwiseRegressorModule(
+                input_dim=self.input_dim,
+                hidden_dim=self.hidden_dim,
+                num_layers=self.num_layers,
+                activation=self.activation,
+                lr=self.lr,
+                n_targets=self.n_targets,
+                monitor_metric=self.monitor_metric,
                 scaler=self.scaler,
                 input_size=self.input_size,
             )
@@ -264,7 +281,16 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
 
     def make_new(self) -> "NeuralPairwiseRegressorModel":
         """Copy parameters to a new model instance without copying the estimator."""
-        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
+        return self.__class__(
+            input_dim=self.input_dim,
+            hidden_dim=self.hidden_dim,
+            num_layers=self.num_layers,
+            activation=self.activation,
+            lr=self.lr,
+            n_targets=self.n_targets,
+            monitor_metric=self.monitor_metric,
+            scaler=self.scaler,
+        )
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
