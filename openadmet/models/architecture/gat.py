@@ -90,16 +90,14 @@ class GATv2Module(LightningModuleBase):
     type: ClassVar[str] = "GATv2Module"
 
     # Model architecture hyperparameters
-    input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
+    input_dim: int = 8  # Must match that of GATGraphFeaturizer TODO: make this dynamic
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = (
-        4  # must match that of GATGraphFeaturizer TODO: make this dynamic
-    )
+    edge_dim: int = 4  # Must match that of GATGraphFeaturizer TODO: make this dynamic
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = True
@@ -415,19 +413,19 @@ class GATv2Model(LightningModelBase):
     type: ClassVar[str] = "GATv2Model"
 
     # Model architecture hyperparameters
-    input_dim: Optional[int] = 8
+    input_dim: int = 8
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = 4
+    edge_dim: int = 4
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = False
     bias: bool = True
-    scaler: Optional[Any] = None
+    scaler: Any | None = None
 
     # Training hyperparameters
     loss_function: str = "mse"
@@ -471,9 +469,6 @@ class GATv2Model(LightningModelBase):
 
         """
         self.scaler = scaler
-
-        if self.input_dim is None:
-            raise ValueError("'input_dim' must be provided to build the GATv2 model.")
 
         if not self.estimator:
             # Build core GAT model
