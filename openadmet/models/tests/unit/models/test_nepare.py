@@ -1,7 +1,7 @@
 import pytest
 from numpy.testing import assert_allclose
 
-from openadmet.models.architecture.lgbm import NeuralPairwiseRegressorModel
+from openadmet.models.architecture.nepare import NeuralPairwiseRegressorModel
 
 
 @pytest.fixture
