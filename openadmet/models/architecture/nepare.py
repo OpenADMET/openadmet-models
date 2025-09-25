@@ -270,9 +270,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
                 n_targets=self.n_targets,
                 monitor_metric=self.monitor_metric,
                 scaler=self.scaler,
-                input_size=self.input_size,
             )
-            self.estimator = nepare
         else:
             logger.warning("Model already exists, skipping build")
 
