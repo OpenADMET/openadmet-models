@@ -9,6 +9,8 @@ Welcome to OpenADMET Models documentation!
 The OpenADMET Models package provides a suite of FOSS tools for building, training, and evaluating machine learning models on chemical matter.
 It includes a variety of featurizers, model architectures, and evaluation metrics to facilitate the development of robust and accurate predictive models, with a particular focus on ADMET properties.
 
+The library includes traditional machine learning methods, deep learning models, and active learning workflows. It is designed for general-purpose use and is not intended to implement every state-of-the-art architecture, but rather to provide a *practical, flexible foundation* for ADMET modeling.
+
 This documentation provides an overview of the package's features, as well as detailed guides on how to use the various components. See the sections below to get started.
 
 **Useful Links**:
