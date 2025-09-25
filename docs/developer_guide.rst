@@ -6,26 +6,26 @@ Welcome to the developer documentation for OpenADMET Models!
 Contributing
 ------------
 
-OpenADMET Models is an open-source project, and we welcome contributions from the community. Whether you're fixing bugs, adding new features, or improving documentation, your help is appreciated!  
+OpenADMET Models is an open-source project, and we welcome contributions from the community. Whether you're fixing bugs, adding new features, or improving documentation, your help is appreciated!
 We also welcome feedback and suggestions for improving the package. Please feel free to open issues on our GitHub repository or join our community discussions to share ideas and ask questions.
 
-We require that all contributions adhere to our coding standards and pass our test suite.  
+We require that all contributions adhere to our coding standards and pass our test suite.
 Additionally, we ask that you follow our `Code of Conduct <https://omsf.io/resources/conduct/>`_ to ensure a welcoming and inclusive environment for all contributors.
 
-We also require all contributors to agree to a Developer Certificate of Origin (DCO). This is a simple statement that you have the right to submit the code you are contributing and that you agree to have it included in the project under the project's license.  
-You can indicate your agreement by ticking the DCO box when submitting a pull request on GitHub.  
+We also require all contributors to agree to a Developer Certificate of Origin (DCO). This is a simple statement that you have the right to submit the code you are contributing and that you agree to have it included in the project under the project's license.
+You can indicate your agreement by ticking the DCO box when submitting a pull request on GitHub.
 Learn more here: `Developer Certificate of Origin <https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin>`_.
 
 License
 -------
 
-OpenADMET Models is distributed under the **MIT License** — see the  
+OpenADMET Models is distributed under the **MIT License** — see the
 `LICENSE <https://github.com/OpenADMET/openadmet_models/blob/main/LICENSE>`_ for full details.
 
 Developing the Package
 ----------------------
 
-Follow the steps in the :doc:`installation` guide to set up your development environment.  
+Follow the steps in the :doc:`installation` guide to set up your development environment.
 Remember to install the package in editable mode using:
 
 .. code-block:: bash
@@ -37,7 +37,7 @@ This ensures that changes to the source code are reflected immediately.
 Testing
 -------
 
-We require that new features and bug fixes include appropriate tests. Tests are located in the ``openadmet/models/tests/`` directory.  
+We require that new features and bug fixes include appropriate tests. Tests are located in the ``openadmet/models/tests/`` directory.
 We use `pytest` as our testing framework.
 
 Tests are separated into **unit** and **integration** tests:
@@ -46,7 +46,7 @@ Tests are separated into **unit** and **integration** tests:
 
 In particular, the `Anvil` workflows are tested extensively in the integration test suite.
 
-Tests are automatically run on each pull request using GitHub Actions.  
+Tests are automatically run on each pull request using GitHub Actions.
 You can also run the tests locally:
 
 .. code-block:: bash
@@ -100,7 +100,7 @@ Tips and Tricks
 Getting Help
 ------------
 
-We’re a friendly bunch! If you have questions or need assistance, don’t hesitate to reach out.  
+We’re a friendly bunch! If you have questions or need assistance, don’t hesitate to reach out.
 You can open an issue on our GitHub repository or join the discussion on `GitHub Discussions <https://github.com/orgs/OpenADMET/discussions>`_.
 
 We look forward to your contributions and hope you enjoy working with OpenADMET Models!
