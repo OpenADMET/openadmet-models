@@ -33,7 +33,7 @@ class RFModelBase(PickleableModelBase):
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump)
+            self.estimator = self.mod_class(**self.model_dump())
         else:
             logger.warning("Model already exists, skipping build")
 
