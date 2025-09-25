@@ -46,7 +46,7 @@ procedure:
       how_to_pair: 'full'
       featurizer:
         FingerprintFeaturizer:
-          descr_type: "ecfp:4"
+          fp_type: "ecfp:4"
 
   model:
     type: NeuralPairwiseRegressorModel
