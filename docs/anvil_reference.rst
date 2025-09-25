@@ -8,7 +8,7 @@ applications such as active learning.
 
 Anvil is built around the concept of a "recipe" - a YAML file that specifies all the components of a machine learning workflow, including data loading,
 featurization, model architecture, training parameters, and evaluation metrics. By defining a recipe, users can easily reproduce experiments, share workflows with others, and systematically explore different modeling approaches.
-Anvil also makes our (OpenADMET Team) lives easier by handling the boilerplate code associated with setting up and running machine learning experiments, saving us from a twisted jungle of scripts and configuration files. 
+Anvil also makes our (OpenADMET Team) lives easier by handling the boilerplate code associated with setting up and running machine learning experiments, saving us from a twisted jungle of scripts and configuration files.
 
 
 A full list of available models, featurizers, trainers, and evaluators can be found in the OpenADMET API documentation. Additionally, we maintain a list of canonical recipes we use in production at XXXX #TODO add link to repo with recipes
@@ -494,5 +494,3 @@ Example
         random_state: 42
         pXC50: true
         title: True vs Predicted pIC50 on test set
-
-
