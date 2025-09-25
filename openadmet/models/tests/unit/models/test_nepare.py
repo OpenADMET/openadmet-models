@@ -10,6 +10,7 @@ def X_y():
     y = [1, 2]
     return X, y
 
+
 def test_nepare():
     nepare_model = NeuralPairwiseRegressorModel()
     assert nepare_model.type == "NeuralPairwiseRegressorModel"
