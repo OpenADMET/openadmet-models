@@ -18,7 +18,7 @@ This documentation provides an overview of the package's features, as well as de
 `Issues & Ideas <https://github.com/OpenADMET/openadmet_models/issues/>`__
 
 |
-.. grid:: 1 2 3 4
+.. grid:: 3
     :gutter: 3
 
     .. grid-item-card:: Installation
