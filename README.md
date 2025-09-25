@@ -13,7 +13,7 @@ The library includes traditional machine learning methods, deep learning models,
 
 
 >[!NOTE]
-> This repo is under very active development, we make no guarantees about stability or correctness.
+> This repo is under very active development, we make no guarantees about stability or correctness. Check out the documentation (WIP) here: https://openadmet-models.readthedocs.io/en/latest/
 
 ## License
 
@@ -68,8 +68,6 @@ Some examples of `Anvil` specifications are provided in the Tutorials and Docume
 
 >[!NOTE]
 > We are currently in development mode and are working on what our first release and documentation will look like, we hope to have something stable for people to try out in Q4 2025!
-
-> When it is available, you will be able to read the documentation here: https://openadmet-models.readthedocs.io/en/latest/, watch this space!
 
 
 

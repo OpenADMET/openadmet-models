@@ -3,68 +3,80 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to openadmet_models's documentation!
+Welcome to OpenADMET Models documentation!
 =========================================================
 
-.. grid:: 1 1 2 2
+The OpenADMET Models package provides a suite of FOSS tools for building, training, and evaluating machine learning models on chemical matter.
+It includes a variety of featurizers, model architectures, and evaluation metrics to facilitate the development of robust and accurate predictive models, with a particular focus on ADMET properties.
 
-    .. grid-item-card:: Getting Started
+The library includes traditional machine learning methods, deep learning models, and active learning workflows. It is designed for general-purpose use and is not intended to implement every state-of-the-art architecture, but rather to provide a *practical, flexible foundation* for ADMET modeling.
+
+This documentation provides an overview of the package's features, as well as detailed guides on how to use the various components. See the sections below to get started.
+
+**Useful Links**:
+`OpenADMET Website <https://openadmet.org/>`__ |
+`Example Tutorial notebooks <https://github.com/OpenADMET/OpenADMET_demos/>`__ |
+`Source Repository <https://github.com/OpenADMET/openadmet_models/>`__ |
+`Issues & Ideas <https://github.com/OpenADMET/openadmet_models/issues/>`__
+
+|
+.. grid:: 3
+    :gutter: 3
+
+    .. grid-item-card:: Installation
       :margin: 0 3 0 0
+      :text-align: center
+      :link: installation
+      :link-type: doc
 
-      Learn the basics of using openadmet_models.
+      Instructions for installing OpenADMET Models.
 
-      .. button-link:: ./getting_started.html
-         :color: primary
-         :outline:
-         :expand:
-
-         To the Getting Started Guide
-
-
-
-    .. grid-item-card::  User Guide
+    .. grid-item-card:: Try it out!
       :margin: 0 3 0 0
+      :text-align: center
+      :link: https://colab.research.google.com/github/OpenADMET/OpenADMET_demos/blob/main/showcase/OpenADMET_Models_Showcase.ipynb
+      :link-type: url
 
-      An in-depth guide for users.
+      New to OpenADMET Models? Try it out in your browser with Colab.
 
-      .. button-link:: ./user_guide.html
-         :color: primary
-         :outline:
-         :expand:
+    .. grid-item-card:: User Guide
+      :margin: 0 3 0 0
+      :text-align: center
+      :link: user_guide
+      :link-type: doc
 
-         To the User Guide
-
-
+      An in-depth guide for users. Start here.
 
     .. grid-item-card:: API Reference
       :margin: 0 3 0 0
+      :text-align: center
+      :link: api
+      :link-type: doc
 
-      How to use the API of openadmet_models.
+      How to use the API of OpenADMET Models.
 
-      .. button-link:: ./api.html
-         :color: primary
-         :outline:
-         :expand:
-
-         To the API Reference.
-
-
-
-    .. grid-item-card::  Developer Guide
+    .. grid-item-card:: Developer Guide
       :margin: 0 3 0 0
+      :text-align: center
+      :link: developer_guide
+      :link-type: doc
 
-      How to contribute to openadmet_models.
+      How to contribute to OpenADMET Models.
 
-      .. button-link:: ./developer_guide.html
-         :color: primary
-         :outline:
-         :expand:
+    .. grid-item-card:: Anvil Reference
+      :margin: 0 3 0 0
+      :text-align: center
+      :link: anvil_reference
+      :link-type: doc
 
-         To the Developer Guide
+      Reference guide to Anvil workflows within OpenADMET Models.
+
+
+
 
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    :hidden:
    :titlesonly:
 
@@ -72,3 +84,12 @@ Welcome to openadmet_models's documentation!
    user_guide
    api
    developer_guide
+   anvil_reference
+
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
