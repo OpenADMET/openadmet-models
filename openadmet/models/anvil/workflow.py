@@ -687,7 +687,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if self.ensemble:
             # Ensemble mode
             self._train_ensemble(
-                X_train, y_train, val_dataloader, output_dir,
+                X_train,
+                y_train,
+                val_dataloader,
+                output_dir,
             )
 
             # Calibrate
