@@ -23,8 +23,8 @@ class LGBMModelBase(PickleableModelBase):
     learning_rate: float = 0.1
     n_estimators: int = 100
     subsample_for_bin: int = 200000
-    objective: str = None
-    class_weight: str = None
+    objective: str | None = None
+    class_weight: str | None = None
     min_split_gain: float = 0.0
     min_child_weight: float = 0.001
     min_child_samples: int = 20
@@ -33,8 +33,8 @@ class LGBMModelBase(PickleableModelBase):
     colsample_bytree: float = 1.0
     reg_alpha: float = 0.0
     reg_lambda: float = 0.0
-    random_state: int = None
-    n_jobs: int = None
+    random_state: int | None = None
+    n_jobs: int | None = None
     importance_type: str = "split"
 
     def __init__(self, *args, **kwargs):
