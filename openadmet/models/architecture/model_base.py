@@ -9,6 +9,7 @@ import joblib
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from lightning import pytorch as pl
+from loguru import logger
 from pydantic import BaseModel, field_validator
 
 models = ClassRegistry(unique=True)
@@ -422,3 +423,23 @@ class LightningModelBase(ModelBase):
         instance.build(scaler=scaler)
         instance.load(serial_path)
         return instance
+
+    def freeze_weights(self, *args, **kwargs):
+        """
+        Freeze parts of the model for transfer learning or fine-tuning.
+
+        Parameters
+        ----------
+        *args: variable length argument list
+            Arguments to be passed to the implementing model's `freeze_weights` method.
+        **kwargs: keyword arguments
+            Keyword arguments to be passed to the implementing model's `freeze_weights` method.
+
+        Notes
+        -----
+        This method should set the `requires_grad` attribute of the specified layers to False,
+        preventing their weights from being updated during training. It also should set these
+        layers to evaluation mode.
+
+        """
+        logger.warning(f"Weight freezing currently not implemented for {self.type}.")
