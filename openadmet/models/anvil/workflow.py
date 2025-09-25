@@ -427,6 +427,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Model loaded")
 
+            # Optionally freeze weights
+            if self.parent_spec.procedure.model.freeze_weights is not None:
+                logger.info(f"Freezing model weights")
+                self.model.freeze_weights(
+                    **self.parent_spec.procedure.model.freeze_weights
+                )
+                logger.info(f"Model weights frozen")
+
         # Build model from scratch
         else:
             logger.info("Building model")
@@ -508,6 +516,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     scaler=bootstrap_scaler,
                 )
                 logger.info(f"Model {i} loaded")
+
+                # Optionally freeze weights
+                if self.parent_spec.procedure.model.freeze_weights is not None:
+                    logger.info(f"Freezing weights for model {i}")
+                    self.model.freeze_weights(
+                        **self.parent_spec.procedure.model.freeze_weights
+                    )
+                    logger.info(f"Model {i} frozen")
 
             # Build model from scratch
             else:

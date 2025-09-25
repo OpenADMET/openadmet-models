@@ -377,12 +377,15 @@ class ModelSpec(AnvilSection):
         The path to the model parameters file.
     serial_path : Optional[str]
         The path to the model serialization file.
+    freeze_weights : Optional[dict]
+        A dictionary specifying which layers to freeze during training.
 
     """
 
     section_name: ClassVar[str] = "model"
     param_path: str | None = None
     serial_path: str | None = None
+    freeze_weights: dict | None = None
 
     @model_validator(mode="after")
     def check_paths(self):
