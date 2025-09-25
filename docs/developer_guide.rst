@@ -22,8 +22,8 @@ License
 OpenADMET Models is distributed under the **MIT License** — see the
 `LICENSE <https://github.com/OpenADMET/openadmet_models/blob/main/LICENSE>`_ for full details.
 
-Developing the Package
-----------------------
+Installation
+------------
 
 Follow the steps in the :doc:`installation` guide to set up your development environment.
 Remember to install the package in editable mode using:
