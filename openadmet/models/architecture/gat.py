@@ -144,7 +144,7 @@ class GATv2Module(LightningModuleBase):
 
         """
         # Initialize super class
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         # Input projection layer
         self.input_projection = nn.Linear(self.input_dim, self.hidden_dim)
@@ -437,7 +437,7 @@ class GATv2Model(LightningModelBase):
     scheduler_patience: int = 10
     monitor_metric: str = "val_loss"
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the GATv2Model.
 
@@ -449,9 +449,9 @@ class GATv2Model(LightningModelBase):
             Keyword arguments for parent class and model configuration.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
-    def build(self, scaler=None, **kwargs):
+    def build(self, scaler=None):
         """
         Build the GATv2 model. 'input_dim' is a mandatory parameter.
 
@@ -459,13 +459,6 @@ class GATv2Model(LightningModelBase):
         ----------
         scaler: Optional[Any]
             Scaler used for target variable normalization.
-        **kwargs: Dict
-            Additional keyword arguments.
-
-
-        Returns
-        -------
-        None
 
         """
         self.scaler = scaler
