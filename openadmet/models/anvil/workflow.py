@@ -423,18 +423,28 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             and self.parent_spec.procedure.model.serial_path is not None
         ):
             logger.info("Loading model from disk, overrides any specified `mod_params`")
-            self.model = self.model.deserialize(
-                self.parent_spec.procedure.model.param_path,
-                self.parent_spec.procedure.model.serial_path,
-                scaler=train_scaler,
-                input_dim=input_dim,
-            )
+            if input_dim is not None:
+                self.model = self.model.deserialize(
+                    self.parent_spec.procedure.model.param_path,
+                    self.parent_spec.procedure.model.serial_path,
+                    scaler=train_scaler,
+                    input_dim=input_dim,
+                )
+            else:
+                self.model = self.model.deserialize(
+                    self.parent_spec.procedure.model.param_path,
+                    self.parent_spec.procedure.model.serial_path,
+                    scaler=train_scaler,
+                )
             logger.info("Model loaded")
 
         # Build model from scratch
         else:
             logger.info("Building model")
-            self.model.build(scaler=train_scaler, input_dim=input_dim)
+            if input_dim is not None:
+                self.model.build(scaler=train_scaler, input_dim=input_dim)
+            else:
+                self.model.build(scaler=train_scaler)
             logger.info("Model built")
 
         # Pass model to trainer

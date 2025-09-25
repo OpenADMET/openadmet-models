@@ -43,6 +43,9 @@ chemprop_AChE_finetune_ensemble = (
     _data_ref / "chemprop_AChE_finetune_ensemble.yaml"
 ).as_posix()
 
+# Nepare fingerprint model
+nepare_fp = (_data_ref / "nepare_fp.yaml").as_posix()
+
 # GPU
 
 # ChemProp with multitask and cross-validation
