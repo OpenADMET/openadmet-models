@@ -90,6 +90,8 @@ class GATv2Module(LightningModuleBase):
     add_self_loops: bool = True
     share_weights: bool = True
     bias: bool = True
+
+    # Training hyperparameters
     loss_function: str = "mse"
 
     @field_validator("pooling")
