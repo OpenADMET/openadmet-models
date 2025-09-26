@@ -1,19 +1,19 @@
 from pathlib import Path
 
 import pytest
-import glob
-from openadmet.models.anvil.workflow import (
+
+from openadmet.models.anvil.specification import (
     AnvilSpecification,
 )
 from openadmet.models.tests.unit.datafiles import (
     acetylcholinesterase_anvil_chemprop_yaml,
-    tabpfn_anvil_classification_yaml,
     anvil_yaml_featconcat,
     anvil_yaml_gridsearch,
+    anvil_yaml_xgboost_cv,
     basic_anvil_yaml,
     basic_anvil_yaml_classification,
     basic_anvil_yaml_cv,
-    anvil_yaml_xgboost_cv
+    tabpfn_anvil_classification_yaml,
 )
 
 
@@ -22,7 +22,7 @@ def all_anvil_full_recipes():
         basic_anvil_yaml,
         anvil_yaml_featconcat,
         anvil_yaml_gridsearch,
-        anvil_yaml_xgboost_cv
+        anvil_yaml_xgboost_cv,
     ]
 
 

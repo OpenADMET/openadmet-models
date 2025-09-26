@@ -1,3 +1,5 @@
+"""Random Forest model implementations."""
+
 from typing import ClassVar
 
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
@@ -8,9 +10,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
 class RFModelBase(PickleableModelBase):
-    """
-    Base class for Sklearn Random Forest models, allows instantiation from parameters that are passable to the RF model classes.
-    """
+    """Base class for Sklearn Random Forest models."""
 
     type: ClassVar[str]
     mod_class: ClassVar[
@@ -21,7 +21,7 @@ class RFModelBase(PickleableModelBase):
     @classmethod
     def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
         """
-        Create a model from parameters
+        Create a model from parameters.
 
         Parameters
         ----------
@@ -30,6 +30,7 @@ class RFModelBase(PickleableModelBase):
         mod_params: dict
             Parameters for the Random Forest model class, such as n_estimators, max_depth,
             learning_rate, etc.
+
         """
         instance = cls(**class_params, mod_params=mod_params)
         instance.build()
@@ -37,7 +38,7 @@ class RFModelBase(PickleableModelBase):
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
-        Train the model
+        Train the model.
 
         Parameters
         ----------
@@ -45,14 +46,13 @@ class RFModelBase(PickleableModelBase):
             Training data features
         y: np.ndarray
             Training data labels
+
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
 
     def build(self):
-        """
-        Prepare the model
-        """
+        """Prepare the model."""
         if not self.estimator:
             self.estimator = self.mod_class(**self.mod_params, n_jobs=-1)
         else:
@@ -60,17 +60,20 @@ class RFModelBase(PickleableModelBase):
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
-        Predict using the model
+        Predict using the model.
 
         Parameters
         ----------
         X: np.ndarray
             Data to predict on
+        **kwargs
+            Additional keyword arguments for the predict method.
 
         Returns
         -------
         np.ndarray
             Predictions from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")
@@ -79,8 +82,7 @@ class RFModelBase(PickleableModelBase):
 
 @models.register("RFRegressorModel")
 class RFRegressorModel(RFModelBase):
-    """ Random Forest regression model
-    """
+    """Random Forest regression model."""
 
     type: ClassVar[str] = "RFRegressorModel"
     mod_class: ClassVar[type] = RandomForestRegressor
@@ -88,9 +90,7 @@ class RFRegressorModel(RFModelBase):
 
 @models.register("RFClassifierModel")
 class RFClassifierModel(RFModelBase):
-    """
-
-    """
+    """RF classifier model."""
 
     type: ClassVar[str] = "RFClassifierModel"
     mod_class: ClassVar[type] = RandomForestClassifier
@@ -103,10 +103,12 @@ class RFClassifierModel(RFModelBase):
         ----------
         X: np.ndarray
             Data to predict on
+
         Returns
         -------
         np.ndarray
             Probabilities for each class from the model
+
         """
         if not self.estimator:
             raise ValueError("Model not trained")

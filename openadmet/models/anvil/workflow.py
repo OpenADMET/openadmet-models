@@ -1,359 +1,47 @@
+"""Workflow implementations for Anvil models."""
+
 import hashlib
 import uuid
-from abc import abstractmethod
 from datetime import datetime
-from enum import StrEnum
 from os import PathLike
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Optional  # Add Optional
+from typing import Any
 
-import fsspec
 import numpy as np
+import pandas as pd
 import torch
-import yaml
 import zarr
 from loguru import logger
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import model_validator
 
-from openadmet.models.active_learning.ensemble_base import (
-    get_ensemble_class,
-)
-from openadmet.models.anvil.data_spec import DataSpec
-from openadmet.models.architecture.model_base import ModelBase, get_mod_class
-from openadmet.models.eval.eval_base import EvalBase, get_eval_class
-from openadmet.models.features.feature_base import FeaturizerBase, get_featurizer_class
-from openadmet.models.registries import *  # noqa: F401, F403
-from openadmet.models.split.split_base import SplitterBase, get_splitter_class
-from openadmet.models.trainer.trainer_base import TrainerBase, get_trainer_class
-from openadmet.models.transforms.transform_base import (
-    TransformBase,
-    get_transform_class,
-)
+from openadmet.models.anvil import Drivers
+from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 
-_SECTION_CLASS_GETTERS = {
-    "feat": get_featurizer_class,
-    "model": get_mod_class,
-    "ensemble": get_ensemble_class,
-    "split": get_splitter_class,
-    "eval": get_eval_class,
-    "train": get_trainer_class,
-    "transform": get_transform_class,
-    "INVALID": lambda x: None,
-}
 
-
-class SpecBase(BaseModel):
-    """
-    Base class for specifications.
-    """
-
-    def to_yaml(self, path, **storage_options):
-        """
-        Write specification to YAML file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "w", **storage_options) as stream:
-            # Safe dump the model to stream
-            yaml.safe_dump(self.model_dump(), stream)
-
-    @classmethod
-    def from_yaml(cls, path, **storage_options):
-        """
-        Load specification from YAML file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "r", **storage_options) as stream:
-            # Safe load the model from stream
-            data = yaml.safe_load(stream)
-
-        # Pass YAML content to class constructor
-        return cls(**data)
-
-
-class Drivers(StrEnum):
-    """
-    Enum for the drivers.
-    """
-
-    PYTORCH = "pytorch"
-    SKLEARN = "sklearn"
-    PYTORCH_ENSEMBLE = "pytorch_ensemble"
-
-
-class Metadata(SpecBase):
-    """
-    Metadata specification.
-    """
-
-    version: Literal["v1"] = Field(
-        ..., description="The version of the metadata schema."
-    )
-    driver: str = Field(
-        Drivers.SKLEARN.value, description="The driver for the workflow."
-    )
-
-    name: str = Field(..., description="The name of the workflow.")
-    build_number: int = Field(
-        ...,
-        ge=0,
-        description="The build number of the workflow (must be non-negative).",
-    )
-    description: str = Field(..., description="Description of the workflow.")
-    tag: str = Field(..., description="Primary tag for the workflow.")
-    authors: str = Field(..., description="Name of the authors.")
-    email: EmailStr = Field(..., description="Email address of the contact person.")
-    # date_created: datetime = Field(
-    #     ..., alias="date-created", description="Date when the workflow was created."
-    # )
-    biotargets: list[str] = Field(
-        ..., description="List of biotargets associated with the workflow."
-    )
-    tags: list[str] = Field(..., description="Additional tags for the workflow.")
-
-
-class AnvilSection(SpecBase):
-    """
-    Anvil specification section base class.
-    """
-
-    type: str | None = None
-    params: dict = {}
-    section_name: ClassVar[str] = "INVALID"
-
-    def to_class(self):
-        return _SECTION_CLASS_GETTERS[self.section_name](self.type)(**self.params)
-
-
-class SplitSpec(AnvilSection):
-    """
-    Data split specification.
-    """
-
-    section_name: ClassVar[str] = "split"
-
-
-class FeatureSpec(AnvilSection):
-    """
-    Featurization specification.
-    """
-
-    section_name: ClassVar[str] = "feat"
-
-
-class ModelSpec(AnvilSection):
-    """
-    Model specification.
-    """
-
-    section_name: ClassVar[str] = "model"
-
-
-class EnsembleSpec(AnvilSection):
-    """
-    Ensemble specification.
-    """
-
-    section_name: ClassVar[str] = "ensemble"
-    n_models: int = 0
-
-    @field_validator("n_models")
-    def check_n_models(cls, value):
-        if value < 2:
-            raise ValueError("Ensemble must have more than one model.")
-        return value
-
-
-class TrainerSpec(AnvilSection):
-    """
-    Trainer specification.
-    """
-
-    section_name: ClassVar[str] = "train"
-
-
-class EvalSpec(AnvilSection):
-    """
-    Evaluation specification.
-    """
-
-    section_name: ClassVar[str] = "eval"
-
-
-class TransformSpec(AnvilSection):
-    """
-    Transform specification.
-    """
-
-    section_name: ClassVar[str] = "transform"
-
-
-class ProcedureSpec(SpecBase):
-    """
-    Procedure specification.
-    """
-
-    section_name: ClassVar[str] = "procedure"
-
-    split: SplitSpec
-    feat: FeatureSpec
-    model: ModelSpec
-    ensemble: EnsembleSpec | None = None
-    train: TrainerSpec
-    transform: Optional[TransformSpec] = None  # Optional transform step
-
-
-class ReportSpec(SpecBase):
-    """
-    Report specification.
-    """
-
-    section_name: ClassVar[str] = "report"
-    eval: list[EvalSpec]
-
-
-class AnvilSpecification(BaseModel):
-    """
-    Full specification for Anvil workflow.
-    """
-
-    metadata: Metadata
-    data: DataSpec
-    procedure: ProcedureSpec
-    report: ReportSpec
-
-    # Need repetition of YAML loaders here to properly set `anvil_dir`
-    # and to not expose to_yaml and from_yaml to the user
-    @classmethod
-    def from_recipe(cls, yaml_path: PathLike, **storage_options):
-        """
-        Load specification from YAML recipe file.
-        """
-
-        # Load YAML file
-        of = fsspec.open(yaml_path, "r", **storage_options)
-        with of as stream:
-            data = yaml.safe_load(stream)
-
-        # Parse parent protocol
-        parent = of.fs.unstrip_protocol(of.fs._parent(yaml_path))
-
-        # Instantiate specification with loaded data
-        instance = cls(**data)
-
-        # Set the anvil_dir
-        instance.data.template_anvil_dir(parent)
-
-        return instance
-
-    def to_recipe(self, path, **storage_options):
-        """
-        Write specification to YAML recipe file.
-        """
-
-        # Open file stream
-        with fsspec.open(path, "w", **storage_options) as stream:
-            # Safe dump the model to stream
-            yaml.safe_dump(self.model_dump(), stream)
-
-    @classmethod
-    def from_multi_yaml(
-        cls,
-        metadata_yaml="metadata.yaml",
-        procedure_yaml="procedure.yaml",
-        data_yaml="data.yaml",
-        report_yaml="eval.yaml",
-        **storage_options,
-    ):
-        """
-        Load specification from multiple YAML files.
-        """
-
-        # Load YAML files
-        metadata = Metadata.from_yaml(metadata_yaml, **storage_options)
-        data = DataSpec.from_yaml(data_yaml, **storage_options)
-        procedure = ProcedureSpec.from_yaml(procedure_yaml, **storage_options)
-        report = ReportSpec.from_yaml(report_yaml, **storage_options)
-
-        # Instantiate the class with loaded data
-        return cls(metadata=metadata, data=data, procedure=procedure, report=report)
-
-    def to_multi_yaml(
-        self,
-        metadata_yaml="metadata.yaml",
-        procedure_yaml="procedure.yaml",
-        data_yaml="data.yaml",
-        report_yaml="eval.yaml",
-        **storage_options,
-    ):
-        """
-        Write specification to multiple YAML files.
-        """
-
-        # Write each section to its own YAML file
-        self.metadata.to_yaml(metadata_yaml, **storage_options)
-        self.data.to_yaml(data_yaml, **storage_options)
-        self.procedure.to_yaml(procedure_yaml, **storage_options)
-        self.report.to_yaml(report_yaml, **storage_options)
-
-    def to_workflow(self):
-        """
-        Convert the specification to a workflow object.
-        """
-
-        logger.info("Making workflow from specification")
-
-        return _DRIVER_TO_CLASS[self.metadata.driver](
-            metadata=self.metadata,
-            data_spec=self.data,
-            model=self.procedure.model.to_class(),
-            ensemble=self.procedure.ensemble.to_class()
-            if self.procedure.ensemble
-            else None,
-            transform=self.procedure.transform.to_class()
-            if self.procedure.transform
-            else None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
-            trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
-            parent_spec=self,
-        )
-
-
-class AnvilWorkflowBase(BaseModel):
-    """
-    Base class for Anvil workflows.
-    """
-
-    metadata: Metadata
-    data_spec: DataSpec
-    transform: Optional[TransformBase] = None  # Optional transform step
-    split: SplitterBase
-    feat: FeaturizerBase
-    model: ModelBase
-    ensemble: EnsembleBase | None = None
-    trainer: TrainerBase
-    evals: list[EvalBase]
-    parent_spec: AnvilSpecification
-    debug: bool = False
-
-    @abstractmethod
-    def run(
-        self, output_dir: PathLike = "anvil_training", debug: bool = False
-    ) -> Any: ...
+def _safe_to_numpy(X):
+    if isinstance(X, (pd.Series, pd.DataFrame)):
+        return X.to_numpy()
+    return X
 
 
 class AnvilWorkflow(AnvilWorkflowBase):
-    """
-    Workflow for running basic Anvil configuration.
-    """
+    """Workflow for running basic Anvil configuration."""
 
     driver: Drivers = Drivers.SKLEARN
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
+        """
+        Check if validation set is needed or not.
+
+        Raises
+        ------
+        ValueError
+            If ensemble is specified but no validation set is requested.
+        ValueError
+            If validation set is requested but no ensemble is specified.
+
+        """
         # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
@@ -368,8 +56,45 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         return self
 
+    @model_validator(mode="after")
+    def check_no_finetuning(self):
+        """
+        Check that no fine-tuning paths are specified.
+
+        Raises
+        ------
+        ValueError
+            If fine-tuning paths are specified for either ensemble or single model.
+
+        """
+        # Ensemble specified
+        if self.ensemble:
+            # Fine-tuning paths specified
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
+                self.parent_spec.procedure.ensemble.serial_paths is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized ensemble models is not supported in this workflow."
+                )
+
+        # No ensemble
+        else:
+            # Fine-tuning paths supplied
+            if (self.parent_spec.procedure.model.param_path is not None) or (
+                self.parent_spec.procedure.model.serial_path is not None
+            ):
+                raise ValueError(
+                    "Finetuning from serialized model is not supported in this workflow."
+                )
+
+        # All fine-tuning paths are None
+        return self
+
     def _train(self, X_train_feat, y_train, output_dir):
-        # Build model
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
+        # Build model from scratch
         logger.info("Building model")
         self.model.build()
         logger.info("Model built")
@@ -385,6 +110,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train_feat, y_train, output_dir):
+        X_train_feat = _safe_to_numpy(X_train_feat)
+        y_train = _safe_to_numpy(y_train)
+
         # Bootstrap iterations
         models = []
         for i in range(self.parent_spec.procedure.ensemble.n_models):
@@ -392,25 +120,34 @@ class AnvilWorkflow(AnvilWorkflowBase):
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
 
-            # Make new instances
-            self.model = self.model.make_new()
-
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train_feat.index, size=len(X_train_feat), replace=True
+                np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
             )
-            X_train_feat_bootstrap = X_train_feat.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
 
+            # Build model from scratch
+            logger.info(f"Building model {i}")
+            bootstrap_model = self.model.from_params(mod_params=self.model.mod_params)
+            logger.info(f"Model {i} built")
+
+            # Pass model to trainer
+            logger.info(f"Setting model {i} in trainer")
+            self.trainer.model = bootstrap_model
+            logger.info(f"Model {i} set in trainer")
+
             # Train model on bootstrapped data
-            logger.info("Training model")
-            self.model = self.trainer.train(X_train_feat_bootstrap, y_train_bootstrap)
-            logger.info("Model trained")
+            logger.info(f"Training model {i}")
+            bootstrap_model = self.trainer.train(
+                X_train_feat_bootstrap, y_train_bootstrap
+            )
+            logger.info(f"Model {i} trained")
 
             # Add model to list
-            models.append(self.model)
+            models.append(bootstrap_model)
 
         # Create ensemble from trained models
         self.model = self.ensemble.from_models(models)
@@ -423,8 +160,22 @@ class AnvilWorkflow(AnvilWorkflowBase):
     ) -> Any:
         """
         Run the workflow.
-        """
 
+        Parameters
+        ----------
+        output_dir : PathLike, optional
+            Directory to save outputs, by default "anvil_training"
+        debug : bool, optional
+            Whether to run in debug mode, by default False
+        tag : str, optional
+            Tag to override the one in the recipe, by default None
+
+        Returns
+        -------
+        Any
+            Result of the workflow run
+
+        """
         # Override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
@@ -546,19 +297,28 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self._train_ensemble(X_train_feat, y_train, output_dir)
 
             # Calibrate
-            self.model.calibrate_uncertainty(X_val_feat, y_val)
+            self.model.calibrate_uncertainty(
+                X_val_feat,
+                y_val,
+                method=self.parent_spec.procedure.ensemble.calibration_method,
+            )
 
             # Save
             logger.info("Saving model")
             self.model.serialize(
                 [
-                    output_dir / f"bootstrap_{i}" / "model.json"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
                     for i in range(self.model.n_models)
                 ],
                 [
-                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
@@ -567,7 +327,10 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Save
             logger.info("Saving model")
-            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
             logger.info("Model saved")
 
         # Predict on test set
@@ -575,10 +338,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Check if the model has predict_proba method (classification)
         if hasattr(self.model, "predict_proba"):
             y_pred = self.model.predict_proba(X_test_feat)
+            y_std = None
 
         # Otherwise, regression
         else:
-            y_pred = self.model.predict(X_test_feat)
+            if self.ensemble:
+                y_pred, y_std = self.model.predict(X_test_feat, return_std=True)
+            else:
+                y_pred = self.model.predict(X_test_feat)
+                y_std = None
         logger.info("Predictions made")
 
         # Run evaluation on train/test
@@ -588,6 +356,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             eval.evaluate(
                 y_true=y_test,
                 y_pred=y_pred,
+                y_std=y_std,
                 model=self.model,
                 X_train=X_train_feat,
                 y_train=y_train,
@@ -602,14 +371,21 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
-    """
-    Workflow for running deep learning Anvil configuration.
-    """
+    """Workflow for running deep learning Anvil configuration."""
 
     driver: Drivers = Drivers.PYTORCH
 
     @model_validator(mode="after")
     def check_no_transform(self):
+        """
+        Check that no transform step is specified.
+
+        Raises
+        ------
+        ValueError
+            If a transform step is specified in the recipe.
+
+        """
         # Check that transform is not set
         if self.transform is not None:
             raise ValueError(
@@ -619,6 +395,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
+        """
+        Check if validation set is needed or not.
+
+        Raises
+        ------
+        ValueError
+            If ensemble is specified but no validation set is requested.
+
+        """
         # Ensemble models require a validation set for uncertainty calibration
         if self.ensemble and self.split.val_size == 0:
             raise ValueError(
@@ -628,10 +413,24 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         return self
 
     def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
-        # Build model
-        logger.info("Building model")
-        self.model.build(scaler=train_scaler)
-        logger.info("Model built")
+        # Load model from disk
+        if (
+            self.parent_spec.procedure.model.param_path is not None
+            and self.parent_spec.procedure.model.serial_path is not None
+        ):
+            logger.info("Loading model from disk, overrides any specified `mod_params`")
+            self.model = self.model.deserialize(
+                self.parent_spec.procedure.model.param_path,
+                self.parent_spec.procedure.model.serial_path,
+                scaler=train_scaler,
+            )
+            logger.info("Model loaded")
+
+        # Build model from scratch
+        else:
+            logger.info("Building model")
+            self.model.build(scaler=train_scaler)
+            logger.info("Model built")
 
         # Pass model to trainer
         logger.info("Setting model in trainer")
@@ -653,6 +452,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Model trained")
 
     def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+        # Safely cast to numpy
+        X_train = _safe_to_numpy(X_train)
+        y_train = _safe_to_numpy(y_train)
+
         # Check if there is an output directory
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
@@ -666,16 +469,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Make new instances
             self.feat = self.feat.make_new()
-            self.model = self.model.make_new()
             self.trainer = self.trainer.make_new()
 
             # Bootstrap train data
             logger.info("Bootstrapping train data")
             bootstrap_indices = np.random.choice(
-                X_train.index, size=len(X_train), replace=True
+                np.arange(len(X_train)), size=len(X_train), replace=True
             )
-            X_train_bootstrap = X_train.loc[bootstrap_indices]
-            y_train_bootstrap = y_train.loc[bootstrap_indices]
+            X_train_bootstrap = X_train[bootstrap_indices]
+            y_train_bootstrap = y_train[bootstrap_indices]
             logger.info("Data bootstrapped")
 
             # Featurize splits
@@ -692,10 +494,26 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Data featurized")
 
-            # Build model
-            logger.info("Building model")
-            self.model.build(scaler=bootstrap_scaler)
-            logger.info("Model built")
+            # Load model from disk
+            if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
+                self.parent_spec.procedure.ensemble.serial_paths is not None
+            ):
+                logger.info(
+                    f"Loading model {i} from disk, overrides any specified `mod_params`"
+                )
+                self.model = self.model.deserialize(
+                    self.parent_spec.procedure.ensemble.param_paths[i],
+                    self.parent_spec.procedure.ensemble.serial_paths[i],
+                    scaler=bootstrap_scaler,
+                )
+                logger.info(f"Model {i} loaded")
+
+            # Build model from scratch
+            else:
+                logger.info(f"Building model {i}")
+                self.model = self.model.make_new()
+                self.model.build(scaler=bootstrap_scaler)
+                logger.info(f"Model {i} built")
 
             # Pass model to trainer
             logger.info("Setting model in trainer")
@@ -728,9 +546,23 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         tag: str = None,
     ) -> Any:
         """
-        Run the workflow
-        """
+        Run the workflow.
 
+        Parameters
+        ----------
+        output_dir : PathLike, optional
+            Directory to save outputs, by default "anvil_training"
+        debug : bool, optional
+            Whether to run in debug mode, by default False
+        tag : str, optional
+            Tag to override the one in the recipe, by default None
+
+        Returns
+        -------
+        Any
+            Result of the workflow run
+
+        """
         # Override the model tag from yaml if provided in cli
         if tag is not None:
             model_tag = tag
@@ -838,6 +670,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 val_dataloader,
                 y_val,
+                method=self.parent_spec.procedure.ensemble.calibration_method,
                 accelerator=self.trainer.accelerator,
                 devices=self.trainer.devices,
             )
@@ -846,13 +679,18 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Saving model")
             self.model.serialize(
                 [
-                    output_dir / f"bootstrap_{i}" / "model.json"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_json_name
                     for i in range(self.model.n_models)
                 ],
                 [
-                    output_dir / f"bootstrap_{i}" / "model.pth"
+                    output_dir
+                    / f"bootstrap_{i}"
+                    / self.model.models[i]._model_save_name
                     for i in range(self.model.n_models)
                 ],
+                output_dir / self.model._calibration_model_save_name,
             )
             logger.info("Model saved")
         else:
@@ -861,16 +699,28 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Save
             logger.info("Saving model")
-            self.model.serialize(output_dir / "model.json", output_dir / "model.pth")
+            self.model.serialize(
+                output_dir / self.model._model_json_name,
+                output_dir / self.model._model_save_name,
+            )
             logger.info("Model saved")
 
         # Predict on test set
         logger.info("Predicting")
-        y_pred = self.model.predict(
-            test_dataloader,
-            accelerator=self.trainer.accelerator,
-            devices=self.trainer.devices,
-        )
+        if self.ensemble:
+            y_pred, y_std = self.model.predict(
+                test_dataloader,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+                return_std=True,
+            )
+        else:
+            y_pred = self.model.predict(
+                test_dataloader,
+                accelerator=self.trainer.accelerator,
+                devices=self.trainer.devices,
+            )
+            y_std = None
         logger.info("Predictions made")
 
         # Run evaluation on train/test
@@ -885,6 +735,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             eval.evaluate(
                 y_true=y_test,
                 y_pred=y_pred,
+                y_std=y_std,
                 model=self.model,
                 X_train=train_dataloader,
                 y_train=train_dataloader,

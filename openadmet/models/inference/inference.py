@@ -1,22 +1,37 @@
+"""Inference functions for trained models."""
+
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import PandasTools
 
-from openadmet.models.anvil.data_spec import DataSpec
-from openadmet.models.anvil.workflow import Metadata, ProcedureSpec
+from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
+from openadmet.models.active_learning.ensemble_base import EnsembleBase
+from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSpec
 
 
 def load_anvil_model_and_metadata(model_dir):
-    """Load the Anvil model from the specified path"""
+    """
+    Load the Anvil model from the specified path.
 
+    Parameters
+    ----------
+    model_dir : Union[str, Path]
+        Path to the directory containing the trained model and its metadata.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the loaded model, feature object, metadata, and data specification.
+
+    """
     # Safely cast to Path
     if not isinstance(model_dir, Path):
         model_dir = Path(model_dir)
 
-    logger.info(f"Loading model from {model_dir}")
     # Load from recipe directory
     recipe_components_dir = model_dir / "recipe_components"
     if not recipe_components_dir.exists():
@@ -59,6 +74,7 @@ def load_anvil_model_and_metadata(model_dir):
             param_paths=list(model_dir.glob(f"*/{model._model_json_name}")),
             serial_paths=list(model_dir.glob(f"*/{model._model_save_name}")),
             mod_class=model,
+            calibration_path=model_dir / ensemble._calibration_model_save_name,
         )
 
     # Load single model
@@ -77,14 +93,47 @@ def predict(
     input_col: str,
     model_dir: Union[str, Path, list[Union[str, Path]]],
     write_csv: bool = False,
-    output_path: str = None,
+    output_csv: str = None,
     debug: bool = False,
     accelerator: str = "gpu",
     log: bool = True,
+    aq_fxn_args: dict | None = None,
     **kwargs,
 ):
-    """Predict using a trained model"""
+    """
+    Predict using a trained model.
 
+    Parameters
+    ----------
+    input_path : Union[str, Path, pd.DataFrame]
+        Path to the input data file (CSV or SDF) or a pandas DataFrame.
+    input_col : str
+        Name of the column containing SMILES strings.
+    model_dir : Union[str, Path, list[Union[str, Path]]]
+        Path(s) to the directory(ies) containing the trained model(s) and their metadata.
+    write_csv : bool, optional
+        Whether to write the output to a CSV file. Default is False.
+    output_csv : str, optional
+        Path to the output CSV file. If None, defaults to 'predictions.csv' in
+        the current directory. Default is None.
+    debug : bool, optional
+        Whether to enable debug logging. Default is False.
+    accelerator : str, optional
+        Accelerator to use for prediction ('cpu' or 'gpu'). Default is 'gpu'.
+    log : bool, optional
+        Whether to enable logging. Default is True.
+    aq_fxn_args : dict, optional
+        Dictionary of acquisition function names and their arguments to compute
+        additional metrics. Default is None.
+    **kwargs
+        Additional keyword arguments.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the input data along with prediction results.
+
+    """
     if not log:
         logger.remove()
         logger.add(lambda msg: None)
@@ -93,8 +142,9 @@ def predict(
     logger.info(f"Input path: {input_path}")
     logger.info(f"Model directories: {model_dir}")
     logger.info(f"Write CSV: {write_csv}")
-    logger.info(f"Output path: {output_path}")
+    logger.info(f"Output CSV: {output_csv}")
     logger.info(f"Input column: {input_col}")
+    logger.info(f"Accelerator: {accelerator}")
     # load input data
     if isinstance(input_path, pd.DataFrame):
         data = input_path
@@ -134,6 +184,13 @@ def predict(
             Path(model_path)
         )
 
+        if isinstance(model, EnsembleBase):
+            logger.info(
+                f"Loaded model ensemble {i} from {model_path}, with {model.n_models} submodels"
+            )
+        else:
+            logger.info(f"Loaded model {i} from {model_path}")
+
         tasknames = data_spec.target_cols
         logger.info(f"Model {i} has tasks: {tasknames}")
 
@@ -149,24 +206,48 @@ def predict(
 
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
+
         # Make the actual model predictions
-        predictions = model.predict(X_feat, accelerator=accelerator)
+
+        # if ensemble, return std as well
+        if isinstance(model, EnsembleBase):
+            predictions, std = model.predict(
+                X_feat, accelerator=accelerator, return_std=True
+            )
+        else:
+            predictions = model.predict(X_feat, accelerator=accelerator)
+            std = np.full(predictions.shape, np.nan)
 
         for j, taskname in enumerate(tasknames):
             predictions_tag = f"OADMET_PRED_{metadata.tag}_{taskname}"
-            if predictions_tag in data.columns:
+            std_tag = f"OADMET_STD_{metadata.tag}_{taskname}"
+
+            if predictions_tag in data.columns or std_tag in data.columns:
                 raise ValueError(
-                    f"Output file already contains a '{predictions_tag}' column"
+                    f"Output file already contains a '{predictions_tag}' column or '{std_tag}' column"
                 )
 
             # Add the predictions to the data DataFrame
             data[predictions_tag] = pd.Series(predictions[:, j], index=X_indices)
+            data[std_tag] = pd.Series(std[:, j], index=X_indices)
             logger.info(
-                f"Predictions for model {i} task {j} saved to column '{predictions_tag}'"
+                f"Predictions for model {i} task {j} saved to column '{predictions_tag}', std saved to column '{std_tag}'"
             )
 
+            # Add acquisition function results
+            if aq_fxn_args is not None:
+                for aq_fxn, aq_args in aq_fxn_args.items():
+                    aq_tag = f"OADMET_{aq_fxn.upper()}_{metadata.tag}_{taskname}"
+                    aq_result = _ACQUISITION_FUNCTIONS[aq_fxn](
+                        predictions[:, j], std[:, j], **aq_args
+                    )
+                    data[aq_tag] = pd.Series(aq_result, index=X_indices)
+                    logger.info(
+                        f"Acquisition function '{aq_fxn}' for model {i} task {j} saved to column '{aq_tag}'"
+                    )
+
     logger.info("Finished prediction")
-    logger.info(f"Predictions saved to {output_path}")
+    logger.info(f"Predictions saved to {output_csv}")
     # remove ROMol column if it exists
     if "ROMol" in data.columns:
         data.drop(columns=["ROMol"], inplace=True)
@@ -175,6 +256,6 @@ def predict(
         data.drop(columns=["ID"], inplace=True)
 
     if write_csv:
-        data.to_csv(output_path, index=False)
+        data.to_csv(output_csv, index=False)
 
     return data

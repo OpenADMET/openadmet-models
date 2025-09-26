@@ -8,11 +8,14 @@ from openadmet.models.tests.integration.datafiles import (
     catboost_prop_dissimilarity,
     chemeleon_MT,
     chemeleon_MT_ensemble,
+    chemprop_AChE_finetune,
+    chemprop_AChE_finetune_ensemble,
     chemprop_MT,
     chemprop_MT_cpu_single,
     chemprop_ST,
     dummy_fp,
     lgbm_fp_cv,
+    lgbm_fp_ensemble,
     lgbm_fp_prop_cv,
     lgbm_mordred_cv_impute,
     lgbm_prop_cv,
@@ -33,12 +36,15 @@ class TestCPUAnvilConfigs:
             lgbm_fp_cv,
             lgbm_fp_prop_cv,
             lgbm_prop_cv,
+            lgbm_fp_ensemble,
             chemprop_MT_cpu_single,
             xgboost_perimeter_cv,
             catboost_prop_dissimilarity,
             lgbm_mordred_cv_impute,
             rf_scaffold_cv,
             dummy_fp,
+            chemprop_AChE_finetune,
+            chemprop_AChE_finetune_ensemble,
         ],
     )
     def test_configs(self, recipe_file, tmp_path):
@@ -95,7 +101,8 @@ class TestGPUAnvilConfigs:
 
 
 class TestStructuralModelGPUAnvilConfigs:
-    """Test for MTENN Anvil configuration with GPU support
+    """
+    Test for MTENN Anvil configuration with GPU support
 
     We need to generate the poses data dynamically for the test, as the original
     mtenn_anvil.yaml file expects a CSV with poses and a folder with PDB files in a static location.

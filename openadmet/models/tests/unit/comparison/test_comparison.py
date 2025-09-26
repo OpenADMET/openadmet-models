@@ -3,7 +3,12 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from openadmet.models.comparison.compare_base import get_comparison_class
 from openadmet.models.comparison.posthoc import PostHocComparison
-from openadmet.models.tests.unit.datafiles import cyp2c9_json, cyp1a2_json, cyp3a4_json, multi_task_json
+from openadmet.models.tests.unit.datafiles import (
+    cyp2c9_json,
+    cyp1a2_json,
+    cyp3a4_json,
+    multi_task_json,
+)
 
 
 def test_get_comparison_class():
@@ -40,8 +45,12 @@ def test_posthoc_repeat_label_error():
 
 def test_posthoc_comparison():
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
-    model_tags = ["openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP3A4-pchembl-regression-testing-cv", "openadmet-CYP1A2-pchembl-regression-testing-cv"]
-    task_tags = ["pchembl_value_mean"]*3
+    model_tags = [
+        "openadmet-CYP2C9-pchembl-regression-testing-cv",
+        "openadmet-CYP3A4-pchembl-regression-testing-cv",
+        "openadmet-CYP1A2-pchembl-regression-testing-cv",
+    ]
+    task_tags = ["pchembl_value_mean"] * 3
     comp_obj = PostHocComparison()
     levene, tukeys_df = comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
     assert_almost_equal(levene["mse"][0], 1.2975061710820235)
@@ -82,10 +91,15 @@ def test_posthoc_comparison_json_reader():
     assert tukeys_df["metric_val"][0] == -0.01037444780666702
     assert tukeys_df["pvalue"][0] == 0.2488307785417857
 
+
 def test_posthoc_comparison_printing(capsys):
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
-    model_tags = ["openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP3A4-pchembl-regression-testing-cv", "openadmet-CYP1A2-pchembl-regression-testing-cv"]
-    task_tags = ["pchembl_value_mean"]*3
+    model_tags = [
+        "openadmet-CYP2C9-pchembl-regression-testing-cv",
+        "openadmet-CYP3A4-pchembl-regression-testing-cv",
+        "openadmet-CYP1A2-pchembl-regression-testing-cv",
+    ]
+    task_tags = ["pchembl_value_mean"] * 3
     comp_obj = PostHocComparison()
     levene, tukeys_df = comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
     captured = capsys.readouterr()
