@@ -1,5 +1,6 @@
 """Graph Attention Network v2 (GATv2) model implementation."""
 
+from dataclasses import dataclass
 from typing import Any, ClassVar, Optional
 
 import numpy as np
@@ -35,6 +36,7 @@ _METRIC_TO_LOSS = {
 }
 
 
+@dataclass
 class GATv2Module(LightningModuleBase):
     """
     Graph Attention Network v2 (GATv2) Model.
@@ -103,16 +105,6 @@ class GATv2Module(LightningModuleBase):
     share_weights: bool = True
     bias: bool = True
 
-    # Training hyperparameters
-    loss_function: str = "mse"
-    optimizer: str = "adamw"
-    optimizer_lr: float = 1e-3
-    optimizer_weight_decay: float = 1e-5
-    scheduler: str = "cosine"
-    scheduler_factor: float = 0.5
-    scheduler_patience: int = 10
-    monitor_metric: str = "val_loss"
-
     @field_validator("pooling")
     @classmethod
     def validate_pooling(cls, value):
@@ -131,21 +123,8 @@ class GATv2Module(LightningModuleBase):
             raise ValueError(f"Loss function must be one of {allowed}")
         return value
 
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize the GATv2Module.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for parent class.
-        **kwargs : dict
-            Keyword arguments for parent class and model configuration.
-
-        """
-        # Initialize super class
-        super().__init__()
-
+    def ___post_init__(self):
+        """Initialize the GATv2Module."""
         # Input projection layer
         self.input_projection = nn.Linear(self.input_dim, self.hidden_dim)
 
@@ -437,20 +416,6 @@ class GATv2Model(LightningModelBase):
     scheduler_patience: int = 10
     monitor_metric: str = "val_loss"
 
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize the GATv2Model.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for parent class.
-        **kwargs : dict
-            Keyword arguments for parent class and model configuration.
-
-        """
-        super().__init__(*args, **kwargs)
-
     def build(self, scaler=None):
         """
         Build the GATv2 model. 'input_dim' is a mandatory parameter.
@@ -491,14 +456,6 @@ class GATv2Model(LightningModelBase):
             logger.info(f"Built GATv2Model with config: {self.estimator.__dict__}")
         else:
             logger.warning("Model already exists, skipping build")
-
-    def make_new(self) -> "GATv2Model":
-        """
-        Create a new instance of the model with the same parameters.
-
-        This does not copy the estimator, only the configuration.
-        """
-        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     def train(self, dataloader):
         """

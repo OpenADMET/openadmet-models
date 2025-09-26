@@ -16,20 +16,6 @@ class RFModelBase(PickleableModelBase):
     type: ClassVar[str]
     mod_class: ClassVar[type]
 
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize the RFModelBase.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for parent class.
-        **kwargs : dict
-            Keyword arguments for parent class and model configuration.
-
-        """
-        super().__init__(*args, **kwargs)
-
     def build(self):
         """Prepare the model."""
         if not self.estimator:

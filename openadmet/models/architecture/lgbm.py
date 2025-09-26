@@ -37,20 +37,6 @@ class LGBMModelBase(PickleableModelBase):
     n_jobs: int | None = None
     importance_type: str = "split"
 
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize the LGBMModelBase.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for parent class.
-        **kwargs : dict
-            Keyword arguments for parent class and model configuration.
-
-        """
-        super().__init__(*args, **kwargs)
-
     def build(self):
         """Prepare the model."""
         if not self.estimator:

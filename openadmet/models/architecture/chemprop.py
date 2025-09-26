@@ -136,20 +136,6 @@ class ChemPropModel(LightningModelBase):
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize the ChemPropModel.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for parent class.
-        **kwargs : dict
-            Keyword arguments for parent class and model configuration.
-
-        """
-        super().__init__(*args, **kwargs)
-
     def _get_output_transform(self, scaler):
         """
         Convert scaler to the output transform needed for predictions.
@@ -272,18 +258,6 @@ class ChemPropModel(LightningModelBase):
             logger.warning("Model already exists, skipping build")
 
         return self
-
-    def make_new(self) -> "ChemPropModel":
-        """
-        Copy parameters to a new model instance without copying the estimator.
-
-        Returns
-        -------
-        ChemPropModel
-            A new instance of ChemPropModel with the same parameters.
-
-        """
-        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     def train(self, dataloader, scaler=None):
         """
