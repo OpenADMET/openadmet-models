@@ -2,10 +2,10 @@
 
 from loguru import logger
 from rich.logging import RichHandler
-import sys
 
 
 def is_notebook() -> bool:
+    """Check if the code is running in a Jupyter notebook environment."""
     try:
         get_ipython  # type: ignore
         return True
