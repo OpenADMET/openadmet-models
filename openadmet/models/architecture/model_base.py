@@ -2,6 +2,7 @@
 
 import json
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from os import PathLike
 from typing import Any, ClassVar
 
@@ -216,6 +217,7 @@ class PickleableModelBase(ModelBase):
         self.save(serial_path)
 
 
+@dataclass
 class LightningModuleBase(pl.LightningModule):
     """
     Lightning module base class.
@@ -236,9 +238,9 @@ class LightningModuleBase(pl.LightningModule):
     scheduler_patience: int = 10
     monitor_metric: str = "val_loss"
 
-    # This must be set for Pydantic to be happy
-    # Not certain of reason for this
-    training: bool = True
+    def __post_init__(self):
+        """Defer initialization of the LightningModuleBase."""
+        pl.LightningModule.__init__(self)
 
     @field_validator("monitor_metric")
     @classmethod
@@ -349,6 +351,18 @@ class LightningModelBase(ModelBase):
     # Meta parameters for this class
     type: ClassVar[str]
     _model_save_name: ClassVar[str] = "model.pth"
+
+    def make_new(self):
+        """
+        Copy parameters to a new model instance without copying the estimator.
+
+        Returns
+        -------
+        LightningModelBase
+            A new instance of LightningModelBase with the same parameters.
+
+        """
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     def save(self, path: PathLike):
         """
