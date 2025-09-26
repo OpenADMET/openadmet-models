@@ -5,7 +5,6 @@ from rich.logging import RichHandler
 import sys
 
 
-
 def is_notebook() -> bool:
     try:
         get_ipython  # type: ignore
@@ -16,6 +15,5 @@ def is_notebook() -> bool:
 
 if not is_notebook():
     from rich.logging import RichHandler
-    logger.configure(
-        handlers=[{"sink": RichHandler(), "format": "{message}"}]
-    )
+
+    logger.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
