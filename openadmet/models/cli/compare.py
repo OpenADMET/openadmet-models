@@ -43,7 +43,12 @@ from openadmet.models.comparison.posthoc import PostHocComparison
     type=bool,
 )
 def compare(
-    model_stats, model_tag, task_name, target=None, output_dir=None, report=False,
+    model_stats,
+    model_tag,
+    task_name,
+    target=None,
+    output_dir=None,
+    report=False,
 ):
     """
     Compare two or more models from summary statistics.
@@ -63,9 +68,14 @@ def compare(
 
     """
     comp = PostHocComparison()
-    comp.compare(model_stats, model_tag, task_name, target=target,
-                 output_dir=output_dir, report=report)
-
+    comp.compare(
+        model_stats,
+        model_tag,
+        task_name,
+        target=target,
+        output_dir=output_dir,
+        report=report,
+    )
 
 
 if __name__ == "__main__":

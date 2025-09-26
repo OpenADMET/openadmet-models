@@ -16,6 +16,7 @@ def test_get_comparison_class():
     with pytest.raises(ValueError):
         get_comparison_class("NotARealClass")
 
+
 def test_posthoc_fails_on_incorrect_inputs():
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
@@ -33,15 +34,27 @@ def test_posthoc_fails_on_incorrect_inputs():
     with pytest.raises(ValueError):
         comp_obj.compare(labels=["model1"], task_names=["task1"])
     with pytest.raises(ValueError):
-        comp_obj.compare(model_stats_fns=[cyp2c9_json, cyp3a4_json], labels=["model1"], task_names=["task1", "task2", "task3"])
+        comp_obj.compare(
+            model_stats_fns=[cyp2c9_json, cyp3a4_json],
+            labels=["model1"],
+            task_names=["task1", "task2", "task3"],
+        )
+
 
 def test_posthoc_repeat_label_error():
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
-    model_tags = ["openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP2C9-pchembl-regression-testing-cv", "openadmet-CYP1A2-pchembl-regression-testing-cv"]
-    task_tags = ["pchembl_value_mean"]*3
+    model_tags = [
+        "openadmet-CYP2C9-pchembl-regression-testing-cv",
+        "openadmet-CYP2C9-pchembl-regression-testing-cv",
+        "openadmet-CYP1A2-pchembl-regression-testing-cv",
+    ]
+    task_tags = ["pchembl_value_mean"] * 3
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
-        comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
+        comp_obj.compare(
+            model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
+        )
+
 
 def test_posthoc_comparison():
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
@@ -52,32 +65,44 @@ def test_posthoc_comparison():
     ]
     task_tags = ["pchembl_value_mean"] * 3
     comp_obj = PostHocComparison()
-    levene, tukeys_df = comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
+    levene, tukeys_df = comp_obj.compare(
+        model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
+    )
     assert_almost_equal(levene["mse"][0], 1.2975061710820235)
     assert_almost_equal(levene["ktau"][0], 0.8835355632672074)
     assert_almost_equal(tukeys_df["metric_val"][0], 0.10937620875054632)
     assert_almost_equal(tukeys_df["pvalue"][14], 0.00321143)
 
+
 def test_posthoc_comparison_anvil_reader():
     training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["biotarget", "model", "tasks"]
     comp_obj = PostHocComparison()
-    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
-    assert labels == ['CYP3A4_LGBM_ST']
+    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
+        training_dir=training_dir, label_types=label_types
+    )
+    assert labels == ["CYP3A4_LGBM_ST"]
+
 
 def test_posthoc_comparison_anvil_bad_label():
     training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["bad_label"]
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
-        model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
+        model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
+            training_dir=training_dir, label_types=label_types
+        )
+
 
 def test_posthoc_comparison_anvil_feature_label():
     training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["feat"]
     comp_obj = PostHocComparison()
-    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(training_dir=training_dir, label_types=label_types)
-    assert labels == ['mordred+ecfp:6']
+    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
+        training_dir=training_dir, label_types=label_types
+    )
+    assert labels == ["mordred+ecfp:6"]
+
 
 def test_posthoc_comparison_json_reader():
     model_stats = [multi_task_json, cyp3a4_json]
@@ -85,7 +110,9 @@ def test_posthoc_comparison_json_reader():
     task_tags = ["cyp3a4_pchembl_value_mean", "pchembl_value_mean"]
     comp_obj = PostHocComparison()
     comp_obj.json_to_df(model_stats, model_tags, task_tags)
-    levene, tukeys_df = comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
+    levene, tukeys_df = comp_obj.compare(
+        model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
+    )
     assert levene["mse"][0] == 2.483488460351842
     assert levene["ktau"][0] == 1.0392615736603197
     assert tukeys_df["metric_val"][0] == -0.01037444780666702
@@ -101,7 +128,9 @@ def test_posthoc_comparison_printing(capsys):
     ]
     task_tags = ["pchembl_value_mean"] * 3
     comp_obj = PostHocComparison()
-    levene, tukeys_df = comp_obj.compare(model_stats_fns=model_stats, labels=model_tags, task_names=task_tags)
+    levene, tukeys_df = comp_obj.compare(
+        model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
+    )
     captured = capsys.readouterr()
     assert "Levene's test results" in captured.out
     assert "Tukey's HSD results" in captured.out
