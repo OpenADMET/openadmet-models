@@ -104,5 +104,5 @@ class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
         # set the params and model to the best found
         self.model.estimator = self.search.best_estimator_
         self.model.mod_params = self.model.estimator.get_params()
-        logger.info(f"Best params: {self.model.mod_params}")
+        logger.info(f"Best params: {self.model.model_dump()}")
         return self.model
