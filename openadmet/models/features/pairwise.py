@@ -26,29 +26,32 @@ from openadmet.models.features.feature_base import (
     get_featurizer_class,
 )
 
+
 class PairwiseAugmentedDataset(torch.utils.data.Dataset):
     """
     Subclass of PairwiseAugmentedDataset to handle inference cases where y is None.
-    
+
     Based on: https://github.com/JacksonBurns/neural-pairwise-regression/blob/main/nepare/data.py
-    
+
     """
 
-    def __init__(self, X: Sequence, y: Sequence, *, how: Literal['full','ut','sut'] = 'full'):
+    def __init__(
+        self, X: Sequence, y: Sequence, *, how: Literal["full", "ut", "sut"] = "full"
+    ):
         """Initialize the PairwiseAugmentedDataset."""
         super().__init__()
         self.X = X
         self.y = y
         match how:
-            case 'full':
+            case "full":
                 self.idxs = list(product(range(len(X)), repeat=2))
-            case 'ut':
+            case "ut":
                 self.idxs = list(combinations_with_replacement(range(len(X)), 2))
-            case 'sut':
+            case "sut":
                 self.idxs = list(combinations(range(len(X)), 2))
             case _:
                 raise TypeError(f"Invalid configuration {how=}.")
-    
+
     def __len__(self):
         """Return the length of the dataset."""
         return len(self.idxs)
@@ -60,8 +63,8 @@ class PairwiseAugmentedDataset(torch.utils.data.Dataset):
             return self.X[i], self.X[j], self.y[i] - self.y[j]
         else:
             return self.X[i], self.X[j]
-    
-    def downsample_(self, n:int, random_seed:int=1701):
+
+    def downsample_(self, n: int, random_seed: int = 1701):
         """Downsample the dataset to n pairs."""
         rng = Random(random_seed)
         self.idxs = rng.sample(self.idxs, k=n)
