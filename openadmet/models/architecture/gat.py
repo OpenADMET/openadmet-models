@@ -71,20 +71,6 @@ class GATv2Module(LightningModuleBase):
         Whether to include bias terms in GAT layers.
     loss_function : str
         Loss function to use ('mse', 'mae', 'huber', 'bce', 'cross_entropy').
-    optimizer : str
-        Optimizer to use ('adam', 'adamw', 'sgd').
-    optimizer_lr : float
-        Learning rate for the optimizer.
-    optimizer_weight_decay : float
-        Weight decay for the optimizer.
-    scheduler : str
-        Learning rate scheduler ('step', 'cosine', 'plateau').
-    scheduler_factor : float
-        Factor for learning rate reduction.
-    scheduler_patience : int
-        Patience for learning rate scheduler.
-    monitor_metric : str
-        Metric to monitor for learning rate scheduler.
 
     """
 
@@ -104,6 +90,7 @@ class GATv2Module(LightningModuleBase):
     add_self_loops: bool = True
     share_weights: bool = True
     bias: bool = True
+    loss_function: str = "mse"
 
     @field_validator("pooling")
     @classmethod
