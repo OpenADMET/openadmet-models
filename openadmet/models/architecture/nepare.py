@@ -188,7 +188,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             Concatenated predictions for the batch.
 
         """
-        x_1, x_2, _ = batch
+        x_1, x_2 = batch
         x = torch.cat((x_1, x_2), dim=1)
         return self(x)
 

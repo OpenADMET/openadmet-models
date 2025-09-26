@@ -2,23 +2,69 @@
 
 import numpy as np
 import pandas as pd
+import torch
 from numpy.typing import ArrayLike
 from typing import Literal, Type, Union
 from random import sample
 from pydantic import Field, field_validator, model_validator
 from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import StandardScaler
+from collections.abc import Sequence
+
+from collections.abc import Sequence
+from collections import namedtuple
+from typing import Literal
+from itertools import combinations, combinations_with_replacement, product, chain
+from random import Random
 
 from openadmet.models.features.chemprop import ChemPropFeaturizer
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
-
-from nepare.data import PairwiseAugmentedDataset
 
 from openadmet.models.features.feature_base import (
     FeaturizerBase,
     featurizers,
     get_featurizer_class,
 )
+
+class PairwiseAugmentedDataset(torch.utils.data.Dataset):
+    """
+    Subclass of PairwiseAugmentedDataset to handle inference cases where y is None.
+    
+    Based on: https://github.com/JacksonBurns/neural-pairwise-regression/blob/main/nepare/data.py
+    
+    """
+
+    def __init__(self, X: Sequence, y: Sequence, *, how: Literal['full','ut','sut'] = 'full'):
+        """Initialize the PairwiseAugmentedDataset."""
+        super().__init__()
+        self.X = X
+        self.y = y
+        match how:
+            case 'full':
+                self.idxs = list(product(range(len(X)), repeat=2))
+            case 'ut':
+                self.idxs = list(combinations_with_replacement(range(len(X)), 2))
+            case 'sut':
+                self.idxs = list(combinations(range(len(X)), 2))
+            case _:
+                raise TypeError(f"Invalid configuration {how=}.")
+    
+    def __len__(self):
+        """Return the length of the dataset."""
+        return len(self.idxs)
+
+    def __getitem__(self, index):
+        """Return the item at the given index."""
+        i, j = self.idxs[index]
+        if self.y is not None:
+            return self.X[i], self.X[j], self.y[i] - self.y[j]
+        else:
+            return self.X[i], self.X[j]
+    
+    def downsample_(self, n:int, random_seed:int=1701):
+        """Downsample the dataset to n pairs."""
+        rng = Random(random_seed)
+        self.idxs = rng.sample(self.idxs, k=n)
 
 
 @featurizers.register("PairwiseFeaturizer")
