@@ -31,6 +31,10 @@ procedure:
   model:
     type: ChemPropModel
     params: {}
+    freeze_weights:
+      message_passing: true
+      batch_norm: false
+      ffn_layers: 0
 
   ensemble:
     type: CommitteeRegressor
