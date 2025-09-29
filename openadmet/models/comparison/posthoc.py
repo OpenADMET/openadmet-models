@@ -856,7 +856,7 @@ class PostHocComparison(ComparisonBase):
     def convert_float_round(self, val: float):
         """
         Convert a float to scientific notation rounded to 3 decimal places.
-        
+
         If conversion fails, return the original value.
 
         Parameters
