@@ -135,7 +135,6 @@ class PostHocComparison(ComparisonBase):
         if model_dirs is not None and isinstance(model_dirs, str):
             model_dirs = [model_dirs]
 
-        """
         if not (
             (model_dirs is not None and label_types is not None)
             or (model_stats_fns is not None and labels is not None and task_names is not None)
@@ -202,8 +201,7 @@ class PostHocComparison(ComparisonBase):
             List of tags for the models, used for plotting and reporting.
         task_names : list of str
             List of task names as they appear in the model statistics JSON files.
-
-        """
+            
         """
         all_labels = []
         all_task_names = []
