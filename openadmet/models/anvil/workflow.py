@@ -428,7 +428,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.parent_spec.procedure.model.serial_path,
                 scaler=train_scaler,
                 **kwargs,
-                )
+            )
 
             logger.info("Model loaded")
 
@@ -668,7 +668,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data featurized")
 
         if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
-            input_dim = train_dataset[0][0].shape[-1] # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
+            input_dim = train_dataset[
+                0
+            ][
+                0
+            ].shape[
+                -1
+            ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
             logger.info(f"Input dim inferred as {input_dim}")
         else:
             logger.info("Input dim not inferred, assuming unpaired data")

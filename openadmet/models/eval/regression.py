@@ -12,7 +12,12 @@ from pydantic import Field
 from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans, get_t_true_and_t_pred
+from openadmet.models.eval.eval_base import (
+    EvalBase,
+    evaluators,
+    mask_nans,
+    get_t_true_and_t_pred,
+)
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 # create partial functions for the scipy stats
@@ -109,9 +114,7 @@ class RegressionMetrics(EvalBase):
             self.use_wandb = use_wandb
 
         for task_id in range(n_tasks):
-            t_true, t_pred = get_t_true_and_t_pred(
-                task_id, y_true, y_pred, None, None
-            )
+            t_true, t_pred = get_t_true_and_t_pred(task_id, y_true, y_pred, None, None)
             t_label = target_labels[task_id]
 
             self.data[t_label] = {}
@@ -384,9 +387,7 @@ class RegressionPlots(EvalBase):
         self.plot_data = {}
 
         for task_id in range(n_tasks):
-            t_true, t_pred = get_t_true_and_t_pred(
-                task_id, y_true, y_pred, None, None
-            )
+            t_true, t_pred = get_t_true_and_t_pred(task_id, y_true, y_pred, None, None)
             t_label = target_labels[task_id]
 
             if self.do_stats:
