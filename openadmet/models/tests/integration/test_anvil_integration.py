@@ -155,6 +155,7 @@ class TestStructuralModelGPUAnvilConfigs:
         )
         assert click_success(result)
 
+
 class TestCPUPosthocConfigs:
     @pytest.mark.cpu
     @pytest.mark.parametrize(
@@ -178,5 +179,6 @@ class TestCPUPosthocConfigs:
             ],
         )
         assert click_success(result)
+
 
 # TODO: Add in tests for inline inference
