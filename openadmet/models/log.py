@@ -2,6 +2,7 @@
 
 from loguru import logger
 from rich.logging import RichHandler
+import os 
 
 
 def is_notebook() -> bool:
@@ -13,7 +14,7 @@ def is_notebook() -> bool:
         return False
 
 
-if not is_notebook():
+if not is_notebook() and not os.getenv("OADMET_NO_RICH_LOGGING"):
     from rich.logging import RichHandler
 
     logger.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
