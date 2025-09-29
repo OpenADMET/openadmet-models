@@ -3,6 +3,8 @@
 import os
 import glob
 import yaml
+import boto3
+from urllib.parse import urlparse
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -29,6 +31,20 @@ import warnings
 
 from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
+def _download_s3_dir(s3_uri, local_dir):
+    """Download all files from an S3 directory to a local directory."""
+    s3 = boto3.client("s3")
+    parsed = urlparse(s3_uri)
+    bucket = parsed.netloc
+    prefix = parsed.path.lstrip("/")
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            rel_path = os.path.relpath(key, prefix)
+            local_path = os.path.join(local_dir, rel_path)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            s3.download_file(bucket, key, local_path)
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
@@ -135,6 +151,17 @@ class PostHocComparison(ComparisonBase):
         if model_dirs is not None and isinstance(model_dirs, str):
             model_dirs = [model_dirs]
 
+        # Download from S3 if needed
+        local_model_dirs = []
+        for model_dir in model_dirs or []:
+            if model_dir.startswith("s3://"):
+                local_dir = f"/tmp/{os.path.basename(model_dir.rstrip('/'))}"
+                _download_s3_dir(model_dir, local_dir)
+                local_model_dirs.append(local_dir)
+            else:
+                local_model_dirs.append(model_dir)
+        model_dirs = local_model_dirs
+
         if not (
             (model_dirs is not None and label_types is not None)
             or (model_stats_fns is not None and labels is not None and task_names is not None)
@@ -201,7 +228,7 @@ class PostHocComparison(ComparisonBase):
             List of tags for the models, used for plotting and reporting.
         task_names : list of str
             List of task names as they appear in the model statistics JSON files.
-            
+
         """
         all_labels = []
         all_task_names = []
