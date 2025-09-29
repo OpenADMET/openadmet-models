@@ -43,6 +43,11 @@ chemprop_AChE_finetune_ensemble = (
     _data_ref / "chemprop_AChE_finetune_ensemble.yaml"
 ).as_posix()
 
+# Cross-validation files for posthoc comparison testing
+cv_metrics_lgbm_fp = (_data_ref / "cross_validation_metrics_fp.json").as_posix()
+cv_metrics_lgbm_descr = (_data_ref / "cross_validation_metrics_descr.json").as_posix()
+cv_metrics_lgbm_combined = (_data_ref / "cross_validation_metrics_combined.json").as_posix()
+
 # GPU
 
 # ChemProp with multitask and cross-validation

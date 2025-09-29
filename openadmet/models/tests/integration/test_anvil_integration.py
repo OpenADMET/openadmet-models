@@ -24,6 +24,9 @@ from openadmet.models.tests.integration.datafiles import (
     rf_scaffold_cv,
     tabpfn,
     xgboost_perimeter_cv,
+    cv_metrics_lgbm_descr,
+    cv_metrics_lgbm_fp,
+    cv_metrics_lgbm_combined,
 )
 from openadmet.models.tests.test_utils import click_success
 
@@ -152,5 +155,28 @@ class TestStructuralModelGPUAnvilConfigs:
         )
         assert click_success(result)
 
+class TestCPUPosthocConfigs:
+    @pytest.mark.cpu
+    @pytest.mark.parametrize(
+        "cv_metrics_file",
+        [
+            cv_metrics_lgbm_fp,
+            cv_metrics_lgbm_descr,
+            cv_metrics_lgbm_combined,
+        ],
+    )
+    def test_configs(self, cv_metrics_file, tmp_path):
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "anvil",
+                "--recipe-path",
+                cv_metrics_file,
+                "--output-dir",
+                tmp_path / "output",
+            ],
+        )
+        assert click_success(result)
 
-# TODO: Add in tests for inline comparison and inference
+# TODO: Add in tests for inline inference
