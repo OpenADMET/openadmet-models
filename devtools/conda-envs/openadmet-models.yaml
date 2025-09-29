@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - ase
+  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
