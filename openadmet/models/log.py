@@ -2,7 +2,7 @@
 
 from loguru import logger
 from rich.logging import RichHandler
-import os 
+import os
 
 
 def is_notebook() -> bool:
