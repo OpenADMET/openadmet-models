@@ -3,6 +3,7 @@
 from abc import abstractmethod
 from typing import Callable
 
+from loguru import logger
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
@@ -82,6 +83,53 @@ def mask_nans_std(y_true: np.ndarray, y_pred: np.ndarray, y_std: np.ndarray):
     mask = ~np.isnan(y_true) & ~np.isnan(y_pred)
     return y_true[mask], y_pred[mask], y_std[mask]
 
+def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None):
+    """
+    Get true and predicted values for each task, handling pairwise differences if necessary.
+    
+    Parameters
+    ----------
+    task_id : int
+        ID of the task.
+    y_true : array-like
+        True values for the full dataset.
+    y_val : array-like
+        True values for the validation set.
+    y_pred : array-like
+        Predicted values for the full dataset.
+    y_pred_fold : array-like
+        Predicted values for the current fold.
+    
+    Returns
+    -------
+    list of tuples
+        List of (t_true, t_pred) tuples for each task.
+
+    """
+    if y_true.shape[0] != y_pred.shape[0]:
+        logger.warning(
+            "y_true and y_pred have different number of samples, generating pairwise differences for true values"
+        )
+        N = y_true.shape[0]
+        t_true = np.array(
+            [
+                y_true[i, task_id] - y_true[j, task_id]
+                for i in range(N)
+                for j in range(N)
+            ]
+        )
+        t_pred = y_pred[:, task_id]
+    elif y_val is not None and y_pred_fold is not None:
+        t_true = y_val[:, task_id]
+        t_pred = y_pred_fold[:, task_id]
+    else:
+        t_true = y_val[:, task_id]
+        t_pred = y_pred_fold[:, task_id]
+    
+                    # remove Nan values
+        t_true, t_pred = mask_nans(t_true, t_pred)
+
+    return t_true, t_pred
 
 class EvalBase(BaseModel):
     """Abstract base class for evaluation modules."""

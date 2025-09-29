@@ -16,7 +16,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import RepeatedKFold, cross_validate
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
     mask_nans,
@@ -592,22 +592,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
             for task_id in range(n_tasks):
-                if y_true.shape[0] != y_pred.shape[0]:
-                    # Generate pairwise true values to match pairwise predictions
-                    N = y_true.shape[0]
-                    t_true = np.array(
-                        [
-                            y_true[i, task_id] - y_true[j, task_id]
-                            for i in range(N)
-                            for j in range(N)
-                        ]
-                    )
-                    t_pred = y_pred[:, task_id]
-                else:
-                    t_true = y_val[:, task_id]
-                    t_pred = y_pred_fold[:, task_id]
-                # remove Nan values
-                t_true, t_pred = mask_nans(t_true, t_pred)
+                t_true, t_pred = get_t_true_and_t_pred(
+                    task_id, y_true, y_pred, y_val, y_pred_fold
+                )
                 t_label = target_labels[task_id]
 
                 for metric_name, metric_data in self._metrics.items():
@@ -650,22 +637,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # now the plots
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
-            if y_true.shape[0] != y_pred.shape[0]:
-                # Generate pairwise true values to match pairwise predictions
-                N = y_true.shape[0]
-                t_true = np.array(
-                    [
-                        y_true[i, task_id] - y_true[j, task_id]
-                        for i in range(N)
-                        for j in range(N)
-                    ]
-                )
-                t_pred = y_pred[:, task_id]
-            else:
-                t_true = y_val[:, task_id]
-                t_pred = y_pred_fold[:, task_id]
-            # remove Nan values
-            t_true, t_pred = mask_nans(t_true, t_pred)
+            t_true, t_pred = get_t_true_and_t_pred(
+                task_id, y_true, y_pred, y_val, y_pred_fold
+            )
             stat_dict = self.get_stat_dict(t_label=t_label)
             # create the plots
             for plot_tag, plot in self.plots.items():

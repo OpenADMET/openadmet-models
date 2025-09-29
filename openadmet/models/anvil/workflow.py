@@ -415,7 +415,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         return self
 
     def _train(
-        self, train_dataloader, val_dataloader, train_scaler, output_dir, input_dim=None
+        self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
         # Load model from disk
         if (
@@ -423,28 +423,19 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             and self.parent_spec.procedure.model.serial_path is not None
         ):
             logger.info("Loading model from disk, overrides any specified `mod_params`")
-            if input_dim is not None:
-                self.model = self.model.deserialize(
-                    self.parent_spec.procedure.model.param_path,
-                    self.parent_spec.procedure.model.serial_path,
-                    scaler=train_scaler,
-                    input_dim=input_dim,
+            self.model = self.model.deserialize(
+                self.parent_spec.procedure.model.param_path,
+                self.parent_spec.procedure.model.serial_path,
+                scaler=train_scaler,
+                **kwargs,
                 )
-            else:
-                self.model = self.model.deserialize(
-                    self.parent_spec.procedure.model.param_path,
-                    self.parent_spec.procedure.model.serial_path,
-                    scaler=train_scaler,
-                )
+
             logger.info("Model loaded")
 
         # Build model from scratch
         else:
             logger.info("Building model")
-            if input_dim is not None:
-                self.model.build(scaler=train_scaler, input_dim=input_dim)
-            else:
-                self.model.build(scaler=train_scaler)
+            self.model.build(scaler=train_scaler, **kwargs)
             logger.info("Model built")
 
         # Pass model to trainer
@@ -677,7 +668,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data featurized")
 
         if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
-            input_dim = train_dataset[0][0].shape[-1]
+            input_dim = train_dataset[0][0].shape[-1] # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
             logger.info(f"Input dim inferred as {input_dim}")
         else:
             logger.info("Input dim not inferred, assuming unpaired data")
