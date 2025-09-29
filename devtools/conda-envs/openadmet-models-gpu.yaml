@@ -54,4 +54,4 @@ dependencies:
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
-    - molfeat
+    - git@github.com:datamol-io/molfeat.git
