@@ -79,7 +79,7 @@ def test_posthoc_comparison_anvil_reader():
     label_types = ["biotarget", "model", "tasks"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-        training_dir=training_dir, label_types=label_types
+        model_dir=training_dir, label_types=label_types
     )
     assert labels == ["CYP3A4_LGBM_ST"]
 
@@ -90,7 +90,7 @@ def test_posthoc_comparison_anvil_bad_label():
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
         model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-            training_dir=training_dir, label_types=label_types
+            model_dir=training_dir, label_types=label_types
         )
 
 
@@ -99,7 +99,7 @@ def test_posthoc_comparison_anvil_feature_label():
     label_types = ["feat"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-        training_dir=training_dir, label_types=label_types
+        model_dir=training_dir, label_types=label_types
     )
     assert labels == ["mordred+ecfp:6"]
 
