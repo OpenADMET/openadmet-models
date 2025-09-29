@@ -91,68 +91,61 @@ class PostHocComparison(ComparisonBase):
         """Get statistics names."""
         return self._stats_names
 
-    def compare(
-        self,
-        training_dir: str = None,
-        label_types: list = None,
-        mt_id: str = None,
-        model_stats_fns: list = None,
-        labels: list = None,
-        task_names: list = None,
-        report: bool = False,
-        output_dir: bool = None,
-    ):
+    def compare(self,
+                model_dirs = None,
+                label_types:list = None,
+                model_stats_fns:list = None,
+                labels:list = None,
+                task_names:list = None,
+                mt_id:str = None,
+                report:bool = False,
+                output_dir:bool = None):
         """
         Compare models using post-hoc statistical tests and generate plots and reports.
 
+        Required arguments are either (model_dirs and label_types) OR (model_stats_fns, labels, and task_names).
+        If the user has the full training directories for the models, it is recommended to use the model_dirs and label_types
+        option. If the user only has the JSON files with model statistics, then use the model_stats_fns, labels, and task_names option.
+
         Parameters
         ----------
-        training_dir : str, optional
+        model_dirs : list, optional
             Path to the main training directory containing model subdirectories with
-            `anvil_recipe.yaml` and `cross_validation_metrics.json` files. Required if
-            `model_stats_fns`, `labels`, and `task_names` are not provided.
+            `anvil_recipe.yaml` and `cross_validation_metrics.json` files.
         label_types : list of str, optional
             List of categories from the `anvil_recipe.yaml` file to use for labeling each model.
-            Supported values are 'biotarget', 'model', 'feat', and 'tasks'. Required if
-            `model_stats_fns`, `labels`, and `task_names` are not provided.
+            Supported values are 'biotarget', 'model', 'feat', and 'tasks'.
+        model_stats_fns : list of str, optional
+            List of file paths to JSON files containing model statistics.
+        labels : list of str, optional
+            List of tags for the models, used for plotting and reporting.
+        task_names : list of str, optional
+            List of task names as they appear in the model statistics JSON files.
         mt_id : str, optional
             Identifier for the target column when comparing multitask models. Used to select
             the appropriate task from the `anvil_recipe.yaml` file.  Must be a unique string
             not appearing in any target columns for other models in the file. Required if comparing
-            multitask models and `training_dir` is provided.
-        model_stats_fns : list of str, optional
-            List of file paths to JSON files containing model statistics. Required if
-            `training_dir` and `label_types` are not provided.
-        labels : list of str, optional
-            List of tags for the models, used for plotting and reporting. Must be unique.
-            Required if `training_dir` and `label_types` are not provided.
-        task_names : list of str, optional
-            List of task names as they appear in the model statistics JSON files.
-            Required if `training_dir` and `label_types` are not provided.
+            multitask models.
         report : bool, optional
-            Whether to generate a PDF report summarizing the comparison results.
-            Default is False.
+            Whether to generate a PDF report of the comparison results. Default is False.
         output_dir : str, optional
-            Path to the output directory where plots and reports will be saved.
-            If not provided, plots and reports will not be saved.
+            Directory to save the output plots and report. Default is None.
+
+        """
+        if model_dirs is not None and isinstance(model_dirs, str):
+            model_dirs = [model_dirs]
 
         """
         if not (
-            (training_dir is not None and label_types is not None)
-            or (
-                model_stats_fns is not None
-                and labels is not None
-                and task_names is not None
-            )
+            (model_dirs is not None and label_types is not None)
+            or (model_stats_fns is not None and labels is not None and task_names is not None)
         ):
             raise ValueError(
-                "You must provide either (training_dir and label_types) OR (model_stats_fns, labels, and task_names)."
+                "You must provide either (model_dir and label_types) OR (model_stats_fns, labels, and task_names)."
             )
 
         if not model_stats_fns:
-            model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(
-                training_dir, label_types, mt_id=mt_id
-            )
+            model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(model_dirs, label_types, mt_id=mt_id)
 
         if len(set(labels)) != len(labels):
             raise ValueError("Labels must be unique")
@@ -180,15 +173,16 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def label_and_task_name_from_anvil(
-        self, training_dir: str, label_types: list[str], mt_id: str = None
-    ):
+    def label_and_task_name_from_anvil(self,
+                                       model_dirs:str,
+                                       label_types:list[str],
+                                       mt_id:str=None):
         """
         Extract model statistics file paths, labels, and task names from an Anvil training directory.
 
         Parameters
         ----------
-        training_dir : str
+        model_dirs : str
             Path to the main training directory containing model subdirectories with
             `anvil_recipe.yaml` and `cross_validation_metrics.json` files.
         label_types : list of str
@@ -210,141 +204,102 @@ class PostHocComparison(ComparisonBase):
             List of task names as they appear in the model statistics JSON files.
 
         """
+        """
         all_labels = []
         all_task_names = []
 
-        # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within training_dir
-        anvil_recipes = [
-            os.path.dirname(i)
-            for i in glob.glob(f"{training_dir}/**/anvil_recipe.yaml", recursive=True)
-        ]
-        cv_metrics = [
-            os.path.dirname(i)
-            for i in glob.glob(
-                f"{training_dir}/**/cross_validation_metrics.json", recursive=True
-            )
-        ]
-        model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
-        print(f"Found {len(model_dirs)} models in {training_dir}")
-
-        model_stats_fns = [
-            f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs
-        ]
-
         for model_dir in model_dirs:
-            with open(f"{model_dir}/anvil_recipe.yaml") as f:
-                anvil = yaml.safe_load(f)
+            # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within model_dir
+            anvil_recipes = [os.path.dirname(i) for i in glob.glob(f"{model_dir}/**/anvil_recipe.yaml", recursive=True)]
+            cv_metrics = [os.path.dirname(i) for i in glob.glob(f"{model_dir}/**/cross_validation_metrics.json", recursive=True)]
+            model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
+            print(f"Found {len(model_dirs)} models in {model_dir}")
 
-            full_label = []
-            target_cols = anvil["data"]["target_cols"]
-            if type(target_cols) is str:
-                target_cols = [target_cols]
+            model_stats_fns = [f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs]
 
-            # NOTE: this logic assumes that if multitask, the tasks will have
-            # different biotargets and that # biotargets == # tasks
-            if len(target_cols) > 1 and mt_id:
-                col_match = []
-                ind_for_biotarget = 0
-                for ind, col in enumerate(target_cols):
-                    if mt_id.lower() in col.lower():
-                        col_match.append(col)
-                        ind_for_biotarget = (
-                            ind.copy()
-                        )  # this is to get the index for the list of biotargets
+            for model_dir in model_dirs:
 
-                # check that the multitask id provided by the user does not
-                # appear in multiple target columns
-                if len(col_match) == 1:
-                    all_task_names.append(col_match[0])
-                elif len(col_match) == 0:
-                    raise ValueError(
-                        f"Target {mt_id} not found in target columns {target_cols}"
-                    )
-                else:
-                    raise ValueError(
-                        f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific"
-                    )
+                with open(f"{model_dir}/anvil_recipe.yaml") as f:
+                    anvil = yaml.safe_load(f)
 
-            # single-task case
-            else:
-                all_task_names.append(target_cols[0])
-                ind_for_biotarget = (
-                    0  # if single task, there will be only one biotarget
-                )
+                full_label = []
+                target_cols = anvil['data']['target_cols']
+                if type(target_cols) is str:
+                    target_cols = [target_cols]
 
-            for lab in label_types:
-                if lab == "biotarget":
-                    full_label.append(
-                        anvil["metadata"]["biotargets"][ind_for_biotarget]
-                    )
+                # NOTE: this logic assumes that if multitask, the tasks will have
+                # different biotargets and that # biotargets == # tasks
+                if len(target_cols) > 1 and mt_id:
+                    col_match = []
+                    ind_for_biotarget = 0
+                    for ind, col in enumerate(target_cols):
+                        if mt_id.lower() in col.lower():
+                            col_match.append(col)
+                            ind_for_biotarget = ind.copy() # this is to get the index for the list of biotargets
 
-                # sets model label based on the class names of the model, as specified in anvil recipe
-                elif lab == "model":
-                    to_remove = [
-                        "Regressor",
-                        "Classifier",
-                        "Model",
-                        "Module",
-                        "Lightning",
-                    ]
-                    label = anvil["procedure"]["model"]["type"]
-                    for r in to_remove:
-                        label = label.replace(r, "")
-                    # chemeleon special case
-                    if label == "ChemProp":
-                        if (
-                            anvil["procedure"]["model"]["params"]["from_chemeleon"]
-                            == True
-                        ):
-                            label = "Chemeleon"
-                    full_label.append(label)
-
-                elif lab == "feat":
-                    to_remove = ["Featurizer"]
-                    label = anvil["procedure"]["feat"]["type"]
-                    if label == "DescriptorFeaturizer":
-                        label = anvil["procedure"]["feat"]["params"]["descr_type"]
-                    if label == "FingerprintFeaturizer":
-                        label = anvil["procedure"]["feat"]["params"]["fp_type"]
-                    if label == "FeatureConcatenator":
-                        label = ""
-                        for ind, f in enumerate(
-                            anvil["procedure"]["feat"]["params"]["featurizers"]
-                        ):
-                            if f == "DescriptorFeaturizer":
-                                label += anvil["procedure"]["feat"]["params"][
-                                    "featurizers"
-                                ]["DescriptorFeaturizer"]["descr_type"]
-                            if f == "FingerprintFeaturizer":
-                                label += anvil["procedure"]["feat"]["params"][
-                                    "featurizers"
-                                ]["FingerprintFeaturizer"]["fp_type"]
-                            if (
-                                ind
-                                < len(
-                                    anvil["procedure"]["feat"]["params"]["featurizers"]
-                                )
-                                - 1
-                            ):
-                                label += "+"
-                    for r in to_remove:
-                        label = label.replace(r, "")
-                    full_label.append(label)
-
-                elif lab == "tasks":
-                    num_tasks = len(target_cols)
-                    if num_tasks > 1:
-                        full_label.append("MT")
+                    # check that the multitask id provided by the user does not
+                    # appear in multiple target columns
+                    if len(col_match) == 1:
+                        all_task_names.append(col_match[0])
+                    elif len(col_match) == 0:
+                        raise ValueError(f"Target {mt_id} not found in target columns {target_cols}")
                     else:
-                        full_label.append("ST")
+                        raise ValueError(f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific")
 
+                # single-task case
                 else:
-                    print("here")
-                    raise ValueError(
-                        f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']"
-                    )
+                    all_task_names.append(target_cols[0])
+                    ind_for_biotarget = 0 # if single task, there will be only one biotarget
 
-            all_labels.append("_".join(full_label))
+                for lab in label_types:
+
+                    if lab == 'biotarget':
+                        full_label.append(anvil['metadata']['biotargets'][ind_for_biotarget])
+
+                    # sets model label based on the class names of the model, as specified in anvil recipe
+                    elif lab == 'model':
+                        to_remove = ['Regressor', 'Classifier', 'Model', 'Module', 'Lightning']
+                        label = anvil['procedure']['model']['type']
+                        for r in to_remove:
+                            label = label.replace(r, '')
+                        # chemeleon special case
+                        if label == 'ChemProp':
+                            if anvil['procedure']['model']['params']['from_chemeleon'] == True:
+                                label = 'Chemeleon'
+                        full_label.append(label)
+
+                    elif lab == 'feat':
+                        to_remove = ['Featurizer']
+                        label = anvil['procedure']['feat']['type']
+                        if label == 'DescriptorFeaturizer':
+                            label = anvil['procedure']['feat']['params']['descr_type']
+                        if label == 'FingerprintFeaturizer':
+                            label = anvil['procedure']['feat']['params']['fp_type']
+                        if label == 'FeatureConcatenator':
+                            label = ''
+                            for ind, f in enumerate(anvil['procedure']['feat']['params']['featurizers']):
+                                if f == 'DescriptorFeaturizer':
+                                    label += anvil['procedure']['feat']['params']['featurizers']['DescriptorFeaturizer']['descr_type']
+                                if f == 'FingerprintFeaturizer':
+                                    label += anvil['procedure']['feat']['params']['featurizers']['FingerprintFeaturizer']['fp_type']
+                                if ind < len(anvil['procedure']['feat']['params']['featurizers']) - 1:
+                                    label += '+'
+                        for r in to_remove:
+                            label = label.replace(r, '')
+                        full_label.append(label)
+
+                    elif lab == 'tasks':
+                        num_tasks = len(target_cols)
+                        if num_tasks > 1:
+                            full_label.append("MT")
+                        else:
+                            full_label.append("ST")
+
+                    else:
+                        print('here')
+                        raise ValueError(f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']")
+
+                all_labels.append('_'.join(full_label))
 
         return (model_stats_fns, all_labels, all_task_names)
 
@@ -364,6 +319,8 @@ class PostHocComparison(ComparisonBase):
             List of file paths to JSON files with model statistics.
         labels : list of str
             List of tags for the models, used for plotting and reporting.
+        task_names : list of str
+            List of task names as they appear in the model statistics JSON files.
 
         Returns
         -------
@@ -518,15 +475,15 @@ class PostHocComparison(ComparisonBase):
             # Determine colors for the bars based on Tukey HSD results
             bar_colors = []
             for method in means.index:
-                color = "red"
+                color = "grey"
                 if method == best_method:
                     color = "blue"
                 else:
                     mask1 = tukey_metric_df["method"] == f"{best_method} - {method}"
                     mask2 = tukey_metric_df["method"] == f"{method} - {best_method}"
                     pvals = tukey_metric_df[mask1 | mask2]["pvalue"]
-                    if not pvals.empty and (pvals > 0.05).any():
-                        color = "grey"
+                    if not pvals.empty and (pvals <= 0.05).any():
+                        color = "red"
                 bar_colors.append(color)
 
             # Plot means with error bars
@@ -612,7 +569,7 @@ class PostHocComparison(ComparisonBase):
             for i in range(len(hsd.statistic) - 1):
                 for j in range(i + 1, len(hsd.statistic)):
                     s = hsd.statistic[i, j]
-                    method_compare.append(f"{labels[i]}-{labels[j]}")
+                    method_compare.append(f"{labels[i]} - {labels[j]}")
                     stats.append(s)
                     errorbars.append(
                         [
@@ -841,8 +798,8 @@ class PostHocComparison(ComparisonBase):
                 title = f"Paired: {method1} - {method2} ({metric})"
 
                 # Determine colors for the bars based on Tukey HSD results
-                mask1 = tukey_metric_df["method"] == f"{method1}-{method2}"
-                mask2 = tukey_metric_df["method"] == f"{method2}-{method1}"
+                mask1 = tukey_metric_df["method"] == f"{method1} - {method2}"
+                mask2 = tukey_metric_df["method"] == f"{method2} - {method1}"
                 pvals = tukey_metric_df[mask1 | mask2]["pvalue"]
                 if not pvals.empty and (pvals > 0.05).any():
                     title_color = "black"
@@ -899,9 +856,11 @@ class PostHocComparison(ComparisonBase):
     def convert_float_round(self, val: float):
         """
         Convert a float to scientific notation rounded to 3 decimal places.
+        
         If conversion fails, return the original value.
 
         Parameters
+        ----------
         ----------
         val : float
             The value to convert.
@@ -1011,12 +970,11 @@ class PostHocComparison(ComparisonBase):
 
     def print_table(self, levene_df: pd.DataFrame, tukeys_df: pd.DataFrame):
         """
-        Print a DataFrame as a table
+        Print a DataFrame as a table.
 
         Parameters
         ----------
         levene_df : pandas.DataFrame
-
             DataFrame containing Levene's test statistics for each metric.
         tukeys_df : pandas.DataFrame
             DataFrame containing Tukey's HSD test results, including method comparisons,
