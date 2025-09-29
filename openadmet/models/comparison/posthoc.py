@@ -31,6 +31,7 @@ import warnings
 
 from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
+
 def _download_s3_dir(s3_uri, local_dir):
     """Download all files from an S3 directory to a local directory."""
     s3 = boto3.client("s3")
@@ -45,6 +46,7 @@ def _download_s3_dir(s3_uri, local_dir):
             local_path = os.path.join(local_dir, rel_path)
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             s3.download_file(bucket, key, local_path)
+
 
 @comparisons.register("PostHoc")
 class PostHocComparison(ComparisonBase):
@@ -107,15 +109,17 @@ class PostHocComparison(ComparisonBase):
         """Get statistics names."""
         return self._stats_names
 
-    def compare(self,
-                model_dirs = None,
-                label_types:list = None,
-                model_stats_fns:list = None,
-                labels:list = None,
-                task_names:list = None,
-                mt_id:str = None,
-                report:bool = False,
-                output_dir:bool = None):
+    def compare(
+        self,
+        model_dirs=None,
+        label_types: list = None,
+        model_stats_fns: list = None,
+        labels: list = None,
+        task_names: list = None,
+        mt_id: str = None,
+        report: bool = False,
+        output_dir: bool = None,
+    ):
         """
         Compare models using post-hoc statistical tests and generate plots and reports.
 
@@ -164,14 +168,20 @@ class PostHocComparison(ComparisonBase):
 
         if not (
             (model_dirs is not None and label_types is not None)
-            or (model_stats_fns is not None and labels is not None and task_names is not None)
+            or (
+                model_stats_fns is not None
+                and labels is not None
+                and task_names is not None
+            )
         ):
             raise ValueError(
                 "You must provide either (model_dir and label_types) OR (model_stats_fns, labels, and task_names)."
             )
 
         if not model_stats_fns:
-            model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(model_dirs, label_types, mt_id=mt_id)
+            model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(
+                model_dirs, label_types, mt_id=mt_id
+            )
 
         if len(set(labels)) != len(labels):
             raise ValueError("Labels must be unique")
@@ -199,10 +209,9 @@ class PostHocComparison(ComparisonBase):
 
         return stats_dfs
 
-    def label_and_task_name_from_anvil(self,
-                                       model_dirs:str,
-                                       label_types:list[str],
-                                       mt_id:str=None):
+    def label_and_task_name_from_anvil(
+        self, model_dirs: str, label_types: list[str], mt_id: str = None
+    ):
         """
         Extract model statistics file paths, labels, and task names from an Anvil training directory.
 
@@ -235,20 +244,29 @@ class PostHocComparison(ComparisonBase):
 
         for model_dir in model_dirs:
             # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within model_dir
-            anvil_recipes = [os.path.dirname(i) for i in glob.glob(f"{model_dir}/**/anvil_recipe.yaml", recursive=True)]
-            cv_metrics = [os.path.dirname(i) for i in glob.glob(f"{model_dir}/**/cross_validation_metrics.json", recursive=True)]
+            anvil_recipes = [
+                os.path.dirname(i)
+                for i in glob.glob(f"{model_dir}/**/anvil_recipe.yaml", recursive=True)
+            ]
+            cv_metrics = [
+                os.path.dirname(i)
+                for i in glob.glob(
+                    f"{model_dir}/**/cross_validation_metrics.json", recursive=True
+                )
+            ]
             model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
             print(f"Found {len(model_dirs)} models in {model_dir}")
 
-            model_stats_fns = [f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs]
+            model_stats_fns = [
+                f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs
+            ]
 
             for model_dir in model_dirs:
-
                 with open(f"{model_dir}/anvil_recipe.yaml") as f:
                     anvil = yaml.safe_load(f)
 
                 full_label = []
-                target_cols = anvil['data']['target_cols']
+                target_cols = anvil["data"]["target_cols"]
                 if type(target_cols) is str:
                     target_cols = [target_cols]
 
@@ -260,60 +278,92 @@ class PostHocComparison(ComparisonBase):
                     for ind, col in enumerate(target_cols):
                         if mt_id.lower() in col.lower():
                             col_match.append(col)
-                            ind_for_biotarget = ind.copy() # this is to get the index for the list of biotargets
+                            ind_for_biotarget = (
+                                ind.copy()
+                            )  # this is to get the index for the list of biotargets
 
                     # check that the multitask id provided by the user does not
                     # appear in multiple target columns
                     if len(col_match) == 1:
                         all_task_names.append(col_match[0])
                     elif len(col_match) == 0:
-                        raise ValueError(f"Target {mt_id} not found in target columns {target_cols}")
+                        raise ValueError(
+                            f"Target {mt_id} not found in target columns {target_cols}"
+                        )
                     else:
-                        raise ValueError(f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific")
+                        raise ValueError(
+                            f"Target {mt_id} found multiple times in target columns {target_cols}, please be more specific"
+                        )
 
                 # single-task case
                 else:
                     all_task_names.append(target_cols[0])
-                    ind_for_biotarget = 0 # if single task, there will be only one biotarget
+                    ind_for_biotarget = (
+                        0  # if single task, there will be only one biotarget
+                    )
 
                 for lab in label_types:
-
-                    if lab == 'biotarget':
-                        full_label.append(anvil['metadata']['biotargets'][ind_for_biotarget])
+                    if lab == "biotarget":
+                        full_label.append(
+                            anvil["metadata"]["biotargets"][ind_for_biotarget]
+                        )
 
                     # sets model label based on the class names of the model, as specified in anvil recipe
-                    elif lab == 'model':
-                        to_remove = ['Regressor', 'Classifier', 'Model', 'Module', 'Lightning']
-                        label = anvil['procedure']['model']['type']
+                    elif lab == "model":
+                        to_remove = [
+                            "Regressor",
+                            "Classifier",
+                            "Model",
+                            "Module",
+                            "Lightning",
+                        ]
+                        label = anvil["procedure"]["model"]["type"]
                         for r in to_remove:
-                            label = label.replace(r, '')
+                            label = label.replace(r, "")
                         # chemeleon special case
-                        if label == 'ChemProp':
-                            if anvil['procedure']['model']['params']['from_chemeleon'] == True:
-                                label = 'Chemeleon'
+                        if label == "ChemProp":
+                            if (
+                                anvil["procedure"]["model"]["params"]["from_chemeleon"]
+                                == True
+                            ):
+                                label = "Chemeleon"
                         full_label.append(label)
 
-                    elif lab == 'feat':
-                        to_remove = ['Featurizer']
-                        label = anvil['procedure']['feat']['type']
-                        if label == 'DescriptorFeaturizer':
-                            label = anvil['procedure']['feat']['params']['descr_type']
-                        if label == 'FingerprintFeaturizer':
-                            label = anvil['procedure']['feat']['params']['fp_type']
-                        if label == 'FeatureConcatenator':
-                            label = ''
-                            for ind, f in enumerate(anvil['procedure']['feat']['params']['featurizers']):
-                                if f == 'DescriptorFeaturizer':
-                                    label += anvil['procedure']['feat']['params']['featurizers']['DescriptorFeaturizer']['descr_type']
-                                if f == 'FingerprintFeaturizer':
-                                    label += anvil['procedure']['feat']['params']['featurizers']['FingerprintFeaturizer']['fp_type']
-                                if ind < len(anvil['procedure']['feat']['params']['featurizers']) - 1:
-                                    label += '+'
+                    elif lab == "feat":
+                        to_remove = ["Featurizer"]
+                        label = anvil["procedure"]["feat"]["type"]
+                        if label == "DescriptorFeaturizer":
+                            label = anvil["procedure"]["feat"]["params"]["descr_type"]
+                        if label == "FingerprintFeaturizer":
+                            label = anvil["procedure"]["feat"]["params"]["fp_type"]
+                        if label == "FeatureConcatenator":
+                            label = ""
+                            for ind, f in enumerate(
+                                anvil["procedure"]["feat"]["params"]["featurizers"]
+                            ):
+                                if f == "DescriptorFeaturizer":
+                                    label += anvil["procedure"]["feat"]["params"][
+                                        "featurizers"
+                                    ]["DescriptorFeaturizer"]["descr_type"]
+                                if f == "FingerprintFeaturizer":
+                                    label += anvil["procedure"]["feat"]["params"][
+                                        "featurizers"
+                                    ]["FingerprintFeaturizer"]["fp_type"]
+                                if (
+                                    ind
+                                    < len(
+                                        anvil["procedure"]["feat"]["params"][
+                                            "featurizers"
+                                        ]
+                                    )
+                                    - 1
+                                ):
+                                    label += "+"
                         for r in to_remove:
-                            label = label.replace(r, '')
+                            label = label.replace(r, "")
                         full_label.append(label)
 
-                    elif lab == 'tasks':
+                    elif lab == "tasks":
                         num_tasks = len(target_cols)
                         if num_tasks > 1:
                             full_label.append("MT")
@@ -321,10 +371,12 @@ class PostHocComparison(ComparisonBase):
                             full_label.append("ST")
 
                     else:
-                        print('here')
-                        raise ValueError(f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']")
+                        print("here")
+                        raise ValueError(
+                            f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']"
+                        )
 
-                all_labels.append('_'.join(full_label))
+                all_labels.append("_".join(full_label))
 
         return (model_stats_fns, all_labels, all_task_names)
 
