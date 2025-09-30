@@ -19,7 +19,7 @@ Option 1: Specify the model directory
 
    compare --model-dirs DIR [--model-dirs DIR ...] \
            --label-types TAG [--label-types TAG ...] \
-           [--mt-id TAG] [--output-dir DIR] [--report BOOL] 
+           [--mt-id TAG] [--output-dir DIR] [--report BOOL]
 
 Option 2 : Specify cross validation statistics files and tags directly
 
@@ -54,15 +54,15 @@ Options
 
 .. option:: --label-types TAG
 
-   Types of labels to use for the generated comparison plots. 
+   Types of labels to use for the generated comparison plots.
    These labels will be automatically generated from the input anvil yaml file.
    Must be specified if ``--model-dirs`` is used.
    Must be one of:
-     - biotarget : which will label by the specified biotarget from ``anvil["metadata"]["biotargets"]``- model : which will label by the model type from 
+     - biotarget : which will label by the specified biotarget from ``anvil["metadata"]["biotargets"]``- model : which will label by the model type from
      - model : which will label from the model type from ``anvil["procedure"]["model"]["type"]``
      - feat : which will label from the featurizer type from ``anvil["procedure"]["feat"]["type"]``
      - tasks : which will label whether the model was trained as multi or single task from the LENGTH of ``anvil["data"]["target_cols"]``
-   
+
    Example:
 
    .. code-block:: bash
