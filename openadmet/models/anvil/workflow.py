@@ -667,18 +667,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         logger.info("Data featurized")
 
+        kwargs = {}
         if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
-            input_dim = train_dataset[
-                0
-            ][
-                0
-            ].shape[
-                -1
-            ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
-            logger.info(f"Input dim inferred as {input_dim}")
+            kwargs['input_dim'] = train_dataset[0][0].shape[-1] # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
+            logger.info(f"Input dim inferred as {kwargs['input_dim']}")
         else:
             logger.info("Input dim not inferred, assuming unpaired data")
-            input_dim = None
 
         # Train
         if self.ensemble:
@@ -724,7 +718,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 val_dataloader,
                 train_scaler,
                 output_dir,
-                input_dim=input_dim,
+                **kwargs,
             )
 
             # Save
