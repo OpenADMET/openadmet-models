@@ -669,7 +669,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         kwargs = {}
         if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
-            kwargs['input_dim'] = train_dataset[0][0].shape[-1] # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
+            kwargs["input_dim"] = train_dataset[0][0].shape[
+                -1
+            ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
             logger.info(f"Input dim inferred as {kwargs['input_dim']}")
         else:
             logger.info("Input dim not inferred, assuming unpaired data")
