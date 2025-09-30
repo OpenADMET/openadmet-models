@@ -170,9 +170,11 @@ class TestCPUPosthocConfigs:
             "LGBM_DESCR",
             "LGBM_COMBINED",
         ]
-        task_names = ["PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
-                      "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
-                      "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))"]
+        task_names = [
+            "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
+            "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
+            "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
+        ]
         result = runner.invoke(
             cli,
             [
