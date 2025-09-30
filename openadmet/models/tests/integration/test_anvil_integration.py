@@ -178,18 +178,15 @@ class TestCPUPosthocConfigs:
         output_dir = tmp_path / "output"
         output_dir.mkdir(parents=True, exist_ok=True)  # <-- Ensure directory exists
 
-        result = runner.invoke(
-            cli,
-            [
-                "compare",
-                "--model-stats-fns",
-                *cv_metrics_files,
-                "--labels",
-                *labels,
-                "--task-names",
-                *task_names,
-                "--output-dir",
-                output_dir,
-            ],
-        )
+        # Repeat each tag before each argument
+        cli_args = ["compare"]
+        for f in cv_metrics_files:
+            cli_args.extend(["--model-stats-fns", f])
+        for l in labels:
+            cli_args.extend(["--labels", l])
+        for t in task_names:
+            cli_args.extend(["--task-names", t])
+        cli_args.extend(["--output-dir", output_dir])
+
+        result = runner.invoke(cli, cli_args)
         assert click_success(result)
