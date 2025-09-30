@@ -15,5 +15,4 @@ def is_notebook() -> bool:
 
 
 if not is_notebook() and not os.getenv("OADMET_NO_RICH_LOGGING"):
-
     logger.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
