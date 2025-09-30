@@ -158,27 +158,33 @@ class TestStructuralModelGPUAnvilConfigs:
 
 class TestCPUPosthocConfigs:
     @pytest.mark.cpu
-    @pytest.mark.parametrize(
-        "cv_metrics_file",
-        [
+    def test_compare_all_cv_metrics(self, tmp_path):
+        runner = CliRunner()
+        cv_metrics_files = [
             cv_metrics_lgbm_fp,
             cv_metrics_lgbm_descr,
             cv_metrics_lgbm_combined,
-        ],
-    )
-    def test_configs(self, cv_metrics_file, tmp_path):
-        runner = CliRunner()
+        ]
+        labels = [
+            "LGBM_FP",
+            "LGBM_DESCR",
+            "LGBM_COMBINED",
+        ]
+        task_names = ["PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
+                      "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
+                      "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))"]
         result = runner.invoke(
             cli,
             [
-                "anvil",
-                "--recipe-path",
-                cv_metrics_file,
+                "compare",
+                "--model-stats-fns",
+                *cv_metrics_files,
+                "--labels",
+                *labels,
+                "--task-names",
+                *task_names,
                 "--output-dir",
                 tmp_path / "output",
             ],
         )
         assert click_success(result)
-
-
-# TODO: Add in tests for inline inference
