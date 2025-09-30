@@ -175,6 +175,9 @@ class TestCPUPosthocConfigs:
             "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
             "PXR_induction_DRC_summary_octant_in-house_pure: pEC50_estimate (-log10(molarity))",
         ]
+        output_dir = tmp_path / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)  # <-- Ensure directory exists
+
         result = runner.invoke(
             cli,
             [
@@ -186,7 +189,7 @@ class TestCPUPosthocConfigs:
                 "--task-names",
                 *task_names,
                 "--output-dir",
-                tmp_path / "output",
+                output_dir,
             ],
         )
         assert click_success(result)
