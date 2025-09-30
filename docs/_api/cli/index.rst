@@ -11,4 +11,3 @@ OpenADMET Models CLI Reference
     anvil
     predict
     compare
-

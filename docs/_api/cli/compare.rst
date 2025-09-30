@@ -1,7 +1,7 @@
 Compare CLI Guide
 =================
 
-The ``compare`` command-line interface (CLI) is used to compare the performance 
+The ``compare`` command-line interface (CLI) is used to compare the performance
 of two or more trained models based on their summary statistics based on sampling from the performance distribution with cross-validation.
 It supports multiple tasks, optional tagging of models, and report generation.
 It is based on [this paper](https://pubs.acs.org/doi/10.1021/acs.jcim.5c01609) by Ash *et al* which details a systematic workflow for model comparison based on cross validation statistics.
@@ -22,10 +22,10 @@ Options
 
 .. option:: --model-stats FILE
 
-   **Required.**  
-   Path(s) to JSON files containing model statistics (most likely produced by the ``openadmet anvil`` command with cross-validation).  
+   **Required.**
+   Path(s) to JSON files containing model statistics (most likely produced by the ``openadmet anvil`` command with cross-validation).
    Can be specified multiple times to compare multiple models.
-   Must be specified **once per model**.  
+   Must be specified **once per model**.
    The order of ``--model-stats`` arguments must match the order of ``--model-tag`` arguments and ``--task-name`` arguments.
 
    Example:
@@ -40,8 +40,8 @@ Options
 
 .. option:: --model-tag TAG
 
-   User-defined names to label and identify different models in the comparison.  
-   Should be specified in the same order as ``--model-stats``.  
+   User-defined names to label and identify different models in the comparison.
+   Should be specified in the same order as ``--model-stats``.
    Optional but highly recommended for clarity.
 
    Example:
@@ -55,8 +55,8 @@ Options
 
 .. option:: --task-name TASK
 
-   **Required.**  
-   One or more task names to compare across models.  
+   **Required.**
+   One or more task names to compare across models.
    These must exactly match the task names as they appear in the model statistics JSON files.
    and must be specified **once per model**. AN example is shown below, where the task names differ by model.
 
@@ -72,8 +72,8 @@ Options
 
 .. option:: --output-dir DIR
 
-   Path to a directory where comparison results (tables, plots, or reports) will be saved.  
-   If not provided, results will be shown in the console only.  
+   Path to a directory where comparison results (tables, plots, or reports) will be saved.
+   If not provided, results will be shown in the console only.
    The directory must already exist.
 
    Example:
@@ -88,8 +88,8 @@ Options
 
 .. option:: --report BOOL
 
-   Whether to generate a summary PDF report in the ``--output-dir``.  
-   Defaults to ``False``.  
+   Whether to generate a summary PDF report in the ``--output-dir``.
+   Defaults to ``False``.
 
    Example:
 
@@ -107,10 +107,10 @@ Description
 
 The ``compare`` CLI:
 
-1. Loads one or more JSON files containing model summary statistics.  
-2. Matches each statistics file to its corresponding ``--model-tag``.  
-3. Compares model performance across a specified task.  
-4. Optionally writes results and a PDF report to the ``--output-dir``.  
+1. Loads one or more JSON files containing model summary statistics.
+2. Matches each statistics file to its corresponding ``--model-tag``.
+3. Compares model performance across a specified task.
+4. Optionally writes results and a PDF report to the ``--output-dir``.
 
 Example Workflow Run
 --------------------
@@ -136,14 +136,14 @@ Expected output:
 Exit Codes
 ----------
 
-- ``0``: Comparison completed successfully.  
-- Non-zero: Comparison encountered an error (see logs for details).  
+- ``0``: Comparison completed successfully.
+- Non-zero: Comparison encountered an error (see logs for details).
 
 Notes
 -----
 
-- Ensure that the JSON files passed via ``--model-stats`` contain valid summary statistics.  
+- Ensure that the JSON files passed via ``--model-stats`` contain valid summary statistics.
 - The number of ``--model-tag`` values must match the number of ``--model-stats`` files.
 - The number of ``--task-name`` values must match the number of ``--model-stats`` files.
-- Task names must exactly match those found in the JSON files.  
-- Report generation requires ``--output-dir`` to be specified.  
+- Task names must exactly match those found in the JSON files.
+- Report generation requires ``--output-dir`` to be specified.
