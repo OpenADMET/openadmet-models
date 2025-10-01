@@ -16,7 +16,7 @@
 /* Navbar link hover color */
 .navbar a:hover, .navbar-primary a:hover, .navbar-brand a:hover {
     background-color: #fff0f0 !important;
-    color: #dc3737 !important;            
+    color: #dc3737 !important;
 }
 
 /* Footer background color */

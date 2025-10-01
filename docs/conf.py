@@ -135,8 +135,7 @@ html_theme_options = {
             "title": "OpenFF on GitHub",
             "icon_classes": "fab fa-github",
         },
-        
-    ]
+    ],
 }
 
 html_css_files = ["custom.css"]
