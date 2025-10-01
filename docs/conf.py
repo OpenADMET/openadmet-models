@@ -106,7 +106,7 @@ html_static_path = ["_static"]
 # documentation.
 
 # (Optional) favicon.
-# If not provided, will default to the generic OpenFF logo
+# If not provided, will default to the generic OpenADMET logo
 html_favicon = "_static/images/logos/favicon-32x32.png"
 
 # Theme options are theme-specific and customize the look and feel of a
@@ -132,7 +132,7 @@ html_theme_options = {
     "socials": [
         {
             "href": "https://github.com/openadmet",
-            "title": "OpenFF on GitHub",
+            "title": "OpenADMET on GitHub",
             "icon_classes": "fab fa-github",
         },
     ],
