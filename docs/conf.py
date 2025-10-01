@@ -114,7 +114,7 @@ html_favicon = "_static/images/logos/favicon-32x32.png"
 html_theme_options = {
     # Repository integration  # the base url for the docs
     # Set the repo url for the link to appear
-    "repo_url": "https://docs.openadmet.org/en/latest/",
+    "repo_url": "https://github.com/OpenADMET/openadmet-models",
     # The name of the repo. If must be set if repo_url is set
     "repo_name": "openadmet-models",
     # Must be one of github, gitlab or bitbucket
@@ -131,7 +131,7 @@ html_theme_options = {
     "css_minify": True,
     "socials": [
         {
-            "href": "https://github.com/openadmet/openadmet-models",
+            "href": "https://github.com/openadmet",
             "title": "OpenFF on GitHub",
             "icon_classes": "fab fa-github",
         },
