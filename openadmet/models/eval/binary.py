@@ -52,10 +52,6 @@ class PosthocBinaryMetrics(EvalBase):
         ValueError
             If `y_true` or `y_pred` is not provided.
 
-        Returns
-        -------
-        None
-
         """
         if y_true is None or y_pred is None:
             raise ValueError("Must provide y_true and y_pred")
@@ -113,10 +109,6 @@ class PosthocBinaryMetrics(EvalBase):
         output_dir : str, optional
             Directory to save the confusion matrix plot. If None, the plot is not saved.
 
-        Returns
-        -------
-        None
-
         """
         pred_class = [y > cutoff for y in y_pred]
         true_class = [y > cutoff for y in y_true]
@@ -143,10 +135,6 @@ class PosthocBinaryMetrics(EvalBase):
         output_dir : str, optional
             Directory to save the classification plot. If None, the plot is not saved.
 
-        Returns
-        -------
-        None
-
         """
         fig, ax = plt.subplots()
         plt.scatter(y_true, y_pred)
@@ -169,10 +157,6 @@ class PosthocBinaryMetrics(EvalBase):
         output_dir : str
             Directory to save the JSON file.
 
-        Returns
-        -------
-        None
-
         """
         data_df.to_json(f"{output_dir}/posthoc_binary_eval.json")
 
@@ -190,10 +174,6 @@ class PosthocBinaryMetrics(EvalBase):
             Precision value(s) to report.
         recall : float or array-like, optional
             Recall value(s) to report.
-
-        Returns
-        -------
-        None
 
         """
         stats_df = pd.DataFrame({"precision": precision, "recall": recall}, index=[0])

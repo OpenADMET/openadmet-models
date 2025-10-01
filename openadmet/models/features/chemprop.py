@@ -136,7 +136,22 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         """
         Featurize a list of SMILES strings.
 
-        #TODO: we likely want to separate the scaling from the featurization
+        Parameters
+        ----------
+        smiles : Iterable[str]
+            List or iterable of SMILES strings to featurize.
+        y : Iterable[Any], optional
+            Target values corresponding to the SMILES strings.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - DataLoader: PyTorch DataLoader for the dataset.
+            - np.ndarray: Array of indices corresponding to the original input.
+            - StandardScaler: Scaler used for any scaling during featurization.
+            - Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]: PyTorch Dataset containing the features and targets.
+
         """
         if y is not None:
             # if a pandas dataframe or series

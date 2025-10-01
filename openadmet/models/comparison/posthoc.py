@@ -682,10 +682,6 @@ class PostHocComparison(ComparisonBase):
         output_dir : str
             Directory to save the JSON files.
 
-        Returns
-        -------
-        None
-
         """
         for stat_df, name in zip(stats_dfs, self.stats_names):
             stat_df.to_json(f"{output_dir}/{name}.json")
@@ -724,10 +720,6 @@ class PostHocComparison(ComparisonBase):
         output_dir : str, optional
             Directory to save the report. Required if write is True.
 
-        Returns
-        -------
-        None
-
         """
         if write:
             self.write_report(data_dfs, output_dir)
@@ -742,10 +734,6 @@ class PostHocComparison(ComparisonBase):
             List of DataFrames containing statistical test results (e.g., Levene, Tukey HSD).
         output_dir : str
             Directory to save the PDF report.
-
-        Returns
-        -------
-        None
 
         """
         doc = SimpleDocTemplate(
@@ -812,10 +800,6 @@ class PostHocComparison(ComparisonBase):
         tukeys_df : pandas.DataFrame
             DataFrame containing Tukey's HSD test results, including method comparisons,
             metrics, values, error bars, and p-values.
-
-        Returns
-        -------
-        None
 
         """
         print("Levene's test results")

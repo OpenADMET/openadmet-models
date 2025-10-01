@@ -215,10 +215,6 @@ class ClassificationMetrics(EvalBase):
         output_dir : str
             Output directory for the report.
 
-        Returns
-        -------
-        None
-
         """
         # write to JSON
         json_path = output_dir / "classification_metrics.json"
@@ -267,11 +263,7 @@ class ClassificationPlots(EvalBase):
         use_wandb : bool, optional
             Whether to log plots to Weights & Biases.
         kwargs : Dict
-            Additional keyword arguments
-
-        Returns
-        -------
-        None
+            Additional keyword arguments.
 
         """
         # Cast as numpy arrays
@@ -432,10 +424,6 @@ class ClassificationPlots(EvalBase):
         ----------
         output_dir : str
             Output directory for the plots.
-
-        Returns
-        -------
-        None
 
         """
         for plot_tag, plot in self.plot_data.items():
