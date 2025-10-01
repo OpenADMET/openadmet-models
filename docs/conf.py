@@ -50,10 +50,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
+    "sphinx_design",
     "sphinx_copybutton",
     "openff_sphinx_theme",
 ]
-
 
 autosummary_generate = True
 napoleon_google_docstring = False

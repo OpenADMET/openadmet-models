@@ -25,11 +25,6 @@
     color: #fff !important;
 }
 
-/* Optionally, hide any SVG or theme logo */
-.navbar-brand svg {
-    display: none !important;
-}
-
 /* Force logo size in navbar */
 .navbar-brand img,
 .sidebar-logo img,
@@ -83,4 +78,24 @@ img[src*="favicon-32x32.png"] {
     height: 20px;           /* Adjust height as needed */
     background: #dc3737;
     z-index: 10;
+}
+
+/* Force nav-search bar background to dark red for OpenFF theme */
+.nav-search,
+.nav-search input,
+.nav-search .search-field,
+.nav-search #search-input {
+    background-color: #791e1e !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+    transition: background-color 0.2s;
+}
+
+/* Lighter color on hover */
+.nav-search:hover,
+.nav-search input:hover,
+.nav-search .search-field:hover,
+.nav-search #search-input:hover {
+    background-color: #c67878 !important;
 }
