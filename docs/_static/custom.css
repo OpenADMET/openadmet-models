@@ -1,0 +1,86 @@
+/* Sidebar background */
+.sidebar-primary, .sidebar-secondary, .sidebar-brand {
+    background-color: #fff0f0 !important;
+}
+
+/* Navbar background */
+.navbar, .navbar-primary, .navbar-brand {
+    background-color: #dc3737 !important;
+}
+
+/* Navbar shadow: */
+.navbar, .navbar-primary, .navbar-brand {
+    box-shadow: 0 4px 8px rgba(220, 55, 55, 0.2) !important;
+}
+
+/* Navbar link hover color */
+.navbar a:hover, .navbar-primary a:hover, .navbar-brand a:hover {
+    background-color: #fff0f0 !important;
+    color: #dc3737 !important;            
+}
+
+/* Footer background color */
+.footer, .footer-bar {
+    background-color: #dc3737 !important;
+    color: #fff !important;
+}
+
+/* Optionally, hide any SVG or theme logo */
+.navbar-brand svg {
+    display: none !important;
+}
+
+/* Force logo size in navbar */
+.navbar-brand img,
+.sidebar-logo img,
+img[src*="favicon-32x32.png"] {
+    height: 44px !important;  /* Adjust height as needed */
+    width: auto !important;   /* Maintain aspect ratio */
+    margin-right: 10px;       /* Optional: space between logo and text */
+}
+
+.navbar-brand {
+    position: relative;
+}
+
+.navbar-brand::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 160px;      /* Adjust width as needed */
+    height: 60px;      /* Adjust height as needed */
+    background: #dc3737;
+    z-index: 10;
+}
+
+.navbar-brand::after {
+    content: "";
+    position: absolute;
+    left: 10px;        /* Adjust position as needed */
+    top: 8px;          /* Adjust position as needed */
+    width: 150px;       /* Adjust size as needed */
+    height: 150px;
+    background: url("_static/images/logos/logo.png") no-repeat center center;
+    background-size: contain;
+    z-index: 11;
+    pointer-events: none; /* Let clicks pass through */
+}
+
+/* Giant red box over the footer "An Open Force Field Initiative project" */
+.footer, .footer-bar {
+    position: relative;
+}
+
+.footer::before, .footer-bar::before {
+    content: "";
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 129px;
+    width: 35%;
+    height: 20px;           /* Adjust height as needed */
+    background: #dc3737;
+    z-index: 10;
+}

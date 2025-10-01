@@ -63,3 +63,4 @@ dependencies:
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
     - -e ../
+    - pip install git+https://github.com/openforcefield/openff-sphinx-theme/@main
