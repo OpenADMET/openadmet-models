@@ -24,7 +24,6 @@ from openadmet.models.architecture.model_base import models as model_registry
 
 _POOLING = {"mean": global_mean_pool, "max": global_max_pool, "add": global_add_pool}
 
-# TODO: unify with the one in chemprop.py
 _METRIC_TO_LOSS = {
     "mse": nn.MSELoss(),
     "mae": nn.L1Loss(),
@@ -86,7 +85,7 @@ class GATv2Module(LightningModuleBase):
     """
 
     # Model architecture hyperparameters
-    input_dim: int = 8  # must match that of GATGraphFeaturizer TODO: make this dynamic
+    input_dim: int = 8
     hidden_dim: int = 64
     num_layers: int = 3
     num_heads: int = 8
@@ -94,7 +93,7 @@ class GATv2Module(LightningModuleBase):
     pooling: str = "mean"
     output_dim: int = 1
     edge_dim: Optional[int] = (
-        4  # must match that of GATGraphFeaturizer TODO: make this dynamic
+        4
     )
     concat_heads: bool = True
     add_self_loops: bool = True

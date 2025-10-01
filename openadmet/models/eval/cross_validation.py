@@ -219,7 +219,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             self.data[t_label] = {}
             for k, v in clean_scores.items() if k not in exclude else {}:
                 # calculate the confidence interval, assuming normal distribution
-                # TODO: check best practice???
                 mean = v.mean()
                 sigma = v.std(ddof=1)
                 lower_ci, upper_ci = norm.interval(
@@ -609,7 +608,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self.data[t_label] = {}
             for k, v in task_data.items():
                 # calculate the confidence interval, assuming normal distribution
-                # TODO: check best practice???
                 v = np.array(v)
                 mean = v.mean()
                 sigma = v.std(ddof=1)
