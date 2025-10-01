@@ -456,4 +456,4 @@ class LightningModelBase(ModelBase):
         layers to evaluation mode.
 
         """
-        logger.warning(f"Weight freezing currently not implemented for {self.type}.")
+        raise NotImplementedError(f"Weight freezing not implemented for {self.type}.")
