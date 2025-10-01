@@ -380,7 +380,7 @@ class LightningModuleBase(pl.LightningModule):
             return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
         else:
             return optimizer
-        
+
 
 class LightningModelBase(ModelBase):
     """A model that uses PyTorch Lightning."""

@@ -151,7 +151,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             - np.ndarray: Array of indices corresponding to the original input.
             - StandardScaler: Scaler used for any scaling during featurization.
             - Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]: PyTorch Dataset containing the features and targets.
-        
+
         """
         if y is not None:
             # if a pandas dataframe or series

@@ -2,6 +2,7 @@
 
 from sklearn.utils.discovery import all_estimators
 
+
 def get_sklearn_estimators_as_dict(type_filter: str = None):
     """
     Get the sklearn estimators.

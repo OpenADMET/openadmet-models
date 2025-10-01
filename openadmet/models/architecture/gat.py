@@ -92,9 +92,7 @@ class GATv2Module(LightningModuleBase):
     dropout: float = 0.2
     pooling: str = "mean"
     output_dim: int = 1
-    edge_dim: Optional[int] = (
-        4
-    )
+    edge_dim: Optional[int] = 4
     concat_heads: bool = True
     add_self_loops: bool = True
     share_weights: bool = True
