@@ -181,10 +181,6 @@ class DataSpec(BaseModel):
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS).
 
-        Returns
-        -------
-        None
-
         """
         with fsspec.open(path, "w", **storage_options) as stream:
             yaml.safe_dump(self.model_dump(), stream)
@@ -226,10 +222,6 @@ class SpecBase(BaseModel):
             The file path to write the YAML content to.
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS).
-
-        Returns
-        -------
-        None
 
         """
         # Open file stream
@@ -598,10 +590,6 @@ class AnvilSpecification(BaseModel):
             The file path for the report YAML file. Default is 'eval.yaml'.
         storage_options : dict, optional
             Additional options to pass to the file system (e.g., for S3, GCS
-
-        Returns
-        -------
-        None
 
         """
         # Write each section to its own YAML file

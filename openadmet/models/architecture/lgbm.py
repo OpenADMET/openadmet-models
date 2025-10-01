@@ -52,10 +52,6 @@ class LGBMModelBase(PickleableModelBase):
         y: np.ndarray
             Training data values
 
-        Returns
-        -------
-        None
-
         """
         self.build()
         self.estimator = self.estimator.fit(X, y)

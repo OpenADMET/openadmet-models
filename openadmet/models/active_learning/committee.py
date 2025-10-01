@@ -81,10 +81,6 @@ class CommitteeRegressor(EnsembleBase):
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
 
-        Returns
-        -------
-        None
-
         """
         # Reset calibration model
         self._calibration_model = None
@@ -128,10 +124,6 @@ class CommitteeRegressor(EnsembleBase):
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
 
-        Returns
-        -------
-        None
-
         """
         # Reset calibration model
         self._calibration_model = None
@@ -168,10 +160,6 @@ class CommitteeRegressor(EnsembleBase):
             The calibration method to use. Options are "isotonic-regression" or "scaling-factor".
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
-
-        Returns
-        -------
-        None
 
         """
         # Validate method selection
@@ -425,10 +413,6 @@ class CommitteeRegressor(EnsembleBase):
         calibration_path: PathLike
             Path to save calibration model.
 
-        Returns
-        -------
-        None
-
         """
         # Check number of paths match
         if self.n_models != len(paths):
@@ -505,10 +489,6 @@ class CommitteeRegressor(EnsembleBase):
             The file paths to save the model architecture.
         calibration_path : PathLike
             The file path to save the calibration model.
-
-        Returns
-        -------
-        None
 
         """
         # Check number of paths match

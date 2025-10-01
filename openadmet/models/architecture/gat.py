@@ -527,11 +527,6 @@ class GATv2Model(LightningModelBase):
         **kwargs: Dict
             Additional keyword arguments.
 
-
-        Returns
-        -------
-        None
-
         """
         self.scaler = scaler
 

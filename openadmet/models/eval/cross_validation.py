@@ -348,10 +348,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         output_dir : str
             Output directory for the report and plots.
 
-        Returns
-        -------
-        None
-
         """
         # write to JSON
         with open(output_dir / "cross_validation_metrics.json", "w") as f:
@@ -705,10 +701,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         ----------
         output_dir : str
             Output directory for the report and plots.
-
-        Returns
-        -------
-        None
 
         """
         # write to JSON

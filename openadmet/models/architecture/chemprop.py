@@ -145,10 +145,6 @@ class ChemPropModel(LightningModelBase):
         scaler: sklearn.preprocessing.StandardScaler, optional
             Scaler for target normalization, if applicable
 
-        Returns
-        -------
-        None
-
         """
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
