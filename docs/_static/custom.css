@@ -44,8 +44,8 @@ img[src*="favicon-32x32.png"] {
     position: absolute;
     left: 0;
     top: 0;
-    width: 160px;      /* Adjust width as needed */
-    height: 60px;      /* Adjust height as needed */
+    width: 180px;      /* Adjust width as needed */
+    height: 64px;      /* Adjust height as needed */
     background: #dc3737;
     z-index: 10;
 }
