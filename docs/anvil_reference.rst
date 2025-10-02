@@ -11,7 +11,7 @@ featurization, model architecture, training parameters, and evaluation metrics. 
 Anvil also makes our (OpenADMET Team) lives easier by handling the boilerplate code associated with setting up and running machine learning experiments, saving us from a twisted jungle of scripts and configuration files.
 
 
-A full list of available models, featurizers, trainers, and evaluators can be found in the OpenADMET API documentation. Additionally, we maintain a list of canonical recipes we use in production at XXXX #TODO add link to repo with recipes
+A full list of available models, featurizers, trainers, and evaluators can be found in the OpenADMET API documentation. Additionally, we maintain a list of canonical recipes we use in production at https://github.com/OpenADMET/optimus-prime
 
 
 How to Use Anvil
