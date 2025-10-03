@@ -110,8 +110,8 @@ Options
 
 .. option:: --task-names TASK
 
-   One or more task names to compare across models, these must exactly match the task names as they appear in the model statistics JSON files.
-   and must be specified **once per model**. An example is shown below, where the task names differ by model.
+   One or more task names to compare across models, these must exactly match the task names as they appear in the model statistics JSON files, and must be specified **once per model**.
+   An example is shown below, where the task names differ by model.
 
    Example:
 
