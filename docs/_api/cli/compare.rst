@@ -58,10 +58,10 @@ Options
    These labels will be automatically generated from the input anvil yaml file.
    Must be specified if ``--model-dirs`` is used.
    Must be one of:
-     - biotarget : which will label by the specified biotarget from ``anvil["metadata"]["biotargets"]``- model : which will label by the model type from
-     - model : which will label from the model type from ``anvil["procedure"]["model"]["type"]``
-     - feat : which will label from the featurizer type from ``anvil["procedure"]["feat"]["type"]``
-     - tasks : which will label whether the model was trained as multi or single task from the LENGTH of ``anvil["data"]["target_cols"]``
+   - biotarget : which will label by the specified biotarget from ``anvil["metadata"]["biotargets"]``
+   - model : which will label from the model type from ``anvil["procedure"]["model"]["type"]``
+   - feat : which will label from the featurizer type from ``anvil["procedure"]["feat"]["type"]``
+   - tasks : which will label whether the model was trained as multi or single task from the LENGTH of ``anvil["data"]["target_cols"]``
 
    Example:
 
@@ -110,9 +110,8 @@ Options
 
 .. option:: --task-names TASK
 
-   One or more task names to compare across models.
-   These must exactly match the task names as they appear in the model statistics JSON files.
-   and must be specified **once per model**. AN example is shown below, where the task names differ by model.
+   One or more task names to compare across models, these must exactly match the task names as they appear in the model statistics JSON files.
+   and must be specified **once per model**. An example is shown below, where the task names differ by model.
 
    Example:
 
@@ -214,7 +213,7 @@ Exit Codes
 Notes
 -----
 
-- Ensure that the directories passsed via ``--model-dirs`` contain valid cross validation metrics and anvil YAML files for option 1.
+- Ensure that the directories passed via ``--model-dirs`` contain valid cross validation metrics and anvil YAML files for option 1.
 - Ensure that the JSON files passed via ``--model-stats-fns`` contain valid summary statistics for option 2.
 - The number of ``--labels`` values must match the number of ``--model-stats-fns`` files for option 2.
 - The number of ``--task-names`` values must match the number of ``--model-stats-fns`` files for option 2.
