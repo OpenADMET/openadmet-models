@@ -2,6 +2,7 @@
 
 import json
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from os import PathLike
 from typing import Any, ClassVar
 
@@ -9,6 +10,7 @@ import joblib
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from lightning import pytorch as pl
+from loguru import logger
 from pydantic import BaseModel, field_validator
 
 models = ClassRegistry(unique=True)
@@ -27,7 +29,6 @@ class ModelBase(BaseModel, ABC):
     """Base class for all models."""
 
     _estimator: Any = None
-
     _model_json_name: ClassVar[str] = "model.json"
 
     @property
@@ -39,27 +40,6 @@ class ModelBase(BaseModel, ABC):
     def estimator(self, value):
         """Set the model estimator."""
         self._estimator = value
-
-    @abstractmethod
-    def from_params(cls, class_params: dict, mod_params: dict):
-        """
-        Create a model from parameters, abstract method to be implemented by subclasses.
-
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        Returns
-        -------
-        instance: ModelBase
-            An instance of the ModelBase class
-
-        """
-        pass
 
     @abstractmethod
     def build(self):
@@ -76,10 +56,6 @@ class ModelBase(BaseModel, ABC):
         path: PathLike
             Path to save the model to
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -92,10 +68,6 @@ class ModelBase(BaseModel, ABC):
         ----------
         path: PathLike
             Path to load the model from
-
-        Returns
-        -------
-        None
 
         """
         pass
@@ -112,10 +84,6 @@ class ModelBase(BaseModel, ABC):
         serial_path: PathLike
             Path to save the model serialization to
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -130,10 +98,6 @@ class ModelBase(BaseModel, ABC):
             Path to load the model parameters from
         serial_path: PathLike
             Path to load the model serialization from
-
-        Returns
-        -------
-        None
 
         """
         pass
@@ -152,10 +116,6 @@ class ModelBase(BaseModel, ABC):
         input: Any
             Input data to predict on
 
-        Returns
-        -------
-        None
-
         """
         pass
 
@@ -166,15 +126,16 @@ class ModelBase(BaseModel, ABC):
     def __eq__(self, value):
         """Compare two model instances for equality, ignoring the model itself."""
         # exclude model from comparison
-        return self.dict(exclude={"model"}) == value.dict(exclude={"model"})
+        return self.model_dump(exclude={"estimator"}) == value.model_dump(
+            exclude={"estimator"}
+        )
 
 
 class PickleableModelBase(ModelBase):
     """A model that can be pickled using joblib."""
 
-    # classvar for pickleable model
+    # ClassVar for pickleable model
     pickleable: ClassVar[bool] = True
-
     _model_save_name: ClassVar[str] = "model.pkl"
 
     def save(self, path: PathLike):
@@ -185,10 +146,6 @@ class PickleableModelBase(ModelBase):
         ----------
         path: PathLike
             Path to save the model to
-
-        Returns
-        -------
-        None
 
         """
         if self.estimator is None:
@@ -206,17 +163,13 @@ class PickleableModelBase(ModelBase):
         path: PathLike
             Path to load the model from
 
-        Returns
-        -------
-        None
-
         """
         with open(path, "rb") as f:
             self.estimator = joblib.load(f)
 
     def make_new(self) -> "PickleableModelBase":
         """Copy parameters to a new model instance without copying the estimator."""
-        return self.__class__(**self.mod_params, **self.dict(exclude={"estimator"}))
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     @classmethod
     def deserialize(
@@ -258,16 +211,13 @@ class PickleableModelBase(ModelBase):
         serial_path: PathLike
             Path to save the pickled model to
 
-        Returns
-        -------
-        None
-
         """
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
         self.save(serial_path)
 
 
+@dataclass
 class LightningModuleBase(pl.LightningModule):
     """
     Lightning module base class.
@@ -275,6 +225,9 @@ class LightningModuleBase(pl.LightningModule):
     A PyTorch lightning model may inherit this instead of pl.LightningModule
     to preconfigure optimizer and scheduler.
     """
+
+    # Meta parameters for this class
+    type: ClassVar[str]
 
     # Optimizer and scheduler configuration
     optimizer: str = "adamw"
@@ -285,9 +238,9 @@ class LightningModuleBase(pl.LightningModule):
     scheduler_patience: int = 10
     monitor_metric: str = "val_loss"
 
-    # This must be set for Pydantic to be happy
-    # Not certain of reason for this
-    training: bool = True
+    def __post_init__(self):
+        """Defer initialization of the LightningModuleBase."""
+        pl.LightningModule.__init__(self)
 
     @field_validator("monitor_metric")
     @classmethod
@@ -381,21 +334,25 @@ class LightningModuleBase(pl.LightningModule):
         else:
             return optimizer
 
-    # TODO: Implement defaults of the following?
-    # def training_step():
-    #     pass
-
-    # def validation_step():
-    #     pass
-
-    # def predict_step():
-    #     pass
-
 
 class LightningModelBase(ModelBase):
     """A model that uses PyTorch Lightning."""
 
+    # Meta parameters for this class
+    type: ClassVar[str]
     _model_save_name: ClassVar[str] = "model.pth"
+
+    def make_new(self):
+        """
+        Copy parameters to a new model instance without copying the estimator.
+
+        Returns
+        -------
+        LightningModelBase
+            A new instance of LightningModelBase with the same parameters.
+
+        """
+        return self.__class__(**self.model_dump(exclude={"estimator"}))
 
     def save(self, path: PathLike):
         """
@@ -405,10 +362,6 @@ class LightningModelBase(ModelBase):
         ----------
         path: PathLike
             Path to save the model to
-
-        Returns
-        -------
-        None
 
         """
         torch.save(self.estimator.state_dict(), path)
@@ -421,10 +374,6 @@ class LightningModelBase(ModelBase):
         ----------
         path: PathLike
             Path to load the model from
-
-        Returns
-        -------
-        None
 
         """
         self.estimator.load_state_dict(torch.load(path))
@@ -441,10 +390,6 @@ class LightningModelBase(ModelBase):
             Path to save the model parameters to
         serial_path: PathLike
             Path to save the serialized model to
-
-        Returns
-        -------
-        None
 
         """
         with open(param_path, "w") as f:
@@ -482,3 +427,23 @@ class LightningModelBase(ModelBase):
         instance.build(scaler=scaler)
         instance.load(serial_path)
         return instance
+
+    def freeze_weights(self, *args, **kwargs):
+        """
+        Freeze parts of the model for transfer learning or fine-tuning.
+
+        Parameters
+        ----------
+        *args: variable length argument list
+            Arguments to be passed to the implementing model's `freeze_weights` method.
+        **kwargs: keyword arguments
+            Keyword arguments to be passed to the implementing model's `freeze_weights` method.
+
+        Notes
+        -----
+        This method should set the `requires_grad` attribute of the specified layers to False,
+        preventing their weights from being updated during training. It also should set these
+        layers to evaluation mode.
+
+        """
+        raise NotImplementedError(f"Weight freezing not implemented for {self.type}.")

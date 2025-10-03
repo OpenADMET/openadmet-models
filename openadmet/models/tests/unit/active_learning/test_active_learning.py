@@ -348,9 +348,9 @@ def test_calibration(tmp_path, toy_data, calibration_method):
 
     # Instantiate empty models to "fill"
     models_new = [
-        LGBMRegressorModel.from_params(mod_params=mod_params)
-        for _ in range(len(committee.models))
+        LGBMRegressorModel(**mod_params) for _ in range(len(committee.models))
     ]
+    [model.build() for model in models_new]
 
     # Load
     committee.load(

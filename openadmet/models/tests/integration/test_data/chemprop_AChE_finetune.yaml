@@ -32,6 +32,10 @@ procedure:
     type: ChemPropModel
     serial_path: openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth
     param_path: openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json
+    freeze_weights:
+      message_passing: true
+      batch_norm: false
+      ffn_layers: 0
     params: {}
 
   split:

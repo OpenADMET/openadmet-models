@@ -101,8 +101,10 @@ class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
         sklearn_model = self.model.estimator
         self.search = GridSearchCV(sklearn_model, param_grid=self.param_grid)
         self.search.fit(X, y)
-        # set the params and model to the best found
+
+        # Set the params and model to the best found
         self.model.estimator = self.search.best_estimator_
-        self.model.mod_params = self.model.estimator.get_params()
-        logger.info(f"Best params: {self.model.mod_params}")
+        self.model.__dict__.update(self.model.estimator.get_params())
+
+        logger.info(f"Best params: {self.model.estimator.get_params()}")
         return self.model

@@ -5,7 +5,6 @@
     "mae",
     "rmse"
   ],
-  "model_params": {},
   "depth": 3,
   "message_hidden_dim": 300,
   "ffn_hidden_dim": 300,

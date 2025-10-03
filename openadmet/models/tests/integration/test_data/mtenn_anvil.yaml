@@ -13,7 +13,6 @@ metadata:
     - "openadmet"
     - "test"
     - "SCHNET"
-
   driver: pytorch
 
 # these are dummy values, replace with actual data in due course
@@ -23,10 +22,7 @@ data:
   input_col: "poses"
   target_cols: ["y"]
 
-transform:
-
 procedure:
-
   split:
     type: ShuffleSplitter
     params:
@@ -36,7 +32,6 @@ procedure:
 
   feat:
     type: MTENNFeaturizer
-
 
   model:
     type: MTENNSchNetModel
@@ -49,11 +44,11 @@ procedure:
       devices: 1
       use_wandb: false
 
-
 report:
   eval:
   - params: {}
     type: RegressionMetrics
+
   - params:
       axes_labels:
       - True pChEMBL
@@ -63,6 +58,7 @@ report:
       pXC50: true
       title: Multitask True vs Predicted pChEMBL on test set
     type: RegressionPlots
+
   - params:
       axes_labels:
       - True pChEMBL

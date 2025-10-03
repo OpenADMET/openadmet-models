@@ -2,9 +2,9 @@
 
 from typing import ClassVar
 
-from sklearn.svm import SVR, SVC
 import numpy as np
 from loguru import logger
+from sklearn.svm import SVC, SVR
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -12,29 +12,16 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class SVMModelBase(PickleableModelBase):
     """Base class for SVM models."""
 
+    # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[
-        type
-    ]  # To specify the XGBoost model class (e.g., XGBMRegressor or XGBMClassifier)
-    mod_params: dict = {}
+    mod_class: ClassVar[type]
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the XGBoost model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare the model."""
+        if not self.estimator:
+            self.estimator = self.mod_class(**self.model_dump())
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -50,13 +37,6 @@ class SVMModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
-
-    def build(self):
-        """Prepare the model."""
-        if not self.estimator:
-            self.estimator = self.mod_class(**self.mod_params)
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -98,8 +78,22 @@ class SVMRegressorModel(SVMModelBase):
     - tree_method: Specify the tree construction algorithm used in XGBoost
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "SVMRegressorModel"
     mod_class: ClassVar[type] = SVR
+
+    # SVR parameters
+    kernel: str = "rbf"
+    degree: int = 3
+    gamma: str = "scale"
+    coef0: float = 0.0
+    tol: float = 0.001
+    C: float = 1.0
+    epsilon: float = 0.1
+    shrinking: bool = True
+    cache_size: int = 200
+    verbose: bool = False
+    max_iter: int = -1
 
 
 @models.register("SVMClassifierModel")
@@ -119,8 +113,26 @@ class SVMClassifierModel(SVMModelBase):
     - tree_method: Specify the tree construction algorithm used in XGBoost
     """
 
+    # Meta parameters for this class
     type: ClassVar[str] = "SVMClassifierModel"
     mod_class: ClassVar[type] = SVC
+
+    # SVC parameters
+    C: float = 1.0
+    kernel: str = "rbf"
+    degree: int = 3
+    gamma: str = "scale"
+    coef0: float = 0.0
+    shrinking: bool = True
+    probability: bool = False
+    tol: float = 0.001
+    cache_size: int = 200
+    class_weight: dict | None = None
+    verbose: bool = False
+    max_iter: int = -1
+    decision_function_shape: str = "ovr"
+    break_ties: bool = False
+    random_state: int | None = None
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

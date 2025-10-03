@@ -20,7 +20,6 @@ dependencies:
   - matplotlib
   - mdanalysis
   - modal
-  - molfeat
   - mordredcommunity
   - numpy
   - pandas
@@ -56,3 +55,4 @@ dependencies:
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
     - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
+    - git+https://github.com/OpenADMET/molfeat.git@main

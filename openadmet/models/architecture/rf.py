@@ -2,9 +2,9 @@
 
 from typing import ClassVar
 
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import numpy as np
 from loguru import logger
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -12,29 +12,16 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class RFModelBase(PickleableModelBase):
     """Base class for Sklearn Random Forest models."""
 
+    # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[
-        type
-    ]  # To specify the  model class (e.g., RandomForestRegressor or RandomForestClassifier)
-    mod_params: dict = {}
+    mod_class: ClassVar[type]
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the Random Forest model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare the model."""
+        if not self.estimator:
+            self.estimator = self.mod_class(**self.model_dump())
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -50,13 +37,6 @@ class RFModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
-
-    def build(self):
-        """Prepare the model."""
-        if not self.estimator:
-            self.estimator = self.mod_class(**self.mod_params, n_jobs=-1)
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -84,16 +64,59 @@ class RFModelBase(PickleableModelBase):
 class RFRegressorModel(RFModelBase):
     """Random Forest regression model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "RFRegressorModel"
     mod_class: ClassVar[type] = RandomForestRegressor
+
+    # RF parameters
+    n_estimators: int = 100
+    criterion: str = "squared_error"
+    max_depth: int | None = None
+    min_samples_split: int = 2
+    min_samples_leaf: int = 1
+    min_weight_fraction_leaf: float = 0.0
+    max_features: float = 1.0
+    max_leaf_nodes: int | None = None
+    min_impurity_decrease: float = 0.0
+    bootstrap: bool = True
+    oob_score: bool = False
+    n_jobs: int | None = None
+    random_state: int | None = None
+    verbose: int = 0
+    warm_start: bool = False
+    ccp_alpha: float = 0.0
+    max_samples: float | None = None
+    monotonic_cst: float | None = None
 
 
 @models.register("RFClassifierModel")
 class RFClassifierModel(RFModelBase):
     """RF classifier model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "RFClassifierModel"
     mod_class: ClassVar[type] = RandomForestClassifier
+
+    # RF parameters
+    n_estimators: int = 100
+    criterion: str = "gini"
+    max_depth: int | None = None
+    min_samples_split: int = 2
+    min_samples_leaf: int = 1
+    min_weight_fraction_leaf: float = 0.0
+    max_features: float | str = "sqrt"
+    max_leaf_nodes: int | None = None
+    min_impurity_decrease: float = 0.0
+    bootstrap: bool = True
+    oob_score: bool = False
+    n_jobs: int | None = None
+    random_state: int | None = None
+    verbose: int = 0
+    warm_start: bool = False
+    class_weight: dict | None = None
+    ccp_alpha: float = 0.0
+    max_samples: float | None = None
+    monotonic_cst: float | None = None
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

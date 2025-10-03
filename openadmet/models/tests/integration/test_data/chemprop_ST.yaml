@@ -1,10 +1,11 @@
 data:
+  type: intake
   cat_entry: null
   input_col: OPENADMET_SMILES
   resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
   target_cols:
   - cyp3a4_pchembl_value_mean
-  type: intake
+
 metadata:
   authors: Hugo M-O
   biotargets:
@@ -20,33 +21,40 @@ metadata:
   - test
   - pchembl
   version: v1
+
 procedure:
   feat:
-    params: {}
     type: ChemPropFeaturizer
+    params: {}
+
   model:
+    type: ChemPropModel
     params:
       messages: bond
       n_tasks: 1
-    type: ChemPropModel
+
   split:
+    type: ShuffleSplitter
     params:
       random_state: 42
       test_size: 0.2
       train_size: 0.7
       val_size: 0.1
-    type: ShuffleSplitter
+
   train:
+    type: LightningTrainer
     params:
       accelerator: gpu
       max_epochs: 10
       use_wandb: false
-    type: LightningTrainer
+
 report:
   eval:
-  - params: {}
-    type: RegressionMetrics
-  - params:
+  - type: RegressionMetrics
+    params: {}
+
+  - type: RegressionPlots
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -54,8 +62,9 @@ report:
       min_val: 3
       pXC50: true
       title: Multitask True vs Predicted pChEMBL on test set
-    type: RegressionPlots
-  - params:
+
+  - type: PytorchLightningRepeatedKFoldCrossValidation
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -64,4 +73,3 @@ report:
       pXC50: true
       random_state: 42
       title: Multitask True vs Predicted pChEMBL on test set
-    type: PytorchLightningRepeatedKFoldCrossValidation

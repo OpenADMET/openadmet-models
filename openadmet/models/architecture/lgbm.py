@@ -12,34 +12,37 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class LGBMModelBase(PickleableModelBase):
     """Base class for LightGBM models."""
 
+    # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[
-        type
-    ]  # To specify the LightGBM model class (e.g., LGBMRegressor or LGBMClassifier)
-    mod_params: dict = {}
+    mod_class: ClassVar[type]
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create an LGBM model from parameters.
+    # LGBM parameters
+    boosting_type: str = "gbdt"
+    num_leaves: int = 31
+    max_depth: int = -1
+    learning_rate: float = 0.1
+    n_estimators: int = 100
+    subsample_for_bin: int = 200000
+    objective: str | None = None
+    class_weight: str | None = None
+    min_split_gain: float = 0.0
+    min_child_weight: float = 0.001
+    min_child_samples: int = 20
+    subsample: float = 1.0
+    subsample_freq: int = 0
+    colsample_bytree: float = 1.0
+    reg_alpha: float = 0.0
+    reg_lambda: float = 0.0
+    random_state: int | None = None
+    n_jobs: int | None = None
+    importance_type: str = "split"
 
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the LightGBM model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        Returns
-        -------
-        instance: LGBMModelBase
-            An instance of the LGBMModelBase class
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare the model."""
+        if not self.estimator:
+            self.estimator = self.mod_class(**self.model_dump())
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -52,20 +55,9 @@ class LGBMModelBase(PickleableModelBase):
         y: np.ndarray
             Training data values
 
-        Returns
-        -------
-        None
-
         """
         self.build()
         self.estimator = self.estimator.fit(X, y)
-
-    def build(self):
-        """Prepare the model."""
-        if not self.estimator:
-            self.estimator = self.mod_class(**self.mod_params)
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -93,6 +85,7 @@ class LGBMModelBase(PickleableModelBase):
 class LGBMRegressorModel(LGBMModelBase):
     """LightGBM regression model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "LGBMRegressorModel"
     mod_class: ClassVar[type] = lgb.LGBMRegressor
 
@@ -101,6 +94,7 @@ class LGBMRegressorModel(LGBMModelBase):
 class LGBMClassifierModel(LGBMModelBase):
     """LightGBM classification model."""
 
+    # Meta parameters for this class
     type: ClassVar[str] = "LGBMClassifierModel"
     mod_class: ClassVar[type] = lgb.LGBMClassifier
 

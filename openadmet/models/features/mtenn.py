@@ -67,10 +67,6 @@ class MTENNDataset(Dataset):
         ignore_h : bool, optional
             Whether to ignore hydrogen atoms in the complexes. Default is True.
 
-        Returns
-        -------
-        None
-
         """
         self.complexes = complexes
         if isinstance(ligand_resname, str):

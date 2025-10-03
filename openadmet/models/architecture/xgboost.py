@@ -2,9 +2,10 @@
 
 from typing import ClassVar
 
-from xgboost import XGBClassifier, XGBRegressor
 import numpy as np
 from loguru import logger
+from pydantic import ConfigDict
+from xgboost import XGBClassifier, XGBRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -12,29 +13,19 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 class XGBoostModelBase(PickleableModelBase):
     """Base class for XGBoost models."""
 
+    # Allow extra arguments
+    model_config = ConfigDict(extra="allow")
+
+    # Meta-parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[
-        type
-    ]  # To specify the XGBoost model class (e.g., XGBMRegressor or XGBMClassifier)
-    mod_params: dict = {}
+    mod_class: ClassVar[type]
 
-    @classmethod
-    def from_params(cls, class_params: dict = {}, mod_params: dict = {}):
-        """
-        Create a model from parameters.
-
-        Parameters
-        ----------
-        class_params: dict
-            Parameters for the model class, such as type, mod_class, etc.
-        mod_params: dict
-            Parameters for the XGBoost model class, such as n_estimators, max_depth,
-            learning_rate, etc.
-
-        """
-        instance = cls(**class_params, mod_params=mod_params)
-        instance.build()
-        return instance
+    def build(self):
+        """Prepare the model."""
+        if not self.estimator:
+            self.estimator = self.mod_class(**self.model_dump())
+        else:
+            logger.warning("Model already exists, skipping build")
 
     def train(self, X: np.ndarray, y: np.ndarray):
         """
@@ -50,13 +41,6 @@ class XGBoostModelBase(PickleableModelBase):
         """
         self.build()
         self.estimator = self.estimator.fit(X, y, verbose=True)
-
-    def build(self):
-        """Prepare the model."""
-        if not self.estimator:
-            self.estimator = self.mod_class(**self.mod_params)
-        else:
-            logger.warning("Model already exists, skipping build")
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """

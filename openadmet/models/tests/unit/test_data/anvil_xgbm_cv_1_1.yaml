@@ -4,6 +4,7 @@ data:
   cat_entry: "CYP3A4_pchembl"
   input_col: "CANONICAL_SMILES"
   target_cols: ["pChEMBL mean"]
+
 metadata:
   authors: Hugo M-O
   biotargets:
@@ -21,28 +22,32 @@ metadata:
   - test
   - pchembl
   version: v1
+
 procedure:
   feat:
+    type: FeatureConcatenator
     params:
       featurizers:
         DescriptorFeaturizer:
           descr_type: mordred
         FingerprintFeaturizer:
           fp_type: ecfp:6
-    type: FeatureConcatenator
+
   model:
-    params:
-      model_params:
-        alpha: 0.005
-        learning_rate: 0.05
     type: XGBRegressorModel
+    params:
+      alpha: 0.005
+      learning_rate: 0.05
+
   split:
+    type: ShuffleSplitter
     params:
       random_state: 42
       test_size: 0.3
       train_size: 0.7
-    type: ShuffleSplitter
+
   train:
+    type: SKLearnGridSearchTrainer
     params:
       param_grid:
         alpha:
@@ -51,12 +56,14 @@ procedure:
         - 0.05
         n_estimators:
         - 500
-    type: SKLearnGridSearchTrainer
+
 report:
   eval:
-  - params: {}
-    type: RegressionMetrics
-  - params:
+  - type: RegressionMetrics
+    params: {}
+
+  - type: RegressionPlots
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -64,8 +71,9 @@ report:
       min_val: 3
       pXC50: true
       title: CYP3A4 True vs Predicted pChEMBL on test set
-    type: RegressionPlots
-  - params:
+
+  - type: SKLearnRepeatedKFoldCrossValidation
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -76,4 +84,3 @@ report:
       pXC50: true
       random_state: 42
       title: CYP3A4 True vs Predicted pChEMBL on test set
-    type: SKLearnRepeatedKFoldCrossValidation

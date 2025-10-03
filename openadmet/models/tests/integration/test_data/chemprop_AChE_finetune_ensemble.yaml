@@ -31,8 +31,13 @@ procedure:
   model:
     type: ChemPropModel
     params: {}
+    freeze_weights:
+      message_passing: true
+      batch_norm: false
+      ffn_layers: 0
 
   ensemble:
+    type: CommitteeRegressor
     n_models: 3
     serial_paths: [
       openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.pth,
@@ -44,7 +49,6 @@ procedure:
       openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json,
       openadmet/models/tests/unit/test_data/aceh_chemprop_anvil_model_dir/model.json
     ]
-    type: CommitteeRegressor
 
   split:
     type: ShuffleSplitter

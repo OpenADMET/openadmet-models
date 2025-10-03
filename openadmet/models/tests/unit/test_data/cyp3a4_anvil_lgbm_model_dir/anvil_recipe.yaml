@@ -33,9 +33,8 @@ procedure:
     type: FeatureConcatenator
   model:
     params:
-      mod_params:
-        alpha: 0.005
-        learning_rate: 0.05
+      alpha: 0.005
+      learning_rate: 0.05
     type: LGBMRegressorModel
   split:
     params:

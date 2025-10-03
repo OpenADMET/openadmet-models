@@ -153,6 +153,3 @@ class TestStructuralModelGPUAnvilConfigs:
             ],
         )
         assert click_success(result)
-
-
-# TODO: Add in tests for inline comparison and inference

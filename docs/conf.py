@@ -20,7 +20,7 @@ import openadmet.models
 
 # -- Project information -----------------------------------------------------
 
-project = "openadmet-models"
+project = "OpenADMET Models"
 copyright = (
     "2025, OpenADMET Contributors. Project structure based on the "
     "Computational Molecular Science Python Cookiecutter version 1.10"
@@ -52,8 +52,8 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx_design",
     "sphinx_copybutton",
+    "openff_sphinx_theme",
 ]
-
 
 autosummary_generate = True
 napoleon_google_docstring = False
@@ -62,6 +62,7 @@ napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+html_js_files = ["_static/custom.js"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -77,12 +78,12 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "tests", "tests/**"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "default"
@@ -93,18 +94,51 @@ pygments_style = "default"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "pydata_sphinx_theme"
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
+html_theme = "openff_sphinx_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+
+# (Optional) favicon.
+# If not provided, will default to the generic OpenADMET logo
+html_favicon = "_static/images/logos/favicon-32x32.png"
+
+# Theme options are theme-specific and customize the look and feel of a
+# theme further.
+html_theme_options = {
+    # Repository integration  # the base url for the docs
+    # Set the repo url for the link to appear
+    "repo_url": "https://github.com/OpenADMET/openadmet-models",
+    # The name of the repo. If must be set if repo_url is set
+    "repo_name": "openadmet-models",
+    # Must be one of github, gitlab or bitbucket
+    "repo_type": "github",
+    # Colour for sidebar captions and other accents. One of
+    # openff-blue, openff-toolkit-blue, openff-dataset-yellow,
+    # openff-evaluator-orange, aquamarine, lilac, amaranth, grape,
+    # violet, pink, pale-green, green, crimson, eggplant, turquoise,
+    # or a tuple of three ints in the range [0, 255] corresponding to
+    # a position in RGB space.
+    "color_accent": (232, 59, 59),
+    # Content Minification for deployment
+    "html_minify": True,
+    "css_minify": True,
+    "socials": [
+        {
+            "href": "https://github.com/openadmet",
+            "title": "OpenADMET on GitHub",
+            "icon_classes": "fab fa-github",
+        },
+    ],
+}
+
+html_css_files = ["custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -114,7 +148,7 @@ html_static_path = ["_static"]
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
+html_sidebars = {"**": ["globaltoc.html", "localtoc.html", "searchbox.html"]}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
@@ -182,3 +216,21 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+
+
+def skip_classmethods(app, what, name, obj, skip, options):
+    """Skip classmethods in the documentation."""
+    import inspect
+
+    if inspect.isclass(obj):
+        return skip
+    if inspect.ismethod(obj) and getattr(obj, "__self__", None) is not None:
+        # Skip classmethods
+        if getattr(obj, "__self__") is not None and isinstance(obj.__self__, type):
+            return True
+    return skip
+
+
+def setup(app):
+    """Set up the Sphinx app and skip classmethods."""
+    app.connect("autodoc-skip-member", skip_classmethods)
