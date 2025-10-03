@@ -520,7 +520,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     self.parent_spec.procedure.ensemble.param_paths[i],
                     self.parent_spec.procedure.ensemble.serial_paths[i],
                     scaler=bootstrap_scaler,
-                    **kwargs
+                    **kwargs,
                 )
                 logger.info(f"Model {i} loaded")
 
