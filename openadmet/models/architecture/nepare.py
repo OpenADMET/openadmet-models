@@ -23,9 +23,9 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
 
     def __init__(
         self,
-        input_dim,
-        hidden_dim,
-        num_layers,
+        input_dim: int,
+        hidden_dim: int,
+        num_layers: int,
         activation: str = "relu",
         lr: float = 1e-4,
         n_targets: int = 1,
@@ -107,7 +107,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             The average loss for the batch.
 
         """
-        return self._step(batch, self.monitor_metric)
+        return self._step(batch, "train_loss")
 
     def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
         """
@@ -126,7 +126,7 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
             The average loss for the batch.
 
         """
-        return self._step(batch, self.monitor_metric)
+        return self._step(batch, "val_loss")
 
     def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx):
         """
@@ -215,21 +215,6 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
     monitor_metric: str = "val_loss"
     scaler: Optional[Any] = None
 
-    @classmethod
-    def from_params(cls, params: dict = None):
-        """
-        Load model parameters from a dictionary.
-
-        Parameters
-        ----------
-        params : dict
-            Dictionary of model parameters.
-
-        """
-        instance = cls(**params)
-        instance.build()
-        return instance
-
     def train(self, dataloader):
         """
         Train the model.
@@ -279,19 +264,6 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
             logger.warning("Model already exists, skipping build")
 
         return self
-
-    def make_new(self) -> "NeuralPairwiseRegressorModel":
-        """Copy parameters to a new model instance without copying the estimator."""
-        return self.__class__(
-            input_dim=self.input_dim,
-            hidden_dim=self.hidden_dim,
-            num_layers=self.num_layers,
-            activation=self.activation,
-            lr=self.lr,
-            n_targets=self.n_targets,
-            monitor_metric=self.monitor_metric,
-            scaler=self.scaler,
-        )
 
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """

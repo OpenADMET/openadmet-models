@@ -111,7 +111,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train_feat, y_train, output_dir):
+    def _train_ensemble(self, X_train_feat, y_train, output_dir, *kwargs):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
@@ -466,7 +466,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(train_dataloader, val_dataloader)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir, **kwargs):
         # Safely cast to numpy
         X_train = _safe_to_numpy(X_train)
         y_train = _safe_to_numpy(y_train)
@@ -520,6 +520,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     self.parent_spec.procedure.ensemble.param_paths[i],
                     self.parent_spec.procedure.ensemble.serial_paths[i],
                     scaler=bootstrap_scaler,
+                    **kwargs
                 )
                 logger.info(f"Model {i} loaded")
 
@@ -535,7 +536,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             else:
                 logger.info(f"Building model {i}")
                 self.model = self.model.make_new()
-                self.model.build(scaler=bootstrap_scaler)
+                self.model.build(scaler=bootstrap_scaler, **kwargs)
                 logger.info(f"Model {i} built")
 
             # Pass model to trainer
@@ -701,6 +702,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 y_train,
                 val_dataloader,
                 output_dir,
+                *kwargs,
             )
 
             # Calibrate
