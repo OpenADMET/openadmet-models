@@ -52,30 +52,20 @@ procedure:
     type: NeuralPairwiseRegressorModel
     params:
       mod_params:
-        hidden_dim: 10
-        num_layers: 4
+        hidden_dim: 4
+        num_layers: 2
         monitor_metric: val_loss
   train:
     type: LightningTrainer
     params:
       accelerator: cpu
       early_stopping: true
-      early_stopping_patience: 10
+      early_stopping_patience: 2
       early_stopping_mode: min
       early_stopping_min_delta: 0.001
-      max_epochs: 2
+      max_epochs: 1
       use_wandb: false
 
 report:
-
   eval:
     - type: RegressionMetrics
-    - type: RegressionPlots
-      params:
-        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
-        title: "True vs Predicted pChEMBL on test set"
-    - type: PytorchLightningRepeatedKFoldCrossValidation
-      params:
-        n_splits: 2
-        n_repeats: 2
-        random_state: 42

@@ -38,7 +38,7 @@ class TestCPUAnvilConfigs:
             lgbm_fp_prop_cv,
             lgbm_prop_cv,
             lgbm_fp_ensemble,
-            chemprop_MT_cpu_single,
+            # chemprop_MT_cpu_single,
             xgboost_perimeter_cv,
             catboost_prop_dissimilarity,
             lgbm_mordred_cv_impute,

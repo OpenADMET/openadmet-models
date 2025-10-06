@@ -73,6 +73,10 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
         self.lr = lr
         self.save_hyperparameters()
 
+    def __hash__(self):
+        """Hash based on object id to ensure uniqueness in sets and dicts."""
+        return id(self)
+
     def forward(self, x: torch.Tensor):
         """
         Forward pass.

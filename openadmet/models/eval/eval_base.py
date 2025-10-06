@@ -120,6 +120,18 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
             ]
         )
         t_pred = y_pred[:, task_id]
+        logger.warning(
+            f"Generated {t_true.shape[0]} pairwise differences for task {task_id}"
+        )
+        # Generate a random sample of 1000 indices
+        sample_indices = np.random.choice(len(t_true), size=5000, replace=False)
+
+        # Index into t_pred and t_true to create new lists
+        t_true = t_true[sample_indices]
+        t_pred = t_pred[sample_indices]
+        logger.warning(
+            f"Sampled down to {t_true.shape[0]} pairwise differences for task {task_id}"
+        )
     elif y_val is not None and y_pred_fold is not None:
         t_true = y_val[:, task_id]
         t_pred = y_pred_fold[:, task_id]
