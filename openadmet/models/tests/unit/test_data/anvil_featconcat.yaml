@@ -21,10 +21,7 @@ data:
   input_col: "CANONICAL_SMILES"
   target_cols: ["pChEMBL mean"]
 
-  transform:
-
 procedure:
-
   split:
     type: ShuffleSplitter
     params:
@@ -44,16 +41,13 @@ procedure:
   model:
     type: LGBMRegressorModel
     params:
-      mod_params:
-        alpha: 0.15
-        learning_rate: 0.1
+      alpha: 0.15
+      learning_rate: 0.1
 
   train:
     type: SKLearnBasicTrainer
 
-
 report:
-
   eval:
     - type: RegressionMetrics
     - type: RegressionPlots

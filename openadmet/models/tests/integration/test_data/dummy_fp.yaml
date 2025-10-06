@@ -58,7 +58,6 @@ procedure:
       test_size: 0.3
 
   train:
-
     type: SKLearnBasicTrainer
 
 
@@ -69,6 +68,7 @@ report:
   # Generate regression metrics
   - type: RegressionMetrics
     params: {}
+
   # Generate regression plots
   - type: SKLearnRepeatedKFoldCrossValidation
     params:

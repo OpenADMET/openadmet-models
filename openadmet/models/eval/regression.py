@@ -216,10 +216,6 @@ class RegressionMetrics(EvalBase):
         output_dir : str
             Output directory for the report.
 
-        Returns
-        -------
-        None
-
         """
         # write to JSON
         json_path = output_dir / "regression_metrics.json"
@@ -681,10 +677,6 @@ class RegressionPlots(EvalBase):
         ----------
         output_dir : str
             Output directory for the plots.
-
-        Returns
-        -------
-        None
 
         """
         for plot_tag, plot in self.plot_data.items():

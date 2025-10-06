@@ -131,7 +131,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             logger.info(f"Building model {i}")
-            bootstrap_model = self.model.from_params(mod_params=self.model.mod_params)
+            bootstrap_model = self.model.make_new()
+            bootstrap_model.build()
             logger.info(f"Model {i} built")
 
             # Pass model to trainer
@@ -418,13 +419,21 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.parent_spec.procedure.model.param_path is not None
             and self.parent_spec.procedure.model.serial_path is not None
         ):
-            logger.info("Loading model from disk, overrides any specified `mod_params`")
+            logger.info("Loading model from disk, overrides any specified parameters.")
             self.model = self.model.deserialize(
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
                 scaler=train_scaler,
             )
             logger.info("Model loaded")
+
+            # Optionally freeze weights
+            if self.parent_spec.procedure.model.freeze_weights is not None:
+                logger.info(f"Freezing model weights")
+                self.model.freeze_weights(
+                    **self.parent_spec.procedure.model.freeze_weights
+                )
+                logger.info(f"Model weights frozen")
 
         # Build model from scratch
         else:
@@ -499,7 +508,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.parent_spec.procedure.ensemble.serial_paths is not None
             ):
                 logger.info(
-                    f"Loading model {i} from disk, overrides any specified `mod_params`"
+                    f"Loading model {i} from disk, overrides any specified parameters."
                 )
                 self.model = self.model.deserialize(
                     self.parent_spec.procedure.ensemble.param_paths[i],
@@ -507,6 +516,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     scaler=bootstrap_scaler,
                 )
                 logger.info(f"Model {i} loaded")
+
+                # Optionally freeze weights
+                if self.parent_spec.procedure.model.freeze_weights is not None:
+                    logger.info(f"Freezing weights for model {i}")
+                    self.model.freeze_weights(
+                        **self.parent_spec.procedure.model.freeze_weights
+                    )
+                    logger.info(f"Model {i} frozen")
 
             # Build model from scratch
             else:

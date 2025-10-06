@@ -62,7 +62,6 @@ procedure:
       test_size: 0.3
 
   train:
-
     type: SKLearnGridSearchTrainer
     # Specify model parameters
     params:
@@ -78,6 +77,7 @@ report:
   # Generate regression metrics
   - type: RegressionMetrics
     params: {}
+
   # Generate regression plots
   - type: SKLearnRepeatedKFoldCrossValidation
     params:

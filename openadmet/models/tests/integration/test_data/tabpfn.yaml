@@ -1,10 +1,11 @@
 data:
+  type: intake
   cat_entry: null
   input_col: OPENADMET_SMILES
   resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
   target_cols:
   - cyp3a4_pchembl_value_mean
-  type: intake
+
 metadata:
   authors: Hugo M-O
   biotargets:
@@ -22,31 +23,36 @@ metadata:
   - test
   - pchembl
   version: v1
+
 procedure:
   feat:
-
     type: DescriptorFeaturizer
-
     params:
       descr_type: desc2d
+
   model:
     type: TabPFNRegressorModel
     params:
       ignore_pretraining_limits: True
       device: cuda
+
   split:
+    type: ShuffleSplitter
     params:
       random_state: 42
       test_size: 0.3
       train_size: 0.7
-    type: ShuffleSplitter
+
   train:
     type: SKLearnBasicTrainer
+
 report:
   eval:
-  - params: {}
-    type: RegressionMetrics
-  - params:
+  - type: RegressionMetrics
+    params: {}
+
+  - type: RegressionPlots
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -54,8 +60,9 @@ report:
       min_val: 3
       pXC50: true
       title: CYP3A4 True vs Predicted pChEMBL on test set
-    type: RegressionPlots
-  - params:
+
+  - type: SKLearnRepeatedKFoldCrossValidation
+    params:
       axes_labels:
       - True pChEMBL
       - Predicted pChEMBL
@@ -66,4 +73,3 @@ report:
       pXC50: true
       random_state: 42
       title: CYP3A4 True vs Predicted pChEMBL on test set
-    type: SKLearnRepeatedKFoldCrossValidation
