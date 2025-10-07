@@ -96,12 +96,8 @@ class AnvilWorkflowBase(BaseModel):
         ValueError
             If the model is multitask but the data specification does not support multitask learning.
         """
-        if len(self.data_spec.target_cols) > 1 and not self.model.n_tasks > 1:
-            raise ValueError(
-                "The model is not multitask but the data specification has multiple target columns."
-            )
         
-        if self.model.n_tasks > 1 and len(self.data_spec.target_cols) == 1:
+        if self.model.n_tasks != len(self.data_spec.target_cols):
             raise ValueError(
-                "The model is multitask but the data specification has only one target column."
+                f"The model has {self.model.n_tasks} tasks but the data specification has {len(self.data_spec.target_cols)} target columns."
             )
