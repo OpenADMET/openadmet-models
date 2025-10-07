@@ -4,7 +4,7 @@ from abc import abstractmethod
 from os import PathLike
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
@@ -83,3 +83,25 @@ class AnvilWorkflowBase(BaseModel):
 
         """
         ...
+
+
+
+    @model_validator(mode="after")
+    def check_multitask_compatibility(self) -> None:
+        """
+        Validate that the model and data specification are compatible for multitask learning.
+
+        Raises
+        ------
+        ValueError
+            If the model is multitask but the data specification does not support multitask learning.
+        """
+        if len(self.data_spec.target_cols) > 1 and not self.model.n_tasks > 1:
+            raise ValueError(
+                "The model is not multitask but the data specification has multiple target columns."
+            )
+        
+        if self.model.n_tasks > 1 and len(self.data_spec.target_cols) == 1:
+            raise ValueError(
+                "The model is multitask but the data specification has only one target column."
+            )

@@ -30,6 +30,7 @@ class ModelBase(BaseModel, ABC):
 
     _estimator: Any = None
     _model_json_name: ClassVar[str] = "model.json"
+    n_tasks: int = 1
 
     @property
     def estimator(self):
