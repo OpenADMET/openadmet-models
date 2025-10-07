@@ -444,6 +444,8 @@ class RegressionPlots(EvalBase):
             Predicted values.
         y_pred_err : array-like, optional
             Prediction error bars.
+        y_true_err: array-like, optional
+            Experimental error bars.
         data_labels : list, optional
             Labels for each data point.
         xlabel : str, optional
