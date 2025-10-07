@@ -8,7 +8,7 @@ from openadmet.models.tests.unit.datafiles import (
     cyp1a2_json,
     cyp3a4_json,
     multi_task_json,
-    anvil_lgbm_trained_model_dir
+    anvil_lgbm_trained_model_dir,
 )
 
 

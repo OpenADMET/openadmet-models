@@ -109,7 +109,7 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         """Get statistics names."""
         return self._stats_names
-    
+
     def safe_dirs(self, dirs):
         """Ensure dirs is a list and contains only valid paths."""
         if not isinstance(dirs, list):
@@ -261,11 +261,10 @@ class PostHocComparison(ComparisonBase):
 
         if not isinstance(label_types, list):
             raise ValueError("label_types must be lists")
-        
+
         model_dirs = self.safe_dirs(dirs=model_dirs)
 
         for model_dir in model_dirs:
-
             # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within model_dir
             logger.info(f"Searching for models in {model_dir}...")
 
@@ -285,7 +284,9 @@ class PostHocComparison(ComparisonBase):
             model_stats_fns = [
                 f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs
             ]
-            logger.info(f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files")
+            logger.info(
+                f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files"
+            )
 
             for model_dir in model_dirs:
                 with open(f"{model_dir}/anvil_recipe.yaml") as f:
