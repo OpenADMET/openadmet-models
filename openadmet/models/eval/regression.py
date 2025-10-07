@@ -495,18 +495,27 @@ class RegressionPlots(EvalBase):
             joint_kws={"ci": confidence_level * 100, "fit_reg": fit_reg},
             color="teal",
             height=10,
+            scatter_kws={"alpha": 0.3},
         )
 
-        if y_pred_err is not None and y_true_err is not None:
+        if y_pred_err is not None:
             g.ax_joint.errorbar(
                 x=np.ravel(y_true),
                 y=np.ravel(y_pred),
-                xerr=np.ravel(y_true_err),
                 yerr=np.ravel(y_pred_err),
                 fmt="o",
                 color="teal",
                 alpha=0.3,
-                # elinewidth=0.15
+            )
+
+        if y_true_err is not None:
+            g.ax_joint.errorbar(
+                x=np.ravel(y_true),
+                y=np.ravel(y_pred),
+                xerr=np.ravel(y_true_err),
+                fmt="o",
+                color="teal",
+                alpha=0.3,
             )
 
         if data_labels is not None:
