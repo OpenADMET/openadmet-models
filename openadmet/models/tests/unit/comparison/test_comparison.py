@@ -13,12 +13,22 @@ from openadmet.models.tests.unit.datafiles import (
 
 
 def test_get_comparison_class():
+    """Test getting comparison class."""
     get_comparison_class("PostHoc")
     with pytest.raises(ValueError):
         get_comparison_class("NotARealClass")
 
 
 def test_posthoc_fails_on_incorrect_inputs():
+    """Test that posthoc comparison fails when given incorrect inputs.
+    
+    Inputs include:
+    - No inputs
+    - Only one of model_stats_fns, labels, or task_names
+    - Mismatched lengths of model_stats_fns, labels, and task_names
+    - Repeated labels
+    - Incorrect labels and task_names for model_stats_fns
+    """
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
         comp_obj.compare()
@@ -43,6 +53,7 @@ def test_posthoc_fails_on_incorrect_inputs():
 
 
 def test_posthoc_repeat_label_error():
+    """Test that posthoc comparison fails when given multiple repeated labels."""
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
     model_tags = [
         "openadmet-CYP2C9-pchembl-regression-testing-cv",
@@ -58,6 +69,7 @@ def test_posthoc_repeat_label_error():
 
 
 def test_posthoc_comparison():
+    """Test that posthoc comparison works when given correct inputs."""
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
     model_tags = [
         "openadmet-CYP2C9-pchembl-regression-testing-cv",
@@ -76,6 +88,7 @@ def test_posthoc_comparison():
 
 
 def test_posthoc_comparison_anvil_reader():
+    """Test that posthoc comparison can read from anvil-trained model directories."""
     label_types = ["biotarget", "model", "tasks"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
@@ -85,6 +98,7 @@ def test_posthoc_comparison_anvil_reader():
 
 
 def test_posthoc_comparison_anvil_bad_label():
+    """Test that posthoc comparison fails when given incorrect label type."""
     label_types = ["bad_label"]
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
@@ -92,8 +106,8 @@ def test_posthoc_comparison_anvil_bad_label():
             model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
         )
 
-
 def test_posthoc_comparison_anvil_feature_label():
+    """Test that posthoc comparison can read features from anvil file."""
     label_types = ["feat"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
@@ -101,8 +115,8 @@ def test_posthoc_comparison_anvil_feature_label():
     )
     assert labels == ["mordred+ecfp:6"]
 
-
 def test_posthoc_comparison_json_reader():
+    """Test that posthoc comparison can read multi vs single task from anvil file."""
     model_stats = [multi_task_json, cyp3a4_json]
     model_tags = ["multitask", "single_task"]
     task_tags = ["cyp3a4_pchembl_value_mean", "pchembl_value_mean"]
@@ -118,6 +132,7 @@ def test_posthoc_comparison_json_reader():
 
 
 def test_posthoc_comparison_printing(capsys):
+    """Test that posthoc comparison prints results to console."""
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
     model_tags = [
         "openadmet-CYP2C9-pchembl-regression-testing-cv",
