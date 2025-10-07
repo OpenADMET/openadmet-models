@@ -84,8 +84,6 @@ class AnvilWorkflowBase(BaseModel):
         """
         ...
 
-
-
     @model_validator(mode="after")
     def check_multitask_compatibility(self) -> None:
         """
@@ -95,8 +93,8 @@ class AnvilWorkflowBase(BaseModel):
         ------
         ValueError
             If the model is multitask but the data specification does not support multitask learning.
+
         """
-        
         if self.model.n_tasks != len(self.data_spec.target_cols):
             raise ValueError(
                 f"The model has {self.model.n_tasks} tasks but the data specification has {len(self.data_spec.target_cols)} target columns."
