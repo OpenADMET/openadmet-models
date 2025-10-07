@@ -186,7 +186,7 @@ class TestCPUPosthocConfigs:
             cli_args.extend(["--labels", l])
         for t in task_names:
             cli_args.extend(["--task-names", t])
-        cli_args.extend(["--output-dir", output_dir])
+        cli_args.extend(["--output-dir", str(output_dir)])
 
         result = runner.invoke(cli, cli_args)
         assert click_success(result)

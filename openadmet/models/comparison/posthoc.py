@@ -28,6 +28,7 @@ from statsmodels.stats.anova import AnovaRM
 from itertools import combinations
 import tabulate
 import warnings
+from loguru import logger
 
 from openadmet.models.comparison.compare_base import ComparisonBase, comparisons
 
@@ -108,6 +109,22 @@ class PostHocComparison(ComparisonBase):
     def stats_names(self):
         """Get statistics names."""
         return self._stats_names
+    
+    def safe_dirs(self, dirs):
+        """Ensure dirs is a list and contains only valid paths."""
+        if not isinstance(dirs, list):
+            dirs = [dirs]
+        clean_dirs = []
+        for dir in dirs:
+            # If dir is a tuple, take the first element
+            if isinstance(dir, tuple):
+                dir = dir[0]
+            if not isinstance(dir, (str, os.PathLike)):
+                raise ValueError(f"Directory {dir} is not a valid path")
+            if not os.path.exists(dir):
+                raise ValueError(f"Directory {dir} does not exist")
+            clean_dirs.append(dir)
+        return clean_dirs
 
     def compare(
         self,
@@ -152,8 +169,8 @@ class PostHocComparison(ComparisonBase):
             Directory to save the output plots and report. Default is None.
 
         """
-        if model_dirs is not None and isinstance(model_dirs, str):
-            model_dirs = [model_dirs]
+        if model_dirs:
+            model_dirs = self.safe_dirs(dirs=model_dirs)
 
         # Download from S3 if needed
         local_model_dirs = []
@@ -210,7 +227,7 @@ class PostHocComparison(ComparisonBase):
         return stats_dfs
 
     def label_and_task_name_from_anvil(
-        self, model_dirs: str, label_types: list[str], mt_id: str = None
+        self, model_dirs: list, label_types: list[str], mt_id: str = None
     ):
         """
         Extract model statistics file paths, labels, and task names from an Anvil training directory.
@@ -242,8 +259,16 @@ class PostHocComparison(ComparisonBase):
         all_labels = []
         all_task_names = []
 
+        if not isinstance(label_types, list):
+            raise ValueError("label_types must be lists")
+        
+        model_dirs = self.safe_dirs(dirs=model_dirs)
+
         for model_dir in model_dirs:
+
             # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within model_dir
+            logger.info(f"Searching for models in {model_dir}...")
+
             anvil_recipes = [
                 os.path.dirname(i)
                 for i in glob.glob(f"{model_dir}/**/anvil_recipe.yaml", recursive=True)
@@ -260,6 +285,7 @@ class PostHocComparison(ComparisonBase):
             model_stats_fns = [
                 f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs
             ]
+            logger.info(f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files")
 
             for model_dir in model_dirs:
                 with open(f"{model_dir}/anvil_recipe.yaml") as f:

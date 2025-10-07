@@ -8,6 +8,7 @@ from openadmet.models.tests.unit.datafiles import (
     cyp1a2_json,
     cyp3a4_json,
     multi_task_json,
+    anvil_lgbm_trained_model_dir
 )
 
 
@@ -75,31 +76,28 @@ def test_posthoc_comparison():
 
 
 def test_posthoc_comparison_anvil_reader():
-    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["biotarget", "model", "tasks"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-        model_dirs=training_dir, label_types=label_types
+        model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
     )
     assert labels == ["CYP3A4_LGBM_ST"]
 
 
 def test_posthoc_comparison_anvil_bad_label():
-    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["bad_label"]
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
         model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-            model_dirs=training_dir, label_types=label_types
+            model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
         )
 
 
 def test_posthoc_comparison_anvil_feature_label():
-    training_dir = "test_data/cyp3a4_anvil_lgbm_model_dir"
     label_types = ["feat"]
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-        model_dirs=training_dir, label_types=label_types
+        model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
     )
     assert labels == ["mordred+ecfp:6"]
 
