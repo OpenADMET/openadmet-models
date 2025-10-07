@@ -74,8 +74,8 @@ procedure:
     # Specify model parameters
     params:
       param_grid:
-        n_estimators: [500, 200, 100]
-        alpha: [0.005, 0.01, 0.1]
+        n_estimators: [500, 100]
+        alpha: [0.005]
         learning_rate: [0.05]
 
 # Section specifying report generation

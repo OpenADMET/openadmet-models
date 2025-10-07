@@ -39,7 +39,7 @@ procedure:
   train:
     type: LightningTrainer
     params:
-      max_epochs: 10
+      max_epochs: 1
       accelerator: "gpu"
       devices: 1
       use_wandb: false

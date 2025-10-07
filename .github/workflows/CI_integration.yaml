@@ -58,7 +58,7 @@ jobs:
         shell: bash -l {0}
         # use the `-m cpu` marker to run only CPU tests
         run: |
-          pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
+          pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration
 
 
       - name: CodeCov

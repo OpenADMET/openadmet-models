@@ -46,7 +46,7 @@ procedure:
     type: LightningTrainer
     params:
       accelerator: gpu
-      max_epochs: 10
+      max_epochs: 1
       use_wandb: false
 report:
   eval:
