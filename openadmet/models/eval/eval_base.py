@@ -138,6 +138,7 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
     else:
         t_true = y_true[:, task_id]
         t_pred = y_pred[:, task_id]
+    t_true, t_pred = mask_nans(t_true, t_pred)
     return t_true, t_pred
 
 

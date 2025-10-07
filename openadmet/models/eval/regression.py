@@ -15,7 +15,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from openadmet.models.eval.eval_base import (
     EvalBase,
     evaluators,
-    mask_nans,
     get_t_true_and_t_pred,
 )
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict

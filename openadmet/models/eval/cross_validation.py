@@ -19,7 +19,6 @@ from sklearn.model_selection import RepeatedKFold, cross_validate
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
-    mask_nans,
     nan_omit_ktau,
     nan_omit_spearmanr,
 )
