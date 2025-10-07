@@ -21,7 +21,7 @@ def test_get_comparison_class():
 
 def test_posthoc_fails_on_incorrect_inputs():
     """Test that posthoc comparison fails when given incorrect inputs.
-    
+
     Inputs include:
     - No inputs
     - Only one of model_stats_fns, labels, or task_names
@@ -106,6 +106,7 @@ def test_posthoc_comparison_anvil_bad_label():
             model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
         )
 
+
 def test_posthoc_comparison_anvil_feature_label():
     """Test that posthoc comparison can read features from anvil file."""
     label_types = ["feat"]
@@ -114,6 +115,7 @@ def test_posthoc_comparison_anvil_feature_label():
         model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
     )
     assert labels == ["mordred+ecfp:6"]
+
 
 def test_posthoc_comparison_json_reader():
     """Test that posthoc comparison can read multi vs single task from anvil file."""
