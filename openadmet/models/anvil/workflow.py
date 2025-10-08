@@ -111,7 +111,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train_feat, y_train, output_dir, *kwargs):
+    def _train_ensemble(self, X_train_feat, y_train, output_dir, **kwargs):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
@@ -702,7 +702,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 y_train,
                 val_dataloader,
                 output_dir,
-                *kwargs,
+                **kwargs,
             )
 
             # Calibrate

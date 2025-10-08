@@ -24,8 +24,8 @@ class NeuralPairwiseRegressorModule(LightningModuleBase):
     def __init__(
         self,
         input_dim: int,
-        hidden_dim: int,
-        num_layers: int,
+        hidden_dim: int = 128,
+        num_layers: int = 4,
         activation: str = "relu",
         lr: float = 1e-4,
         n_targets: int = 1,

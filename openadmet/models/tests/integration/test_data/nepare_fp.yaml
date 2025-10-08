@@ -66,6 +66,14 @@ procedure:
       max_epochs: 1
       use_wandb: false
 
-report:
   eval:
     - type: RegressionMetrics
+    - type: RegressionPlots
+      params:
+        axes_labels: ["True pChEMBL", "Predicted pChEMBL"]
+        title: "True vs Predicted pChEMBL on test set"
+    - type: PytorchLightningRepeatedKFoldCrossValidation
+      params:
+        n_splits: 2
+        n_repeats: 2
+        random_state: 42
