@@ -86,36 +86,34 @@ def test_posthoc_comparison():
     assert_almost_equal(tukeys_df["metric_val"][0], 0.10937620875054632)
     assert_almost_equal(tukeys_df["pvalue"][14], 0.00321143)
 
-
-def test_posthoc_comparison_anvil_reader():
-    """Test that posthoc comparison can read from anvil-trained model directories."""
-    label_types = ["biotarget", "model", "tasks"]
+@pytest.mark.parametrize(
+    "label_types,expected_labels",
+    [
+        (["biotarget", "model", "tasks"], ["CYP3A4_LGBM_ST"]),
+        (["feat"], ["mordred+ecfp:6"]),
+    ]
+)
+def test_posthoc_comparison_anvil_reader_and_feature_label(label_types, expected_labels):
+    """Test that posthoc comparison can read from anvil-trained model directories and features."""
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
         model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
     )
-    assert labels == ["CYP3A4_LGBM_ST"]
+    assert labels == expected_labels
 
-
-def test_posthoc_comparison_anvil_bad_label():
+@pytest.mark.parametrize(
+    "label_types",
+    [
+        (["bad_label"]),
+    ]
+)
+def test_posthoc_comparison_json_reader_fails(label_types):
     """Test that posthoc comparison fails when given incorrect label type."""
-    label_types = ["bad_label"]
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
-        model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
+        comp_obj.label_and_task_name_from_anvil(
             model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
         )
-
-
-def test_posthoc_comparison_anvil_feature_label():
-    """Test that posthoc comparison can read features from anvil file."""
-    label_types = ["feat"]
-    comp_obj = PostHocComparison()
-    model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
-        model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
-    )
-    assert labels == ["mordred+ecfp:6"]
-
 
 def test_posthoc_comparison_json_reader():
     """Test that posthoc comparison can read multi vs single task from anvil file."""
