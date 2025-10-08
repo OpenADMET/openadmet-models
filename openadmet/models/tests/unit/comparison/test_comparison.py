@@ -86,14 +86,17 @@ def test_posthoc_comparison():
     assert_almost_equal(tukeys_df["metric_val"][0], 0.10937620875054632)
     assert_almost_equal(tukeys_df["pvalue"][14], 0.00321143)
 
+
 @pytest.mark.parametrize(
     "label_types,expected_labels",
     [
         (["biotarget", "model", "tasks"], ["CYP3A4_LGBM_ST"]),
         (["feat"], ["mordred+ecfp:6"]),
-    ]
+    ],
 )
-def test_posthoc_comparison_anvil_reader_and_feature_label(label_types, expected_labels):
+def test_posthoc_comparison_anvil_reader_and_feature_label(
+    label_types, expected_labels
+):
     """Test that posthoc comparison can read from anvil-trained model directories and features."""
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
@@ -101,11 +104,12 @@ def test_posthoc_comparison_anvil_reader_and_feature_label(label_types, expected
     )
     assert labels == expected_labels
 
+
 @pytest.mark.parametrize(
     "label_types",
     [
         (["bad_label"]),
-    ]
+    ],
 )
 def test_posthoc_comparison_json_reader_fails(label_types):
     """Test that posthoc comparison fails when given incorrect label type."""
@@ -114,6 +118,7 @@ def test_posthoc_comparison_json_reader_fails(label_types):
         comp_obj.label_and_task_name_from_anvil(
             model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
         )
+
 
 def test_posthoc_comparison_json_reader():
     """Test that posthoc comparison can read multi vs single task from anvil file."""
