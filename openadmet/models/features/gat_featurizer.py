@@ -32,7 +32,7 @@ class GATGraphFeaturizer(FeaturizerBase):
     """
 
     batch_size: int = 32
-    shuffle: bool = True
+    shuffle: bool = False
     num_workers: int = 0
 
     def _featurize_single_molecule(
