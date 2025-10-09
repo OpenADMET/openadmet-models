@@ -66,6 +66,7 @@ procedure:
       max_epochs: 1
       use_wandb: false
 
+report:
   eval:
     - type: RegressionMetrics
     - type: RegressionPlots
