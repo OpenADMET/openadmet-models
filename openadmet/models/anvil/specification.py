@@ -234,7 +234,7 @@ class SpecBase(BaseModel):
         path : str or PathLike
             The file path to read the YAML content from.
         storage_options : dict, optional
-            Additional options to pass to the file system (e.g., for S3, GCS
+            Additional options to pass to the file system (e.g., for S3, GCS)
 
         Returns
         -------
@@ -602,7 +602,7 @@ class AnvilSpecification(BaseModel):
         report_yaml : str or PathLike, optional
             The file path for the report YAML file. Default is 'eval.yaml'.
         storage_options : dict, optional
-            Additional options to pass to the file system (e.g., for S3, GCS
+            Additional options to pass to the file system (e.g., for S3, GCS)
 
         """
         # Write each section to its own YAML file

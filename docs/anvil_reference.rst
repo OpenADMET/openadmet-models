@@ -95,7 +95,7 @@ and ``pytorch_ensemble`` for training ensembles of deep learning models.
      - Additional tags associated with the workflow description.
    * - version
      - str
-     - Version of the metadata schema.
+     - Version of the metadata schema. (Currently must be set to ``v1``).
 
 Data
 -----
@@ -283,10 +283,6 @@ required for training and evaluation. Each model type has its own set of options
 customization to suit specific tasks and datasets. Refer to the linked OpenADMET API documentation for detailed information
 on each model's implementation and usage.
 
-
-### Add Nepare
-
-
 .. list-table::
   :header-rows: 1
   :widths: 30 70
@@ -431,7 +427,7 @@ You can define the number of models in the ensemble and the calibration method t
 Currently we only offer a :doc:`CommitteeRegressor </_api/api/active_learning/committee>` to measure disagreement among the models in the ensemble.
 
 Models can also be calibrated after training using a scaling factor method to improve uncertainty estimates. This functionality is provided by the `uncertainty_toolbox <https://github.com/uncertainty-toolbox/uncertainty-toolbox>`_ package.
-See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>`_ for more details.
+See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` for more details.
 
 Example
 ^^^^^^^

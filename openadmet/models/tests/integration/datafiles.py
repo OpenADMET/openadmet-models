@@ -45,6 +45,12 @@ chemprop_AChE_finetune_ensemble = (
 
 # Nepare fingerprint model
 nepare_fp = (_data_ref / "nepare_fp.yaml").as_posix()
+# Cross-validation files for posthoc comparison testing
+cv_metrics_lgbm_fp = (_data_ref / "cross_validation_metrics_fp.json").as_posix()
+cv_metrics_lgbm_descr = (_data_ref / "cross_validation_metrics_descr.json").as_posix()
+cv_metrics_lgbm_combined = (
+    _data_ref / "cross_validation_metrics_combined.json"
+).as_posix()
 
 # GPU
 

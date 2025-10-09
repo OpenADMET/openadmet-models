@@ -14,7 +14,7 @@ from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 @trainers.register("LightningTrainer")
 class LightningTrainer(TrainerBase):
     """
-    Trainer for sklearn models with grid search.
+    Trainer for PyTorch models.
 
     Attributes
     ----------

@@ -83,4 +83,4 @@ Copyright (c) 2025, OpenADMET Models Contributors
 
 ## Acknowledgements
 
-OpenFE is an [Open Molecular Software Foundation](https://omsf.io/) hosted project.
+OpenADMET is an [Open Molecular Software Foundation](https://omsf.io/) hosted project.
