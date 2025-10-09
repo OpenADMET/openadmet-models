@@ -1,14 +1,14 @@
 """Graph Attention Network (GAT) featurizer implementation."""
 
-from typing import Optional, List, Any
 from collections.abc import Iterable
-import torch
+from typing import Any, List, Optional
+
 import numpy as np
+import torch
+from loguru import logger
+from rdkit import Chem
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from loguru import logger
-
-from rdkit import Chem
 
 from .feature_base import FeaturizerBase, featurizers
 
