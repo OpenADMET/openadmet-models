@@ -247,6 +247,7 @@ class MTENNSchNetModel(LightningModelBase):
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
         Use the model for prediction.
+        *** WARNING: Current MTENN issue where loading a model must be done on GPU to obtain the correct weights. 
 
         Parameters
         ----------
@@ -268,6 +269,8 @@ class MTENNSchNetModel(LightningModelBase):
             If the model is not built or trained.
 
         """
+        if accelerator == "cpu":
+            raise AttributeError("Trying to use model predict on CPU. Currently accelerator MUST be GPU for prediction.")
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
 
