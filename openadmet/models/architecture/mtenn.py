@@ -10,6 +10,7 @@ from mtenn.config import ModelConfig, SchNetRepresentationConfig
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
+import warnings
 
 class MTENNLightningModule(pl.LightningModule):
     """
@@ -269,10 +270,12 @@ class MTENNSchNetModel(LightningModelBase):
             If the model is not built or trained.
 
         """
-        if accelerator == "cpu":
-            raise AttributeError("Trying to use model predict on CPU. Currently accelerator MUST be GPU for prediction.")
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
+
+        if accelerator == "cpu":
+            warnings.warn("HEED THIS FATAL WARNING!!!! Prediction on CPU is not supported for models loaded from GPU-trained checkpoints. If you are currently NOT training and loading a model from weights, BE SURE your device matches the device used during training!!! "
+        )
 
         with torch.inference_mode():
             trainer = pl.Trainer(
