@@ -12,6 +12,7 @@ from openadmet.models.architecture.model_base import models as model_registry
 
 import warnings
 
+
 class MTENNLightningModule(pl.LightningModule):
     """
     PyTorch Lightning wrapper for MTENN models.
@@ -248,7 +249,7 @@ class MTENNSchNetModel(LightningModelBase):
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
         Use the model for prediction.
-        *** WARNING: Current MTENN issue where loading a model must be done on GPU to obtain the correct weights. 
+        *** WARNING: Current MTENN issue where loading a model must be done on GPU to obtain the correct weights.
 
         Parameters
         ----------
@@ -274,12 +275,13 @@ class MTENNSchNetModel(LightningModelBase):
             raise AttributeError("Model not built or trained.")
 
         if accelerator == "cpu":
-            warnings.warn("\n HEED THIS FATAL WARNING!!!!!!!!!!!!!\n \
+            warnings.warn(
+                "\n HEED THIS FATAL WARNING!!!!!!!!!!!!!\n \
 >>> Prediction on CPU is not supported for models loaded from GPU-trained checkpoints.\n \
->>> If you are NOT currently training a model  and are loading a model from weights, BE SURE your device matches the device used during training!!!", 
-        UserWarning,
-        stacklevel=2,
-        )
+>>> If you are NOT currently training a model  and are loading a model from weights, BE SURE your device matches the device used during training!!!",
+                UserWarning,
+                stacklevel=2,
+            )
             warnings.simplefilter("once", UserWarning)
 
         with torch.inference_mode():
