@@ -271,7 +271,6 @@ class MTENNSchNetModel(LightningModelBase):
             If the model is not built or trained.
 
         """
-
         if not self.estimator:
             raise AttributeError("Model not built or trained.")
 
