@@ -274,8 +274,13 @@ class MTENNSchNetModel(LightningModelBase):
             raise AttributeError("Model not built or trained.")
 
         if accelerator == "cpu":
-            warnings.warn("HEED THIS FATAL WARNING!!!! Prediction on CPU is not supported for models loaded from GPU-trained checkpoints. If you are currently NOT training and loading a model from weights, BE SURE your device matches the device used during training!!! "
+            warnings.warn("\n HEED THIS FATAL WARNING!!!!!!!!!!!!!\n \
+>>> Prediction on CPU is not supported for models loaded from GPU-trained checkpoints.\n \
+>>> If you are NOT currently training a model  and are loading a model from weights, BE SURE your device matches the device used during training!!!", 
+        UserWarning,
+        stacklevel=2,
         )
+            warnings.simplefilter("once", UserWarning)
 
         with torch.inference_mode():
             trainer = pl.Trainer(
