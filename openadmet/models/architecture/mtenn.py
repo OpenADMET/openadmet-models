@@ -249,7 +249,7 @@ class MTENNSchNetModel(LightningModelBase):
     def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
         """
         Use the model for prediction.
-        
+
         WARNING: Current MTENN issue where loading a model must be done on GPU to obtain the correct weights.
 
         Parameters
