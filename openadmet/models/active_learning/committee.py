@@ -159,6 +159,7 @@ class CommitteeRegressor(EnsembleBase):
             The target validation set values.
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
+
         """
         pass
 
