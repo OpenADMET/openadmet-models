@@ -151,7 +151,6 @@ class CommitteeRegressor(EnsembleBase):
         """Placeholder function for no calibration."""
         pass
 
-
     def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
         """
         Configure uncertainty calibration using selected method.
