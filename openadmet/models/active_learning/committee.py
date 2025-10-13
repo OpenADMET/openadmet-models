@@ -475,7 +475,10 @@ class CommitteeRegressor(EnsembleBase):
 
         # Load calibration model
         if calibration_path is not None:
-            instance._load_calibration_model(calibration_path)
+            try:
+                instance._load_calibration_model(calibration_path)
+            except Exception as e:
+                logger.warning(f"Failed to load calibration model from {calibration_path}: {e}, if a a calibration model is not expected, this warning can be ignored.")
 
         return instance
 
@@ -567,6 +570,9 @@ class CommitteeRegressor(EnsembleBase):
 
         # Load calibration model
         if calibration_path is not None:
-            instance._load_calibration_model(calibration_path)
+            try:
+                instance._load_calibration_model(calibration_path)
+            except Exception as e:
+                logger.warning(f"Failed to load calibration model from {calibration_path}: {e}, if a a calibration model is not expected, this warning can be ignored.")
 
         return instance
