@@ -148,7 +148,18 @@ class CommitteeRegressor(EnsembleBase):
         self._calibration_model = {"scaling-factor": calibration_models}
 
     def _do_nothing_calibration(self, X, y, **kwargs):
-        """Placeholder function for no calibration."""
+        """
+        Passthrough function for no calibration.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
+        """
         pass
 
     def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
