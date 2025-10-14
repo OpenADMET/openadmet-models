@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import ArrayLike
-from typing import Literal, Type, Union
+from typing import Literal, Type, Union, Any
 from random import sample
 from pydantic import Field, field_validator, model_validator
 from torch.utils.data import DataLoader, Dataset
@@ -19,6 +19,7 @@ from random import Random
 
 from openadmet.models.features.chemprop import ChemPropFeaturizer
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
+from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 
 from openadmet.models.features.feature_base import (
     FeaturizerBase,
@@ -93,20 +94,11 @@ class PairwiseFeaturizer(FeaturizerBase):
 
     """
 
-    how_to_pair: Literal["full", "ut", "sut"] = Field(
-        "full",
-        description="How to pair the features, options are 'full' for all pairs, "
-        "'ut' for upper triangular pairs, 'sut' for symmetric upper triangular pairs,"
-        "'rand' for random set of pairs from full, as set by num_pairs.",
-    )
-    featurizer: Union[type[FeaturizerBase], FeaturizerBase, dict] = Field(
-        ..., description="Featurizer to use before pairing"
-    )
-    n_jobs: int = Field(4, description="Number of jobs to use for featurization")
-    batch_size: int = Field(128, description="Batch size to use for DataLoader")
-    shuffle: bool = Field(
-        False, description="Whether to shuffle the data in the DataLoader"
-    )
+    how_to_pair: Literal["full", "ut", "sut"] = "full"
+    featurizer: Any = FingerprintFeaturizer(fp_type="ecfp:4")
+    n_jobs: int = 4
+    batch_size: int = 128
+    shuffle: bool = False
 
     @model_validator(mode="before")
     def validate_pairwise(cls, values):
@@ -129,7 +121,7 @@ class PairwiseFeaturizer(FeaturizerBase):
             feat_type, feat_params = next(iter(value.items()))
             feat_class = get_featurizer_class(feat_type)
             return feat_class(**feat_params)
-        elif isinstance(value, type) and issubclass(value, FeaturizerBase):
+        elif isinstance(value, FeaturizerBase):
             return value
         else:
             raise TypeError(
@@ -202,4 +194,5 @@ class PairwiseFeaturizer(FeaturizerBase):
 
         """
         # Get the featurizer type name
-        return self.__class__(**self.model_dump())
+        ft = PairwiseFeaturizer(how_to_pair=self.how_to_pair, featurizer=self.featurizer, n_jobs=self.n_jobs, batch_size=self.batch_size, shuffle=self.shuffle)
+        return ft

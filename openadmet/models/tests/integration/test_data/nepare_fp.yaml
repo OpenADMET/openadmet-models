@@ -19,7 +19,7 @@ metadata:
 data:
   # Specify where anvil will run (inputs, outputs, etc.)
   # Specify the dataset file
-  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
+  resource: "{{ANVIL_DIR}}/cyp_multitask_nepare.csv"
   # TODO: add description of intake
   type: intake
   # Specify input column containing SMILES
@@ -44,6 +44,7 @@ procedure:
     type: PairwiseFeaturizer
     params:
       how_to_pair: 'full'
+      batch_size: 10
       featurizer:
         FingerprintFeaturizer:
           fp_type: "ecfp:4"

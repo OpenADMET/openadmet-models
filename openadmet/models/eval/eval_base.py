@@ -123,8 +123,8 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
         logger.warning(
             f"Generated {t_true.shape[0]} pairwise differences for task {task_id}"
         )
-        # Generate a random sample of 1000 indices
-        sample_indices = np.random.choice(len(t_true), size=5000, replace=False)
+        # Generate a random sample indices
+        sample_indices = np.random.choice(len(t_true), size=len(t_true)/2, replace=False)
 
         # Index into t_pred and t_true to create new lists
         t_true = t_true[sample_indices]
