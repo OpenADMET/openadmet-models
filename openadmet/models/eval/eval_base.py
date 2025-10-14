@@ -125,7 +125,7 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
         )
         # Generate a random sample indices
         sample_indices = np.random.choice(
-            len(t_true), size=int(len(t_true)-1), replace=False
+            len(t_true), size=int(len(t_true) - 1), replace=False
         )
 
         # Index into t_pred and t_true to create new lists
