@@ -194,5 +194,11 @@ class PairwiseFeaturizer(FeaturizerBase):
 
         """
         # Get the featurizer type name
-        ft = PairwiseFeaturizer(how_to_pair=self.how_to_pair, featurizer=self.featurizer, n_jobs=self.n_jobs, batch_size=self.batch_size, shuffle=self.shuffle)
+        ft = PairwiseFeaturizer(
+            how_to_pair=self.how_to_pair,
+            featurizer=self.featurizer,
+            n_jobs=self.n_jobs,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+        )
         return ft
