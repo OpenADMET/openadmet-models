@@ -68,7 +68,6 @@ procedure:
       use_wandb: false
 
 report:
-report:
   eval:
   - type: RegressionMetrics
     params: {}
