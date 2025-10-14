@@ -251,7 +251,7 @@ class MTENNSchNetModel(LightningModelBase):
         Use the model for prediction.
 
         WARNING: Current MTENN issue where loading a model must be done on GPU to obtain the correct weights.
-        Set env variable OADMET_ALLOW_MTENN_CPU to either 1 or True to use CPU. 
+        Set env variable OADMET_ALLOW_MTENN_CPU to either 1 or True to use CPU.
 
         Parameters
         ----------
