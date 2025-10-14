@@ -47,7 +47,7 @@ class ImputeTransform(TransformBase):
         if value not in ["simple", "iterative"]:
             raise ValueError("Imputer must be either 'simple' or 'iterative'")
         return value
-    
+
     def fit(self, X: np.ndarray, *args, **kwargs):
         """
         Fit the imputer to the data X.
@@ -70,9 +70,7 @@ class ImputeTransform(TransformBase):
         if self.imputer == "simple":
             self.imputer_instance = SimpleImputer(strategy=self.strategy)
         elif self.imputer == "iterative":
-            self.imputer_instance = IterativeImputer(
-                random_state=self.random_state
-            )
+            self.imputer_instance = IterativeImputer(random_state=self.random_state)
         else:
             raise ValueError("Invalid imputer type specified.")
 
