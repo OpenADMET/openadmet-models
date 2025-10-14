@@ -69,10 +69,7 @@ procedure:
 
 report:
   eval:
-  - type: RegressionMetrics
-    params: {}
-
-    type: RegressionPlots
+  - type: RegressionPlots
     params:
       axes_labels:
       - True pChEMBL
