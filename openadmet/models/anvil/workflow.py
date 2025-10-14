@@ -274,6 +274,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Transform data
         if self.transform:
             # Train
+            logger.info("Transforming data")
+            self.transform.fit(X_train_feat)
             X_train_feat = self.transform.transform(X_train_feat)
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
 
