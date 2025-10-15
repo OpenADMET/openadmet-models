@@ -147,6 +147,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             Predicted values (not used in cross-validation, but required for interface).
         y_true : array-like
             True values (not used in cross-validation, but required for interface).
+        X_all : array-like
+            All data features.
+        y_all : array-like
+            All data targets.
         tag : str, optional
             Tag for the evaluation run.
         target_labels : list of str, optional
