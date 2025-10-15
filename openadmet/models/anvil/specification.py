@@ -71,7 +71,7 @@ class DataSpec(BaseModel):
     """
 
     type: str
-    resource: str
+    resource: Optional[str] = None
 
     cat_entry: Optional[str] = None
     target_cols: Union[str, list[str]]
@@ -129,15 +129,17 @@ class DataSpec(BaseModel):
 
         """
         if self.anvil_dir:
-            template = jinja2.Template(self.resource)
-            self.resource = template.render(ANVIL_DIR=self.anvil_dir)
+            if self.resource :
+                template = jinja2.Template(self.resource)
+                self.resource = template.render(ANVIL_DIR=self.anvil_dir)
         return self
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template the resource with ANVIL_DIR if present."""
         self.anvil_dir = anvil_dir
-        template = jinja2.Template(self.resource)
-        self.resource = template.render(ANVIL_DIR=anvil_dir)
+        if self.resource:
+            template = jinja2.Template(self.resource)
+            self.resource = template.render(ANVIL_DIR=anvil_dir)
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
