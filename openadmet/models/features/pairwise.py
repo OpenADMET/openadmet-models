@@ -95,12 +95,12 @@ class PairwiseFeaturizer(FeaturizerBase):
     """
 
     how_to_pair: Literal["full", "ut", "sut"] = "full"
-    featurizer: Any = FingerprintFeaturizer(fp_type="ecfp:4")
+    featurizer: FeaturizerBase = FingerprintFeaturizer(fp_type="ecfp:4")
     n_jobs: int = 4
     batch_size: int = 128
     shuffle: bool = False
 
-    @model_validator(mode="before")
+    @field_validator(mode="before")
     def validate_pairwise(cls, values):
         """Validate the how_to_pair and num_pairs parameters together."""
         how_to_pair = values.get("how_to_pair")
