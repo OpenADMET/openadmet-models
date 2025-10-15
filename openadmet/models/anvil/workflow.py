@@ -235,7 +235,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Load data from YAML specification
         logger.info("Loading data")
         if self.data_spec.using_train_test:
-            logger.info("Using prespecified train/test resources from data specification")
+            logger.info(
+                "Using prespecified train/test resources from data specification"
+            )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
         else:
             X, y = self.data_spec.read()
@@ -652,7 +654,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Load data from YAML specification
         logger.info("Loading data")
         if self.data_spec.using_train_test:
-            logger.info("Using prespecified train/test resources from data specification")
+            logger.info(
+                "Using prespecified train/test resources from data specification"
+            )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
         else:
             X, y = self.data_spec.read()
