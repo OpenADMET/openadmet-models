@@ -687,7 +687,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
 
-
         logger.info("Data featurized")
 
         # Train
