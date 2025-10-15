@@ -100,7 +100,7 @@ class PairwiseFeaturizer(FeaturizerBase):
     batch_size: int = 128
     shuffle: bool = False
 
-    @field_validator(mode="before")
+    @field_validator("how_to_pair", mode="before")
     def validate_pairwise(cls, values):
         """Validate the how_to_pair and num_pairs parameters together."""
         how_to_pair = values.get("how_to_pair")
