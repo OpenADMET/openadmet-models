@@ -65,6 +65,8 @@ class DataSpec(BaseModel):
 
     type: str
     resource: str
+    train_resource: Optional[str] = None
+    test_resource: Optional[str] = None
     cat_entry: Optional[str] = None
     target_cols: Union[str, list[str]]
     input_col: str
@@ -72,6 +74,35 @@ class DataSpec(BaseModel):
     dropna: Optional[bool] = False
 
     _catalog: Optional[intake.catalog.Catalog] = None
+    _using_train_test: bool = False
+
+
+    @property
+    def using_train_test(self):
+        """Whether using separate train and test resources."""
+        return self._using_train_test
+
+
+    @model_validator(mode="after")
+    def check_resource_test_train(self):
+        """Ensure that either resource or train/test resources are provided."""
+        if self.resource and (self.train_resource or self.test_resource):
+            raise ValueError(
+                "Specify either `resource` or both `train_resource` and `test_resource`, not both."
+            )
+        if not self.resource and not (self.train_resource and self.test_resource):
+            raise ValueError(
+                "Must specify either `resource` or both `train_resource` and `test_resource`."
+            )
+        if self.train_resource or self.test_resource:
+            if not (self.train_resource and self.test_resource):
+                raise ValueError(
+                    "Both `train_resource` and `test_resource` must be provided together."
+                )
+            self._using_train_test = True
+            self.resource = None  # Clear resource to avoid confusion
+        return self
+
 
     @field_validator("target_cols", mode="before")
     @classmethod
@@ -117,20 +148,102 @@ class DataSpec(BaseModel):
             The target data (e.g., properties to predict)
 
         """
+        if self._using_train_test:
+            return self._read_train_test()
+        else:
+            return self._read_single_resource()
+        
+    @staticmethod
+    def _read_csv_or_parquet(resource: str) -> pd.DataFrame:
+        """Read data from a CSV or Parquet resource."""
+        if resource.endswith(".csv"):
+            data = intake.open_csv(resource).read()
+        elif any(resource.endswith(x) for x in [".parquet", ".pq", ".pqt"]):
+            data = intake.open_parquet(resource).read()
+        else:
+            raise ValueError(f"Unsupported resource type: {resource}")
+        return data
+
+
+    def _read_train_test(self) -> tuple[pd.Series, pd.Series]:
+        """Read data from separate train and test resources."""
+        if self.train_resource is None or self.test_resource is None:
+            raise ValueError("Both train_resource and test_resource must be specified.")
+
+
+        # Read train data
+        if self.train_resource.endswith(".yaml") or self.train_resource.endswith(".yml"):
+            raise ValueError("YAML catalogs not supported with train/test resources.")
+        else:
+            train_data = self._read_csv_or_parquet(self.train_resource)
+            if "_split" in train_data.columns:
+                raise ValueError("Train data should not contain a '_split' column.")
+            train_data["_split"] = "train"  # Add split column for logging
+        
+        # Read test data
+        if self.test_resource.endswith(".yaml") or self.test_resource.endswith(".yml"):
+            raise ValueError("YAML catalogs not supported with train/test resources.")
+        else:
+            test_data = self._read_csv_or_parquet(self.test_resource)
+            if "_split" in test_data.columns:
+                raise ValueError("Test data should not contain a '_split' column.")
+            test_data["_split"] = "test"  # Add split column for logging
+
+        # Combine train and test for joint NaN handling
+        combined = pd.concat([train_data, test_data])
+        combined = combined[
+            [self.input_col]
+            + (
+                self.target_cols
+                if isinstance(self.target_cols, list)
+                else [self.target_cols]
+            )
+            + ["_split"]
+        ] 
+
+        # get number of combined rows for logging
+        n_before = len(combined)
+        if self.dropna:
+            cleaned_combined = combined.dropna().reset_index(drop=True)
+            n_after = len(cleaned_combined)
+            n_dropped = n_before - n_after
+        else:
+            n_dropped = 0
+            cleaned_combined = combined
+
+        # re-split the data
+        train_clean = cleaned_combined[cleaned_combined["_split"] == "train"]
+        test_clean = cleaned_combined[cleaned_combined["_split"] == "test"]
+
+        # grab inputs and data for each split
+        input_train_clean = train_clean[self.input_col]
+        targets_train_clean = train_clean[self.target_cols]
+
+        input_test_clean = test_clean[self.input_col]
+        targets_test_clean = test_clean[self.target_cols]
+        logger.info(f"{n_before} total rows. {n_dropped} NaN rows were dropped.")
+
+        return input_train_clean, targets_train_clean, input_test_clean, targets_test_clean
+
+    def _read_single_resource(self) -> tuple[pd.Series, pd.Series]:
+
+    
         # if YAML, parse as intake catalog
         if self.resource.endswith(".yaml") or self.resource.endswith(".yml"):
+            if not self.cat_entry:
+                raise ValueError("cat_entry must be specified for YAML resources.")
             self._catalog = intake.open_catalog(self.resource)
-            data = self._catalog[self.cat_entry].read()
-
-        # if CSV, parse using intake
-        elif self.resource.endswith(".csv"):
-            data = intake.open_csv(self.resource).read()
-
-        elif any(self.resource.endswith(x) for x in [".parquet", ".pq", ".pqt"]):
-            data = intake.open_parquet(self.resource).read()
+            if self.cat_entry not in self._catalog:
+                raise ValueError(
+                    f"cat_entry '{self.cat_entry}' not found in catalog '{self.resource}'."
+                )
+            data = self._catalog[self.cat_entry]().read()
+            
+        # else, read as CSV or Parquet
         else:
-            raise ValueError(f"Unsupported resource type: {self.resource}")
+            data = self._read_csv_or_parquet(self.resource)
 
+    
         # combine input and targets for joint NaN handling
         combined = data[
             [self.input_col]

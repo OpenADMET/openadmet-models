@@ -234,12 +234,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Load data from YAML specification
         logger.info("Loading data")
-        X, y = self.data_spec.read()
+        if self.data_spec.using_train_test:
+            logger.info("Using prespecified train/test resources from data specification")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.data_spec.read()
+        else:
+            X, y = self.data_spec.read()
+            # Split data into train, validation, and test sets
+            logger.info("Splitting data from single resource")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
         logger.info("Data loaded")
-
-        # Split data into train, validation, and test sets
-        logger.info("Splitting data")
-        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
@@ -648,12 +651,15 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Load data from YAML specification
         logger.info("Loading data")
-        X, y = self.data_spec.read()
+        if self.data_spec.using_train_test:
+            logger.info("Using prespecified train/test resources from data specification")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.data_spec.read()
+        else:
+            X, y = self.data_spec.read()
+            # Split data into train, validation, and test sets
+            logger.info("Splitting data from single resource")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
         logger.info("Data loaded")
-
-        # Split data into train, validation, and test sets
-        logger.info("Splitting data")
-        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
