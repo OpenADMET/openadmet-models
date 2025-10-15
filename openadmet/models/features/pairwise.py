@@ -101,11 +101,12 @@ class PairwiseFeaturizer(FeaturizerBase):
     shuffle: bool = False
 
     @field_validator("how_to_pair", mode="before")
-    def validate_pairwise(cls, values):
-        """Validate the how_to_pair and num_pairs parameters together."""
-        if how_to_pair not in ["full", "ut", "sut"]:
+    @classmethod
+    def validate_pairwise(cls, value):
+        """Validate the how_to_pair parameter."""
+        if value not in ["full", "ut", "sut"]:
             raise ValueError("how_to_pair must be one of 'full', 'ut', or 'sut'")
-        return values
+        return value
 
     @field_validator("featurizer", mode="before")
     @classmethod
