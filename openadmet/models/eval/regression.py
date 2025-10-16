@@ -622,13 +622,10 @@ class RegressionPlots(EvalBase):
         tick_font = 12
         ax_font = 14
 
-        padding = 0.2
         y_limits = {
-            "MSE": (0 - padding, 1 + padding),
-            "MAE": (0 - padding, 1 + padding),
-            "$R^2$": (-1 - padding, 1 + padding),
-            "Kendall's $\\tau$": (-1 - padding, 1 + padding),
-            "Spearman's $\\rho$": (-1 - padding, 1 + padding),
+            "$R^2$": (0, 1),
+            "Kendall's $\\tau$": (0, 1),
+            "Spearman's $\\rho$": (0, 1),
         }
 
         n_metrics = len(metrics)
@@ -649,7 +646,10 @@ class RegressionPlots(EvalBase):
             ax.set_xlim(-0.5, 0.5)
 
             # Set fixed y-limits
-            if metric in y_limits:
+            if metric in ["MSE", "MAE"]:
+                upper = upper_ci[i] * 1.1 if upper_ci[i] > 0 else 1
+                ax.set_ylim(0, upper)
+            elif metric in y_limits:
                 ax.set_ylim(y_limits[metric])
 
         fig.suptitle(
