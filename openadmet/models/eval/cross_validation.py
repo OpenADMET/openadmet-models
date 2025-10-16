@@ -2,7 +2,7 @@
 
 import json
 from collections import defaultdict
-
+from typing import Any, ClassVar
 import pandas as pd
 import numpy as np
 from loguru import logger
@@ -63,6 +63,7 @@ class CrossValidationBase(EvalBase):
 
     """
 
+    is_cross_val: ClassVar[bool] = True
     _evaluated: bool = False
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"

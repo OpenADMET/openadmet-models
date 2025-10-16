@@ -4,7 +4,7 @@ from abc import abstractmethod
 from os import PathLike
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
@@ -83,3 +83,26 @@ class AnvilWorkflowBase(BaseModel):
 
         """
         ...
+
+
+
+    @model_validator(mode="after")
+    def no_ensemble_cross_val(self) -> "AnvilWorkflowBase":
+        """
+        Validate that ensemble models are not used with cross-validation.
+
+        Raises
+        ------
+        ValueError
+            If an ensemble model is used with cross-validation.
+
+        Returns
+        -------
+        AnvilWorkflowBase
+            The validated workflow instance.
+
+        """
+        doing_cv = any([v.is_cross_val for v in self.evals])
+        if self.ensemble is not None and doing_cv:
+            raise ValueError("Ensemble models cannot be used with cross-validation.")
+        return self

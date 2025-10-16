@@ -1,7 +1,7 @@
 """Base class and utilities for evaluation modules."""
 
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, ClassVar
 
 from loguru import logger
 import numpy as np
@@ -146,6 +146,8 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
 
 class EvalBase(BaseModel):
     """Abstract base class for evaluation modules."""
+
+    is_cross_val: ClassVar[bool] = False
 
     class Config:
         """Pydantic configuration for the EvalBase class."""
