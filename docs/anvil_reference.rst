@@ -98,7 +98,7 @@ and ``pytorch_ensemble`` for training ensembles of deep learning models.
      - Version of the metadata schema. (Currently must be set to ``v1``).
 
 Data
-^^^^^^^
+^^^^
 
 The ``data`` section defines how input data is loaded and which columns are
 used for modeling. You must specify the dataset location, input column, target columns,
@@ -368,7 +368,7 @@ You can choose from different splitter types, each with its own parameters to co
     - Splits the dataset by selecting compounds at the periphery of the chemical space, ensuring that edge cases are included in the training set.
 
 Example
-""""""""
+"""""""
 
 .. code-block:: yaml
 
@@ -404,7 +404,7 @@ It allows you to specify the trainer type and various training parameters to con
 
 
 Example
-""""""""
+"""""""
 .. code-block:: yaml
 
   train:
@@ -430,7 +430,7 @@ Models can also be calibrated after training using a scaling factor method to im
 See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` for more details.
 
 Example
-""""""""
+"""""""
 .. code-block:: yaml
 
   ensemble:
@@ -439,7 +439,7 @@ Example
     calibration_method: scaling-factor
 
 Report
-^^^^^^^
+^^^^^^
 
 The ``report`` section specifies the evaluations to be performed after training the model.
 You can choose from various evaluation types, each with its own parameters to customize the output. Regression models are only compatible with RegressionMetrics and similarly classification models only with ClassificationMetrics.
@@ -473,7 +473,7 @@ Importantly, the ``report`` section also allows for cross-validation to be perfo
     - Generates uncertainty plots.
 
 Example
-""""""""
+"""""""
 .. code-block:: yaml
 
   report:
