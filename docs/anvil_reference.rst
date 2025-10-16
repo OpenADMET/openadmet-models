@@ -15,7 +15,7 @@ A full list of available models, featurizers, trainers, and evaluators can be fo
 
 
 How to Use Anvil
-=================
+-----------------
 
 To initiate the ``anvil`` workflow, a recipe yaml file must be provided.
 There are many configuration options available.
@@ -30,7 +30,7 @@ you can set, their types, and how they interact across models and trainers.
    :depth: 2
 
 Metadata
----------
+^^^^^^^^
 
 The ``metadata`` section provides essential information about the workflow, such as authorship,
 versioning, and descriptive tags. This section ensures that workflows are well-documented
@@ -98,7 +98,7 @@ and ``pytorch_ensemble`` for training ensembles of deep learning models.
      - Version of the metadata schema. (Currently must be set to ``v1``).
 
 Data
------
+^^^^^^^
 
 The ``data`` section defines how input data is loaded and which columns are
 used for modeling. You must specify the dataset location, input column, target columns,
@@ -187,7 +187,7 @@ Pulling data from a remote location is also possible by specifying a URL in the 
 .. _Intake: https://intake.readthedocs.io/
 
 Procedure
-----------
+^^^^^^^^^
 
 The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined,
 data splits are configured, and training parameters are set. Each subsection provides
@@ -329,7 +329,7 @@ on each model's implementation and usage.
     - scikit-learn Support Vector Machine regressor `(SVR) <https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html>`_ .
 
 Example
-^^^^^^^
+"""""""
 .. code-block:: yaml
 
   model:
@@ -368,7 +368,7 @@ You can choose from different splitter types, each with its own parameters to co
     - Splits the dataset by selecting compounds at the periphery of the chemical space, ensuring that edge cases are included in the training set.
 
 Example
-^^^^^^^
+""""""""
 
 .. code-block:: yaml
 
@@ -404,7 +404,7 @@ It allows you to specify the trainer type and various training parameters to con
 
 
 Example
-^^^^^^^
+""""""""
 .. code-block:: yaml
 
   train:
@@ -430,7 +430,7 @@ Models can also be calibrated after training using a scaling factor method to im
 See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` for more details.
 
 Example
-^^^^^^^
+""""""""
 .. code-block:: yaml
 
   ensemble:
@@ -439,7 +439,7 @@ Example
     calibration_method: scaling-factor
 
 Report
---------------
+^^^^^^^
 
 The ``report`` section specifies the evaluations to be performed after training the model.
 You can choose from various evaluation types, each with its own parameters to customize the output. Regression models are only compatible with RegressionMetrics and similarly classification models only with ClassificationMetrics.
@@ -473,7 +473,7 @@ Importantly, the ``report`` section also allows for cross-validation to be perfo
     - Generates uncertainty plots.
 
 Example
-^^^^^^^
+""""""""
 .. code-block:: yaml
 
   report:
