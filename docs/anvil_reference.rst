@@ -107,7 +107,7 @@ and optional preprocessing steps. The data loader can read from remote locations
 
 Reading from a local file requires specifying the path to the dataset file in the ``resource`` field.
 Supported file types include CSV, and Parquet. If using ``resource`` your dataset will be split into training, validation, and test sets
-using the specified splitter in the ``procedure`` section. 
+using the specified splitter in the ``procedure`` section.
 
 Alternatively, you can also provide separate files for training, validation, and test sets by using the ``train_resource``, ``val_resource``, and ``test_resource`` fields respectively.
 
