@@ -1,0 +1,94 @@
+# This spection specifies the input data
+data:
+  # Specify where anvil will run (inputs, outputs, etc.)
+  # Specify the dataset file
+  train_resource: "{{ANVIL_DIR}}/cyp_multitask_train.csv"
+  test_resource: "{{ANVIL_DIR}}/cyp_multitask_test.csv"
+  val_resource: "{{ANVIL_DIR}}/cyp_multitask_val.csv"
+  # TODO: add description of intake
+  type: intake
+  # Specify input column containing SMILES
+  input_col: OPENADMET_SMILES
+  # Specify each (1+) of the target columns, or the column that you're trying to predict
+  target_cols:
+  - cyp3a4_pchembl_value_mean
+  dropna: true
+
+# Additional metadata
+metadata:
+  authors: Cynthia Xu
+  biotargets:
+  - CYP3A4
+  build_number: 0
+  description: basic regression using a LightGBM model
+  driver: sklearn
+  email: cynthia.xu@omsf.io
+  name: lgbm_pchembl
+  tag: openadmet-CYP3A4-chembl
+  tags:
+  - openadmet
+  - test
+  - pchembl
+  version: v1
+
+# Section specifying training procedure
+procedure:
+# Featurization specification
+  feat:
+    # Using the ChemPropFeaturizer (for ChemProp model)
+    # See openadmet.models.features
+    type: FingerprintFeaturizer
+    params:
+        fp_type: "ecfp:4"
+
+  # Model specification
+  model:
+    # Indicate model type
+    # See openadmet.models.architecture for all model types
+    type: LGBMRegressorModel
+    # Specify model parameters
+    params:
+      alpha: 0.005
+      learning_rate: 0.05
+
+  # Specify data splits
+  split:
+    # Specify how data will be split
+    # See openadmet.models.split
+    type: ShuffleSplitter
+    # Specify split parameters
+    params:
+      random_state: 42
+      train_size: 0.7
+      val_size: 0.0
+      test_size: 0.3
+
+  train:
+    type: SKLearnGridSearchTrainer
+    # Specify model parameters
+    params:
+      param_grid:
+        n_estimators: [500]
+        alpha: [0.005]
+        learning_rate: [0.05]
+
+# Section specifying report generation
+report:
+  # Configure evaluation
+  eval:
+  # Generate regression metrics
+  - type: RegressionMetrics
+    params: {}
+
+  # Generate regression plots
+  - type: SKLearnRepeatedKFoldCrossValidation
+    params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      n_splits: 3
+      n_repeats: 2
+      title:  True vs Predicted pChEMBL on test set

@@ -136,11 +136,17 @@ class DataSpec(BaseModel):
         return self
 
     def template_anvil_dir(self, anvil_dir: Path):
-        """Template the resource with ANVIL_DIR if present."""
+        """Template all resources with ANVIL_DIR if present."""
         self.anvil_dir = anvil_dir
-        if self.resource:
-            template = jinja2.Template(self.resource)
-            self.resource = template.render(ANVIL_DIR=anvil_dir)
+
+        for attr in ["resource", "train_resource", "test_resource", "val_resource"]:
+            value = getattr(self, attr, None)
+            if value:
+                setattr(
+                    self,
+                    attr,
+                    jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
+                )
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """

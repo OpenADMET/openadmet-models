@@ -50,6 +50,10 @@ cv_metrics_lgbm_combined = (
     _data_ref / "cross_validation_metrics_combined.json"
 ).as_posix()
 
+# Train/test split recipes
+lgbm_fp_cv_train_test = (_data_ref / "lgbm_fp_cv_train_test.yaml").as_posix()
+chemprop_MT_cpu_single_train_test = (_data_ref / "chemprop_MT_cpu_single_train_test.yaml").as_posix()
+
 # GPU
 
 # ChemProp with multitask and cross-validation

@@ -22,11 +22,13 @@ from openadmet.models.tests.integration.datafiles import (
     mtenn_anvil,
     pdb_folder,
     rf_scaffold_cv,
+    chemprop_MT_cpu_single_train_test,
     tabpfn,
     xgboost_perimeter_cv,
     cv_metrics_lgbm_descr,
     cv_metrics_lgbm_fp,
     cv_metrics_lgbm_combined,
+    lgbm_fp_cv_train_test
 )
 from openadmet.models.tests.test_utils import click_success
 
@@ -41,7 +43,9 @@ class TestCPUAnvilConfigs:
             lgbm_prop_cv,
             lgbm_fp_ensemble,
             chemprop_MT_cpu_single,
+            chemprop_MT_cpu_single_train_test,
             xgboost_perimeter_cv,
+            lgbm_fp_cv_train_test,
             catboost_prop_dissimilarity,
             lgbm_mordred_cv_impute,
             rf_scaffold_cv,
