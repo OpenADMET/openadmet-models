@@ -106,7 +106,10 @@ and optional preprocessing steps. The data loader can read from remote locations
 
 
 Reading from a local file requires specifying the path to the dataset file in the ``resource`` field.
-Supported file types include CSV, and Parquet.
+Supported file types include CSV, and Parquet. If using ``resource`` your dataset will be split into training, validation, and test sets
+using the specified splitter in the ``procedure`` section. 
+
+Alternatively, you can also provide separate files for training, validation, and test sets by using the ``train_resource``, ``val_resource``, and ``test_resource`` fields respectively.
 
 .. code-block:: yaml
 
@@ -149,6 +152,23 @@ Pulling data from a remote location is also possible by specifying a URL in the 
      - target_column_name2
      dropna: false
 
+
+An example of using train, validation, and test resources:
+
+.. code-block:: yaml
+
+   data:
+     type: intake
+     train_resource: PATH_TO_TRAIN_DATASET.parquet
+     val_resource: PATH_TO_VAL_DATASET.parquet
+     test_resource: PATH_TO_TEST_DATASET.parquet
+     input_col: COLUMN_NAME
+     target_cols:
+     - target_column_name1
+     - target_column_name2
+     dropna: false
+
+
 **Parameters**
 
 .. list-table::
@@ -161,6 +181,19 @@ Pulling data from a remote location is also possible by specifying a URL in the 
    * - resource
      - str
      - Path to dataset file. Allowed filetypes: YAML, CSV, parquet.
+        Can also be a URL to a remote file.
+    * - train_resource
+      - Optional[str]
+      - Path to training dataset file. Allowed filetypes: CSV, parquet.
+         Can also be a URL to a remote file.
+    * - val_resource
+      - Optional[str]
+      - Path to validation dataset file. Allowed filetypes: CSV, parquet.
+         Can also be a URL to a remote file.
+    * - test_resource
+      - Optional[str]
+      - Path to test dataset file. Allowed filetypes: CSV, parquet.
+         Can also be a URL to a remote file.
    * - type
      - str, default: ``intake``
      - Loader type. Must be ``intake``. Uses the `Intake`_ data catalog
