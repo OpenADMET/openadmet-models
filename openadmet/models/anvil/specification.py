@@ -142,11 +142,7 @@ class DataSpec(BaseModel):
         for attr in ["resource", "train_resource", "test_resource", "val_resource"]:
             value = getattr(self, attr, None)
             if value:
-                setattr(
-                    self,
-                    attr,
-                    jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
-                )
+                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
