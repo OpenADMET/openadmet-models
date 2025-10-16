@@ -28,7 +28,7 @@ from openadmet.models.tests.integration.datafiles import (
     cv_metrics_lgbm_descr,
     cv_metrics_lgbm_fp,
     cv_metrics_lgbm_combined,
-    lgbm_fp_cv_train_test
+    lgbm_fp_cv_train_test,
 )
 from openadmet.models.tests.test_utils import click_success
 
