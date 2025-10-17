@@ -183,7 +183,9 @@ class LightningTrainer(TrainerBase):
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
         # Load best checkpoint after training
-        checkpoint = torch.load(self._callbacks["ModelCheckpoint"].best_model_path)
+        checkpoint = torch.load(
+            self._callbacks["ModelCheckpoint"].best_model_path, weights_only=True
+        )
         self.model.estimator.load_state_dict(checkpoint["state_dict"])
 
         return self.model
