@@ -3,6 +3,7 @@
 from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 
+import torch
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
@@ -182,9 +183,8 @@ class LightningTrainer(TrainerBase):
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
         # Load best checkpoint after training
-        self.model.estimator = self.model.estimator.load_from_checkpoint(
-            self._callbacks["ModelCheckpoint"].best_model_path
-        )
+        checkpoint = torch.load(self._callbacks["ModelCheckpoint"].best_model_path)
+        self.model.estimator.load_state_dict(checkpoint["state_dict"])
 
         return self.model
 
