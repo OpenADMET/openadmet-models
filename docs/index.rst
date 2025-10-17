@@ -34,7 +34,7 @@ This documentation provides an overview of the package's features, as well as de
     .. grid-item-card:: Try it out!
       :margin: 0 3 0 0
       :text-align: center
-      :link: https://colab.research.google.com/github/OpenADMET/OpenADMET_demos/blob/main/showcase/OpenADMET_Models_Showcase.ipynb
+      :link: https://try.openadmet.org
       :link-type: url
 
       New to OpenADMET Models? Try it out in your browser with Colab.
