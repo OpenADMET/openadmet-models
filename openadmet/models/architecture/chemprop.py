@@ -94,6 +94,22 @@ class ChemPropModel(LightningModelBase):
     max_lr: float = 1e-3
     final_lr: float = 1e-4
 
+    _n_tasks: int = 1
+
+
+    @model_validator(mode="after")
+    def set_n_tasks(self) -> "ChemPropModel":
+        """
+        Set the number of tasks for the model.
+
+        Returns
+        -------
+        ChemPropModel
+            The updated model instance.
+        """
+        self._n_tasks = self.n_tasks
+        return self
+
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
