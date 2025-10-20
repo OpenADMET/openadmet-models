@@ -30,6 +30,7 @@ class ImputeTransform(TransformBase):
     )
     imputer: Literal["simple", "iterative"] = "simple"  # Can be 'simple' or 'iterative'
     random_state: Optional[int] = None  # Optional random state for reproducibility
+    imputer_instance: Optional[object] = None  # Placeholder for the imputer instance
 
     @field_validator("strategy")
     def validate_strategy(cls, value):
@@ -46,6 +47,34 @@ class ImputeTransform(TransformBase):
         if value not in ["simple", "iterative"]:
             raise ValueError("Imputer must be either 'simple' or 'iterative'")
         return value
+
+    def fit(self, X: np.ndarray, *args, **kwargs):
+        """
+        Fit the imputer to the data X.
+
+        Parameters
+        ----------
+        X: np.ndarray
+            Input data with potential missing values
+        *args
+            Additional positional arguments (not used).
+        **kwargs
+            Additional keyword arguments (not used).
+
+        Returns
+        -------
+        self
+            Fitted transform instance
+
+        """
+        if self.imputer == "simple":
+            self.imputer_instance = SimpleImputer(strategy=self.strategy)
+        elif self.imputer == "iterative":
+            self.imputer_instance = IterativeImputer(random_state=self.random_state)
+        else:
+            raise ValueError("Invalid imputer type specified.")
+
+        self.imputer_instance.fit(X)
 
     def transform(self, X: np.ndarray, *args, **kwargs):
         """
@@ -66,13 +95,6 @@ class ImputeTransform(TransformBase):
             Transformed data with missing values imputed
 
         """
-        if self.imputer == "iterative":
-            imputer = IterativeImputer(
-                strategy=self.strategy, random_state=self.random_state
-            )
-        else:
-            if self.strategy == "constant":
-                imputer = SimpleImputer(strategy=self.strategy, fill_value=0)
-            else:
-                imputer = SimpleImputer(strategy=self.strategy)
-        return imputer.fit_transform(X)
+        if self.imputer_instance is None:
+            raise RuntimeError("The imputer has not been fitted yet. Call 'fit' first.")
+        return self.imputer_instance.transform(X)

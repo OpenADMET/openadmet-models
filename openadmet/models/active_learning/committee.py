@@ -35,6 +35,7 @@ class CommitteeRegressor(EnsembleBase):
     _calibration_methods: dict = {
         "isotonic-regression": "_isotonic_regression_calibration",
         "scaling-factor": "_scaling_factor_calibration",
+        None: "_do_nothing_calibration",
     }
 
     @property
@@ -145,6 +146,22 @@ class CommitteeRegressor(EnsembleBase):
             calibration_models.append(scale_factor)
 
         self._calibration_model = {"scaling-factor": calibration_models}
+
+    def _do_nothing_calibration(self, X, y, **kwargs):
+        """
+        Passthrough function for no calibration.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
+
+        """
+        pass
 
     def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
         """
@@ -469,7 +486,12 @@ class CommitteeRegressor(EnsembleBase):
 
         # Load calibration model
         if calibration_path is not None:
-            instance._load_calibration_model(calibration_path)
+            try:
+                instance._load_calibration_model(calibration_path)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load calibration model from {calibration_path}: {e}, if a a calibration model is not expected, this warning can be ignored."
+                )
 
         return instance
 
@@ -561,6 +583,11 @@ class CommitteeRegressor(EnsembleBase):
 
         # Load calibration model
         if calibration_path is not None:
-            instance._load_calibration_model(calibration_path)
+            try:
+                instance._load_calibration_model(calibration_path)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load calibration model from {calibration_path}: {e}, if a a calibration model is not expected, this warning can be ignored."
+                )
 
         return instance

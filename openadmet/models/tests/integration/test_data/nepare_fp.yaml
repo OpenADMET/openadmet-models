@@ -1,0 +1,91 @@
+metadata:
+  version: v1
+  name: "example-workflow"
+  driver: "pytorch"
+  build_number: 0
+  description: "running a basic workflow for nepare"
+  tag: "openadmet-models-basic-test"
+  authors: "Devany West"
+  email: "devany.west@omsf.io"
+  date_created: 2025-09-03
+  biotargets:
+    - "CYP3A4"
+  tags:
+    - "openadmet"
+    - "workflow"
+    - "test"
+
+# This spection specifies the input data
+data:
+  # Specify where anvil will run (inputs, outputs, etc.)
+  # Specify the dataset file
+  resource: "{{ANVIL_DIR}}/cyp_multitask_nepare.csv"
+  # TODO: add description of intake
+  type: intake
+  # Specify input column containing SMILES
+  input_col: OPENADMET_SMILES
+  # Specify each (1+) of the target columns, or the column that you're trying to predict
+  target_cols:
+  - cyp3a4_pchembl_value_mean
+  dropna: true
+  transform:
+
+procedure:
+
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.1
+      val_size: 0.1
+      random_state: 42
+
+  feat:
+    type: PairwiseFeaturizer
+    params:
+      how_to_pair: 'full'
+      batch_size: 10
+      featurizer:
+        FingerprintFeaturizer:
+          fp_type: "ecfp:4"
+
+  model:
+    type: NeuralPairwiseRegressorModel
+    params:
+      mod_params:
+        hidden_dim: 4
+        num_layers: 2
+        monitor_metric: val_loss
+  train:
+    type: LightningTrainer
+    params:
+      accelerator: cpu
+      early_stopping: true
+      early_stopping_patience: 2
+      early_stopping_mode: min
+      early_stopping_min_delta: 0.001
+      max_epochs: 1
+      use_wandb: false
+
+report:
+  eval:
+  - type: RegressionPlots
+    params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      title: True vs Predicted pChEMBL on test set
+
+  - type: PytorchLightningRepeatedKFoldCrossValidation
+    params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      n_repeats: 2
+      n_splits: 2
+      pXC50: true
+      random_state: 42
+      title: Nepare

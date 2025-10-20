@@ -47,7 +47,7 @@ class MTENNDataset(Dataset):
     def __init__(
         self,
         complexes: Iterable[Path],
-        y: Iterable[Any],
+        y: Iterable[Any] = None,
         ligand_resname: Union[str, list[str]] = "LIG",
         ignore_h: bool = True,
     ):
@@ -58,7 +58,7 @@ class MTENNDataset(Dataset):
         ----------
         complexes : Iterable[Path]
             List or iterable of paths to PDB files of protein-ligand complexes.
-        y : Iterable[Any]
+        y : Iterable[Any], optional
             List or iterable of target values corresponding to the complexes.
         ligand_resname : Union[str, list[str]], optional
             The residue name(s) of the ligand in the PDB files. If a single string
@@ -75,7 +75,7 @@ class MTENNDataset(Dataset):
             raise ValueError(
                 "ligand_resnames must be a string or a list of the same length as complexes"
             )
-        if len(complexes) != len(y):
+        if y is not None and len(complexes) != len(y):
             raise ValueError("complexes and y must be the same length")
         self.ligand_resname = ligand_resname
         self.y = y
@@ -183,9 +183,10 @@ class MTENNDataset(Dataset):
         Z = self.Z[idx]
         B = self.B[idx]
         lig_mask = self.lig_mask[idx]
-        y = self.y[idx]
-
-        return {"pos": pos, "Z": Z, "B": B, "lig_mask": lig_mask, "Y": y}
+        item = {"pos": pos, "Z": Z, "B": B, "lig_mask": lig_mask}
+        if self.y is not None:
+            item["Y"] = self.y[idx]
+        return item
 
 
 def _mtenn_collate_fn(batch):
@@ -201,9 +202,10 @@ def _mtenn_collate_fn(batch):
         }
 
         data_list.append(data)
+        if "Y" in item:
+            targets.append(torch.tensor(item["Y"], dtype=torch.float32))
 
-        targets.append(torch.tensor(item["Y"], dtype=torch.float32))
-    targets = torch.stack(targets, dim=0)
+    targets = torch.stack(targets, dim=0) if targets else None
 
     return data_list, targets
 
@@ -242,7 +244,9 @@ class MTENNFeaturizer(FeaturizerBase):
     def _prepare(self):
         """Prepare the featurizer."""
 
-    def featurize(self, complexes: Iterable[Path], y: Iterable[Any]) -> DataLoader:
+    def featurize(
+        self, complexes: Iterable[Path], y: Iterable[Any] = None
+    ) -> DataLoader:
         """
         Featurize a list of SMILES strings.
 
@@ -250,7 +254,7 @@ class MTENNFeaturizer(FeaturizerBase):
         ----------
         complexes : Iterable[Path]
             List or iterable of paths to PDB files of protein-ligand complexes.
-        y : Iterable[Any]
+        y : Iterable[Any], optional
             List or iterable of target values corresponding to the complexes.
 
         Returns
@@ -266,14 +270,22 @@ class MTENNFeaturizer(FeaturizerBase):
         # if a pandas dataframe or series
         if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):
             y = y.to_numpy()
-        y = y.reshape(-1, 1)
 
-        self._dataset = MTENNDataset(
-            complexes=complexes,
-            y=y,
-            ligand_resname=self.ligand_resname,
-            ignore_h=self.ignore_h,
-        )
+        if y is not None:
+            y = y.reshape(-1, 1)
+
+            self._dataset = MTENNDataset(
+                complexes=complexes,
+                y=y,
+                ligand_resname=self.ligand_resname,
+                ignore_h=self.ignore_h,
+            )
+        else:
+            self._dataset = MTENNDataset(
+                complexes=complexes,
+                ligand_resname=self.ligand_resname,
+                ignore_h=self.ignore_h,
+            )
 
         self._dataloader = DataLoader(
             self._dataset,

@@ -15,6 +15,7 @@ from openadmet.models.architecture.gat import *  # noqa: F401 F403
 from openadmet.models.architecture.dummy import *  # noqa: F401 F403
 from openadmet.models.architecture.lgbm import *  # noqa: F401 F403  # noqa: F401 F403
 from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
+from openadmet.models.architecture.nepare import *  # noqa: F401 F403
 from openadmet.models.architecture.rf import *  # noqa: F401 F403
 from openadmet.models.architecture.svm import *  # noqa: F401 F403
 from openadmet.models.architecture.tabpfn import *  # noqa: F401 F403

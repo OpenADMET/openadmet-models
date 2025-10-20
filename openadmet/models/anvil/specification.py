@@ -58,20 +58,55 @@ class DataSpec(BaseModel):
         The base directory for relative paths.
     dropna : Optional[bool]
         Whether to drop rows with NaN values.
+    train_resource : Optional[str]
+        The path or URL to the training data resource (if using separate train/test).
+    test_resource : Optional[str]
+        The path or URL to the testing data resource (if using separate train/test).
+    val_resource : Optional[str]
+        The path or URL to the validation data resource (if using separate train/test).
     _catalog : Optional[intake.catalog.Catalog]
         The intake catalog object if the resource is a YAML file.
+    _using_train_test : bool
+        Whether using separate train and test resources.
 
     """
 
     type: str
-    resource: str
+    resource: Optional[str] = None
+
     cat_entry: Optional[str] = None
     target_cols: Union[str, list[str]]
     input_col: str
     anvil_dir: Optional[str] = None
     dropna: Optional[bool] = False
+    train_resource: Optional[str] = None
+    test_resource: Optional[str] = None
+    val_resource: Optional[str] = None
 
     _catalog: Optional[intake.catalog.Catalog] = None
+    _using_train_test: bool = False
+
+    @property
+    def using_train_test(self):
+        """Whether using separate train and test resources."""
+        return self._using_train_test
+
+    @model_validator(mode="after")
+    def check_resource_test_train(self):
+        """Ensure that either resource or train/test/val resources are provided, not both."""
+        if self.resource and (
+            self.train_resource or self.test_resource or self.val_resource
+        ):
+            raise ValueError(
+                "Specify either `resource` or `train_resource`/`test_resource`/`val_resource`, not both."
+            )
+        if self.train_resource or self.test_resource or self.val_resource:
+            if not (self.train_resource and self.test_resource):
+                raise ValueError(
+                    "`train_resource` and `test_resource` must both be specified when using separate resources."
+                )
+            self._using_train_test = True
+        return self
 
     @field_validator("target_cols", mode="before")
     @classmethod
@@ -95,15 +130,19 @@ class DataSpec(BaseModel):
 
         """
         if self.anvil_dir:
-            template = jinja2.Template(self.resource)
-            self.resource = template.render(ANVIL_DIR=self.anvil_dir)
+            if self.resource:
+                template = jinja2.Template(self.resource)
+                self.resource = template.render(ANVIL_DIR=self.anvil_dir)
         return self
 
     def template_anvil_dir(self, anvil_dir: Path):
-        """Template the resource with ANVIL_DIR if present."""
+        """Template all resources with ANVIL_DIR if present."""
         self.anvil_dir = anvil_dir
-        template = jinja2.Template(self.resource)
-        self.resource = template.render(ANVIL_DIR=anvil_dir)
+
+        for attr in ["resource", "train_resource", "test_resource", "val_resource"]:
+            value = getattr(self, attr, None)
+            if value:
+                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
@@ -117,48 +156,118 @@ class DataSpec(BaseModel):
             The target data (e.g., properties to predict)
 
         """
-        # if YAML, parse as intake catalog
-        if self.resource.endswith(".yaml") or self.resource.endswith(".yml"):
-            self._catalog = intake.open_catalog(self.resource)
-            data = self._catalog[self.cat_entry].read()
+        return (
+            self._read_train_test_val()
+            if self._using_train_test
+            else self._read_single_resource()
+        )
 
-        # if CSV, parse using intake
-        elif self.resource.endswith(".csv"):
-            data = intake.open_csv(self.resource).read()
+    @staticmethod
+    def _read_csv_or_parquet(resource: str) -> pd.DataFrame:
+        """Read data from a CSV or Parquet resource."""
+        if resource.endswith(".csv"):
+            return intake.open_csv(resource).read()
+        elif any(resource.endswith(x) for x in [".parquet", ".pq", ".pqt"]):
+            return intake.open_parquet(resource).read()
+        raise ValueError(f"Unsupported resource type: {resource}")
 
-        elif any(self.resource.endswith(x) for x in [".parquet", ".pq", ".pqt"]):
-            data = intake.open_parquet(self.resource).read()
-        else:
-            raise ValueError(f"Unsupported resource type: {self.resource}")
+    def _read_train_test_val(self) -> tuple[pd.Series, ...]:
+        """Read data from separate train/test/validation resources."""
+        if not self.train_resource or not self.test_resource:
+            raise ValueError("Both train_resource and test_resource must be specified.")
 
-        # combine input and targets for joint NaN handling
-        combined = data[
-            [self.input_col]
-            + (
-                self.target_cols
-                if isinstance(self.target_cols, list)
-                else [self.target_cols]
-            )
-        ]
+        def read_split(resource: str, split_name: str) -> pd.DataFrame:
+            if resource.endswith((".yaml", ".yml")):
+                raise ValueError(
+                    "YAML catalogs not supported with train/test resources."
+                )
+            data = self._read_csv_or_parquet(resource)
+            if "_split" in data.columns:
+                raise ValueError(
+                    f"{split_name.capitalize()} data should not contain a '_split' column."
+                )
+            data["_split"] = split_name
+            return data
 
-        # get number of combined rows for logging
+        # Read and combine data
+        splits_to_read = [(self.train_resource, "train"), (self.test_resource, "test")]
+        if self.val_resource:
+            splits_to_read.append((self.val_resource, "val"))
+
+        combined = pd.concat(
+            [read_split(resource, split) for resource, split in splits_to_read]
+        )
+
+        target_cols = (
+            self.target_cols
+            if isinstance(self.target_cols, list)
+            else [self.target_cols]
+        )
+        combined = combined[[self.input_col] + target_cols + ["_split"]]
+
+        # Handle NaN values
         n_before = len(combined)
-
         if self.dropna:
-            cleaned_combined = combined.dropna().reset_index(drop=True)
-            n_after = len(cleaned_combined)
-            n_dropped = n_before - n_after
+            combined = combined.dropna().reset_index(drop=True)
+            logger.info(
+                f"{n_before} total rows. {n_before - len(combined)} NaN rows were dropped."
+            )
         else:
-            n_dropped = 0
-            cleaned_combined = combined
+            logger.info(f"{n_before} total rows. 0 NaN rows were dropped.")
 
-        # Split the data again
-        input_clean = cleaned_combined[self.input_col]
-        targets_clean = cleaned_combined[self.target_cols]
+        # Split and return (X values, then Y values)
+        train = combined[combined["_split"] == "train"]
+        test = combined[combined["_split"] == "test"]
 
-        logger.info(f"{n_before} total rows. {n_dropped} NaN rows were dropped.")
+        val = combined[combined["_split"] == "val"] if self.val_resource else None
 
-        return input_clean, targets_clean
+        X_train = train[self.input_col]
+        X_test = test[self.input_col]
+        X_val = val[self.input_col] if val is not None else None
+
+        y_train = train[self.target_cols]
+        y_test = test[self.target_cols]
+        y_val = val[self.target_cols] if val is not None else None
+
+        # also return full X, y for reference
+        X = combined[self.input_col]
+        y = combined[self.target_cols]
+
+        return X_train, X_val, X_test, y_train, y_val, y_test, X, y
+
+    def _read_single_resource(self) -> tuple[pd.Series, pd.Series]:
+        """Read data from a single resource."""
+        # Read data
+        if self.resource.endswith((".yaml", ".yml")):
+            if not self.cat_entry:
+                raise ValueError("cat_entry must be specified for YAML resources.")
+            self._catalog = intake.open_catalog(self.resource)
+            if self.cat_entry not in self._catalog:
+                raise ValueError(
+                    f"cat_entry '{self.cat_entry}' not found in catalog '{self.resource}'."
+                )
+            data = self._catalog[self.cat_entry]().read()
+        else:
+            data = self._read_csv_or_parquet(self.resource)
+
+        # Select and clean columns
+        target_cols = (
+            self.target_cols
+            if isinstance(self.target_cols, list)
+            else [self.target_cols]
+        )
+        combined = data[[self.input_col] + target_cols]
+
+        n_before = len(combined)
+        if self.dropna:
+            combined = combined.dropna().reset_index(drop=True)
+            logger.info(
+                f"{n_before} total rows. {n_before - len(combined)} NaN rows were dropped."
+            )
+        else:
+            logger.info(f"{n_before} total rows. 0 NaN rows were dropped.")
+
+        return combined[self.input_col], combined[self.target_cols]
 
     @property
     def catalog(self):
@@ -234,7 +343,7 @@ class SpecBase(BaseModel):
         path : str or PathLike
             The file path to read the YAML content from.
         storage_options : dict, optional
-            Additional options to pass to the file system (e.g., for S3, GCS
+            Additional options to pass to the file system (e.g., for S3, GCS)
 
         Returns
         -------
@@ -439,14 +548,14 @@ class EnsembleSpec(AnvilSection):
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int
-    calibration_method: str = "isotonic-regression"
+    calibration_method: str | None = "isotonic-regression"
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
     @field_validator("calibration_method")
     def check_method(cls, value):
         """Validate the calibration method."""
-        allowed = ["isotonic-regression", "scaling-factor"]
+        allowed = ["isotonic-regression", "scaling-factor", None]
         if value not in allowed:
             raise ValueError(
                 f"Invalid calibration method: {value}. Valid options are: {allowed}."
@@ -602,7 +711,7 @@ class AnvilSpecification(BaseModel):
         report_yaml : str or PathLike, optional
             The file path for the report YAML file. Default is 'eval.yaml'.
         storage_options : dict, optional
-            Additional options to pass to the file system (e.g., for S3, GCS
+            Additional options to pass to the file system (e.g., for S3, GCS)
 
         """
         # Write each section to its own YAML file

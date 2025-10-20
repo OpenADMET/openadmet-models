@@ -5,7 +5,9 @@ import uuid
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
-from typing import Any
+
+from typing import Any, ClassVar, Literal, Optional
+
 
 import numpy as np
 import pandas as pd
@@ -109,7 +111,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(X_train_feat, y_train)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train_feat, y_train, output_dir):
+    def _train_ensemble(self, X_train_feat, y_train, output_dir, **kwargs):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
@@ -234,12 +236,17 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Load data from YAML specification
         logger.info("Loading data")
-        X, y = self.data_spec.read()
+        if self.data_spec.using_train_test:
+            logger.info(
+                "Using prespecified train/test resources from data specification"
+            )
+            X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+        else:
+            X, y = self.data_spec.read()
+            # Split data into train, validation, and test sets
+            logger.info("Splitting data from single resource")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
         logger.info("Data loaded")
-
-        # Split data into train, validation, and test sets
-        logger.info("Splitting data")
-        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
@@ -271,9 +278,14 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X_test_feat, _ = self.feat.featurize(X_test)
         zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
 
+        # featurize whole dataset also for CV if needed
+        X_feat, _ = self.feat.featurize(X)
+
         # Transform data
         if self.transform:
             # Train
+            logger.info("Transforming data")
+            self.transform.fit(X_train_feat)
             X_train_feat = self.transform.transform(X_train_feat)
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
 
@@ -285,6 +297,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Test
             X_test_feat = self.transform.transform(X_test_feat)
             zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
+
+            # Whole dataset
+            X_feat = self.transform.transform(X_feat)
 
             logger.info("Data transformed")
         else:
@@ -361,6 +376,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 model=self.model,
                 X_train=X_train_feat,
                 y_train=y_train,
+                X_all=X_feat,
+                y_all=y,
                 tag=model_tag,
                 target_labels=target_labels,
             )
@@ -413,7 +430,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         return self
 
-    def _train(self, train_dataloader, val_dataloader, train_scaler, output_dir):
+    def _train(
+        self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
+    ):
         # Load model from disk
         if (
             self.parent_spec.procedure.model.param_path is not None
@@ -424,7 +443,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.parent_spec.procedure.model.param_path,
                 self.parent_spec.procedure.model.serial_path,
                 scaler=train_scaler,
+                **kwargs,
             )
+
             logger.info("Model loaded")
 
             # Optionally freeze weights
@@ -438,7 +459,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Build model from scratch
         else:
             logger.info("Building model")
-            self.model.build(scaler=train_scaler)
+            self.model.build(scaler=train_scaler, **kwargs)
             logger.info("Model built")
 
         # Pass model to trainer
@@ -460,7 +481,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(train_dataloader, val_dataloader)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir):
+    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir, **kwargs):
         # Safely cast to numpy
         X_train = _safe_to_numpy(X_train)
         y_train = _safe_to_numpy(y_train)
@@ -514,6 +535,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     self.parent_spec.procedure.ensemble.param_paths[i],
                     self.parent_spec.procedure.ensemble.serial_paths[i],
                     scaler=bootstrap_scaler,
+                    **kwargs,
                 )
                 logger.info(f"Model {i} loaded")
 
@@ -529,7 +551,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             else:
                 logger.info(f"Building model {i}")
                 self.model = self.model.make_new()
-                self.model.build(scaler=bootstrap_scaler)
+                self.model.build(scaler=bootstrap_scaler, **kwargs)
                 logger.info(f"Model {i} built")
 
             # Pass model to trainer
@@ -638,12 +660,17 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Load data from YAML specification
         logger.info("Loading data")
-        X, y = self.data_spec.read()
+        if self.data_spec.using_train_test:
+            logger.info(
+                "Using prespecified train/test resources from data specification"
+            )
+            X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+        else:
+            X, y = self.data_spec.read()
+            # Split data into train, validation, and test sets
+            logger.info("Splitting data from single resource")
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
         logger.info("Data loaded")
-
-        # Split data into train, validation, and test sets
-        logger.info("Splitting data")
-        X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
@@ -676,12 +703,28 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Dataloader, indices, scaler, dataset
         test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
         torch.save(test_dataloader, output_dir / "test_dataloader.pth")
+
         logger.info("Data featurized")
+
+        kwargs = {}
+        if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
+            kwargs["input_dim"] = train_dataset[0][0].shape[
+                -1
+            ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
+            logger.info(f"Input dim inferred as {kwargs['input_dim']}")
+        else:
+            logger.info("Input dim not inferred, assuming unpaired data")
 
         # Train
         if self.ensemble:
             # Ensemble mode
-            self._train_ensemble(X_train, y_train, val_dataloader, output_dir)
+            self._train_ensemble(
+                X_train,
+                y_train,
+                val_dataloader,
+                output_dir,
+                **kwargs,
+            )
 
             # Calibrate
             self.model.calibrate_uncertainty(
@@ -712,7 +755,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Model saved")
         else:
             # Single-model mode
-            self._train(train_dataloader, val_dataloader, train_scaler, output_dir)
+            self._train(
+                train_dataloader,
+                val_dataloader,
+                train_scaler,
+                output_dir,
+                **kwargs,
+            )
 
             # Save
             logger.info("Saving model")
@@ -756,8 +805,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 model=self.model,
                 X_train=train_dataloader,
                 y_train=train_dataloader,
-                X_train_raw=X_train,
-                y_train_raw=y_train,
+                X_all=X,
+                y_all=y,
                 featurizer=self.feat,
                 trainer=self.trainer,
                 use_wandb=use_wandb,

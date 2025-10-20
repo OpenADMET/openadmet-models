@@ -5,6 +5,7 @@ from numpy.testing import assert_array_equal
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 @pytest.fixture()
@@ -83,3 +84,18 @@ def test_feature_concatenator_order_independence(smiles):
 
     assert_array_equal(X1, X2)
     assert_array_equal(idx1, idx2)
+
+
+def test_pairwise_featurizer(smiles):
+    featurizer = PairwiseFeaturizer(
+        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "dtype": np.float32}},
+        how_to_pair="full",
+        batch_size=2,
+        shuffle=False,
+        n_jobs=1,
+    )
+    _, _, scaler, dataset = featurizer.featurize(smiles, y=np.array([1.0, 2.0, 1.0]))
+    assert len(dataset) == 9  # 3 molecules -> 3x3 = 9 pairs in 'full' mode
+    expected_y = np.array([0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0])
+    assert [dataset[i][2] for i in range(9)] == pytest.approx(expected_y)
+    assert scaler is None  # No scaling applied in FingerprintFeaturizer

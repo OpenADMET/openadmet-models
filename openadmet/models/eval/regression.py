@@ -12,7 +12,11 @@ from pydantic import Field
 from scipy.stats import kendalltau, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans
+from openadmet.models.eval.eval_base import (
+    EvalBase,
+    evaluators,
+    get_t_true_and_t_pred,
+)
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 
 # create partial functions for the scipy stats
@@ -109,10 +113,7 @@ class RegressionMetrics(EvalBase):
             self.use_wandb = use_wandb
 
         for task_id in range(n_tasks):
-            t_true = y_true[:, task_id]
-            t_pred = y_pred[:, task_id]
-            # remove Nan values
-            t_true, t_pred = mask_nans(t_true, t_pred)
+            t_true, t_pred = get_t_true_and_t_pred(task_id, y_true, y_pred, None, None)
             t_label = target_labels[task_id]
 
             self.data[t_label] = {}
@@ -381,10 +382,7 @@ class RegressionPlots(EvalBase):
         self.plot_data = {}
 
         for task_id in range(n_tasks):
-            t_true = y_true[:, task_id]
-            t_pred = y_pred[:, task_id]
-            # remove Nan values
-            t_true, t_pred = mask_nans(t_true, t_pred)
+            t_true, t_pred = get_t_true_and_t_pred(task_id, y_true, y_pred, None, None)
             t_label = target_labels[task_id]
 
             if self.do_stats:
@@ -421,6 +419,7 @@ class RegressionPlots(EvalBase):
         y_true,
         y_pred,
         y_pred_err=None,
+        y_true_err=None,
         data_labels=None,
         xlabel="Measured",
         ylabel="Predicted",
@@ -443,6 +442,8 @@ class RegressionPlots(EvalBase):
             Predicted values.
         y_pred_err : array-like, optional
             Prediction error bars.
+        y_true_err: array-like, optional
+            Experimental error bars.
         data_labels : list, optional
             Labels for each data point.
         xlabel : str, optional
@@ -490,9 +491,9 @@ class RegressionPlots(EvalBase):
             y=np.ravel(y_pred),
             kind="reg",
             joint_kws={"ci": confidence_level * 100, "fit_reg": fit_reg},
-            scatter_kws={"alpha": 0.3},
             color="teal",
             height=10,
+            scatter_kws={"alpha": 0.3},
         )
 
         if y_pred_err is not None:
@@ -500,6 +501,16 @@ class RegressionPlots(EvalBase):
                 x=np.ravel(y_true),
                 y=np.ravel(y_pred),
                 yerr=np.ravel(y_pred_err),
+                fmt="o",
+                color="teal",
+                alpha=0.3,
+            )
+
+        if y_true_err is not None:
+            g.ax_joint.errorbar(
+                x=np.ravel(y_true),
+                y=np.ravel(y_pred),
+                xerr=np.ravel(y_true_err),
                 fmt="o",
                 color="teal",
                 alpha=0.3,

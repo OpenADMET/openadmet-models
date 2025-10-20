@@ -17,7 +17,7 @@ repos:
   - id: black
     files: ^openadmet_models
 - repo: https://github.com/PyCQA/isort
-  rev: 6.1.0
+  rev: 7.0.0
   hooks:
   - id: isort
     files: ^openadmet_models
@@ -30,14 +30,14 @@ repos:
     files: ^openadmet_models
     additional_dependencies: [Flake8-pyproject]
 - repo: https://github.com/asottile/pyupgrade
-  rev: 'v3.20.0'
+  rev: 'v3.21.0'
   hooks:
   - id: pyupgrade
     args:
     - --py39-plus
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.13.3
+  rev: v0.14.0
   hooks:
     # Run the linter.
     - id: ruff-check

@@ -11,6 +11,10 @@ from rdkit.Chem import PandasTools
 from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
 from openadmet.models.active_learning.ensemble_base import EnsembleBase
 from openadmet.models.anvil.specification import DataSpec, Metadata, ProcedureSpec
+from openadmet.models.features.pairwise import (
+    PairwiseAugmentedDataset,
+    PairwiseFeaturizer,
+)
 
 
 def load_anvil_model_and_metadata(model_dir):
@@ -88,6 +92,35 @@ def load_anvil_model_and_metadata(model_dir):
     return loaded_model, feat, metadata, data
 
 
+def _generate_pairwise_df(
+    data, input_col, feat, predictions, predictions_tag, std_tag
+) -> pd.DataFrame:
+    """Generate a DataFrame for pairwise predictions."""
+    smiles = data[input_col].values
+    pairwise_dataset = PairwiseAugmentedDataset(smiles, None, how=feat.how_to_pair)
+    pairs = pairwise_dataset.idxs  # list of (i, j) tuples
+
+    smiles_i = [smiles[i] for i, j in pairs]
+    smiles_j = [smiles[j] for i, j in pairs]
+    pred = predictions[:, j]
+
+    pairwise_df = pd.DataFrame(
+        {
+            f"{input_col}_i": smiles_i,
+            f"{input_col}_j": smiles_j,
+            predictions_tag: pred,
+        }
+    )
+
+    pairwise_df[std_tag] = pd.Series(predictions[:, j], index=pairwise_df.index)
+
+    pairwise_df[input_col] = (
+        pairwise_df[f"{input_col}_i"] + " - " + pairwise_df[f"{input_col}_j"]
+    )
+
+    return pairwise_df
+
+
 def predict(
     input_path: str,
     input_col: str,
@@ -148,12 +181,13 @@ def predict(
     # load input data
     if isinstance(input_path, pd.DataFrame):
         data = input_path
-
     elif isinstance(input_path, Path) or isinstance(input_path, str):
         if input_path.endswith(".csv"):
             data = pd.read_csv(input_path)
         elif input_path.endswith(".sdf"):
             data = PandasTools.LoadSDF(input_path, smilesName=input_col)
+        else:
+            raise ValueError("Path must lead to a CSV or SDF file")
     else:
         raise ValueError(
             "Input path must be a pandas DataFrame, a CSV file, or an SDF file"
@@ -227,9 +261,19 @@ def predict(
                     f"Output file already contains a '{predictions_tag}' column or '{std_tag}' column"
                 )
 
-            # Add the predictions to the data DataFrame
-            data[predictions_tag] = pd.Series(predictions[:, j], index=X_indices)
-            data[std_tag] = pd.Series(std[:, j], index=X_indices)
+            if isinstance(feat, PairwiseFeaturizer):
+                logger.info(
+                    "Detected pairwise featurizer, generating pairwise output DataFrame"
+                )
+                data = _generate_pairwise_df(
+                    data, input_col, feat, predictions, predictions_tag, std_tag
+                )
+
+            else:
+                # Add the predictions to the data DataFrame
+                data[predictions_tag] = pd.Series(predictions[:, j], index=X_indices)
+                data[std_tag] = pd.Series(std[:, j], index=X_indices)
+
             logger.info(
                 f"Predictions for model {i} task {j} saved to column '{predictions_tag}', std saved to column '{std_tag}'"
             )

@@ -20,9 +20,9 @@ from openadmet.models.tests.unit.datafiles import (
 def all_anvil_full_recipes():
     return [
         basic_anvil_yaml,
-        anvil_yaml_featconcat,
+        # anvil_yaml_featconcat, # skipping as slow, redundant with integration tests
         anvil_yaml_gridsearch,
-        anvil_yaml_xgboost_cv,
+        # anvil_yaml_xgboost_cv, # skipping as slow, redundant with integration tests
     ]
 
 

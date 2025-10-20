@@ -3,6 +3,7 @@
 from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 
+import torch
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
@@ -14,7 +15,7 @@ from openadmet.models.trainer.trainer_base import TrainerBase, trainers
 @trainers.register("LightningTrainer")
 class LightningTrainer(TrainerBase):
     """
-    Trainer for sklearn models with grid search.
+    Trainer for PyTorch models.
 
     Attributes
     ----------
@@ -96,8 +97,8 @@ class LightningTrainer(TrainerBase):
         # Initialize logging container
         self._logger = []
 
-        # initialize the callbacks list
-        self._callbacks = []
+        # Initialize the callbacks dict
+        self._callbacks = {}
 
         fmtstring = (
             "best-{epoch}-{val_loss:.4f}"
@@ -106,7 +107,7 @@ class LightningTrainer(TrainerBase):
         )
 
         # Configure checkpoint callbacks
-        checkpointing = ModelCheckpoint(
+        checkpoint_callback = ModelCheckpoint(
             self.output_dir
             / "checkpoints",  # Directory where model checkpoints will be saved
             fmtstring,  # Filename format for checkpoints, including epoch and validation loss
@@ -116,8 +117,8 @@ class LightningTrainer(TrainerBase):
             save_top_k=1,  # Keep the top 1 checkpoints
         )
 
-        # Append the checkpointing callback to the callbacks list
-        self._callbacks.append(checkpointing)
+        # Append the checkpointing callback to the callbacks dict
+        self._callbacks[checkpoint_callback.__class__.__name__] = checkpoint_callback
 
         # Configure early stopping callback
         if self.early_stopping:
@@ -127,7 +128,9 @@ class LightningTrainer(TrainerBase):
                 patience=self.early_stopping_patience,  # Number of epochs with no improvement after which training will be stopped
                 mode=self.early_stopping_mode,  # Stop when validation loss stops decreasing
             )
-            self._callbacks.append(early_stopping_callback)
+            self._callbacks[early_stopping_callback.__class__.__name__] = (
+                early_stopping_callback
+            )
 
         # Append wandb longer if requested
         if self.use_wandb:
@@ -146,7 +149,7 @@ class LightningTrainer(TrainerBase):
             accelerator=self.accelerator,
             devices=self.devices,  # Use GPU if available
             max_epochs=self.max_epochs,  # number of epochs to train for
-            callbacks=self._callbacks,
+            callbacks=list(self._callbacks.values()),
             gradient_clip_val=self.gradient_clip_val,
             precision=self.precision,
             accumulate_grad_batches=self.accumulate_grad_batches,
@@ -178,6 +181,12 @@ class LightningTrainer(TrainerBase):
 
         # Fit model
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
+
+        # Load best checkpoint after training
+        checkpoint = torch.load(
+            self._callbacks["ModelCheckpoint"].best_model_path, weights_only=False
+        )
+        self.model.estimator.load_state_dict(checkpoint["state_dict"])
 
         return self.model
 

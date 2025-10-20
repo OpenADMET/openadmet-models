@@ -416,6 +416,8 @@ class GATv2Model(LightningModelBase):
             Additional keyword arguments.
 
         """
+        logger.warning("GAT Model is experimental, use with caution.")
+
         self.scaler = scaler
 
         if not self.estimator:
@@ -483,6 +485,8 @@ class GATv2Model(LightningModelBase):
             Predictions as a NumPy array.
 
         """
+        logger.warning("GAT Model is experimental, use with caution.")
+
         if not self.estimator:
             raise AttributeError("Model not trained")
 

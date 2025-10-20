@@ -1,5 +1,5 @@
-`openadmet-models`
-==============================
+`OpenADMET Models`
+==================
 [//]: # (Badges)
 [![Logo](https://img.shields.io/badge/OSMF-OpenADMET-%23002f4a)](https://openadmet.org/)
 [![GitHub Actions Build Status](https://github.com/OpenADMET/openadmet_models/workflows/CI/badge.svg)](https://github.com/OpenADMET/openadmet_models/actions?query=workflow%3ACI)
@@ -83,4 +83,4 @@ Copyright (c) 2025, OpenADMET Models Contributors
 
 ## Acknowledgements
 
-OpenFE is an [Open Molecular Software Foundation](https://omsf.io/) hosted project.
+OpenADMET is an [Open Molecular Software Foundation](https://omsf.io/) hosted project.

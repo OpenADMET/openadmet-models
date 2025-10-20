@@ -2,7 +2,7 @@
 
 import json
 from collections import defaultdict
-
+from typing import Any, ClassVar
 import pandas as pd
 import numpy as np
 from loguru import logger
@@ -16,15 +16,16 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import RepeatedKFold, cross_validate
 
-from openadmet.models.eval.eval_base import EvalBase, evaluators
+from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
-    mask_nans,
     nan_omit_ktau,
     nan_omit_spearmanr,
 )
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
+
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 def wrap_ktau(y_true, y_pred):
@@ -62,6 +63,7 @@ class CrossValidationBase(EvalBase):
 
     """
 
+    is_cross_val: ClassVar[bool] = True
     _evaluated: bool = False
     axes_labels: list[str] = Field(
         ["Measured", "Predicted"], description="Labels for the axes"
@@ -126,6 +128,8 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         y_train=None,
         y_pred=None,
         y_true=None,
+        X_all=None,
+        y_all=None,
         tag=None,
         target_labels=None,
         **kwargs,
@@ -145,6 +149,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             Predicted values (not used in cross-validation, but required for interface).
         y_true : array-like
             True values (not used in cross-validation, but required for interface).
+        X_all : array-like
+            All data features.
+        y_all : array-like
+            All data targets.
         tag : str, optional
             Tag for the evaluation run.
         target_labels : list of str, optional
@@ -164,9 +172,11 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_train is None
             or y_pred is None
             or y_true is None
+            or X_all is None
+            or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, y_all must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -198,7 +208,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation
         scores = cross_validate(
-            estimator, X_train, y_train, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
+            estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
         )
 
         logger.info("Cross-validation complete")
@@ -427,8 +437,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         y_true=None,
         y_pred=None,
         y_train=None,
-        X_train_raw=None,
-        y_train_raw=None,
+        X_all=None,
+        y_all=None,
         featurizer=None,
         trainer=None,
         tag=None,
@@ -451,10 +461,10 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             Predicted values for the full dataset.
         y_train : array-like
             Training targets.
-        X_train_raw : array-like
-            Raw training features (before featurization).
-        y_train_raw : array-like
-            Raw training targets (before featurization).
+        X_all : array-like
+            All data features.
+        y_all : array-like
+            All data targets.
         featurizer : object
             Featurizer instance for data preprocessing.
         trainer : LightningTrainer
@@ -482,13 +492,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_pred is None
             or y_true is None
             or tag is None
-            or X_train_raw is None
-            or y_train_raw is None
             or featurizer is None
             or trainer is None
+            or X_all is None
+            or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, and tag must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, y_all, and tag must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -503,7 +513,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
         # run CV
-        print(self.n_splits, self.n_repeats, self.random_state)
         cv = RepeatedKFold(
             n_splits=self.n_splits,
             n_repeats=self.n_repeats,
@@ -518,11 +527,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         self._metric_data = {}
 
         # cast to numpy arrays
-        X_train_raw = X_train_raw.to_numpy()
-        y_train_raw = y_train_raw.to_numpy()
+        X_all = X_all.to_numpy()
+        y_all = y_all.to_numpy()
 
         # prepare containers for metrics
-        n_tasks = y_train_raw.shape[1]
+        n_tasks = y_all.shape[1]
         if target_labels is None:
             target_labels = [f"task_{i}" for i in range(n_tasks)]
 
@@ -531,14 +540,14 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self._metric_data[t_label] = defaultdict(list)
 
         for fold, (fold_train_ids, fold_val_ids) in enumerate(
-            cv.split(X=X_train_raw, y=y_train_raw)
+            cv.split(X=X_all, y=y_all)
         ):
             logger.info(f"Fold {fold}")
 
-            X_train = X_train_raw[fold_train_ids]
-            y_train = y_train_raw[fold_train_ids]
-            X_val = X_train_raw[fold_val_ids]
-            y_val = y_train_raw[fold_val_ids]
+            X_train = X_all[fold_train_ids]
+            y_train = y_all[fold_train_ids]
+            X_val = X_all[fold_val_ids]
+            y_val = y_all[fold_val_ids]
 
             # print shapes of matrices
             logger.debug(f"X_train shape: {X_train.shape}")
@@ -585,10 +594,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
             for task_id in range(n_tasks):
-                t_true = y_val[:, task_id]
-                t_pred = y_pred_fold[:, task_id]
-                # remove Nan values
-                t_true, t_pred = mask_nans(t_true, t_pred)
+                t_true, t_pred = get_t_true_and_t_pred(
+                    task_id, y_true, y_pred, y_val, y_pred_fold
+                )
                 t_label = target_labels[task_id]
 
                 for metric_name, metric_data in self._metrics.items():
@@ -629,14 +637,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # now the plots
         for task_id in range(n_tasks):
-            t_true = y_true[:, task_id]
-            t_pred = y_pred[:, task_id]
-            # remove Nan values
-            t_true, t_pred = mask_nans(t_true, t_pred)
             t_label = target_labels[task_id]
-
+            t_true, t_pred = get_t_true_and_t_pred(
+                task_id, y_true, y_pred, y_val, y_pred_fold
+            )
             stat_dict = self.get_stat_dict(t_label=t_label)
-
             # create the plots
             for plot_tag, plot in self.plots.items():
                 plot_tag_task = f"{plot_tag}_{t_label}"

@@ -14,7 +14,7 @@ from openadmet.models.features.feature_base import MolfeatFeaturizer, featurizer
 @featurizers.register("DescriptorFeaturizer")
 class DescriptorFeaturizer(MolfeatFeaturizer):
     """
-    Fingerprint featurizer for molecules, relies on molfeat backend.
+    Molecular descriptor featurizer, relies on molfeat backend.
 
     Attributes
     ----------

@@ -2,14 +2,22 @@ data:
   type: intake
   cat_entry: null
   input_col: OPENADMET_SMILES
-  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
+  train_resource: "{{ANVIL_DIR}}/cyp_multitask_train.csv"
+  test_resource: "{{ANVIL_DIR}}/cyp_multitask_test.csv"
+  val_resource: "{{ANVIL_DIR}}/cyp_multitask_val.csv"
   target_cols:
   - cyp3a4_pchembl_value_mean
+  - cyp2d6_pchembl_value_mean
+  - cyp2c9_pchembl_value_mean
+  - cyp1a2_pchembl_value_mean
 
 metadata:
   authors: Hugo M-O
   biotargets:
   - CYP3A4
+  - CYP2D6
+  - CYP2C9
+  - CYP1A2
   build_number: 0
   description: basic regression  using a ChemProp multitask task model
   driver: pytorch
@@ -31,7 +39,7 @@ procedure:
     type: ChemPropModel
     params:
       messages: bond
-      n_tasks: 1
+      n_tasks: 4
 
   split:
     type: ShuffleSplitter
@@ -44,7 +52,7 @@ procedure:
   train:
     type: LightningTrainer
     params:
-      accelerator: gpu
+      accelerator: cpu
       max_epochs: 1
       use_wandb: false
 
@@ -72,4 +80,4 @@ report:
       n_splits: 5
       pXC50: true
       random_state: 42
-      title: Multitask True vs Predicted pChEMBL on test set
+      title: Multitask True vs Predicted pChEMBL on test

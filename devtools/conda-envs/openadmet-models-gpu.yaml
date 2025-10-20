@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - ase
+  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
@@ -54,4 +55,5 @@ dependencies:
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
+    - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
     - git+https://github.com/OpenADMET/molfeat.git@main
