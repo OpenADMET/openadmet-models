@@ -9,7 +9,7 @@ import torch
 from chemprop import models, nn
 from lightning import pytorch as pl
 from loguru import logger
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
