@@ -455,7 +455,7 @@ class PostHocComparison(ComparisonBase):
                 values = data[task][m]["value"]
                 if np.isnan(values).any():
                     if m == "spearmanr":
-                        method_data[m] = pd.Series(values).fillna(-1.)
+                        method_data[m] = pd.Series(values).fillna(-1.0)
                     else:
                         method_data[m] = pd.Series(values).fillna(0)
                 else:
