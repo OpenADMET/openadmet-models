@@ -259,7 +259,11 @@ class PostHocComparison(ComparisonBase):
         all_labels = []
         all_task_names = []
 
-        if not isinstance(label_types, list):
+        if isinstance(label_types, str):
+            label_types = [label_types]
+        elif isinstance(label_types, tuple):
+            label_types = list(label_types)
+        elif not isinstance(label_types, list):
             raise ValueError("label_types must be lists")
 
         model_dirs = self.safe_dirs(dirs=model_dirs)
@@ -449,7 +453,13 @@ class PostHocComparison(ComparisonBase):
                 if m not in data[task]:
                     raise ValueError(f"Metric {m} not found in task {task} data.")
                 values = data[task][m]["value"]
-                method_data[m] = values
+                if np.isnan(values).any():
+                    if m == "spearmanr":
+                        method_data[m] = pd.Series(values).fillna(-1.)
+                    else:
+                        method_data[m] = pd.Series(values).fillna(0)
+                else:
+                    method_data[m] = values
             method_data["method"] = tag
             df = pd.concat([df, method_data])
             print(
