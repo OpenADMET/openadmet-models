@@ -36,6 +36,7 @@ class LGBMModelBase(PickleableModelBase):
     random_state: int | None = None
     n_jobs: int | None = None
     importance_type: str = "split"
+    verbose: int = -1
 
     def build(self):
         """Prepare the model."""
