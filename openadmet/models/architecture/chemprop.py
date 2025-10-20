@@ -96,7 +96,6 @@ class ChemPropModel(LightningModelBase):
 
     _n_tasks: int = 1
 
-
     @model_validator(mode="after")
     def set_n_tasks(self) -> "ChemPropModel":
         """
@@ -106,6 +105,7 @@ class ChemPropModel(LightningModelBase):
         -------
         ChemPropModel
             The updated model instance.
+
         """
         self._n_tasks = self.n_tasks
         return self

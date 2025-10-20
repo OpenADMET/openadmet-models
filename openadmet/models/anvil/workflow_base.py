@@ -102,7 +102,6 @@ class AnvilWorkflowBase(BaseModel):
 
         return self
 
-
     @model_validator(mode="after")
     def no_ensemble_cross_val(self) -> "AnvilWorkflowBase":
         """
