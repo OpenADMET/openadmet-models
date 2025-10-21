@@ -561,6 +561,8 @@ class PostHocComparison(ComparisonBase):
             ses = anova_df.groupby("method")[metric].sem()
             ax = axes[i]
 
+            ax.set_xlim(left=0, right=None)
+
             # Get Tukey HSD results for determining significance
             hsd_df = self.get_tukeys_df(df, labels)
 
