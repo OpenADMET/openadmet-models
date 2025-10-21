@@ -15,7 +15,7 @@ This documentation provides an overview of the package's features, as well as de
 
 **Useful Links**:
 `OpenADMET Website <https://openadmet.org/>`__ |
-`Example Tutorial notebooks <https://demos.openadmet.org/en/latest/index.html>`__ |
+`Example Tutorial Notebooks <https://demos.openadmet.org/en/latest/index.html>`__ |
 `Source Repository <https://github.com/OpenADMET/openadmet_models/>`__ |
 `Issues & Ideas <https://github.com/OpenADMET/openadmet_models/issues/>`__
 
