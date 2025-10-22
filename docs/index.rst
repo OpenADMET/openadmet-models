@@ -39,13 +39,13 @@ This documentation provides an overview of the package's features, as well as de
 
       New to OpenADMET Models? Try it out in your browser with Colab.
 
-    .. grid-item-card:: User Guide
+    .. grid-item-card:: Example Tutorials
       :margin: 0 3 0 0
       :text-align: center
       :link: user_guide
       :link-type: doc
 
-      An in-depth guide for users. Start here.
+      A series of step-by-step tutorials demonstrating key features.
 
     .. grid-item-card:: API Reference
       :margin: 0 3 0 0
