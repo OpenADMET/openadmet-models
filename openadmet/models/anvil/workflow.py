@@ -380,6 +380,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 y_all=y,
                 tag=model_tag,
                 target_labels=target_labels,
+                plot_errbars=self.parent_spec.procedure.ensemble.plot_errbars
             )
 
             # Write evaluation report

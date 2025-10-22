@@ -332,7 +332,7 @@ class RegressionPlots(EvalBase):
     dpi: int = Field(300, description="DPI for the plot")
 
     def evaluate(
-        self, y_true=None, y_pred=None, use_wandb=False, target_labels=None, **kwargs
+        self, y_true=None, y_pred=None, y_std=None, plot_errbars=False, use_wandb=False, target_labels=None, **kwargs
     ):
         """
         Generate regression plots and optionally compute statistics.
@@ -343,6 +343,10 @@ class RegressionPlots(EvalBase):
             True values.
         y_pred : array-like
             Predicted values.
+        y_std : array-like
+            Standard deviation of predictions if ensemble is specified.
+        plot_errbars : bool, optional
+            Whether or not to plot standard deviation of predictions as error bars if ensemble is specified.
         use_wandb : bool, optional
             Whether to log plots to Weights & Biases.
         target_labels : list of str, optional
@@ -404,6 +408,7 @@ class RegressionPlots(EvalBase):
                     self.plot_data[f"{t_label}_{plot_tag}"] = plot(
                         t_true,
                         t_pred,
+                        y_pred_err = y_std,
                         xlabel=self.axes_labels[0],
                         ylabel=self.axes_labels[1],
                         title=f"{self.title}\nTask: {t_label}",
@@ -411,6 +416,7 @@ class RegressionPlots(EvalBase):
                         pXC50=self.pXC50,
                         min_val=self.min_val,
                         max_val=self.max_val,
+                        plot_errbars=plot_errbars
                     )
         return self.plot_data
 
@@ -430,6 +436,7 @@ class RegressionPlots(EvalBase):
         min_val=None,
         max_val=None,
         fit_reg=True,
+        plot_errbars=False
     ):
         """
         Create a regression scatter plot with optional confidence intervals and statistics table.
@@ -464,6 +471,8 @@ class RegressionPlots(EvalBase):
             Maximum axis value.
         fit_reg : bool, optional
             Whether to fit and plot a regression line.
+        plot_errbars : bool, optional
+            Whether to plot model error bars from ensemble predictions.
 
         Returns
         -------
@@ -496,7 +505,7 @@ class RegressionPlots(EvalBase):
             scatter_kws={"alpha": 0.3},
         )
 
-        if y_pred_err is not None:
+        if y_pred_err is not None and plot_errbars:
             g.ax_joint.errorbar(
                 x=np.ravel(y_true),
                 y=np.ravel(y_pred),
