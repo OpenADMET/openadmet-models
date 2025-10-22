@@ -332,7 +332,14 @@ class RegressionPlots(EvalBase):
     dpi: int = Field(300, description="DPI for the plot")
 
     def evaluate(
-        self, y_true=None, y_pred=None, y_std=None, plot_errbars=False, use_wandb=False, target_labels=None, **kwargs
+        self,
+        y_true=None,
+        y_pred=None,
+        y_std=None,
+        plot_errbars=False,
+        use_wandb=False,
+        target_labels=None,
+        **kwargs,
     ):
         """
         Generate regression plots and optionally compute statistics.
@@ -408,7 +415,7 @@ class RegressionPlots(EvalBase):
                     self.plot_data[f"{t_label}_{plot_tag}"] = plot(
                         t_true,
                         t_pred,
-                        y_pred_err = y_std,
+                        y_pred_err=y_std,
                         xlabel=self.axes_labels[0],
                         ylabel=self.axes_labels[1],
                         title=f"{self.title}\nTask: {t_label}",
@@ -416,7 +423,7 @@ class RegressionPlots(EvalBase):
                         pXC50=self.pXC50,
                         min_val=self.min_val,
                         max_val=self.max_val,
-                        plot_errbars=plot_errbars
+                        plot_errbars=plot_errbars,
                     )
         return self.plot_data
 
@@ -436,7 +443,7 @@ class RegressionPlots(EvalBase):
         min_val=None,
         max_val=None,
         fit_reg=True,
-        plot_errbars=False
+        plot_errbars=False,
     ):
         """
         Create a regression scatter plot with optional confidence intervals and statistics table.

@@ -545,7 +545,7 @@ class EnsembleSpec(AnvilSection):
         The list of serialization file paths for the ensemble models.
     plot_errbars: Optional[bool]
         Whether or not to plot model standard deviation on regression plot as error bars.
-    
+
     """
 
     section_name: ClassVar[str] = "ensemble"
