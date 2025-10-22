@@ -15,7 +15,7 @@ This documentation provides an overview of the package's features, as well as de
 
 **Useful Links**:
 `OpenADMET Website <https://openadmet.org/>`__ |
-`Example Tutorial notebooks <https://demos.openadmet.org/en/latest/index.html>`__ |
+`Example Tutorial Notebooks <https://demos.openadmet.org/en/latest/index.html>`__ |
 `Source Repository <https://github.com/OpenADMET/openadmet_models/>`__ |
 `Issues & Ideas <https://github.com/OpenADMET/openadmet_models/issues/>`__
 
@@ -37,15 +37,15 @@ This documentation provides an overview of the package's features, as well as de
       :link: https://try.openadmet.org
       :link-type: url
 
-      New to OpenADMET Models? Try it out in your browser with Colab.
+      New to OpenADMET Models? Try it out in your browser with Binder (may take a moment to load).
 
-    .. grid-item-card:: User Guide
+    .. grid-item-card:: Example Tutorials
       :margin: 0 3 0 0
       :text-align: center
       :link: user_guide
       :link-type: doc
 
-      An in-depth guide for users. Start here.
+      A series of step-by-step tutorials demonstrating key features.
 
     .. grid-item-card:: API Reference
       :margin: 0 3 0 0
