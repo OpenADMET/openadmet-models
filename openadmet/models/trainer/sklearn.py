@@ -10,9 +10,7 @@ from openadmet.models.drivers import DriverType
 
 
 class SKLearnTrainer(TrainerBase):
-    """
-    Base trainer for sklearn models.
-    """
+    """Base trainer for sklearn models."""
 
     _driver_type: DriverType = DriverType.SKLEARN
 
