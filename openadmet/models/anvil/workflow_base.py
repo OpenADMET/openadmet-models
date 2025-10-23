@@ -123,8 +123,6 @@ class AnvilWorkflowBase(BaseModel):
             raise ValueError("Ensemble models cannot be used with cross-validation.")
         return self
 
-
-
     @model_validator(mode="after")
     def check_model_trainer_compatibility(self) -> "AnvilWorkflowBase":
         """
@@ -146,7 +144,6 @@ class AnvilWorkflowBase(BaseModel):
                 f"Model driver type {self.model._driver_type} does not match trainer driver type {self.trainer._driver_type}."
             )
         return self
-    
 
     @model_validator(mode="after")
     def check_trainer_cv_compatibility(self) -> "AnvilWorkflowBase":

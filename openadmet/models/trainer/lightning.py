@@ -93,7 +93,6 @@ class LightningTrainer(TrainerBase):
     _callbacks: Any = None
     _driver_type: DriverType = DriverType.LIGHTNING
 
-
     def build(self):
         """Build the model trainer."""
         # Initialize logging container

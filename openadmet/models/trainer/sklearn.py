@@ -16,6 +16,7 @@ class SKLearnTrainer(TrainerBase):
 
     _driver_type: DriverType = DriverType.SKLEARN
 
+
 @trainers.register("SKLearnBasicTrainer")
 class SKlearnBasicTrainer(SKLearnTrainer):
     """Basic trainer for sklearn models."""

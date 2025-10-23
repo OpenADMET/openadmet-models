@@ -26,6 +26,7 @@ from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 from openadmet.models.drivers import DriverType
 
+
 def wrap_ktau(y_true, y_pred):
     """Wrap ktau nan omission."""
     return nan_omit_ktau(y_true, y_pred).statistic
