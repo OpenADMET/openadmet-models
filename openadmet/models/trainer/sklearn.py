@@ -77,7 +77,7 @@ class SKLearnSearchTrainer(SKLearnTrainer):
 
 
 @trainers.register("SKLearnGridSearchTrainer")
-class SKLearnGridSearchTrainer(SKLearnTrainer):
+class SKLearnGridSearchTrainer(SKLearnSearchTrainer):
     """
     Trainer for sklearn models with grid search.
 
