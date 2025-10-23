@@ -122,3 +122,52 @@ class AnvilWorkflowBase(BaseModel):
         if self.ensemble is not None and doing_cv:
             raise ValueError("Ensemble models cannot be used with cross-validation.")
         return self
+
+
+
+    @model_validator(mode="after")
+    def check_model_trainer_compatibility(self) -> "AnvilWorkflowBase":
+        """
+        Validate that the model and trainer are compatible.
+
+        Raises
+        ------
+        ValueError
+            If the model and trainer driver types do not match.
+
+        Returns
+        -------
+        AnvilWorkflowBase
+            The validated workflow instance.
+
+        """
+        if self.model._driver_type != self.trainer._driver_type:
+            raise ValueError(
+                f"Model driver type {self.model._driver_type} does not match trainer driver type {self.trainer._driver_type}."
+            )
+        return self
+    
+
+    @model_validator(mode="after")
+    def check_trainer_cv_compatibility(self) -> "AnvilWorkflowBase":
+        """
+        Validate that the trainer supports cross-validation if any evaluation requires it.
+
+        Raises
+        ------
+        ValueError
+            If the trainer does not support cross-validation but an evaluation requires it.
+
+        Returns
+        -------
+        AnvilWorkflowBase
+            The validated workflow instance.
+
+        """
+        cv_evals = [v for v in self.evals if v.is_cross_val]
+        for eval_instance in cv_evals:
+            if not self.trainer._driver_type == eval_instance._driver_type:
+                raise ValueError(
+                    f"Trainer driver type {self.trainer._driver_type} does not match evaluation driver type {eval_instance._driver_type} required for cross-validation."
+                )
+        return self

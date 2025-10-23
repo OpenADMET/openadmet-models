@@ -5,13 +5,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from os import PathLike
 from typing import Any, ClassVar
-
 import joblib
 import torch
 from class_registry import ClassRegistry, RegistryKeyError
 from lightning import pytorch as pl
 from loguru import logger
 from pydantic import BaseModel, field_validator
+from openadmet.models.drivers import DriverType
 
 models = ClassRegistry(unique=True)
 
@@ -133,11 +133,12 @@ class ModelBase(BaseModel, ABC):
 
 
 class PickleableModelBase(ModelBase):
-    """A model that can be pickled using joblib."""
+    """An sklearn model that can be pickled using joblib."""
 
     # ClassVar for pickleable model
     pickleable: ClassVar[bool] = True
     _model_save_name: ClassVar[str] = "model.pkl"
+    _driver_type: DriverType = DriverType.SKLEARN
 
     def save(self, path: PathLike):
         """
@@ -342,6 +343,7 @@ class LightningModelBase(ModelBase):
     # Meta parameters for this class
     type: ClassVar[str]
     _model_save_name: ClassVar[str] = "model.pth"
+    _driver_type: DriverType = DriverType.LIGHTNING
 
     def make_new(self):
         """
