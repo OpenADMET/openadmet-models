@@ -52,6 +52,8 @@ class CrossValidationBase(EvalBase):
         Title for the plots.
     pXC50 : bool
         Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit.
+    plot_errbars : bool
+        Whether to plot error bars for ensemble predictions.
     confidence_level : float
         Confidence level for the confidence interval.
     _metrics : dict
@@ -72,6 +74,9 @@ class CrossValidationBase(EvalBase):
     pXC50: bool = Field(
         False,
         description="Whether to plot for pXC50, highlighting 0.5 and 1.0 log range unit",
+    )
+    plot_errbars: bool = Field(
+        False, description="Whether to plot error bars for ensemble predictions"
     )
     confidence_level: float = Field(
         0.95, description="Confidence level for the confidence interval"
@@ -268,6 +273,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                     pXC50=self.pXC50,
                     min_val=self.min_val,
                     max_val=self.max_val,
+                    plot_errbars=self.plot_errbars,
                 )
 
         return self.data

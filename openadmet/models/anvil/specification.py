@@ -543,8 +543,6 @@ class EnsembleSpec(AnvilSection):
         The list of parameter file paths for the ensemble models.
     serial_paths : Optional[list[str]]
         The list of serialization file paths for the ensemble models.
-    plot_errbars: Optional[bool]
-        Whether or not to plot model standard deviation on regression plot as error bars.
 
     """
 
@@ -553,7 +551,6 @@ class EnsembleSpec(AnvilSection):
     calibration_method: str | None = "isotonic-regression"
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
-    plot_errbars: Optional[bool] = False
 
     @field_validator("calibration_method")
     def check_method(cls, value):
