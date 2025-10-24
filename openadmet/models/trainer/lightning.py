@@ -191,7 +191,9 @@ class LightningTrainer(TrainerBase):
 
             self.model.estimator.load_state_dict(checkpoint["state_dict"])
         except:
-            logger.debug("Warning: Training did not generate a best checkpoint. Using the latest checkpoint state-dict for evaluation.")
+            logger.debug(
+                "Warning: Training did not generate a best checkpoint. Using the latest checkpoint state-dict for evaluation."
+            )
             pass
 
         return self.model
