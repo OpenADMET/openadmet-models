@@ -184,10 +184,15 @@ class LightningTrainer(TrainerBase):
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
         # Load best checkpoint after training
-        checkpoint = torch.load(
-            self._callbacks["ModelCheckpoint"].best_model_path, weights_only=False
-        )
-        self.model.estimator.load_state_dict(checkpoint["state_dict"])
+        try:
+            checkpoint = torch.load(
+                self._callbacks["ModelCheckpoint"].best_model_path, weights_only=False
+            )
+
+            self.model.estimator.load_state_dict(checkpoint["state_dict"])
+        except:
+            logger.debug("Warning: Training did not generate a best checkpoint. Using the latest checkpoint state-dict for evaluation.")
+            pass
 
         return self.model
 
