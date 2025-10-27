@@ -130,7 +130,7 @@ class TestStructuralModelGPUAnvilConfigs:
             {"poses": [pdb_file.as_posix() for pdb_file in pdb_files]}
         )
         # add a dummy target column with random floats
-        poses_df["y"] = np.random.rand()
+        poses_df["y"] = np.random.rand(len(poses_df))
 
         # save the CSV file to the temporary path
         poses_csv = tmp_path / "poses.csv"
