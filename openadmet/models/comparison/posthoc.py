@@ -353,11 +353,11 @@ class PostHocComparison(ComparisonBase):
                             label = label.replace(r, "")
                         # chemeleon special case
                         if label == "ChemProp":
-                            if (
-                                anvil["procedure"]["model"]["params"]["from_chemeleon"]
-                                == True
-                            ):
-                                label = "Chemeleon"
+                            if isinstance(anvil["procedure"]["model"]["params"], dict):
+                                if anvil["procedure"]["model"]["params"].get(
+                                    "from_chemeleon", False
+                                ):
+                                    label = "Chemeleon"
                         full_label.append(label)
 
                     elif lab == "feat":
