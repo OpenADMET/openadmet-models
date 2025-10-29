@@ -282,18 +282,18 @@ class PostHocComparison(ComparisonBase):
                     f"{model_dir}/**/cross_validation_metrics.json", recursive=True
                 )
             ]
-            model_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
-            print(f"Found {len(model_dirs)} models in {model_dir}")
+            anvil_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
+            print(f"Found {len(anvil_dirs)} models in {model_dir}")
 
             model_stats_fns = [
-                f"{model_dir}/cross_validation_metrics.json" for model_dir in model_dirs
+                f"{anvil_dir}/cross_validation_metrics.json" for anvil_dir in anvil_dirs
             ]
             logger.info(
                 f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files"
             )
 
-            for model_dir in model_dirs:
-                with open(f"{model_dir}/anvil_recipe.yaml") as f:
+            for anvil_dir in anvil_dirs:
+                with open(f"{anvil_dir}/anvil_recipe.yaml") as f:
                     anvil = yaml.safe_load(f)
 
                 full_label = []
