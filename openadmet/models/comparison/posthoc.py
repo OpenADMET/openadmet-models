@@ -118,7 +118,7 @@ class PostHocComparison(ComparisonBase):
         for dir in dirs:
             # If dir is a tuple, take the first element
             if isinstance(dir, tuple):
-                dir = dir[0]
+                dir = list(dir)
             if not isinstance(dir, (str, os.PathLike)):
                 raise ValueError(f"Directory {dir} is not a valid path")
             if not os.path.exists(dir):
