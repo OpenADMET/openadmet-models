@@ -267,6 +267,7 @@ class PostHocComparison(ComparisonBase):
             raise ValueError("label_types must be lists")
 
         model_dirs = self.safe_dirs(dirs=model_dirs)
+        model_stats_fns = []
 
         for model_dir in model_dirs:
             # find all directories containing an anvil_recipe.yaml and cross_validation_metrics.json within model_dir
@@ -285,14 +286,14 @@ class PostHocComparison(ComparisonBase):
             anvil_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
             print(f"Found {len(anvil_dirs)} models in {model_dir}")
 
-            model_stats_fns = [
-                f"{anvil_dir}/cross_validation_metrics.json" for anvil_dir in anvil_dirs
-            ]
             logger.info(
                 f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files"
             )
 
             for anvil_dir in anvil_dirs:
+                
+                model_stats_fns.append(f"{anvil_dir}/cross_validation_metrics.json")
+
                 with open(f"{anvil_dir}/anvil_recipe.yaml") as f:
                     anvil = yaml.safe_load(f)
 
