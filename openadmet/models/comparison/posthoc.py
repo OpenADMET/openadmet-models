@@ -291,7 +291,6 @@ class PostHocComparison(ComparisonBase):
             )
 
             for anvil_dir in anvil_dirs:
-                
                 model_stats_fns.append(f"{anvil_dir}/cross_validation_metrics.json")
 
                 with open(f"{anvil_dir}/anvil_recipe.yaml") as f:
