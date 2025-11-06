@@ -743,4 +743,3 @@ class AnvilSpecification(BaseModel):
             evals=[eval.to_class() for eval in self.report.eval],
             parent_spec=self,
         )
-    

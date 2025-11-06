@@ -825,7 +825,8 @@ _DRIVER_TO_CLASS = {
     Drivers.PYTORCH: AnvilDeepLearningWorkflow,
 }
 
-def _trainer_to_driver(trainer:str) -> Drivers:
+
+def _trainer_to_driver(trainer: str) -> Drivers:
     """
     Map trainer type to driver type.
 
