@@ -725,9 +725,9 @@ class AnvilSpecification(BaseModel):
         logger.info("Making workflow from specification")
 
         # Import here to avoid circular import
-        from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
+        from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS, _trainer_to_driver
 
-        return _DRIVER_TO_CLASS[self.metadata.driver](
+        return _DRIVER_TO_CLASS[_trainer_to_driver(self.procedure.train.type)](
             metadata=self.metadata,
             data_spec=self.data,
             model=self.procedure.model.to_class(),
@@ -743,3 +743,4 @@ class AnvilSpecification(BaseModel):
             evals=[eval.to_class() for eval in self.report.eval],
             parent_spec=self,
         )
+    
