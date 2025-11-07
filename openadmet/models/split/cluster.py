@@ -6,7 +6,12 @@ import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
 from openadmet.models.split.scaffold import safe_index
-from useful_rdkit_utils import GroupKFoldShuffle, get_butina_clusters, get_bemis_murcko_clusters
+from useful_rdkit_utils import (
+    GroupKFoldShuffle,
+    get_butina_clusters,
+    get_bemis_murcko_clusters,
+)
+
 
 @splitters.register("KMeansSplitter")
 class KMeansSplitter(SplitterBase):
@@ -94,6 +99,7 @@ class KMeansSplitter(SplitterBase):
             y_val,
             safe_index(y, test_idx),
         )
+
 
 class ButinaSplitter(SplitterBase):
     """Splits the data based on the Butina clustering of the molecules."""
