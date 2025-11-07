@@ -5,6 +5,7 @@ import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
 from openadmet.models.split.scaffold import safe_index
 
+
 @splitters.register("KMeansSplitter")
 class KMeansSplitter(SplitterBase):
     """Splits the data based on the KMeans clustering of the molecules."""
