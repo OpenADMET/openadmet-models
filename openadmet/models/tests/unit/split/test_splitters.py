@@ -7,9 +7,11 @@ from openadmet.models.split.cluster import ClusterSplitter
 from openadmet.models.split.split_base import splitters
 from openadmet.models.tests.unit.datafiles import CYP3A4_chembl_pchembl
 
+
 def test_in_splitters():
     assert "ShuffleSplitter" in splitters
     assert "ClusterSplitter" in splitters
+
 
 @pytest.mark.parametrize(
     "train_size, val_size, test_size, expected_train, expected_val, expected_test, error",
@@ -105,7 +107,13 @@ def test_simple_split(
     ],
 )
 def test_cluster_split(
-    train_size, val_size, test_size, expected_train, expected_val, expected_test, error,
+    train_size,
+    val_size,
+    test_size,
+    expected_train,
+    expected_val,
+    expected_test,
+    error,
 ):
     df = pd.read_csv(CYP3A4_chembl_pchembl)
     X = df["CANONICAL_SMILES"].values[:100]
@@ -125,7 +133,12 @@ def test_cluster_split(
 
     # Initialize splitter
     splitter = ClusterSplitter(
-        train_size=train_size, val_size=val_size, test_size=test_size, random_state=42, method="kmeans", k_clusters=2
+        train_size=train_size,
+        val_size=val_size,
+        test_size=test_size,
+        random_state=42,
+        method="kmeans",
+        k_clusters=2,
     )
 
     # Error is expected

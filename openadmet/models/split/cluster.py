@@ -7,13 +7,18 @@ from splito import KMeansSplit
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
-from useful_rdkit_utils import get_kmeans_clusters, get_butina_clusters, get_bemis_murcko_clusters
+from useful_rdkit_utils import (
+    get_kmeans_clusters,
+    get_butina_clusters,
+    get_bemis_murcko_clusters,
+)
+
 
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
     """Splits the data based on the KMeans clustering of the molecules."""
 
-    method:str = "butina"
+    method: str = "butina"
     k_clusters: int = 10
 
     @field_validator("method", mode="before")
@@ -21,9 +26,10 @@ class ClusterSplitter(SplitterBase):
     def validate_method(cls, value):
         """Validate that the method is one of the allowed options."""
         if value not in {"butina", "kmeans", "bemis-murcko"}:
-            raise ValueError(f"Invalid method: {value}. Must be one of 'butina', 'kmeans', or 'bemis-murcko'.")
+            raise ValueError(
+                f"Invalid method: {value}. Must be one of 'butina', 'kmeans', or 'bemis-murcko'."
+            )
         return value
-
 
     def split(self, X, y):
         """
@@ -76,7 +82,7 @@ class ClusterSplitter(SplitterBase):
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
-            stratify = clusters,
+            stratify=clusters,
         )
 
         # No validation set requested, return train(+val) and test sets
@@ -89,7 +95,9 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "bemis-murcko":
             split_clusters = get_bemis_murcko_clusters(X_train_val)
         elif self.method == "kmeans":
-            split_clusters = get_kmeans_clusters(X_train_val, n_clusters=self.k_clusters)
+            split_clusters = get_kmeans_clusters(
+                X_train_val, n_clusters=self.k_clusters
+            )
 
         # Split train+val into train and val sets
         X_train, X_val, y_train, y_val = train_test_split(
