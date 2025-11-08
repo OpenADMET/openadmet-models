@@ -93,13 +93,13 @@ def test_simple_split(
     "train_size, val_size, test_size, expected_train, expected_val, expected_test, error",
     [
         # 80, 0, 20
-        (0.8, 0.0, 0.2, 80, 0, 20, False),
+        (0.8, 0.0, 0.2, 800, 0, 200, False),
         # 70, 30, 0
-        (0.7, 0.3, 0.0, 70, 30, 0, False),
+        (0.7, 0.3, 0.0, 700, 300, 0, False),
         # 70, 10, 20
-        (0.7, 0.1, 0.2, 70, 10, 20, False),
+        (0.7, 0.1, 0.2, 700, 100, 200, False),
         # 60, 20, 20
-        (0.6, 0.2, 0.2, 60, 20, 20, False),
+        (0.6, 0.2, 0.2, 600, 200, 200, False),
         # 100, 0, 0; raises error
         (1.0, 0.0, 0.0, -1, -1, -1, True),
         # 50, 50, 50; raises error
@@ -116,8 +116,8 @@ def test_cluster_split(
     error,
 ):
     df = pd.read_csv(CYP3A4_chembl_pchembl)
-    X = df["CANONICAL_SMILES"].values[:100]
-    y = df["pChEMBL mean"].values[:100]
+    X = df["CANONICAL_SMILES"].values[:1000]
+    y = df["pChEMBL mean"].values[:1000]
 
     # Error expected
     if error is True:
@@ -128,6 +128,7 @@ def test_cluster_split(
                 val_size=val_size,
                 test_size=test_size,
                 random_state=42,
+                k_clusters=2,
             )
         return
 
