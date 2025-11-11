@@ -63,7 +63,9 @@ class SplitterBase(BaseModel, ABC):
 
         # Check that val_size and test_size are not both 0
         if self.val_size + self.test_size == 0.0:
-            logger.info("Warning! val_size and test_size are both 0.0. You are training a no-split model!")
+            logger.info(
+                "Warning! val_size and test_size are both 0.0. You are training a no-split model!"
+            )
 
         return self
 
