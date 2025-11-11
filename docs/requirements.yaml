@@ -62,5 +62,6 @@ dependencies:
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
+    - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main
