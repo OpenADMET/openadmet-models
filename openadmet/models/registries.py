@@ -45,6 +45,7 @@ from openadmet.models.log import logger  # noqa: F401 F403
 from openadmet.models.split.scaffold import *  # noqa: F401 F403
 from openadmet.models.split.sklearn import *  # noqa: F401 F403
 from openadmet.models.split.split_base import splitters  # noqa: F401 F403
+from openadmet.models.split.cluster import *  # noqa: F401 F403
 
 # trainers
 from openadmet.models.trainer.lightning import *  # noqa: F401 F403
