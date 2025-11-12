@@ -30,7 +30,7 @@ class ClusterSplitter(SplitterBase):
                 f"Invalid method: {value}. Must be one of 'butina', 'kmeans', or 'bemis-murcko'."
             )
         return value
-    
+
     @model_validator(mode="after")
     def check_sizes(self):
         """Validate the sizes of the splits."""
