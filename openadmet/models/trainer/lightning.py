@@ -93,7 +93,7 @@ class LightningTrainer(TrainerBase):
     _callbacks: Any = None
     _driver_type: DriverType = DriverType.LIGHTNING
 
-    def build(self, no_val:bool = False):
+    def build(self, no_val: bool = False):
         """
         Build the model trainer.
 
@@ -101,6 +101,7 @@ class LightningTrainer(TrainerBase):
         ----------
         no_val : bool, optional
             If no validation set specified, aka training a no split model, by default False
+
         """
         # Initialize logging container
         self._logger = []
