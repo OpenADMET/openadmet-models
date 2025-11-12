@@ -484,7 +484,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Prepare the trainer
         logger.info("Preparing trainer")
-        self.trainer.build()
+        if val_dataloader is None:
+            no_val = True
+        else:
+            no_val = False
+        self.trainer.build(no_val=no_val)
         logger.info("Trainer prepared")
 
         # Commence model training

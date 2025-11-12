@@ -93,13 +93,23 @@ class LightningTrainer(TrainerBase):
     _callbacks: Any = None
     _driver_type: DriverType = DriverType.LIGHTNING
 
-    def build(self):
-        """Build the model trainer."""
+    def build(self, no_val:bool = False):
+        """
+        Build the model trainer.
+
+        Parameters
+        ----------
+        no_val : bool, optional
+            If no validation set specified, aka training a no split model, by default False
+        """
         # Initialize logging container
         self._logger = []
 
         # Initialize the callbacks dict
         self._callbacks = {}
+
+        if no_val:
+            self.model.estimator.monitor_metric = "train_loss"
 
         fmtstring = (
             "best-{epoch}-{val_loss:.4f}"
@@ -179,9 +189,6 @@ class LightningTrainer(TrainerBase):
         """
         # Indicate that the model is being trained
         logger.debug(f"Training model {self.model.estimator}")
-
-        if val_dataloader is None or len(val_dataloader) == 0:
-            self.model.estimator.monitor_metric == "train_loss"
 
         # Fit model
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
