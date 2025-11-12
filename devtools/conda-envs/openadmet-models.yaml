@@ -57,3 +57,4 @@ dependencies:
     - git+https://github.com/PriorLabs/TabPFN.git@main
     - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
     - git+https://github.com/OpenADMET/molfeat.git@main
+    - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
