@@ -180,6 +180,9 @@ class LightningTrainer(TrainerBase):
         # Indicate that the model is being trained
         logger.debug(f"Training model {self.model.estimator}")
 
+        if val_dataloader is None or len(val_dataloader) == 0:
+            self.model.estimator.monitor_metric == "train_loss"
+
         # Fit model
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
