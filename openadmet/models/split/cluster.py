@@ -1,6 +1,6 @@
 """Cluster-based data splitting implementations."""
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import train_test_split
 from splito import KMeansSplit
@@ -30,6 +30,19 @@ class ClusterSplitter(SplitterBase):
                 f"Invalid method: {value}. Must be one of 'butina', 'kmeans', or 'bemis-murcko'."
             )
         return value
+    
+    @model_validator(mode="after")
+    def check_sizes(self):
+        """Validate the sizes of the splits."""
+        # Check that sizes sum to 1
+        if self.test_size + self.val_size + self.train_size != 1.0:
+            raise ValueError("Test and train sizes must sum to 1.0")
+
+        # Check that val_size and test_size are not both 0
+        if self.val_size + self.test_size == 0.0:
+            raise ValueError("Either val_size or test_size must be greater than 0")
+
+        return self
 
     def split(self, X, y):
         """
