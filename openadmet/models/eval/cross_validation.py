@@ -14,7 +14,8 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import RepeatedKFold, cross_validate
+from sklearn.model_selection import GroupKFold, cross_validate, RepeatedKFold   
+from useful_rdkit_utils import get_butina_clusters, get_kmeans_clusters, get_bemis_murcko_clusters
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -35,7 +36,6 @@ def wrap_ktau(y_true, y_pred):
 def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
     return nan_omit_spearmanr(y_true, y_pred).correlation
-
 
 class CrossValidationBase(EvalBase):
     """
@@ -61,6 +61,10 @@ class CrossValidationBase(EvalBase):
         Minimum value for the axes.
     max_val : float
         Maximum value for the axes.
+    use_clustering : bool
+        Whether to use clustering for splitting the data.
+    clustering_method : str
+        Method to use for clustering ('butina', 'kmeans', 'bemis-murcko').
 
     """
 
@@ -91,6 +95,14 @@ class CrossValidationBase(EvalBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
 
+    use_clustering: bool = Field(
+        False, description="Whether to use clustering for splitting the data"
+    )
+    clustering_method: str = Field(
+        "butina",
+        description="Method to use for clustering ('butina', 'kmeans', 'bemis-murcko')",
+    )  
+
     @property
     def metric_names(self):
         """
@@ -103,6 +115,51 @@ class CrossValidationBase(EvalBase):
 
         """
         return list(self._metrics.keys())
+    
+    def clustering(self, X_all, y_all):
+        """
+        Generate clustering-based cross-validation splits.
+
+        Parameters
+        ----------
+        X_all : array-like
+            All data features.
+        y_all : array-like
+            All data targets.
+        
+        Returns
+        -------
+        iterator
+            Iterator over train-test index splits.
+            
+        """
+        # Get clusters based on the selected method
+        if self.clustering_method == "butina":
+            clusters = get_butina_clusters(X_all)
+        elif self.clustering_method == "bemis-murcko":
+            clusters = get_bemis_murcko_clusters(X_all)
+        elif self.clustering_method == "kmeans":
+            clusters = get_kmeans_clusters(X_all, n_clusters=self.n_splits)
+
+        train_inds = []
+        test_inds = []
+        # get reproducible set of random states to not generate same split each repeat
+        prng = np.random.RandomState(self.random_state)
+        split_rand_states = prng.randint(0, 10000, size=self.n_repeats) 
+
+        for i, split_rand_state in zip(range(self.n_repeats), split_rand_states):
+            gss = GroupKFold(
+                n_splits=self.n_splits,
+                test_size=1.0 / self.n_splits,
+                shuffle=True,
+                random_state=split_rand_state,
+            )
+            split_inds = gss.split(X_all, y_all, groups=clusters)
+            for train_idx, test_idx in split_inds:
+                train_inds.append(train_idx)
+                test_inds.append(test_idx)
+        
+        cv = iter(zip(train_inds, test_inds))
 
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
@@ -202,12 +259,16 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
             )
 
-        # run CV
-        cv = RepeatedKFold(
-            n_splits=self.n_splits,
-            n_repeats=self.n_repeats,
-            random_state=self.random_state,
-        )
+        if self.use_clustering:
+            cv = self.clustering(X_all, y_all)
+
+        else:
+            # run CV
+            cv = RepeatedKFold(
+                n_splits=self.n_splits,
+                n_repeats=self.n_repeats,
+                random_state=self.random_state,
+            )
 
         estimator = model.estimator
         # evaluate the model, storing the results
@@ -412,6 +473,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
     random_state: int = Field(42, description="Random state for reproducibility")
+
     _evaluated: bool = False
     _driver_type: DriverType = DriverType.LIGHTNING
     axes_labels: list[str] = Field(
@@ -520,12 +582,15 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
-        # run CV
-        cv = RepeatedKFold(
-            n_splits=self.n_splits,
-            n_repeats=self.n_repeats,
-            random_state=self.random_state,
-        )
+        if self.use_clustering:
+            cv = self.clustering(X_all, y_all)
+
+        else:
+            cv = RepeatedKFold(
+                n_splits=self.n_splits,
+                n_repeats=self.n_repeats,
+                random_state=self.random_state,
+            )
 
         self.data = {
             "shape": [self.n_splits, self.n_repeats],
