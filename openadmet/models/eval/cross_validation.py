@@ -14,8 +14,12 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import GroupKFold, cross_validate, RepeatedKFold   
-from useful_rdkit_utils import get_butina_clusters, get_kmeans_clusters, get_bemis_murcko_clusters
+from sklearn.model_selection import GroupKFold, cross_validate, RepeatedKFold
+from useful_rdkit_utils import (
+    get_butina_clusters,
+    get_kmeans_clusters,
+    get_bemis_murcko_clusters,
+)
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -36,6 +40,7 @@ def wrap_ktau(y_true, y_pred):
 def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
     return nan_omit_spearmanr(y_true, y_pred).correlation
+
 
 class CrossValidationBase(EvalBase):
     """
@@ -101,7 +106,7 @@ class CrossValidationBase(EvalBase):
     clustering_method: str = Field(
         "butina",
         description="Method to use for clustering ('butina', 'kmeans', 'bemis-murcko')",
-    )  
+    )
 
     @property
     def metric_names(self):
@@ -115,7 +120,7 @@ class CrossValidationBase(EvalBase):
 
         """
         return list(self._metrics.keys())
-    
+
     def clustering(self, X_all, y_all):
         """
         Generate clustering-based cross-validation splits.
@@ -126,12 +131,12 @@ class CrossValidationBase(EvalBase):
             All data features.
         y_all : array-like
             All data targets.
-        
+
         Returns
         -------
         iterator
             Iterator over train-test index splits.
-            
+
         """
         # Get clusters based on the selected method
         if self.clustering_method == "butina":
@@ -145,7 +150,7 @@ class CrossValidationBase(EvalBase):
         test_inds = []
         # get reproducible set of random states to not generate same split each repeat
         prng = np.random.RandomState(self.random_state)
-        split_rand_states = prng.randint(0, 10000, size=self.n_repeats) 
+        split_rand_states = prng.randint(0, 10000, size=self.n_repeats)
 
         for i, split_rand_state in zip(range(self.n_repeats), split_rand_states):
             gss = GroupKFold(
@@ -158,7 +163,7 @@ class CrossValidationBase(EvalBase):
             for train_idx, test_idx in split_inds:
                 train_inds.append(train_idx)
                 test_inds.append(test_idx)
-        
+
         cv = iter(zip(train_inds, test_inds))
 
 
