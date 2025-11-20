@@ -86,7 +86,7 @@ class ClusterSplitter(SplitterBase):
                 random_state=self.random_state,
                 stratify=clusters,
             )
-            return X_train, X_val, None, y_train, y_val, None
+            return X_train, X_val, None, y_train, y_val, None, clusters
 
         # Split into train+val and test
         X_train_val, X_test, y_train_val, y_test = train_test_split(
@@ -100,7 +100,7 @@ class ClusterSplitter(SplitterBase):
 
         # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
-            return X_train_val, None, X_test, y_train_val, None, y_test
+            return X_train_val, None, X_test, y_train_val, None, y_test, clusters
 
         # Get new clusters based on the selected method
         if self.method == "butina":
@@ -123,4 +123,4 @@ class ClusterSplitter(SplitterBase):
         )
 
         # Return train, val and test sets
-        return X_train, X_val, X_test, y_train, y_val, y_test
+        return X_train, X_val, X_test, y_train, y_val, y_test, clusters
