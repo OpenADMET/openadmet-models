@@ -112,7 +112,7 @@ class CrossValidationBase(EvalBase):
 
         """
         return list(self._metrics.keys())
-    
+
     def RepeatedGroupKFold(self, X_all, y_all):
         """
         Generate clustering-based cross-validation splits.
@@ -150,7 +150,7 @@ class CrossValidationBase(EvalBase):
             for train_idx, test_idx in split_inds:
                 train_inds.append(train_idx)
                 test_inds.append(test_idx)
-        
+
         return iter(zip(train_inds, test_inds))
 
 
@@ -425,6 +425,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
+
 @evaluators.register("ClusteredSKLearnRepeatedKFoldCrossValidation")
 class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     """
@@ -446,7 +447,10 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
     random_state: int = Field(42, description="Random state for reproducibility")
-    clustering_method: str = Field('butina', description="Clustering method to use ('butina', 'kmeans', 'bemis-murcko')")
+    clustering_method: str = Field(
+        "butina",
+        description="Clustering method to use ('butina', 'kmeans', 'bemis-murcko')",
+    )
 
     _driver_type: DriverType = DriverType.SKLEARN
 
@@ -702,6 +706,7 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
+
 
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):

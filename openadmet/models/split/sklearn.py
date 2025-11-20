@@ -32,7 +32,6 @@ class ShuffleSplitter(SplitterBase):
             - y_test: Test set target values (or None if test_size=0).
 
         """
-
         # Training set only requested
         if self.val_size == 0 and self.test_size == 0:
             X_train, y_train = X, y
