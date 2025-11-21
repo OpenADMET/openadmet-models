@@ -10,6 +10,7 @@ from openadmet.models.tests.unit.datafiles import CYP3A4_chembl_pchembl
 def test_in_splitters():
     assert "ShuffleSplitter" in splitters
 
+
 @pytest.mark.parametrize(
     "train_size, val_size, test_size, expected_train, expected_val, expected_test, error",
     # Train, val, test sizes
