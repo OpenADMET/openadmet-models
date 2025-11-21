@@ -764,7 +764,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # cast to numpy arrays
         X_all = X_all.to_numpy()
-        X_all = X_all.to_numpy()
         y_all = y_all.to_numpy()
 
         # prepare containers for metrics
