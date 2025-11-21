@@ -681,7 +681,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(
                 X, y
             )
         logger.info("Data loaded")
