@@ -16,7 +16,11 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import GroupKFold, cross_validate, RepeatedKFold
 from sklearn.cluster import KMeans
-from useful_rdkit_utils import get_bemis_murcko_clusters, get_butina_clusters, get_kmeans_clusters
+from useful_rdkit_utils import (
+    get_bemis_murcko_clusters,
+    get_butina_clusters,
+    get_kmeans_clusters,
+)
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -200,7 +204,9 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         logger.info("Starting cross-validation")
 
         n_tasks = 1
-        target_labels = self.get_target_labels(target_labels=target_labels, n_tasks=n_tasks)
+        target_labels = self.get_target_labels(
+            target_labels=target_labels, n_tasks=n_tasks
+        )
 
         # run CV
         cv = RepeatedKFold(
@@ -220,7 +226,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         logger.info("Cross-validation complete")
 
         # clean data in self.data and get the task label
-        t_label = self.clean_data(scores, n_tasks, target_labels, tag) 
+        t_label = self.clean_data(scores, n_tasks, target_labels, tag)
 
         self._evaluated = True
 
@@ -231,7 +237,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     def get_target_labels(self, target_labels, n_tasks):
         """
         Get target labels, ensuring they match the number of tasks.
-        
+
         Parameters
         ----------
         target_labels : list of str or None
@@ -302,12 +308,12 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 metric_data["confidence_level"] = self.confidence_level
                 self.data[t_label][k] = metric_data
 
-        return(t_label)
-    
+        return t_label
+
     def plot_data(self, t_label, y_true, y_pred):
         """
         Generate plots for the cross-validation results.
-        
+
         Parameters
         ----------
         t_label : str
@@ -316,11 +322,11 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             True values.
         y_pred : array-like
             Predicted values.
-            
+
         Returns
         -------
         None
-        
+
         """
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
@@ -544,13 +550,15 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossVali
         logger.info("Starting cross-validation")
 
         n_tasks = 1
-        target_labels = self.get_target_labels(target_labels=target_labels, n_tasks=n_tasks)
+        target_labels = self.get_target_labels(
+            target_labels=target_labels, n_tasks=n_tasks
+        )
 
-        if self.clustering_method == 'butina':
+        if self.clustering_method == "butina":
             clusters = get_butina_clusters(X_smiles_all)
-        elif self.clustering_method == 'bemis-murcko':
+        elif self.clustering_method == "bemis-murcko":
             clusters = get_bemis_murcko_clusters(X_smiles_all)
-        elif self.clustering_method == 'kmeans':
+        elif self.clustering_method == "kmeans":
             clusters = get_kmeans_clusters(X_smiles_all, n_clusters=self.n_splits)
 
         train_inds = []
@@ -570,7 +578,7 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossVali
                 test_inds.append(test_idx)
 
         cv = iter(zip(train_inds, test_inds))
-        
+
         estimator = model.estimator
         # evaluate the model, storing the results
         # we do one job here to avoid issues with double parallelization
@@ -582,7 +590,7 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossVali
         logger.info("Cross-validation complete")
 
         # clean data in self.data and get the task label
-        t_label = self.clean_data(scores, n_tasks, target_labels, tag) 
+        t_label = self.clean_data(scores, n_tasks, target_labels, tag)
 
         self._evaluated = True
 
@@ -590,7 +598,7 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossVali
 
         return self.data
 
-    
+
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     """
