@@ -15,11 +15,8 @@ from sklearn.metrics import (
     r2_score,
 )
 from sklearn.model_selection import GroupKFold, cross_validate, RepeatedKFold
-from useful_rdkit_utils import (
-    get_butina_clusters,
-    get_kmeans_clusters,
-    get_bemis_murcko_clusters,
-)
+from sklearn.cluster import KMeans
+from useful_rdkit_utils import get_bemis_murcko_clusters, get_butina_clusters, get_kmeans_clusters
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -113,46 +110,6 @@ class CrossValidationBase(EvalBase):
         """
         return list(self._metrics.keys())
 
-    def RepeatedGroupKFold(self, X_all, y_all):
-        """
-        Generate clustering-based cross-validation splits.
-
-        Parameters
-        ----------
-        X_feat_all : array-like
-            All data features.
-        y_all : array-like
-            All data targets.
-
-        Returns
-        -------
-        iterator
-            Iterator over train-test index splits.
-
-
-        """
-        groups = splitter.split(X_all, y_all, return_group_inds=True)
-
-        train_inds = []
-        test_inds = []
-        # get reproducible set of random states to not generate same split each repeat
-        prng = np.random.RandomState(self.random_state)
-        split_rand_states = prng.randint(0, 10000, size=self.n_repeats)
-
-        for i, split_rand_state in zip(range(self.n_repeats), split_rand_states):
-            gss = GroupKFold(
-                n_splits=self.n_splits,
-                test_size=1.0 / self.n_splits,
-                shuffle=True,
-                random_state=split_rand_state,
-            )
-            split_inds = gss.split(X_all, y_all, groups=groups)
-            for train_idx, test_idx in split_inds:
-                train_inds.append(train_idx)
-                test_inds.append(test_idx)
-
-        return iter(zip(train_inds, test_inds))
-
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
 class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
@@ -183,7 +140,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         y_train=None,
         y_pred=None,
         y_true=None,
-        splitter=None,
         X_all=None,
         y_all=None,
         tag=None,
@@ -228,12 +184,11 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_train is None
             or y_pred is None
             or y_true is None
-            or splitter is None
             or X_all is None
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_feat_all, y_all must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, y_all must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -245,13 +200,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         logger.info("Starting cross-validation")
 
         n_tasks = 1
-        if target_labels is None:
-            target_labels = [f"task_{i}" for i in range(n_tasks)]
-
-        if len(target_labels) != n_tasks:
-            raise ValueError(
-                f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
-            )
+        target_labels = self.get_target_labels(target_labels=target_labels, n_tasks=n_tasks)
 
         # run CV
         cv = RepeatedKFold(
@@ -270,7 +219,61 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         logger.info("Cross-validation complete")
 
-        # remove the 'test_' prefix from the keys
+        # clean data in self.data and get the task label
+        t_label = self.clean_data(scores, n_tasks, target_labels, tag) 
+
+        self._evaluated = True
+
+        self.plot_data(t_label=t_label, y_true=y_true, y_pred=y_pred)
+
+        return self.data
+
+    def get_target_labels(self, target_labels, n_tasks):
+        """
+        Get target labels, ensuring they match the number of tasks.
+        
+        Parameters
+        ----------
+        target_labels : list of str or None
+            List of target names.
+        n_tasks : int
+            Number of tasks.
+
+        Returns
+        -------
+        List of target names.
+
+        """
+        if target_labels is None:
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
+
+        if len(target_labels) != n_tasks:
+            raise ValueError(
+                f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
+            )
+        return target_labels
+
+    def clean_data(self, scores, n_tasks, target_labels, tag):
+        """
+        Clean cross-validation scores for reporting.
+
+        Parameters
+        ----------
+        scores : dict
+            Raw cross-validation scores.
+        n_tasks : int
+            Number of tasks.
+        target_labels : list of str
+            List of target names.
+        tag : str
+            Tag for the evaluation run.
+
+        Returns
+        -------
+        dict
+            Dictionary containing cleaned cross-validation metrics and confidence intervals.
+
+        """
         # also convert the numpy arrays to lists so they can be serialized to JSON
         clean_scores = {}
         for k, v in scores.items():
@@ -299,8 +302,26 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 metric_data["confidence_level"] = self.confidence_level
                 self.data[t_label][k] = metric_data
 
-        self._evaluated = True
-
+        return(t_label)
+    
+    def plot_data(self, t_label, y_true, y_pred):
+        """
+        Generate plots for the cross-validation results.
+        
+        Parameters
+        ----------
+        t_label : str
+            Task label.
+        y_true : array-like
+            True values.
+        y_pred : array-like
+            Predicted values.
+            
+        Returns
+        -------
+        None
+        
+        """
         self.plots = {
             "cross_validation_regplot": RegressionPlots.regplot,
             "cross_validation_ciplot": RegressionPlots.ciplot,
@@ -327,8 +348,6 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                     max_val=self.max_val,
                     plot_errbars=self.plot_errbars,
                 )
-
-        return self.data
 
     def get_stat_caption(self, t_label):
         """
@@ -427,7 +446,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
 
 @evaluators.register("ClusteredSKLearnRepeatedKFoldCrossValidation")
-class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
+class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossValidation):
     """
     Cross-validation evaluator for sklearn models (single-task regression).
 
@@ -440,7 +459,7 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     random_state : int
         Random state for reproducibility.
     clustering_method : str
-        Method to use for clustering ('butina', 'kmeans', 'bemis-murcko').
+        Method to use for clustering ('butina' or 'kmeans').
 
     """
 
@@ -461,9 +480,8 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         y_train=None,
         y_pred=None,
         y_true=None,
-        splitter=None,
         X_all=None,
-        X_feat_all=None,
+        X_smiles_all=None,
         y_all=None,
         tag=None,
         target_labels=None,
@@ -484,8 +502,10 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             Predicted values (not used in cross-validation, but required for interface).
         y_true : array-like
             True values (not used in cross-validation, but required for interface).
-        X_feat_all : array-like
+        X_all : array-like
             All data features.
+        X_smiles_all : array-like
+            All data smiles
         y_all : array-like
             All data targets.
         tag : str, optional
@@ -507,13 +527,12 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_train is None
             or y_pred is None
             or y_true is None
-            or splitter is None
             or X_all is None
-            or X_feat_all is None
+            or X_smiles_all is None
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_feat_all, y_all must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, X_smiles_all, y_all must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -525,189 +544,53 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         logger.info("Starting cross-validation")
 
         n_tasks = 1
-        if target_labels is None:
-            target_labels = [f"task_{i}" for i in range(n_tasks)]
+        target_labels = self.get_target_labels(target_labels=target_labels, n_tasks=n_tasks)
 
-        if len(target_labels) != n_tasks:
-            raise ValueError(
-                f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
+        if self.clustering_method == 'butina':
+            clusters = get_butina_clusters(X_smiles_all)
+        elif self.clustering_method == 'bemis-murcko':
+            clusters = get_bemis_murcko_clusters(X_smiles_all)
+        elif self.clustering_method == 'kmeans':
+            clusters = get_kmeans_clusters(X_smiles_all, n_clusters=self.n_splits)
+
+        train_inds = []
+        test_inds = []
+        # get reproducible set of random states to not generate same split each repeat
+        prng = np.random.RandomState(self.random_state)
+        split_rand_states = prng.randint(0, 10000, size=self.n_repeats)
+
+        for i, split_rand_state in zip(range(self.n_repeats), split_rand_states):
+            gss = GroupKFold(
+                n_splits=self.n_splits,
+                shuffle=True,
+                random_state=split_rand_state,
             )
+            for train_idx, test_idx in gss.split(X_all, y_all, groups=clusters):
+                train_inds.append(train_idx)
+                test_inds.append(test_idx)
 
-        cv = self.split(splitter, X_all, y_all)
-
-        # # run CV
-        # cv = RepeatedKFold(
-        #     n_splits=self.n_splits,
-        #     n_repeats=self.n_repeats,
-        #     random_state=self.random_state,
-        # )
-
+        cv = iter(zip(train_inds, test_inds))
+        
         estimator = model.estimator
         # evaluate the model, storing the results
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation
         scores = cross_validate(
-            estimator, X_feat_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
+            estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
         )
 
         logger.info("Cross-validation complete")
 
-        # remove the 'test_' prefix from the keys
-        # also convert the numpy arrays to lists so they can be serialized to JSON
-        clean_scores = {}
-        for k, v in scores.items():
-            clean_scores[k.replace("test_", "")] = v
-
-        # exclude fit_time and score_time
-        exclude = ["fit_time", "score_time"]
-
-        self.data = {"shape": [self.n_splits, self.n_repeats], "tag": tag}
-
-        for task_id in range(n_tasks):
-            t_label = target_labels[task_id]
-            self.data[t_label] = {}
-            for k, v in clean_scores.items() if k not in exclude else {}:
-                # calculate the confidence interval, assuming normal distribution
-                mean = v.mean()
-                sigma = v.std(ddof=1)
-                lower_ci, upper_ci = norm.interval(
-                    self.confidence_level, loc=mean, scale=sigma
-                )
-                metric_data = {}
-                metric_data["value"] = v.tolist()
-                metric_data["mean"] = np.mean(v)
-                metric_data["lower_ci"] = lower_ci
-                metric_data["upper_ci"] = upper_ci
-                metric_data["confidence_level"] = self.confidence_level
-                self.data[t_label][k] = metric_data
+        # clean data in self.data and get the task label
+        t_label = self.clean_data(scores, n_tasks, target_labels, tag) 
 
         self._evaluated = True
 
-        self.plots = {
-            "cross_validation_regplot": RegressionPlots.regplot,
-            "cross_validation_ciplot": RegressionPlots.ciplot,
-        }
-
-        self.plot_data = {}
-
-        stat_dict = self.get_stat_dict(t_label=t_label)
-
-        # create the plots
-        for plot_tag, plot in self.plots.items():
-            if "ciplot" in plot_tag:
-                self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
-            elif "regplot" in plot_tag:
-                self.plot_data[plot_tag] = plot(
-                    y_true,
-                    y_pred,
-                    xlabel=self.axes_labels[0],
-                    ylabel=self.axes_labels[1],
-                    title=f"{self.title}\nTask: {t_label}",
-                    stat_dict=stat_dict,
-                    pXC50=self.pXC50,
-                    min_val=self.min_val,
-                    max_val=self.max_val,
-                    plot_errbars=self.plot_errbars,
-                )
+        self.plot_data(t_label=t_label, y_true=y_true, y_pred=y_pred)
 
         return self.data
 
-    def get_stat_caption(self, t_label):
-        """
-        Get a formatted statistics caption for a given task.
-
-        Parameters
-        ----------
-        t_label : str
-            Task label.
-
-        Returns
-        -------
-        str
-            Caption string with statistics.
-
-        """
-        if not self._evaluated:
-            raise ValueError(
-                ":( You must evaluate the model before the statistics caption can be made."
-            )
-        return _make_stat_caption(
-            data=self.data,
-            task_name=t_label,
-            metric_names=self.metric_names,
-            metrics=self._metrics,
-            confidence_level=self.confidence_level,
-            cv=True,
-        )
-
-    def get_stat_dict(self, t_label):
-        """
-        Get a statistics dictionary for a given task.
-
-        Parameters
-        ----------
-        t_label : str
-            Task label.
-
-        Returns
-        -------
-        dict
-            Dictionary of statistics for the task.
-
-        """
-        if not self._evaluated:
-            raise ValueError(
-                "R'uh-r'oh! You must evaluate the model before the statistics dict can be made."
-            )
-        return _make_stat_dict(
-            data=self.data,
-            task_name=t_label,
-            metric_names=self.metric_names,
-            metrics=self._metrics,
-            confidence_level=self.confidence_level,
-            cv=True,
-        )
-
-    def report(self, write=False, output_dir=None):
-        """
-        Report the evaluation results, optionally writing to disk.
-
-        Parameters
-        ----------
-        write : bool, optional
-            Whether to write the report to disk.
-        output_dir : str, optional
-            Output directory for the report.
-
-        Returns
-        -------
-        dict
-            Dictionary of computed metrics.
-
-        """
-        if write:
-            self.write_report(output_dir)
-        return self.data
-
-    def write_report(self, output_dir):
-        """
-        Write the evaluation report and plots to disk.
-
-        Parameters
-        ----------
-        output_dir : str
-            Output directory for the report and plots.
-
-        """
-        # write to JSON
-        with open(output_dir / "cross_validation_metrics.json", "w") as f:
-            json.dump(self.data, f, indent=2)
-
-        # write each plot to a file
-        for plot_tag, plot in self.plot_data.items():
-            plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
-
-
+    
 @evaluators.register("PytorchLightningRepeatedKFoldCrossValidation")
 class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     """
@@ -780,7 +663,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         y_pred=None,
         y_train=None,
         X_all=None,
-        X_feat_all=None,
         y_all=None,
         featurizer=None,
         trainer=None,
@@ -804,7 +686,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             Predicted values for the full dataset.
         y_train : array-like
             Training targets.
-        X_feat_all : array-like
+        X_all : array-like
             All data features.
         y_all : array-like
             All data targets.
@@ -838,11 +720,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             or featurizer is None
             or trainer is None
             or X_all is None
-            or X_feat_all is None
+            or X_all is None
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_feat_all, y_all, and tag must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, y_all, and tag must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -857,7 +739,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
         if self.use_clustering:
-            cv = self.clustering(X_feat_all, y_all)
+            cv = self.clustering(X_all, y_all)
 
         else:
             cv = RepeatedKFold(
@@ -875,7 +757,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # cast to numpy arrays
         X_all = X_all.to_numpy()
-        X_feat_all = X_feat_all.to_numpy()
+        X_all = X_all.to_numpy()
         y_all = y_all.to_numpy()
 
         # prepare containers for metrics
@@ -888,13 +770,13 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self._metric_data[t_label] = defaultdict(list)
 
         for fold, (fold_train_ids, fold_val_ids) in enumerate(
-            cv.split(X=X_feat_all, y=y_all)
+            cv.split(X=X_all, y=y_all)
         ):
             logger.info(f"Fold {fold}")
 
-            X_train = X_feat_all[fold_train_ids]
+            X_train = X_all[fold_train_ids]
             y_train = y_all[fold_train_ids]
-            X_val = X_feat_all[fold_val_ids]
+            X_val = X_all[fold_val_ids]
             y_val = y_all[fold_val_ids]
 
             # print shapes of matrices

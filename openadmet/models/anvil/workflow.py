@@ -245,9 +245,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(
-                X, y
-            )
+            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
         logger.info("Data loaded")
 
         # Save splits to CSV outputs
@@ -388,6 +386,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                     X_train=X_train_feat,
                     y_train=y_train,
                     X_all=X_feat,
+                    X_smiles_all=X,
                     y_all=y,
                     tag=model_tag,
                     target_labels=target_labels,
