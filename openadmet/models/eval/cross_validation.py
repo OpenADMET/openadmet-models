@@ -67,8 +67,6 @@ class CrossValidationBase(EvalBase):
         Minimum value for the axes.
     max_val : float
         Maximum value for the axes.
-    use_clustering : bool
-        Whether to use clustering for splitting the data.
     clustering_method : str
         Method to use for clustering ('butina', 'kmeans', 'bemis-murcko').
 
@@ -560,6 +558,11 @@ class ClusteredSKLearnRepeatedKFoldCrossValidation(SKLearnRepeatedKFoldCrossVali
             clusters = get_bemis_murcko_clusters(X_smiles_all)
         elif self.clustering_method == "kmeans":
             clusters = get_kmeans_clusters(X_smiles_all, n_clusters=self.n_splits)
+        else:
+            raise ValueError(
+                f"Clustering method {self.clustering_method} not recognized. "
+                "Choose from 'butina', 'kmeans', or 'bemis-murcko'."
+            )
 
         train_inds = []
         test_inds = []
@@ -746,15 +749,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
-        if self.use_clustering:
-            cv = self.clustering(X_all, y_all)
-
-        else:
-            cv = RepeatedKFold(
-                n_splits=self.n_splits,
-                n_repeats=self.n_repeats,
-                random_state=self.random_state,
-            )
+        cv = RepeatedKFold(
+            n_splits=self.n_splits,
+            n_repeats=self.n_repeats,
+            random_state=self.random_state,
+        )
 
         self.data = {
             "shape": [self.n_splits, self.n_repeats],
