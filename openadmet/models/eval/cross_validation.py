@@ -1000,6 +1000,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             cv=True,
         )
 
+
 @evaluators.register("ClusteredPytorchLightningRepeatedKFoldCrossValidation")
 class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     """
@@ -1199,10 +1200,11 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
 
-        folds = [i for i in range(self.n_splits*self.n_repeats)]
+        folds = [i for i in range(self.n_splits * self.n_repeats)]
 
-        for fold, fold_train_ids, fold_val_ids in enumerate(folds, train_inds, test_inds):
-            
+        for fold, fold_train_ids, fold_val_ids in enumerate(
+            folds, train_inds, test_inds
+        ):
             logger.info(f"Fold {fold}")
 
             X_train = X_all[fold_train_ids]
