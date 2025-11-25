@@ -1204,9 +1204,7 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
 
         folds = [i for i in range(self.n_splits * self.n_repeats)]
 
-        for fold, fold_train_ids, fold_val_ids in zip(
-            folds, train_inds, test_inds
-        ):
+        for fold, fold_train_ids, fold_val_ids in zip(folds, train_inds, test_inds):
             logger.info(f"Fold {fold}")
 
             X_train = X_all[fold_train_ids]
