@@ -830,6 +830,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     X_train=train_dataloader,
                     y_train=train_dataloader,
                     X_all=X,
+                    X_smiles_all=X,
                     y_all=y,
                     featurizer=self.feat,
                     trainer=self.trainer,

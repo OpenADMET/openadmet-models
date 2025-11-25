@@ -1078,6 +1078,7 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
         y_train=None,
         X_all=None,
         y_all=None,
+        X_smiles_all=None,
         featurizer=None,
         trainer=None,
         tag=None,
@@ -1134,11 +1135,12 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
             or featurizer is None
             or trainer is None
             or X_all is None
+            or X_smiles_all is None
             or X_all is None
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_all, y_all, and tag must be provided"
+                "model, X_train, y_train, y_pred, y_true, X_all, X_smiles_all, y_all, and tag must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -1153,11 +1155,11 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
         if self.clustering_method == "butina":
-            clusters = get_butina_clusters(X_train)
+            clusters = get_butina_clusters(X_smiles_all)
         elif self.clustering_method == "bemis-murcko":
-            clusters = get_bemis_murcko_clusters(X_train)
+            clusters = get_bemis_murcko_clusters(X_smiles_all)
         elif self.clustering_method == "kmeans":
-            clusters = get_kmeans_clusters(X_train, n_clusters=self.n_splits)
+            clusters = get_kmeans_clusters(X_smiles_all, n_clusters=self.n_splits)
         else:
             raise ValueError(
                 f"Clustering method {self.clustering_method} not recognized. "
