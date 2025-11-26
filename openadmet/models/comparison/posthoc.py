@@ -113,12 +113,12 @@ class PostHocComparison(ComparisonBase):
     def safe_dirs(self, dirs):
         """Ensure dirs is a list and contains only valid paths."""
         if not isinstance(dirs, list):
-            dirs = [dirs]
+            dirs = list(dirs)
         clean_dirs = []
         for dir in dirs:
             # If dir is a tuple, take the first element
             if isinstance(dir, tuple):
-                dir = list(dir)
+                dir = dir[0]
             if not isinstance(dir, (str, os.PathLike)):
                 raise ValueError(f"Directory {dir} is not a valid path")
             if not os.path.exists(dir):
@@ -199,7 +199,7 @@ class PostHocComparison(ComparisonBase):
             model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(
                 model_dirs, label_types, mt_id=mt_id
             )
-
+        
         if len(set(labels)) != len(labels):
             raise ValueError("Labels must be unique")
 
@@ -284,10 +284,9 @@ class PostHocComparison(ComparisonBase):
                 )
             ]
             anvil_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
-            print(f"Found {len(anvil_dirs)} models in {model_dir}")
-
+           
             logger.info(
-                f"Found {len(model_stats_fns)} cross_validation_metrics.json and anvil_recipe.yaml files"
+                f"Found {len(anvil_dirs)} cross_validation_metrics.json and anvil_recipe.yaml files"
             )
 
             for anvil_dir in anvil_dirs:
@@ -309,9 +308,7 @@ class PostHocComparison(ComparisonBase):
                     for ind, col in enumerate(target_cols):
                         if mt_id.lower() in col.lower():
                             col_match.append(col)
-                            ind_for_biotarget = (
-                                ind.copy()
-                            )  # this is to get the index for the list of biotargets
+                            ind_for_biotarget = ind  # this is to get the index for the list of biotargets
 
                     # check that the multitask id provided by the user does not
                     # appear in multiple target columns
@@ -601,7 +598,6 @@ class PostHocComparison(ComparisonBase):
                     if not pvals.empty and (pvals <= 0.05).any():
                         color = "red"
                 bar_colors.append(color)
-
             # Plot means with error bars
             for j, (mean, se, color) in enumerate(
                 zip(means.values, ses.values, bar_colors)
@@ -621,7 +617,7 @@ class PostHocComparison(ComparisonBase):
                     ax.axvline(mean + se, color="grey", linestyle="--", linewidth=1)
             ax.set_yticks(np.arange(len(means)))
             ax.set_yticklabels(means.index)
-            ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]}")
+            ax.set_title(f"p={self.convert_float_round(model.anova_table['Pr > F'].iloc[0])}")
             ax.set_xlabel(metric)
             ax.set_ylabel("method")
         plt.tight_layout()
