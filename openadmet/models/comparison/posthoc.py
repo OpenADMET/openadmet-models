@@ -199,7 +199,7 @@ class PostHocComparison(ComparisonBase):
             model_stats_fns, labels, task_names = self.label_and_task_name_from_anvil(
                 model_dirs, label_types, mt_id=mt_id
             )
-        
+
         if len(set(labels)) != len(labels):
             raise ValueError("Labels must be unique")
 
@@ -284,7 +284,7 @@ class PostHocComparison(ComparisonBase):
                 )
             ]
             anvil_dirs = list(set(anvil_recipes).intersection(set(cv_metrics)))
-           
+
             logger.info(
                 f"Found {len(anvil_dirs)} cross_validation_metrics.json and anvil_recipe.yaml files"
             )
@@ -617,7 +617,9 @@ class PostHocComparison(ComparisonBase):
                     ax.axvline(mean + se, color="grey", linestyle="--", linewidth=1)
             ax.set_yticks(np.arange(len(means)))
             ax.set_yticklabels(means.index)
-            ax.set_title(f"p={self.convert_float_round(model.anova_table['Pr > F'].iloc[0])}")
+            ax.set_title(
+                f"p={self.convert_float_round(model.anova_table['Pr > F'].iloc[0])}"
+            )
             ax.set_xlabel(metric)
             ax.set_ylabel("method")
         plt.tight_layout()
