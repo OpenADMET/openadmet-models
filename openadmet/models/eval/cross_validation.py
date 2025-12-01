@@ -1103,6 +1103,8 @@ class ClusteredPytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase)
             Training targets.
         X_all : array-like
             All data features.
+        X_smiles_all : array-like
+            All data smiles
         y_all : array-like
             All data targets.
         featurizer : object
