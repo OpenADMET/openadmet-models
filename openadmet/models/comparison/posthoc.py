@@ -69,14 +69,11 @@ class PostHocComparison(ComparisonBase):
 
     """
 
-    _metrics_names: list = ["mse", "mae", "r2", "ktau", "spearmanr"]
+    _metrics_names: list = ["mae", "r2"]
 
     _direction_dict: dict = {
         "mae": "minimize",
-        "mse": "minimize",
         "r2": "maximize",
-        "ktau": "maximize",
-        "spearmanr": "maximize",
     }
 
     _sig_levels: list = [0.05, 0.01, 0.001]
@@ -217,12 +214,12 @@ class PostHocComparison(ComparisonBase):
         plot_data = {}
         plot_data["normality"] = self.normality_plots(df, output_dir)
         plot_data["anova"] = self.anova(df, labels, output_dir)
-        plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
-        plot_data["mean_diff"] = self.mean_diff_plots(df, labels, self.cl, output_dir)
-        plot_data["paired"] = self.paired_plots(df, labels, output_dir)
+        # plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
+        # plot_data["mean_diff"] = self.mean_diff_plots(df, labels, self.cl, output_dir)
+        # plot_data["paired"] = self.paired_plots(df, labels, output_dir)
 
-        self.print_table(stats_dfs[0], stats_dfs[1])
-        self.report(stats_dfs, report, output_dir)
+        # self.print_table(stats_dfs[0], stats_dfs[1])
+        # self.report(stats_dfs, report, output_dir)
 
         return stats_dfs
 
@@ -550,7 +547,7 @@ class PostHocComparison(ComparisonBase):
             1,
             sharex=False,
             sharey=False,
-            figsize=(8, 4 * len(self.metrics)),
+            figsize=(8, 8 * len(self.metrics)),
         )
         if len(self.metrics) == 1:
             axes = [axes]
@@ -613,16 +610,16 @@ class PostHocComparison(ComparisonBase):
                     elinewidth=2,
                 )
                 if means.index[j] == best_method:
-                    ax.axvline(mean - se, color="grey", linestyle="--", linewidth=1)
-                    ax.axvline(mean + se, color="grey", linestyle="--", linewidth=1)
+                    ax.axvline(mean - se, color="lightblue", linestyle="--", linewidth=1)
+                    ax.axvline(mean + se, color="lightblue", linestyle="--", linewidth=1)
+            lines = [3, 5, 8, 11, 14, 17]
+            for y in lines:  # Replace `y_values` with the range of your y-axis
+                ax.axhline(y=y-0.5, color='gray', linestyle='--', linewidth=0.5)
             ax.set_yticks(np.arange(len(means)))
             ax.set_yticklabels(means.index)
-            ax.set_title(
-                f"p={self.convert_float_round(model.anova_table['Pr > F'].iloc[0])}"
-            )
-            ax.set_xlabel(metric)
-            ax.set_ylabel("method")
-        plt.tight_layout()
+            ax.set_xlabel(metric, fontsize=12)
+        plt.suptitle('PXR Random Split ANOVA', y=0.95, fontsize=16)
+        plt.tight_layout(rect=[0, 0, 0.95, 0.95])
 
         if output_dir:
             plt.savefig(f"{output_dir}/anova.pdf")
