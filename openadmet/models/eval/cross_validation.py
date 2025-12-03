@@ -499,6 +499,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         y_train=None,
         X_all=None,
         y_all=None,
+        groups=None,
         featurizer=None,
         trainer=None,
         tag=None,
@@ -525,6 +526,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             All data features.
         y_all : array-like
             All data targets.
+        groups: array-like, optional
+            Group labels for the samples used while splitting the dataset.
         featurizer : object
             Featurizer instance for data preprocessing.
         trainer : LightningTrainer
