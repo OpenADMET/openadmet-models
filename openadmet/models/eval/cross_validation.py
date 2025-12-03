@@ -36,10 +36,11 @@ def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
     return nan_omit_spearmanr(y_true, y_pred).correlation
 
+
 def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
     """
     Generate train/test indices for Repeated Group K-Fold cross-validation.
-    
+
     Parameters
     ----------
     X : array-like
@@ -80,6 +81,7 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
             test_inds.append(test_idx)
 
     return train_inds, test_inds
+
 
 class CrossValidationBase(EvalBase):
     """
