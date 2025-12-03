@@ -610,15 +610,19 @@ class PostHocComparison(ComparisonBase):
                     elinewidth=2,
                 )
                 if means.index[j] == best_method:
-                    ax.axvline(mean - se, color="lightblue", linestyle="--", linewidth=1)
-                    ax.axvline(mean + se, color="lightblue", linestyle="--", linewidth=1)
+                    ax.axvline(
+                        mean - se, color="lightblue", linestyle="--", linewidth=1
+                    )
+                    ax.axvline(
+                        mean + se, color="lightblue", linestyle="--", linewidth=1
+                    )
             lines = [3, 5, 8, 11, 14, 17]
             for y in lines:  # Replace `y_values` with the range of your y-axis
-                ax.axhline(y=y-0.5, color='gray', linestyle='--', linewidth=0.5)
+                ax.axhline(y=y - 0.5, color="gray", linestyle="--", linewidth=0.5)
             ax.set_yticks(np.arange(len(means)))
             ax.set_yticklabels(means.index)
             ax.set_xlabel(metric, fontsize=12)
-        plt.suptitle('PXR Random Split ANOVA', y=0.95, fontsize=16)
+        plt.suptitle("PXR Random Split ANOVA", y=0.95, fontsize=16)
         plt.tight_layout(rect=[0, 0, 0.95, 0.95])
 
         if output_dir:
