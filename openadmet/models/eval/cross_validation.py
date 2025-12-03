@@ -14,7 +14,7 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import RepeatedKFold, cross_validate
+from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -136,6 +136,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         y_true=None,
         X_all=None,
         y_all=None,
+        clusters=None,
         tag=None,
         target_labels=None,
         **kwargs,
@@ -203,11 +204,26 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             )
 
         # run CV
-        cv = RepeatedKFold(
-            n_splits=self.n_splits,
-            n_repeats=self.n_repeats,
-            random_state=self.random_state,
-        )
+        if clusters is None:
+            clusters = np.array([i for i in range(X_all.shape[0])])
+
+        train_inds = []
+        test_inds = []
+        # get reproducible set of random states to not generate same split each repeat
+        prng = np.random.RandomState(self.random_state)
+        split_rand_states = prng.randint(0, 10000, size=self.n_repeats)
+
+        for i, split_rand_state in zip(range(self.n_repeats), split_rand_states):
+            gss = GroupKFold(
+                n_splits=self.n_splits,
+                shuffle=True,
+                random_state=split_rand_state,
+            )
+            for train_idx, test_idx in gss.split(X_all, y_all, groups=clusters):
+                train_inds.append(train_idx)
+                test_inds.append(test_idx)
+
+        cv = iter(zip(train_inds, test_inds))
 
         estimator = model.estimator
         # evaluate the model, storing the results
