@@ -605,7 +605,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self._metric_data[t_label] = defaultdict(list)
 
         for fold, (fold_train_ids, fold_val_ids) in enumerate(
-            cv.split(X=X_all, y=y_all)
+            cv
         ):
             logger.info(f"Fold {fold}")
 
