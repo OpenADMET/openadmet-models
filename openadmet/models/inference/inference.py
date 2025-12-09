@@ -139,7 +139,7 @@ def predict(
     Parameters
     ----------
     input_path : Union[str, Path, pd.DataFrame]
-        Path to the input data file (CSV or SDF) or a pandas DataFrame.
+        Path to the input data file (CSV or SDF or parquet) or a pandas DataFrame.
     input_col : str
         Name of the column containing SMILES strings.
     model_dir : Union[str, Path, list[Union[str, Path]]]
@@ -186,11 +186,13 @@ def predict(
             data = pd.read_csv(input_path)
         elif input_path.endswith(".sdf"):
             data = PandasTools.LoadSDF(input_path, smilesName=input_col)
+        elif input_path.endswith(".parquet"):
+            data = pd.read_parquet(input_path)
         else:
-            raise ValueError("Path must lead to a CSV or SDF file")
+            raise ValueError("Path must lead to a CSV or SDF or parquet file")
     else:
         raise ValueError(
-            "Input path must be a pandas DataFrame, a CSV file, or an SDF file"
+            "Input path must be a pandas DataFrame, a CSV file, a parquet file, or an SDF file"
         )
 
     if input_col not in data.columns:
