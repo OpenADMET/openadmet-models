@@ -3,6 +3,7 @@
 from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import GroupShuffleSplit
+from sklearn.cluster import KMeans
 from splito import KMeansSplit
 import numpy as np
 import pandas as pd
@@ -13,7 +14,6 @@ from useful_rdkit_utils import (
     get_scaffold,
     smi2numpy_fp,
 )
-from sklearn.cluster import KMeans
 
 
 @splitters.register("ClusterSplitter")
@@ -22,6 +22,7 @@ class ClusterSplitter(SplitterBase):
 
     method: str = "butina"
     k_clusters: int = 10
+    butina_cutoff: float = 0.65
 
     @field_validator("method", mode="before")
     @classmethod
@@ -71,7 +72,7 @@ class ClusterSplitter(SplitterBase):
         """
         # Get clusters based on the selected method
         if self.method == "butina":
-            clusters = get_butina_clusters(X)
+            clusters = get_butina_clusters(X, cutoff=self.butina_cutoff)
         elif self.method == "bemis-murcko":
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
