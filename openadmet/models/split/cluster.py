@@ -4,7 +4,6 @@ from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.cluster import KMeans
-from splito import KMeansSplit
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
