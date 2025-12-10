@@ -93,13 +93,13 @@ def test_simple_split(
     "train_size, val_size, test_size, expected_train, expected_val, expected_test, error",
     [
         # 80, 0, 20
-        (0.8, 0.0, 0.2, 1528, 0, 427, False),
+        (0.8, 0.0, 0.2, 1528, 0, 472, False),
         # 70, 30, 0
-        (0.7, 0.3, 0.0, 1528, 427, 0, False),
+        (0.7, 0.3, 0.0, 1528, 472, 0, False),
         # 70, 10, 20
-        (0.7, 0.1, 0.2, 1281, 247, 427, False),
+        (0.7, 0.1, 0.2, 1281, 247, 472, False),
         # 60, 20, 20
-        (0.6, 0.2, 0.2, 1281, 247, 427, False),
+        (0.6, 0.2, 0.2, 1281, 247, 472, False),
         # 100, 0, 0; raises error
         (1.0, 0.0, 0.0, 200, 0, 0, True),
         # 50, 50, 50; raises error
