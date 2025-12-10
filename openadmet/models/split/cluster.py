@@ -2,17 +2,18 @@
 
 from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GroupShuffleSplit
 from splito import KMeansSplit
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
 from useful_rdkit_utils import (
-    get_kmeans_clusters,
     get_butina_clusters,
     get_bemis_murcko_clusters,
+    get_scaffold,
+    smi2numpy_fp,
 )
-
+from sklearn.cluster import KMeans
 
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
@@ -73,7 +74,9 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "bemis-murcko":
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
-            clusters = get_kmeans_clusters(X, n_clusters=self.k_clusters)
+            km = KMeans(n_clusters=self.k_clusters, n_init='auto', random_state=self.random_state)
+            fp_list = [smi2numpy_fp(x) for x in X]
+            clusters = km.fit_predict(np.stack(fp_list))
 
         if self.test_size == 0 and self.val_size == 0:
             X_train, y_train = X, y
@@ -81,14 +84,14 @@ class ClusterSplitter(SplitterBase):
 
         if self.test_size == 0:
             # Split into train and val
-            gss = GroupKFold(n_splits=int(1 / self.val_size))
+            gss = GroupShuffleSplit(n_splits=int(1 / self.val_size), random_state=self.random_state)
             for train_idx, val_idx in gss.split(X, y, groups=clusters):
                 X_train, X_val = np.array(X)[train_idx], np.array(X)[val_idx]
                 y_train, y_val = np.array(y)[train_idx], np.array(y)[val_idx]
                 break
             return X_train, X_val, None, y_train, y_val, None, clusters
 
-        gss = GroupKFold(n_splits=int(1 / self.test_size))
+        gss = GroupShuffleSplit(n_splits=int(1 / self.test_size), random_state=self.random_state)
         for train_val_idx, test_idx in gss.split(X, y, groups=clusters):
             X_train_val, X_test = np.array(X)[train_val_idx], np.array(X)[test_idx]
             y_train_val, y_test = np.array(y)[train_val_idx], np.array(y)[test_idx]
@@ -96,19 +99,11 @@ class ClusterSplitter(SplitterBase):
 
         if self.val_size == 0:
             return X_train_val, None, X_test, y_train_val, None, y_test, clusters
-
-        gss = GroupKFold(n_splits=int(1 / self.val_size))
-        for train_idx, val_idx in gss.split(
-            X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]
-        ):
-            X_train, X_val = (
-                np.array(X_train_val)[train_idx],
-                np.array(X_train_val)[val_idx],
-            )
-            y_train, y_val = (
-                np.array(y_train_val)[train_idx],
-                np.array(y_train_val)[val_idx],
-            )
+        
+        gss = GroupShuffleSplit(n_splits=int(1 / self.val_size), random_state=self.random_state)
+        for train_idx, val_idx in gss.split(X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]):
+            X_train, X_val = np.array(X_train_val)[train_idx], np.array(X_train_val)[val_idx]
+            y_train, y_val = np.array(y_train_val)[train_idx], np.array(y_train_val)[val_idx]
             break
 
         # Return train, val and test sets

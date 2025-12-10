@@ -62,7 +62,7 @@ def test_simple_split(
         return
 
     # Perform the split
-    X_train, X_val, X_test, y_train, y_val, y_test = splitter.split(X, y)
+    X_train, X_val, X_test, y_train, y_val, y_test, groups = splitter.split(X, y)
 
     # Check train
     assert X_train.shape[0] == expected_train
@@ -93,13 +93,13 @@ def test_simple_split(
     "train_size, val_size, test_size, expected_train, expected_val, expected_test, error",
     [
         # 80, 0, 20
-        (0.8, 0.0, 0.2, 1600, 0, 400, False),
+        (0.8, 0.0, 0.2, 1573, 0, 427, False),
         # 70, 30, 0
-        (0.7, 0.3, 0.0, 1400, 600, 0, False),
+        (0.7, 0.3, 0.0, 1573, 427, 0, False),
         # 70, 10, 20
-        (0.7, 0.1, 0.2, 1400, 200, 400, False),
+        (0.7, 0.1, 0.2, 1326, 247, 427, False),
         # 60, 20, 20
-        (0.6, 0.2, 0.2, 1200, 400, 400, False),
+        (0.6, 0.2, 0.2, 1326, 247, 427, False),
         # 100, 0, 0; raises error
         (1.0, 0.0, 0.0, 200, 0, 0, True),
         # 50, 50, 50; raises error
@@ -128,7 +128,7 @@ def test_cluster_split(
                 val_size=val_size,
                 test_size=test_size,
                 random_state=42,
-                k_clusters=2,
+                k_clusters=100,
             )
         return
 
@@ -139,7 +139,7 @@ def test_cluster_split(
         test_size=test_size,
         random_state=42,
         method="kmeans",
-        k_clusters=2,
+        k_clusters=100,
     )
 
     # Error is expected
@@ -149,7 +149,7 @@ def test_cluster_split(
         return
 
     # Perform the split
-    X_train, X_val, X_test, y_train, y_val, y_test = splitter.split(X, y)
+    X_train, X_val, X_test, y_train, y_val, y_test, groups = splitter.split(X, y)
 
     # Check train
     assert X_train.shape[0] == expected_train
