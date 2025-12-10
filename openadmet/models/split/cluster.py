@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupKFold
 from splito import KMeansSplit
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from useful_rdkit_utils import (
     get_butina_clusters,
     get_bemis_murcko_clusters,
 )
-
 
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
@@ -75,52 +74,33 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "kmeans":
             clusters = get_kmeans_clusters(X, n_clusters=self.k_clusters)
 
-        # No test set requested
+        if self.test_size == 0 and self.val_size == 0:
+            X_train, y_train = X, y
+            return X, None, None, y, None, None, clusters
+        
         if self.test_size == 0:
             # Split into train and val
-            X_train, X_val, y_train, y_val = train_test_split(
-                X,
-                y,
-                train_size=None,
-                test_size=int(self.val_size * X.shape[0]),
-                random_state=self.random_state,
-                stratify=clusters,
-            )
-            return X_train, X_val, None, y_train, y_val, None
+            gss = GroupKFold(n_splits=int(1 / self.val_size))
+            for train_idx, val_idx in gss.split(X, y, groups=clusters):
+                X_train, X_val = np.array(X)[train_idx], np.array(X)[val_idx]
+                y_train, y_val = np.array(y)[train_idx], np.array(y)[val_idx]
+                break
+            return X_train, X_val, None, y_train, y_val, None, clusters
 
-        # Split into train+val and test
-        X_train_val, X_test, y_train_val, y_test = train_test_split(
-            X,
-            y,
-            train_size=None,
-            test_size=int(self.test_size * X.shape[0]),
-            random_state=self.random_state,
-            stratify=clusters,
-        )
+        gss = GroupKFold(n_splits=int(1 / self.test_size))
+        for train_val_idx, test_idx in gss.split(X, y, groups=clusters):
+            X_train_val, X_test = np.array(X)[train_val_idx], np.array(X)[test_idx]
+            y_train_val, y_test = np.array(y)[train_val_idx], np.array(y)[test_idx]
+            break
 
-        # No validation set requested, return train(+val) and test sets
         if self.val_size == 0:
-            return X_train_val, None, X_test, y_train_val, None, y_test
-
-        # Get new clusters based on the selected method
-        if self.method == "butina":
-            split_clusters = get_butina_clusters(X_train_val)
-        elif self.method == "bemis-murcko":
-            split_clusters = get_bemis_murcko_clusters(X_train_val)
-        elif self.method == "kmeans":
-            split_clusters = get_kmeans_clusters(
-                X_train_val, n_clusters=self.k_clusters
-            )
-
-        # Split train+val into train and val sets
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val,
-            y_train_val,
-            train_size=None,
-            test_size=int(self.val_size * X.shape[0]),
-            random_state=self.random_state,
-            stratify=split_clusters,
-        )
+            return X_train_val, None, X_test, y_train_val, None, y_test, clusters
+        
+        gss = GroupKFold(n_splits=int(1 / self.val_size))
+        for train_idx, val_idx in gss.split(X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]):
+            X_train, X_val = np.array(X_train_val)[train_idx], np.array(X_train_val)[val_idx]
+            y_train, y_val = np.array(y_train_val)[train_idx], np.array(y_train_val)[val_idx]
+            break
 
         # Return train, val and test sets
-        return X_train, X_val, X_test, y_train, y_val, y_test, split_clusters
+        return X_train, X_val, X_test, y_train, y_val, y_test, clusters
