@@ -241,6 +241,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 "Using prespecified train/test resources from data specification"
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+            groups = None
         else:
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
@@ -679,6 +680,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 "Using prespecified train/test resources from data specification"
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+            groups = None
         else:
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
