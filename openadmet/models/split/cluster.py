@@ -13,6 +13,7 @@ from useful_rdkit_utils import (
     get_bemis_murcko_clusters,
 )
 
+
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
     """Splits the data based on the KMeans clustering of the molecules."""
@@ -77,7 +78,7 @@ class ClusterSplitter(SplitterBase):
         if self.test_size == 0 and self.val_size == 0:
             X_train, y_train = X, y
             return X, None, None, y, None, None, clusters
-        
+
         if self.test_size == 0:
             # Split into train and val
             gss = GroupKFold(n_splits=int(1 / self.val_size))
@@ -95,11 +96,19 @@ class ClusterSplitter(SplitterBase):
 
         if self.val_size == 0:
             return X_train_val, None, X_test, y_train_val, None, y_test, clusters
-        
+
         gss = GroupKFold(n_splits=int(1 / self.val_size))
-        for train_idx, val_idx in gss.split(X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]):
-            X_train, X_val = np.array(X_train_val)[train_idx], np.array(X_train_val)[val_idx]
-            y_train, y_val = np.array(y_train_val)[train_idx], np.array(y_train_val)[val_idx]
+        for train_idx, val_idx in gss.split(
+            X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]
+        ):
+            X_train, X_val = (
+                np.array(X_train_val)[train_idx],
+                np.array(X_train_val)[val_idx],
+            )
+            y_train, y_val = (
+                np.array(y_train_val)[train_idx],
+                np.array(y_train_val)[val_idx],
+            )
             break
 
         # Return train, val and test sets
