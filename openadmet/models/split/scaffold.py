@@ -93,6 +93,7 @@ class ScaffoldSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            None,
         )
 
 
@@ -181,6 +182,7 @@ class PerimeterSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            None,
         )
 
 
@@ -269,6 +271,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            None,
         )
 
 

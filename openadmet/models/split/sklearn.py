@@ -72,4 +72,4 @@ class ShuffleSplitter(SplitterBase):
         )
 
         # Return train, val and test sets
-        return X_train, X_val, X_test, y_train, y_val, y_test
+        return X_train, X_val, X_test, y_train, y_val, y_test, None

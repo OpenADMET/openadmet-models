@@ -245,7 +245,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
+            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(X, y)
         logger.info("Data loaded")
 
         # Save splits to CSV outputs
@@ -386,6 +386,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                     X_train=X_train_feat,
                     y_train=y_train,
                     X_all=X_feat,
+                    groups=groups,
                     y_all=y,
                     tag=model_tag,
                     target_labels=target_labels,
@@ -680,7 +681,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
+            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(X, y)
         logger.info("Data loaded")
 
         # Save splits to CSV outputs
@@ -829,6 +830,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     X_train=train_dataloader,
                     y_train=train_dataloader,
                     X_all=X,
+                    groups=groups,
                     y_all=y,
                     featurizer=self.feat,
                     trainer=self.trainer,
