@@ -100,7 +100,7 @@ def toy_data():
 
     # Split the data
     splitter = ShuffleSplitter(train_size=0.7, val_size=0.1, test_size=0.2)
-    X_train, X_val, X_test, y_train, y_val, y_test = splitter.split(
+    X_train, X_val, X_test, y_train, y_val, y_test, _ = splitter.split(
         X, y[:, 0].reshape(-1, 1)
     )
 
