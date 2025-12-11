@@ -26,7 +26,6 @@ dependencies:
   - mordredcommunity
   - numpy
   - pandas
-  - pingouin
   - pip
   - python >= 3.12
   - pytorch
