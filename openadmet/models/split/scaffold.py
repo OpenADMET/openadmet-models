@@ -44,6 +44,7 @@ class ScaffoldSplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = splitter.scaffolds
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -93,7 +94,7 @@ class ScaffoldSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
-            None,
+            groups,
         )
 
 
@@ -134,6 +135,7 @@ class PerimeterSplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = splitter.reduce(X)
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -182,7 +184,7 @@ class PerimeterSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
-            None,
+            groups,
         )
 
 
@@ -223,6 +225,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = splitter.reduce(X)
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -271,7 +274,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
-            None,
+            groups,
         )
 
 
