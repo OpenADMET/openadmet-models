@@ -176,7 +176,7 @@ class PostHocComparison(ComparisonBase):
         # Download from S3 if needed
         local_model_dirs = []
         for model_dir in model_dirs or []:
-            if (model_dir.startswith("s3://")):
+            if model_dir.startswith("s3://"):
                 local_dir = f"/tmp/{os.path.basename(model_dir.rstrip('/'))}"
                 _download_s3_dir(model_dir, local_dir)
                 local_model_dirs.append(local_dir)
@@ -938,13 +938,15 @@ class PostHocComparison(ComparisonBase):
                 # Plot individual paired lines with color based on direction
                 for _, row in pivot_df.iterrows():
                     # Check if the line increases or decreases
-                    if row.iloc[-1] > row.iloc[0]: 
+                    if row.iloc[-1] > row.iloc[0]:
                         color = "green"
                     else:
                         color = "red"
                     ax.plot(methods, row, marker="o", color=color, alpha=0.7)
 
-                sns.pointplot(data=tmp_df, x="method", y=metric, ax=ax, join=False, ci=None)
+                sns.pointplot(
+                    data=tmp_df, x="method", y=metric, ax=ax, join=False, ci=None
+                )
                 ax.set_title(title, color=title_color)
                 ax.set_xlabel("Method")
                 ax.set_ylabel(metric.upper())
