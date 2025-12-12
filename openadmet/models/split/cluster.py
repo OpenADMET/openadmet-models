@@ -82,7 +82,9 @@ class ClusterSplitter(SplitterBase):
                 random_state=self.random_state,
                 algorithm="lloyd",
             )
-            fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]  # Enforce float64 precision
+            fp_list = [
+                smi2numpy_fp(x).astype(np.float64) for x in X
+            ]  # Enforce float64 precision
             with threadpool_limits(limits=1):  # Disable parallelism
                 clusters = km.fit_predict(np.stack(fp_list))
 
