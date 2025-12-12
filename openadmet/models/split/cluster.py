@@ -86,7 +86,7 @@ class ClusterSplitter(SplitterBase):
             fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]
             with threadpool_limits(limits=1):
                 clusters = km.fit_predict(np.stack(fp_list))
-        logging.warning(len(clusters))
+        logging.warning(clusters)
 
         if self.test_size == 0 and self.val_size == 0:
             X_train, y_train = X, y
