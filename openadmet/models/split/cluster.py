@@ -1,5 +1,5 @@
 """Cluster-based data splitting implementations."""
-
+import logging 
 from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import GroupShuffleSplit
@@ -82,17 +82,17 @@ class ClusterSplitter(SplitterBase):
                 random_state=self.random_state,
                 algorithm="lloyd",
             )
-            fp_list = [
-                smi2numpy_fp(x).astype(np.float64) for x in X
-            ]  # Enforce float64 precision
-            with threadpool_limits(limits=1):  # Disable parallelism
+            fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]
+            with threadpool_limits(limits=1):
                 clusters = km.fit_predict(np.stack(fp_list))
+        logging.warning(len(clusters))
 
         if self.test_size == 0 and self.val_size == 0:
             X_train, y_train = X, y
             return X, None, None, y, None, None, clusters
 
         if self.test_size == 0:
+            logging.warning('val_size ' + str(int(1/self.val_size)) + ' ' + str(self.val_size))
             # Split into train and val
             gss = GroupShuffleSplit(
                 n_splits=int(1 / self.val_size), random_state=self.random_state
@@ -103,6 +103,7 @@ class ClusterSplitter(SplitterBase):
                 break
             return X_train, X_val, None, y_train, y_val, None, clusters
 
+        logging.warning('test_size ' + str(int(1/self.test_size)) + ' ' + str(self.test_size))
         gss = GroupShuffleSplit(
             n_splits=int(1 / self.test_size), random_state=self.random_state
         )
@@ -114,6 +115,7 @@ class ClusterSplitter(SplitterBase):
         if self.val_size == 0:
             return X_train_val, None, X_test, y_train_val, None, y_test, clusters
 
+        logging.warning('val_size ' + str(int(1/self.val_size)) + ' ' + str(self.val_size))
         gss = GroupShuffleSplit(
             n_splits=int(1 / self.val_size), random_state=self.random_state
         )
