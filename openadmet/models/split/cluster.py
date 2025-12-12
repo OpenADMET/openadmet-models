@@ -4,6 +4,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.cluster import KMeans
+from threadpoolctl import threadpool_limits
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
@@ -77,11 +78,13 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "kmeans":
             km = KMeans(
                 n_clusters=self.k_clusters,
-                n_init="auto",
+                n_init=1,
                 random_state=self.random_state,
+                algorithm="lloyd",
             )
-            fp_list = [smi2numpy_fp(x) for x in X]
-            clusters = km.fit_predict(np.stack(fp_list))
+            fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]  # Enforce float64 precision
+            with threadpool_limits(limits=1):  # Disable parallelism
+                clusters = km.fit_predict(np.stack(fp_list))
 
         if self.test_size == 0 and self.val_size == 0:
             X_train, y_train = X, y
