@@ -92,7 +92,9 @@ class TabPFNExtensionModelBase(PickleableModelBase):
     def build(self):
         """Prepare and build the model instance."""
         accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
-        warnings.warn("TabPFN 2.5 is distributed under the TabPFN 2.5 License: https://priorlabs.ai/tabpfn-license which prohibits commercial use. Review the license and ensure you are compliant before using this model. A commercial license can be obtained from the TabPFN team.")
+        warnings.warn(
+            "TabPFN 2.5 is distributed under the TabPFN 2.5 License: https://priorlabs.ai/tabpfn-license which prohibits commercial use. Review the license and ensure you are compliant before using this model. A commercial license can be obtained from the TabPFN team."
+        )
         if not self.estimator:
             self.estimator = self.mod_class(
                 max_time=self.max_time,
