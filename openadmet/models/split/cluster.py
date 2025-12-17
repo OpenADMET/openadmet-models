@@ -16,7 +16,6 @@ from useful_rdkit_utils import (
     smi2numpy_fp,
 )
 
-
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
     """Splits the data based on the KMeans clustering of the molecules."""
@@ -77,6 +76,7 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "bemis-murcko":
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
+            logging.warning("KMeans clustering is NOT DETERMINISTIC even with random seed.")
             km = KMeans(
                 n_clusters=self.k_clusters,
                 n_init=1,
@@ -84,168 +84,78 @@ class ClusterSplitter(SplitterBase):
                 algorithm="lloyd",
             )
             fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]
-            with threadpool_limits(limits=1):
-                clusters = km.fit_predict(np.stack(fp_list))
+            with threadpool_limits(limits=1): 
+                clusters = km.fit_predict(np.stack(fp_list, dtype=np.float64))
 
-        # Calculate and log the frequency of each cluster
-        unique_clusters, counts = np.unique(clusters, return_counts=True)
-        cluster_frequencies = dict(zip(unique_clusters, counts))
-        logging.warning(f"Cluster frequencies: {cluster_frequencies}")
-        freqs = {
-            0: 7,
-            1: 31,
-            2: 42,
-            3: 14,
-            4: 61,
-            5: 14,
-            6: 3,
-            7: 16,
-            8: 4,
-            9: 64,
-            10: 16,
-            11: 209,
-            12: 21,
-            13: 13,
-            14: 22,
-            15: 20,
-            16: 4,
-            17: 20,
-            18: 11,
-            19: 34,
-            20: 10,
-            21: 17,
-            22: 26,
-            23: 11,
-            24: 14,
-            25: 8,
-            26: 12,
-            27: 16,
-            28: 7,
-            29: 14,
-            30: 29,
-            31: 47,
-            32: 15,
-            33: 17,
-            34: 93,
-            35: 11,
-            36: 20,
-            37: 20,
-            38: 9,
-            39: 19,
-            40: 46,
-            41: 10,
-            42: 23,
-            43: 11,
-            44: 28,
-            45: 23,
-            46: 21,
-            47: 18,
-            48: 12,
-            49: 7,
-            50: 37,
-            51: 21,
-            52: 76,
-            53: 32,
-            54: 11,
-            55: 13,
-            56: 11,
-            57: 7,
-            58: 13,
-            59: 8,
-            60: 5,
-            61: 17,
-            62: 15,
-            63: 14,
-            64: 18,
-            65: 4,
-            66: 7,
-            67: 37,
-            68: 25,
-            69: 13,
-            70: 7,
-            71: 6,
-            72: 19,
-            73: 5,
-            74: 7,
-            75: 24,
-            76: 6,
-            77: 58,
-            78: 14,
-            79: 10,
-            80: 7,
-            81: 15,
-            82: 18,
-            83: 2,
-            84: 20,
-            85: 18,
-            86: 8,
-            87: 20,
-            88: 8,
-            89: 5,
-            90: 5,
-            91: 9,
-            92: 15,
-            93: 8,
-            94: 18,
-            95: 8,
-            96: 15,
-            97: 14,
-            98: 4,
-            99: 3,
-        }
-        are_equal = freqs == cluster_frequencies
-        logging.warning(f"Are freqs and cluster_frequencies equal? {are_equal}")
+        # Group X into subarrays based on cluster assignments
+        unique_clusters = np.unique(clusters)
+        subarrays_X = [X[clusters == cluster] for cluster in unique_clusters]
+        subarrays_y = [y[clusters == cluster] for cluster in unique_clusters]
+        n_subarrays = len(subarrays_X)
+        lengths = np.array([len(arr) for arr in subarrays_X])
+        total_elements = lengths.sum()
+        indices = np.arange(n_subarrays)
 
-        if self.test_size == 0 and self.val_size == 0:
-            X_train, y_train = X, y
-            return X, None, None, y, None, None, clusters
+        # Calculate target element counts (cumulative)
+        ratios = [self.train_size, self.val_size, self.test_size]
+        cum_ratios = np.cumsum(ratios)[:2]
+        target_counts = (cum_ratios * total_elements).astype(int)
+        
+        best_split = None
+        min_error = 0.001
+        
+        rng = np.random.default_rng(self.random_state)
 
-        if self.test_size == 0:
-            logging.warning(
-                "val_size " + str(int(1 / self.val_size)) + " " + str(self.val_size)
-            )
-            # Split into train and val
-            gss = GroupShuffleSplit(
-                n_splits=int(1 / self.val_size), random_state=self.random_state
-            )
-            for train_idx, val_idx in gss.split(X, y, groups=clusters):
-                X_train, X_val = np.array(X)[train_idx], np.array(X)[val_idx]
-                y_train, y_val = np.array(y)[train_idx], np.array(y)[val_idx]
-                break
-            return X_train, X_val, None, y_train, y_val, None, clusters
+        # Monte Carlo Search for best set of clusters to split with
+        # specified train_size, val_size, and test_size
+        for _ in range(1000):
+            # Shuffle indices
+            shuffled_indices = rng.permutation(indices)
+            
+            # Calculate cumulative sum of lengths in this shuffled order
+            shuffled_lengths = lengths[shuffled_indices]
+            cum_counts = np.cumsum(shuffled_lengths)
+            
+            # Find split indices where cumulative count crosses targets
+            # searchsorted finds the first index where cum_counts >= target
+            split_1 = np.searchsorted(cum_counts, target_counts[0])
+            split_2 = np.searchsorted(cum_counts, target_counts[1])
+            
+            # Calculate Error (L1 distance from target count)
+            # We look at how far the actual cut points are from ideal targets
+            error = (abs(cum_counts[split_1] - target_counts[0]) + 
+                    abs(cum_counts[split_2] - target_counts[1]))
+            
+            if error < min_error:
+                min_error = error
+                best_split = (shuffled_indices, split_1, split_2)
+                
+                # Optimization: Early exit if perfect match
+                if min_error == 0:
+                    break
+        
+        # 3. Retrieve Best Split
+        best_indices, s1, s2 = best_split
+        
+        train_idxs = best_indices[:s1+1]
+        val_idxs   = best_indices[s1+1:s2+1]
+        test_idxs  = best_indices[s2+1:]
 
-        logging.warning(
-            "test_size " + str(int(1 / self.test_size)) + " " + str(self.test_size)
-        )
-        gss = GroupShuffleSplit(
-            n_splits=int(1 / self.test_size), random_state=self.random_state
-        )
-        for train_val_idx, test_idx in gss.split(X, y, groups=clusters):
-            X_train_val, X_test = np.array(X)[train_val_idx], np.array(X)[test_idx]
-            y_train_val, y_test = np.array(y)[train_val_idx], np.array(y)[test_idx]
-            break
+        logging.warning(val_idxs)
 
-        if self.val_size == 0:
-            return X_train_val, None, X_test, y_train_val, None, y_test, clusters
-
-        logging.warning(
-            "val_size " + str(int(1 / self.val_size)) + " " + str(self.val_size)
-        )
-        gss = GroupShuffleSplit(
-            n_splits=int(1 / self.val_size), random_state=self.random_state
-        )
-        for train_idx, val_idx in gss.split(
-            X_train_val, y_train_val, groups=np.array(clusters)[train_val_idx]
-        ):
-            X_train, X_val = (
-                np.array(X_train_val)[train_idx],
-                np.array(X_train_val)[val_idx],
-            )
-            y_train, y_val = (
-                np.array(y_train_val)[train_idx],
-                np.array(y_train_val)[val_idx],
-            )
-            break
+        # Retrieve train, val, and test sets for X and y separately
+        X_train, X_val, X_test = retrieve_data_by_idx(subarrays_X, [train_idxs, val_idxs, test_idxs])
+        y_train, y_val, y_test = retrieve_data_by_idx(subarrays_y, [train_idxs, val_idxs, test_idxs])
 
         # Return train, val and test sets
         return X_train, X_val, X_test, y_train, y_val, y_test, clusters
+
+def retrieve_data_by_idx(subarrays, all_inds):
+    """Retrieve data based on indices."""
+    to_return = []
+    for idxs in all_inds:
+        if len(idxs) == 0:
+            to_return.append(None)
+        else:
+            to_return.append(np.concatenate([subarrays[i] for i in idxs]))
+    return to_return
