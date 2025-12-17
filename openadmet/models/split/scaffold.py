@@ -65,6 +65,7 @@ class ScaffoldSplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
@@ -157,6 +158,7 @@ class PerimeterSplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = splitter.reduce(X)
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
@@ -249,6 +251,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = splitter.reduce(X)
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
