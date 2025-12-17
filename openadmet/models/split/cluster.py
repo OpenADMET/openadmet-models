@@ -48,7 +48,7 @@ class ClusterSplitter(SplitterBase):
 
         return self
 
-    def split(self, X, y):
+    def split(self, X, y, num_iters=1000):
         """
         Split the data into train, validation, and test sets.
 
@@ -58,6 +58,8 @@ class ClusterSplitter(SplitterBase):
             List or iterable of SMILES strings to split.
         y : Iterable[float] or pd.Series
             List or iterable of target values corresponding to the SMILES strings.
+        num_iters : int, optional
+            Number of Monte Carlo trials to minimize the deviation from target ratios. Default is 1000
 
         Returns
         -------
@@ -95,50 +97,40 @@ class ClusterSplitter(SplitterBase):
         subarrays_X = [X[clusters == cluster] for cluster in unique_clusters]
         subarrays_y = [y[clusters == cluster] for cluster in unique_clusters]
         n_subarrays = len(subarrays_X)
+
+        # Set subarray data
         lengths = np.array([len(arr) for arr in subarrays_X])
         total_elements = lengths.sum()
         indices = np.arange(n_subarrays)
-
-        # Calculate target element counts (cumulative)
         ratios = [self.train_size, self.val_size, self.test_size]
         cum_ratios = np.cumsum(ratios)[:2]
         target_counts = (cum_ratios * total_elements).astype(int)
 
         best_split = None
-        min_error = 0.001
-
+        min_error = float('inf')
         rng = np.random.default_rng(self.random_state)
 
-        # Monte Carlo Search for best set of clusters to split with
-        # specified train_size, val_size, and test_size
-        for _ in range(1000):
-            # Shuffle indices
+        # Search for best set of clusters to split with specified sizes
+        for _ in range(num_iters):
+
             shuffled_indices = rng.permutation(indices)
 
             # Calculate cumulative sum of lengths in this shuffled order
             shuffled_lengths = lengths[shuffled_indices]
             cum_counts = np.cumsum(shuffled_lengths)
-
-            # Find split indices where cumulative count crosses targets
-            # searchsorted finds the first index where cum_counts >= target
+            
+            # Searchsorted finds the first index where cum_counts >= target
             split_1 = np.searchsorted(cum_counts, target_counts[0])
             split_2 = np.searchsorted(cum_counts, target_counts[1])
-
-            # Calculate Error (L1 distance from target count)
-            # We look at how far the actual cut points are from ideal targets
-            error = abs(cum_counts[split_1] - target_counts[0]) + abs(
-                cum_counts[split_2] - target_counts[1]
-            )
-
+            
+            # Look at how far the actual cut points are from ideal targets
+            error = (abs(cum_counts[split_1] - target_counts[0]) + 
+                    abs(cum_counts[split_2] - target_counts[1]))
+            
             if error < min_error:
                 min_error = error
                 best_split = (shuffled_indices, split_1, split_2)
-
-                # Optimization: Early exit if perfect match
-                if min_error == 0:
-                    break
-
-        # 3. Retrieve Best Split
+        
         best_indices, s1, s2 = best_split
 
         train_idxs = best_indices[: s1 + 1]
