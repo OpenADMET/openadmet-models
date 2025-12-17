@@ -16,6 +16,7 @@ from useful_rdkit_utils import (
     smi2numpy_fp,
 )
 
+
 @splitters.register("ClusterSplitter")
 class ClusterSplitter(SplitterBase):
     """Splits the data based on the KMeans clustering of the molecules."""
@@ -76,7 +77,9 @@ class ClusterSplitter(SplitterBase):
         elif self.method == "bemis-murcko":
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
-            logging.warning("KMeans clustering is NOT DETERMINISTIC even with random seed.")
+            logging.warning(
+                "KMeans clustering is NOT DETERMINISTIC even with random seed."
+            )
             km = KMeans(
                 n_clusters=self.k_clusters,
                 n_init=1,
@@ -84,7 +87,7 @@ class ClusterSplitter(SplitterBase):
                 algorithm="lloyd",
             )
             fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]
-            with threadpool_limits(limits=1): 
+            with threadpool_limits(limits=1):
                 clusters = km.fit_predict(np.stack(fp_list, dtype=np.float64))
 
         # Group X into subarrays based on cluster assignments
@@ -100,10 +103,10 @@ class ClusterSplitter(SplitterBase):
         ratios = [self.train_size, self.val_size, self.test_size]
         cum_ratios = np.cumsum(ratios)[:2]
         target_counts = (cum_ratios * total_elements).astype(int)
-        
+
         best_split = None
         min_error = 0.001
-        
+
         rng = np.random.default_rng(self.random_state)
 
         # Monte Carlo Search for best set of clusters to split with
@@ -111,44 +114,50 @@ class ClusterSplitter(SplitterBase):
         for _ in range(1000):
             # Shuffle indices
             shuffled_indices = rng.permutation(indices)
-            
+
             # Calculate cumulative sum of lengths in this shuffled order
             shuffled_lengths = lengths[shuffled_indices]
             cum_counts = np.cumsum(shuffled_lengths)
-            
+
             # Find split indices where cumulative count crosses targets
             # searchsorted finds the first index where cum_counts >= target
             split_1 = np.searchsorted(cum_counts, target_counts[0])
             split_2 = np.searchsorted(cum_counts, target_counts[1])
-            
+
             # Calculate Error (L1 distance from target count)
             # We look at how far the actual cut points are from ideal targets
-            error = (abs(cum_counts[split_1] - target_counts[0]) + 
-                    abs(cum_counts[split_2] - target_counts[1]))
-            
+            error = abs(cum_counts[split_1] - target_counts[0]) + abs(
+                cum_counts[split_2] - target_counts[1]
+            )
+
             if error < min_error:
                 min_error = error
                 best_split = (shuffled_indices, split_1, split_2)
-                
+
                 # Optimization: Early exit if perfect match
                 if min_error == 0:
                     break
-        
+
         # 3. Retrieve Best Split
         best_indices, s1, s2 = best_split
-        
-        train_idxs = best_indices[:s1+1]
-        val_idxs   = best_indices[s1+1:s2+1]
-        test_idxs  = best_indices[s2+1:]
+
+        train_idxs = best_indices[: s1 + 1]
+        val_idxs = best_indices[s1 + 1 : s2 + 1]
+        test_idxs = best_indices[s2 + 1 :]
 
         logging.warning(val_idxs)
 
         # Retrieve train, val, and test sets for X and y separately
-        X_train, X_val, X_test = retrieve_data_by_idx(subarrays_X, [train_idxs, val_idxs, test_idxs])
-        y_train, y_val, y_test = retrieve_data_by_idx(subarrays_y, [train_idxs, val_idxs, test_idxs])
+        X_train, X_val, X_test = retrieve_data_by_idx(
+            subarrays_X, [train_idxs, val_idxs, test_idxs]
+        )
+        y_train, y_val, y_test = retrieve_data_by_idx(
+            subarrays_y, [train_idxs, val_idxs, test_idxs]
+        )
 
         # Return train, val and test sets
         return X_train, X_val, X_test, y_train, y_val, y_test, clusters
+
 
 def retrieve_data_by_idx(subarrays, all_inds):
     """Retrieve data based on indices."""
