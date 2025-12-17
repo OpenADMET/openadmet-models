@@ -107,30 +107,30 @@ class ClusterSplitter(SplitterBase):
         target_counts = (cum_ratios * total_elements).astype(int)
 
         best_split = None
-        min_error = float('inf')
+        min_error = float("inf")
         rng = np.random.default_rng(self.random_state)
 
         # Search for best set of clusters to split with specified sizes
         for _ in range(num_iters):
-
             shuffled_indices = rng.permutation(indices)
 
             # Calculate cumulative sum of lengths in this shuffled order
             shuffled_lengths = lengths[shuffled_indices]
             cum_counts = np.cumsum(shuffled_lengths)
-            
+
             # Searchsorted finds the first index where cum_counts >= target
             split_1 = np.searchsorted(cum_counts, target_counts[0])
             split_2 = np.searchsorted(cum_counts, target_counts[1])
-            
+
             # Look at how far the actual cut points are from ideal targets
-            error = (abs(cum_counts[split_1] - target_counts[0]) + 
-                    abs(cum_counts[split_2] - target_counts[1]))
-            
+            error = abs(cum_counts[split_1] - target_counts[0]) + abs(
+                cum_counts[split_2] - target_counts[1]
+            )
+
             if error < min_error:
                 min_error = error
                 best_split = (shuffled_indices, split_1, split_2)
-        
+
         best_indices, s1, s2 = best_split
 
         train_idxs = best_indices[: s1 + 1]
