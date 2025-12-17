@@ -239,7 +239,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
-                groups
+                groups,
             )
 
         # Split into train+val and test
@@ -260,7 +260,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
-                groups
+                groups,
             )
 
         # Split train+val into train and val sets using sklearn
