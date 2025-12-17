@@ -228,7 +228,9 @@ class MaxDissimilaritySplitter(SplitterBase):
             - y_test: Test set target values (or None if test_size=0).
 
         """
-        logging.warning("MaxDissimilaritySplitter is not available for Cross-Validation.")
+        logging.warning(
+            "MaxDissimilaritySplitter is not available for Cross-Validation."
+        )
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
