@@ -44,7 +44,7 @@ class ScaffoldSplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
-            groups = splitter.scaffolds
+            groups = None
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -54,6 +54,7 @@ class ScaffoldSplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups,
             )
 
         # Split into train+val and test
@@ -75,6 +76,7 @@ class ScaffoldSplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups,
             )
 
         # Split train+val into train and val sets
@@ -145,6 +147,7 @@ class PerimeterSplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups,
             )
 
         # Split into train+val and test
@@ -165,6 +168,7 @@ class PerimeterSplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups,
             )
 
         # Split train+val into train and val sets using sklearn
@@ -235,6 +239,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups
             )
 
         # Split into train+val and test
@@ -255,6 +260,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups
             )
 
         # Split train+val into train and val sets using sklearn
