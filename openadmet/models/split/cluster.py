@@ -5,7 +5,9 @@ from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.cluster import KMeans
-from threadpoolctl import threadpool_limits
+from molfeat.trans import MoleculeTransformer
+from molfeat.trans.fp import FPVecTransformer
+import datamol as dm
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
@@ -23,6 +25,7 @@ class ClusterSplitter(SplitterBase):
 
     method: str = "butina"
     k_clusters: int = 10
+    kmeans_fp_type: str = "morgan"
     butina_cutoff: float = 0.65
 
     @field_validator("method", mode="before")
@@ -59,7 +62,7 @@ class ClusterSplitter(SplitterBase):
         y : Iterable[float] or pd.Series
             List or iterable of target values corresponding to the SMILES strings.
         num_iters : int, optional
-            Number of Monte Carlo trials to minimize the deviation from target ratios. Default is 1000
+            Number of Monte Carlo trials to minimize the deviation from target ratios. Default is 1000.
 
         Returns
         -------
@@ -80,7 +83,7 @@ class ClusterSplitter(SplitterBase):
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
             logging.warning(
-                "KMeans clustering is NOT DETERMINISTIC even with random seed."
+                "KMeans clustering is NOT DETERMINISTIC with random seed across platforms."
             )
             km = KMeans(
                 n_clusters=self.k_clusters,
@@ -88,9 +91,15 @@ class ClusterSplitter(SplitterBase):
                 random_state=self.random_state,
                 algorithm="lloyd",
             )
-            fp_list = [smi2numpy_fp(x).astype(np.float64) for x in X]
-            with threadpool_limits(limits=1):
-                clusters = km.fit_predict(np.stack(fp_list, dtype=np.float64))
+            vec_featurizer = FPVecTransformer(self.kmeans_fp_type)
+            transformer = MoleculeTransformer(
+                vec_featurizer,
+                parallel_kwargs={"progress": False},
+                )
+            with dm.without_rdkit_log():
+                feat, _ = transformer(X, ignore_errors=True)
+            fp_list = list(np.squeeze(feat))
+            clusters = km.fit_predict(np.stack(fp_list, dtype=np.float64))
 
         # Group X into subarrays based on cluster assignments
         unique_clusters = np.unique(clusters)
@@ -103,8 +112,8 @@ class ClusterSplitter(SplitterBase):
         total_elements = lengths.sum()
         indices = np.arange(n_subarrays)
         ratios = [self.train_size, self.val_size, self.test_size]
-        cum_ratios = np.cumsum(ratios)[:2]
-        target_counts = (cum_ratios * total_elements).astype(int)
+        ratios = np.cumsum(ratios)[:2]
+        target_counts = (ratios * total_elements).astype(int)
 
         best_split = None
         min_error = float("inf")
@@ -116,15 +125,15 @@ class ClusterSplitter(SplitterBase):
 
             # Calculate cumulative sum of lengths in this shuffled order
             shuffled_lengths = lengths[shuffled_indices]
-            cum_counts = np.cumsum(shuffled_lengths)
+            counts = np.cumsum(shuffled_lengths)
 
             # Searchsorted finds the first index where cum_counts >= target
-            split_1 = np.searchsorted(cum_counts, target_counts[0])
-            split_2 = np.searchsorted(cum_counts, target_counts[1])
+            split_1 = np.searchsorted(counts, target_counts[0])
+            split_2 = np.searchsorted(counts, target_counts[1])
 
             # Look at how far the actual cut points are from ideal targets
-            error = abs(cum_counts[split_1] - target_counts[0]) + abs(
-                cum_counts[split_2] - target_counts[1]
+            error = abs(counts[split_1] - target_counts[0]) + abs(
+                counts[split_2] - target_counts[1]
             )
 
             if error < min_error:
@@ -137,8 +146,6 @@ class ClusterSplitter(SplitterBase):
         val_idxs = best_indices[s1 + 1 : s2 + 1]
         test_idxs = best_indices[s2 + 1 :]
 
-        logging.warning(val_idxs)
-
         # Retrieve train, val, and test sets for X and y separately
         X_train, X_val, X_test = retrieve_data_by_idx(
             subarrays_X, [train_idxs, val_idxs, test_idxs]
@@ -146,6 +153,10 @@ class ClusterSplitter(SplitterBase):
         y_train, y_val, y_test = retrieve_data_by_idx(
             subarrays_y, [train_idxs, val_idxs, test_idxs]
         )
+
+        if self.train_size != len(X_train) or self.val_size != len(X_val) / total_elements or self.test_size != len(X_test) / total_elements:
+            logging.warning(
+                f"Train/val/test sizes DO NOT match input requests due to cluster sizes: Train: {self.train_size/total_elements}, Val: {self.val_size/total_elements}, Test: {self.test_size/total_elements}")
 
         # Return train, val and test sets
         return X_train, X_val, X_test, y_train, y_val, y_test, clusters
