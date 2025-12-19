@@ -95,7 +95,7 @@ class ClusterSplitter(SplitterBase):
             transformer = MoleculeTransformer(
                 vec_featurizer,
                 parallel_kwargs={"progress": False},
-                )
+            )
             with dm.without_rdkit_log():
                 feat, _ = transformer(X, ignore_errors=True)
             fp_list = list(np.squeeze(feat))
@@ -154,9 +154,14 @@ class ClusterSplitter(SplitterBase):
             subarrays_y, [train_idxs, val_idxs, test_idxs]
         )
 
-        if self.train_size != len(X_train) or self.val_size != len(X_val) / total_elements or self.test_size != len(X_test) / total_elements:
+        if (
+            self.train_size != len(X_train)
+            or self.val_size != len(X_val) / total_elements
+            or self.test_size != len(X_test) / total_elements
+        ):
             logging.warning(
-                f"Train/val/test sizes DO NOT match input requests due to cluster sizes: Train: {self.train_size/total_elements}, Val: {self.val_size/total_elements}, Test: {self.test_size/total_elements}")
+                f"Train/val/test sizes DO NOT match input requests due to cluster sizes: Train: {self.train_size / total_elements}, Val: {self.val_size / total_elements}, Test: {self.test_size / total_elements}"
+            )
 
         # Return train, val and test sets
         return X_train, X_val, X_test, y_train, y_val, y_test, clusters
