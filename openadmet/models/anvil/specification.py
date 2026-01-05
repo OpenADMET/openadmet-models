@@ -627,7 +627,10 @@ class ProcedureSpec(SpecBase):
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
     transform: Optional[TransformSpec] = None  # Optional transform step
-    driver: Optional[str] = None  # Optional driver override, otherwise inferred from trainer
+    driver: Optional[str] = (
+        None  # Optional driver override, otherwise inferred from trainer
+    )
+
 
 class ReportSpec(SpecBase):
     """Report specification."""
