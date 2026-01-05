@@ -727,19 +727,37 @@ class AnvilSpecification(BaseModel):
         # Import here to avoid circular import
         from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS, _trainer_to_driver
 
-        return _DRIVER_TO_CLASS[_trainer_to_driver(self.procedure.train.type)](
-            metadata=self.metadata,
-            data_spec=self.data,
-            model=self.procedure.model.to_class(),
-            ensemble=self.procedure.ensemble.to_class()
-            if self.procedure.ensemble
-            else None,
-            transform=self.procedure.transform.to_class()
-            if self.procedure.transform
-            else None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
-            trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
-            parent_spec=self,
-        )
+        if self.procedure.driver:
+            return _DRIVER_TO_CLASS[self.procedure.driver](
+                metadata=self.metadata,
+                data_spec=self.data,
+                model=self.procedure.model.to_class(),
+                ensemble=self.procedure.ensemble.to_class()
+                if self.procedure.ensemble
+                else None,
+                transform=self.procedure.transform.to_class()
+                if self.procedure.transform
+                else None,
+                split=self.procedure.split.to_class(),
+                feat=self.procedure.feat.to_class(),
+                trainer=self.procedure.train.to_class(),
+                evals=[eval.to_class() for eval in self.report.eval],
+                parent_spec=self,
+            )
+        else:
+            return _DRIVER_TO_CLASS[_trainer_to_driver(self.procedure.train.type)](
+                metadata=self.metadata,
+                data_spec=self.data,
+                model=self.procedure.model.to_class(),
+                ensemble=self.procedure.ensemble.to_class()
+                if self.procedure.ensemble
+                else None,
+                transform=self.procedure.transform.to_class()
+                if self.procedure.transform
+                else None,
+                split=self.procedure.split.to_class(),
+                feat=self.procedure.feat.to_class(),
+                trainer=self.procedure.train.to_class(),
+                evals=[eval.to_class() for eval in self.report.eval],
+                parent_spec=self,
+            )
