@@ -726,12 +726,11 @@ class AnvilSpecification(BaseModel):
 
         # Import here to avoid circular import
         from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS, _trainer_to_driver
+
         if self.procedure.driver:
             driver = _DRIVER_TO_CLASS[self.procedure.driver]
         else:
-            driver = _DRIVER_TO_CLASS[
-                _trainer_to_driver(self.procedure.train.type)
-            ]
+            driver = _DRIVER_TO_CLASS[_trainer_to_driver(self.procedure.train.type)]
 
         return driver(
             metadata=self.metadata,
