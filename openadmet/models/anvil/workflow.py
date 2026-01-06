@@ -16,7 +16,7 @@ import zarr
 from loguru import logger
 from pydantic import model_validator
 
-from openadmet.models.anvil import Drivers
+from openadmet.models.drivers import DriverType
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 
 
@@ -821,6 +821,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
 
 _DRIVER_TO_CLASS = {
-    Drivers.SKLEARN: AnvilWorkflow,
-    Drivers.Lightning: AnvilDeepLearningWorkflow,
+    DriverType.SKLEARN: AnvilWorkflow,
+    DriverType.LIGHTNING: AnvilDeepLearningWorkflow,
 }
