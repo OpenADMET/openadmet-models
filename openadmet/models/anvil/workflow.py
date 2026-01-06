@@ -29,7 +29,7 @@ def _safe_to_numpy(X):
 class AnvilWorkflow(AnvilWorkflowBase):
     """Workflow for running basic Anvil configuration."""
 
-    driver: Drivers = Drivers.SKLEARN
+    driver: DriverType = DriverType.SKLEARN
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
@@ -391,7 +391,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     """Workflow for running deep learning Anvil configuration."""
 
-    driver: Drivers = Drivers.PYTORCH
+    driver: DriverType = DriverType.LIGHTNING
 
     @model_validator(mode="after")
     def check_no_transform(self):
