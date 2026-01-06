@@ -822,5 +822,5 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
 _DRIVER_TO_CLASS = {
     Drivers.SKLEARN: AnvilWorkflow,
-    Drivers.PYTORCH: AnvilDeepLearningWorkflow,
+    Drivers.Lightning: AnvilDeepLearningWorkflow,
 }
