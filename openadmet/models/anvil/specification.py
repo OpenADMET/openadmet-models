@@ -728,7 +728,7 @@ class AnvilSpecification(BaseModel):
         from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
 
         trainer_class = self.procedure.train.to_class()
-        driver = _DRIVER_TO_CLASS[trainer_class._driver_type]
+        driver = _DRIVER_TO_CLASS[str(trainer_class._driver_type).split(".")[-1]]
 
         return driver(
             metadata=self.metadata,
