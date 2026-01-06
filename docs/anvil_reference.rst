@@ -38,8 +38,8 @@ and easily identifiable. Many of these fields are purely descriptive and do not 
 
 Workflows are divided into "drivers" which specify the backend framework to be used.
 Currently supported drivers are ``pytorch``, ``sklearn``, and ``pytorch_ensemble``.
-The ``driver`` field must be set accordingly to ensure compatibility with the chosen featurizer, model and
-trainer.  In short ``pytorch`` is used for deep learning models, ``sklearn`` for traditional machine learning models (and their ensembles),
+The ``driver`` field can be specified here, but the driver type will be inferred from the choice of trainer in the ``procedure`` section.
+This is to avoid mismatches between the driver and the selected trainer.  In short ``pytorch`` is used for deep learning models, ``sklearn`` for traditional machine learning models (and their ensembles),
 and ``pytorch_ensemble`` for training ensembles of deep learning models.
 
 

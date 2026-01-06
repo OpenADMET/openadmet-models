@@ -393,7 +393,7 @@ class Metadata(SpecBase):
         ..., description="The version of the metadata schema."
     )
     driver: str = Field(
-        Drivers.SKLEARN.value, description="The driver for the workflow."
+        DriverType.SKLEARN.value, description="The driver for the workflow."
     )
 
     name: str = Field(..., description="The name of the workflow.")
