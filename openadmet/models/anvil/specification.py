@@ -627,10 +627,6 @@ class ProcedureSpec(SpecBase):
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
     transform: Optional[TransformSpec] = None  # Optional transform step
-    driver: Optional[str] = (
-        None  # Optional driver override, otherwise inferred from trainer
-    )
-
 
 class ReportSpec(SpecBase):
     """Report specification."""
@@ -728,12 +724,10 @@ class AnvilSpecification(BaseModel):
         logger.info("Making workflow from specification")
 
         # Import here to avoid circular import
-        from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS, _trainer_to_driver
+        from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
 
-        if self.procedure.driver:
-            driver = _DRIVER_TO_CLASS[self.procedure.driver]
-        else:
-            driver = _DRIVER_TO_CLASS[_trainer_to_driver(self.procedure.train.type)]
+        trainer_class = self.procedure.train.to_class()
+        driver = _DRIVER_TO_CLASS[trainer_class._driver_type]
 
         return driver(
             metadata=self.metadata,

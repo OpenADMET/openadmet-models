@@ -819,13 +819,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         logger.info("Evaluation done")
 
-
-_DRIVER_TO_CLASS = {
-    Drivers.SKLEARN: AnvilWorkflow,
-    Drivers.PYTORCH: AnvilDeepLearningWorkflow,
-}
-
-
 def _trainer_to_driver(trainer: str) -> Drivers:
     """
     Map trainer type to driver type.
