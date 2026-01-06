@@ -7,10 +7,11 @@ LABEL org.opencontainers.image.licenses=MIT
 
 # set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV CONDA_OVERRIDE_CUDA="11.8"
 
 RUN micromamba config append channels conda-forge
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER  devtools/conda-envs/openadmet-models.yaml /tmp/env.yaml
+COPY --chown=$MAMBA_USER:$MAMBA_USER  devtools/conda-envs/openadmet-models-gpu.yaml /tmp/env.yaml
 COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
 
 RUN micromamba install -y -n base git -f /tmp/env.yaml && \

@@ -5,6 +5,7 @@ from collections.abc import Iterable
 
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel, model_validator
+from loguru import logger
 
 splitters = ClassRegistry(unique=True)
 
@@ -62,7 +63,9 @@ class SplitterBase(BaseModel, ABC):
 
         # Check that val_size and test_size are not both 0
         if self.val_size + self.test_size == 0.0:
-            raise ValueError("Either val_size or test_size must be greater than 0")
+            logger.info(
+                "Warning! val_size and test_size are both 0.0. You are training a no-split model!"
+            )
 
         return self
 

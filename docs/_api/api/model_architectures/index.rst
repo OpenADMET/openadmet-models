@@ -9,7 +9,6 @@ Anvil implemenations of various architectures.
    catboost
    chemprop
    dummy
-   GAT
    lgbm
    model_base
    mtenn

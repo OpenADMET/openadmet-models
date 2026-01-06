@@ -14,7 +14,7 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import RepeatedKFold, cross_validate
+from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -35,6 +35,52 @@ def wrap_ktau(y_true, y_pred):
 def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
     return nan_omit_spearmanr(y_true, y_pred).correlation
+
+
+def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
+    """
+    Generate train/test indices for Repeated Group K-Fold cross-validation.
+
+    Parameters
+    ----------
+    X : array-like
+        Feature data.
+    y : array-like
+        Target data.
+    groups : array-like
+        Group labels for the samples used while splitting the dataset.
+    n_splits : int
+        Number of splits for cross-validation.
+    n_repeats : int
+        Number of repeats for cross-validation.
+    random_state : int
+        Random state for reproducibility.
+
+    Returns
+    -------
+    train_inds : list of np.ndarray
+        List of training set indices for each fold.
+    test_inds : list of np.ndarray
+        List of test set indices for each fold.
+
+    """
+    train_inds = []
+    test_inds = []
+    # get reproducible set of random states to not generate same split each repeat
+    prng = np.random.RandomState(random_state)
+    split_rand_states = prng.randint(0, 10000, size=n_repeats)
+
+    for i, split_rand_state in zip(range(n_repeats), split_rand_states):
+        gss = GroupKFold(
+            n_splits=n_splits,
+            shuffle=True,
+            random_state=split_rand_state,
+        )
+        for train_idx, test_idx in gss.split(X, y, groups=groups):
+            train_inds.append(train_idx)
+            test_inds.append(test_idx)
+
+    return train_inds, test_inds
 
 
 class CrossValidationBase(EvalBase):
@@ -136,6 +182,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         y_true=None,
         X_all=None,
         y_all=None,
+        groups=None,
         tag=None,
         target_labels=None,
         **kwargs,
@@ -159,6 +206,8 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             All data features.
         y_all : array-like
             All data targets.
+        groups: array-like, optional
+            Group labels for the samples used while splitting the dataset.
         tag : str, optional
             Tag for the evaluation run.
         target_labels : list of str, optional
@@ -203,11 +252,14 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             )
 
         # run CV
-        cv = RepeatedKFold(
-            n_splits=self.n_splits,
-            n_repeats=self.n_repeats,
-            random_state=self.random_state,
+        if groups is None:
+            groups = np.array([i for i in range(X_all.shape[0])])
+
+        train_inds, test_inds = repeated_group_k_fold(
+            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_state
         )
+
+        cv = iter(zip(train_inds, test_inds))
 
         estimator = model.estimator
         # evaluate the model, storing the results
@@ -447,6 +499,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         y_train=None,
         X_all=None,
         y_all=None,
+        groups=None,
         featurizer=None,
         trainer=None,
         tag=None,
@@ -473,6 +526,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             All data features.
         y_all : array-like
             All data targets.
+        groups: array-like, optional
+            Group labels for the samples used while splitting the dataset.
         featurizer : object
             Featurizer instance for data preprocessing.
         trainer : LightningTrainer
@@ -520,12 +575,14 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         # store the metric names and callables in dict suitable for sklearn cross_validate
         self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
 
-        # run CV
-        cv = RepeatedKFold(
-            n_splits=self.n_splits,
-            n_repeats=self.n_repeats,
-            random_state=self.random_state,
+        if groups is None:
+            groups = np.array([i for i in range(X_all.shape[0])])
+
+        train_inds, test_inds = repeated_group_k_fold(
+            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_state
         )
+
+        cv = iter(zip(train_inds, test_inds))
 
         self.data = {
             "shape": [self.n_splits, self.n_repeats],
@@ -547,9 +604,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
 
-        for fold, (fold_train_ids, fold_val_ids) in enumerate(
-            cv.split(X=X_all, y=y_all)
-        ):
+        for fold, (fold_train_ids, fold_val_ids) in enumerate(cv):
             logger.info(f"Fold {fold}")
 
             X_train = X_all[fold_train_ids]

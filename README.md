@@ -14,7 +14,7 @@
 
 The library includes traditional machine learning methods, deep learning models, and active learning workflows. It is designed for general-purpose use and is not intended to implement every state-of-the-art architectures, but rather to provide a practical, flexible foundation for ADMET modeling.
 
-Read the documentation [here](https://docs.openadmet.org) to learn more. There is also a set of [demonstration tutorials](demos.openadmet.org) for a deeper dive into and a showcase example you can try live on [Google Colab](try.openadmet.org)!
+Read the documentation [here](https://docs.openadmet.org) to learn more. There is also a set of [demonstration tutorials](https://demos.openadmet.org) for a deeper dive into and a showcase example you can try live on [Google Colab](https://try.openadmet.org)!
 
 ## License
 

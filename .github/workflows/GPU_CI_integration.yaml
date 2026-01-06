@@ -72,6 +72,8 @@ jobs:
         # use the `-m gpu` marker to run only GPU tests
         run: |
           pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       - name: Post to failure to Slack Channel
         if: ${{ failure() }}
@@ -82,7 +84,7 @@ jobs:
             token: ${{ secrets.SLACK_BOT_TOKEN }}
             payload: |
               channel: ${{ secrets.SLACK_CHANNEL }}
-              text: "A GPU integration test failed: ${{ github.event.pull_request.html_url }}"
+              text: "❌ *A GPU Integration Test Failed*\n*Repo:* ${{ github.repository }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
 
       - name: Post to success to Slack Channel
         if: ${{ success() }}
@@ -93,7 +95,7 @@ jobs:
             token: ${{ secrets.SLACK_BOT_TOKEN }}
             payload: |
               channel: ${{ secrets.SLACK_CHANNEL }}
-              text: "A GPU integration test succeeded: ${{ github.event.pull_request.html_url }}"
+              text: "✅ *A GPU Integration Test Succeeded*\n*Repo:* ${{ github.repository }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Results>"
 
 
 

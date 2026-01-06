@@ -1,10 +1,15 @@
 """Scaffold-based data splitting implementations."""
 
+import logging
 from sklearn.model_selection import train_test_split
 from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
 import numpy as np
 import pandas as pd
 from openadmet.models.split.split_base import SplitterBase, splitters
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @splitters.register("ScaffoldSplitter")
@@ -34,6 +39,7 @@ class ScaffoldSplitter(SplitterBase):
             - y_test: Test set target values (or None if test_size=0).
 
         """
+        logging.warning("ScaffoldSplitter is not available for cross-validation.")
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -44,6 +50,7 @@ class ScaffoldSplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = None
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -53,6 +60,7 @@ class ScaffoldSplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups,
             )
 
         # Split into train+val and test
@@ -63,6 +71,7 @@ class ScaffoldSplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
@@ -74,6 +83,7 @@ class ScaffoldSplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups,
             )
 
         # Split train+val into train and val sets
@@ -93,6 +103,7 @@ class ScaffoldSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            groups,
         )
 
 
@@ -123,6 +134,7 @@ class PerimeterSplitter(SplitterBase):
             - y_test: Test set target values (or None if test_size=0).
 
         """
+        logging.warning("PerimeterSplitter is not available for cross-validation.")
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -133,6 +145,7 @@ class PerimeterSplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = None
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -142,6 +155,7 @@ class PerimeterSplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups,
             )
 
         # Split into train+val and test
@@ -151,6 +165,7 @@ class PerimeterSplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
@@ -162,6 +177,7 @@ class PerimeterSplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups,
             )
 
         # Split train+val into train and val sets using sklearn
@@ -181,6 +197,7 @@ class PerimeterSplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            groups,
         )
 
 
@@ -211,6 +228,9 @@ class MaxDissimilaritySplitter(SplitterBase):
             - y_test: Test set target values (or None if test_size=0).
 
         """
+        logging.warning(
+            "MaxDissimilaritySplitter is not available for cross-validation."
+        )
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -221,6 +241,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_state,
             )
+            groups = None
             train_idx, val_idx = next(splitter.split(X=X))
 
             return (
@@ -230,6 +251,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_idx),
                 safe_index(y, val_idx),
                 None,
+                groups,
             )
 
         # Split into train+val and test
@@ -239,6 +261,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_state,
         )
+        groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
 
         # No validation set requested, return train(+val) and test sets
@@ -250,6 +273,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 safe_index(y, train_val_idx),
                 None,
                 safe_index(y, test_idx),
+                groups,
             )
 
         # Split train+val into train and val sets using sklearn
@@ -269,6 +293,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             y_train,
             y_val,
             safe_index(y, test_idx),
+            groups,
         )
 
 

@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import json
-from pingouin import plot_paired
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -112,7 +111,9 @@ class PostHocComparison(ComparisonBase):
 
     def safe_dirs(self, dirs):
         """Ensure dirs is a list and contains only valid paths."""
-        if not isinstance(dirs, list):
+        if isinstance(dirs, tuple):
+            dirs = list(dirs)
+        elif not isinstance(dirs, list):
             dirs = [dirs]
         clean_dirs = []
         for dir in dirs:
@@ -929,11 +930,23 @@ class PostHocComparison(ComparisonBase):
                         title = title + "  ->"
 
                 ax = axes[plot_idx]
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=FutureWarning)
-                    plot_paired(
-                        data=tmp_df, dv=metric, within="method", subject="cycle", ax=ax
-                    )
+
+                # Prepare data for paired plotting
+                methods = tmp_df["method"].unique()
+                pivot_df = tmp_df.pivot(index="cycle", columns="method", values=metric)
+
+                # Plot individual paired lines with color based on direction
+                for _, row in pivot_df.iterrows():
+                    # Check if the line increases or decreases
+                    if row.iloc[-1] > row.iloc[0]:
+                        color = "green"
+                    else:
+                        color = "red"
+                    ax.plot(methods, row, marker="o", color=color, alpha=0.7)
+
+                sns.pointplot(
+                    data=tmp_df, x="method", y=metric, ax=ax, join=False, ci=None
+                )
                 ax.set_title(title, color=title_color)
                 ax.set_xlabel("Method")
                 ax.set_ylabel(metric.upper())

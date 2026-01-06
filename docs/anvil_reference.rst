@@ -1,29 +1,28 @@
 Anvil Reference
 ================
-
 Anvil is a workflow engine integrated into openadmet_models that allows users to define a human-readable model
-specification to reproducibly train and evaluate machine learning models. This is to facilitate large-scale reproducible training and comparisons
-across different datasets, models, and featurizations. In addition, anvil also allows for the training of model ensembles, that can be easily used in downstream
-applications such as active learning.
+specification to reproducibly train and evaluate machine learning models.
+This is to facilitate large-scale reproducible training and comparisons across different datasets, models, and featurizations.
+In addition, anvil allows for the training of model ensembles, that can be easily used in downstream applications
+such as active learning.
 
-Anvil is built around the concept of a "recipe" - a YAML file that specifies all the components of a machine learning workflow, including data loading,
-featurization, model architecture, training parameters, and evaluation metrics. By defining a recipe, users can easily reproduce experiments, share workflows with others, and systematically explore different modeling approaches.
-Anvil also makes our (OpenADMET Team) lives easier by handling the boilerplate code associated with setting up and running machine learning experiments, saving us from a twisted jungle of scripts and configuration files.
+Anvil is built around the concept of a "recipe" - a YAML file that specifies all the components of a machine learning
+workflow, including data loading, featurization, model architecture, training parameters, and evaluation metrics.
+By defining a recipe, users can easily reproduce experiments, share workflows with others, and systematically explore different modeling approaches.
+Anvil also makes our (OpenADMET Team) lives easier by handling the boilerplate code associated with setting up and
+running machine learning experiments, saving us from a twisted jungle of scripts and configuration files.
 
-
-A full list of available models, featurizers, trainers, and evaluators can be found in the OpenADMET API documentation. Additionally, we maintain a list of canonical recipes we use in production at https://github.com/OpenADMET/optimus-prime
-
+A full list of available models, featurizers, trainers, and evaluators can be found in the OpenADMET API documentation.
+Additionally, we maintain a list of canonical recipes we use in production `here <https://github.com/OpenADMET/optimus-prime>`_.
 
 How to Use Anvil
 -----------------
-
 To initiate the ``anvil`` workflow, a recipe yaml file must be provided.
 There are many configuration options available.
-Each workflow consists of four main sections: ``metadata``, ``data``,
-``procedure``, and ``report``.
+Each workflow consists of four main sections: ``metadata``, ``data``, ``procedure``, and ``report``.
 
-This guide should help you navigate the ``anvil`` workflow and understand the parameters
-you can set, their types, and how they interact across models and trainers.
+This guide should help you navigate the ``anvil`` workflow and understand the parameters you can set, their types, and
+how they interact across models and trainers.
 
 .. contents::
    :local:
@@ -31,10 +30,10 @@ you can set, their types, and how they interact across models and trainers.
 
 Metadata
 ^^^^^^^^
-
-The ``metadata`` section provides essential information about the workflow, such as authorship,
-versioning, and descriptive tags. This section ensures that workflows are well-documented
-and easily identifiable. Many of these fields are purely descriptive and do not affect the workflow's execution.
+The ``metadata`` section provides essential information about the workflow, such as authorship, versioning, and
+descriptive tags.
+This section ensures that workflows are well-documented and easily identifiable.
+Many of these fields are purely descriptive and do not affect the workflow's execution.
 
 Workflows are divided into "drivers" which specify the backend framework to be used.
 Currently supported drivers are ``pytorch``, ``sklearn``, and ``pytorch_ensemble``.
@@ -42,9 +41,7 @@ The ``driver`` field can be specified here, but the driver type will be inferred
 This is to avoid mismatches between the driver and the selected trainer.  In short ``pytorch`` is used for deep learning models, ``sklearn`` for traditional machine learning models (and their ensembles),
 and ``pytorch_ensemble`` for training ensembles of deep learning models.
 
-
 .. code-block:: yaml
-
    metadata:
      authors: Author Name
      email: author@email.org
@@ -58,7 +55,6 @@ and ``pytorch_ensemble`` for training ensembles of deep learning models.
      version: v1
 
 **Parameters**
-
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -99,20 +95,19 @@ and ``pytorch_ensemble`` for training ensembles of deep learning models.
 
 Data
 ^^^^
-
-The ``data`` section defines how input data is loaded and which columns are
-used for modeling. You must specify the dataset location, input column, target columns,
-and optional preprocessing steps. The data loader can read from remote locations as well as local files
-
+The ``data`` section defines how input data is loaded and which columns are used for modeling.
+You must specify the dataset location, input column, target columns, and optional preprocessing steps.
+The data loader can read from remote locations as well as local files.
 
 Reading from a local file requires specifying the path to the dataset file in the ``resource`` field.
-Supported file types include CSV, and Parquet. If using ``resource`` your dataset will be split into training, validation, and test sets
-using the specified splitter in the ``procedure`` section.
+Supported file types include CSV, and Parquet.
+If using ``resource`` your dataset will be split into training, validation, and test sets using the specified splitter
+in the ``procedure`` section.
 
-Alternatively, you can also provide separate files for training, validation, and test sets by using the ``train_resource``, ``val_resource``, and ``test_resource`` fields respectively.
+Alternatively, you can also provide separate files for training, validation, and test sets by using the ``train_resource``,
+``val_resource``, and ``test_resource`` fields, respectively.
 
 .. code-block:: yaml
-
    data:
      type: intake
      resource: PATH_TO_DATASET.parquet
@@ -122,12 +117,11 @@ Alternatively, you can also provide separate files for training, validation, and
      - target_column_name2
      dropna: false
 
-
-A more advanced option is to use an Intake catalog to manage datasets. This is done by specifying a YAML file in the ``resource`` field
-and the catalog entry in the ``cat_entry`` field. This allows for more flexible dataset management, especially when dealing with multiple datasets or complex data sources.
+A more advanced option is to use an Intake catalog to manage datasets.
+This is done by specifying a YAML file in the ``resource`` field and the catalog entry in the ``cat_entry`` field.
+This allows for more flexible dataset management, especially when dealing with multiple datasets or complex data sources.
 
 .. code-block:: yaml
-
    data:
      type: intake
      resource: PATH_TO_CATALOG.yaml
@@ -138,11 +132,9 @@ and the catalog entry in the ``cat_entry`` field. This allows for more flexible 
      - target_column_name2
      dropna: false
 
-
 Pulling data from a remote location is also possible by specifying a URL in the ``resource`` field.
 
 .. code-block:: yaml
-
    data:
      type: intake
      resource: https://path_to_your_data/dataset.parquet
@@ -152,11 +144,9 @@ Pulling data from a remote location is also possible by specifying a URL in the 
      - target_column_name2
      dropna: false
 
-
 An example of using train, validation, and test resources:
 
 .. code-block:: yaml
-
    data:
      type: intake
      train_resource: PATH_TO_TRAIN_DATASET.parquet
@@ -168,9 +158,7 @@ An example of using train, validation, and test resources:
      - target_column_name2
      dropna: false
 
-
 **Parameters**
-
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -221,32 +209,28 @@ An example of using train, validation, and test resources:
 
 Procedure
 ^^^^^^^^^
+The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined, data splits
+are configured, and training parameters are set.
 
-The ``procedure`` section is the core of the workflow, where the data is transformed, models are defined,
-data splits are configured, and training parameters are set. Each subsection provides
-details on the available options and their configurations:
-
-- **Featurization**: Defines how molecular data is transformed into numerical representations
-  using various available featurizers.
-- **Models**: Specifies the model to be used.
-- **Splits**: Configures how the dataset is divided into training, validation, and test sets
-  using assigned splitter.
-- **Training**: Sets up the training process, including the trainer type
-  and training parameters.
+- **Featurization**: Defines how molecular data is transformed into numerical representations using various available
+  featurizers, specified in the `feat` subsection.
+- **Model**: Specifies the model to be used, including loading from saved model weights, under the `model` subsection.
+- **Splitting**: Configures how the dataset is divided into training, validation, and test sets using assigned splitter,
+  defined in the `split` subsection.
+- **Training**: Sets up the training process, including the trainer type and training parameters, under the `train`
+  subsection.
 
 Each subsection provides examples and parameter descriptions to help you configure the workflow
 according to your requirements.
 
 Featurization
 ~~~~~~~~~~~~~
-The ``features`` module provides a variety of featurizers which map
-molecular data into suitable input formats for the specified model.
-Below are the available options. Each featurizer has its own set of parameters
-which can be found in the linked OpenADMET API documentation.
+The ``feat`` section is used to specify among a variety of featurizers, which map molecular data into suitable input formats for the specified model.
+Below are the available options.
+Each featurizer has its own set of parameters which can be found in the linked OpenADMET API documentation.
 
-In general we follow the design pattern that all deep learning featurizers return
-a ``PyTorch DataLoader`` as input, while traditional machine learning models return a
-a ``2D NumPy array`` or pandas ``DataFrame``.
+In general we follow the design pattern that all deep learning featurizers return a ``PyTorch`` ``DataLoader`` as input,
+while traditional machine learning models return a a 2D ``NumPy`` array or ``pandas`` ``DataFrame``.
 
 .. list-table::
   :header-rows: 1
@@ -256,8 +240,6 @@ a ``2D NumPy array`` or pandas ``DataFrame``.
     - Description
   * - :doc:`ChemPropFeaturizer </_api/api/featurization/chemprop>`
     - Converts SMILES strings into a ChemProp compatible PyTorch DataLoader.
-  * - :doc:`GATGraphFeaturizer </_api/api/featurization/GAT>`
-    - Converts SMILES strings into graph Data objects for GAT-like models, uses a PyTorch DataLoader.
   * - :doc:`MTENNFeaturizer </_api/api/featurization/mtenn>`
     - Creates masked PDB features suitable for downstream use in MTENN models, uses a PyTorch DataLoader.
   * - :doc:`DescriptorFeaturizer </_api/api/featurization/descriptors>`
@@ -267,25 +249,19 @@ a ``2D NumPy array`` or pandas ``DataFrame``.
   * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
     - Combines multiple featurizers into a single feature array.
 
-
-
-Featurization for a traditional machine learning model using fingerprints is easily done
-by specifying the ``FingerprintFeaturizer``
-
+For example, featurization for a traditional machine learning model using fingerprints is easily done by specifying the ``FingerprintFeaturizer``.
 
 .. code-block:: yaml
-
    feat:
      type: FingerprintFeaturizer
      params:
        fp_type: ecfp:4
        radius: 2
 
-
-You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  RDKit 2D descriptors and ECFP4 fingerprints.
+You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
+2D descriptors and ECFP4 fingerprints.
 
 .. code-block:: yaml
-
    feat:
      type: FeatureConcatenator
      params:
@@ -297,24 +273,20 @@ You can also combine multiple traditional ML featurizers using the ``FeatureConc
            radius: 2
            n_bits: 2048
 
-
-For deep learning models, the ``ChemPropFeaturizer`` is a common choice. Below is an example configuration.
+For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
+As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
 
 .. code-block:: yaml
-
   feat:
     type: ChemPropFeaturizer
     params: {}
 
-
-Models
-~~~~~~
-
-The ``models`` section specifies the model to be used in the workflow.
-It allows you to define the type of model, its parameters, and any additional configurations
-required for training and evaluation. Each model type has its own set of options, enabling
-customization to suit specific tasks and datasets. Refer to the linked OpenADMET API documentation for detailed information
-on each model's implementation and usage.
+Model
+~~~~~
+The ``model`` section specifies the model to be used in the workflow.
+It allows you to define the type of model, its parameters, and any additional configurations required for training and evaluation.
+Each model type has its own set of options, enabling customization to suit specific tasks and datasets.
+Refer to the linked OpenADMET API documentation for detailed information on each model's implementation and usage.
 
 .. list-table::
   :header-rows: 1
@@ -324,8 +296,6 @@ on each model's implementation and usage.
     - Description
   * - :doc:`ChemPropModel </_api/api/model_architectures/chemprop>`
     - `ChemProp <https://github.com/chemprop/chemprop>`_ Message Passing Neural Network. Also, used when implementing `Chemeleon <https://github.com/JacksonBurns/chemeleon>`_.
-  * - :doc:`GATv2Model </_api/api/model_architectures/GAT>`
-    - Graph Attention Network v2 (`GATv2 <https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.GATv2Conv.html#torch_geometric.nn.conv.GATv2Conv>`_) model implementation.
   * - :doc:`CatBoostClassifierModel </_api/api/model_architectures/catboost>`
     - Gradient boosting on decision trees for classification using `CatBoost <https://catboost.ai/docs/en/>`_.
   * - :doc:`CatBoostRegressorModel </_api/api/model_architectures/catboost>`
@@ -364,7 +334,6 @@ on each model's implementation and usage.
 Example
 """""""
 .. code-block:: yaml
-
   model:
     type: ChemPropModel
     params:
@@ -378,10 +347,36 @@ Example
       n_tasks: 1
       from_chemeleon: False
 
+Deep learning models can also be configured to load pretrained weights during initialization, enabling finetuning on new datasets.
+Classic machine learning models do not have weights or state to load, requiring complete retraining with new data concatenated to the original training set.
+Paths to a saved model are specified with the ``serial_path`` and ``param_path`` fields in the ``model`` section.
+Note that any model parameters defined in the ``params`` field will be overridden by those loaded from the saved model.
 
-Split
-~~~~~~
+.. code-block:: yaml
+  model:
+    type: ChemPropModel
+    serial_path: PATH_TO_SAVED_MODEL/model.pth
+    param_path: PATH_TO_SAVED_MODEL/model_params.json
 
+Finally, select components of the deep learning model can be frozen during training to prevent their weights from being updated.
+This is done by specifying the ``freeze_weights`` field in the ``model`` section.
+Here, the message passing layers are frozen, while batch normalization and feedforward network layers remain trainable.
+
+.. code-block:: yaml
+  model:
+    type: ChemPropModel
+    serial_path: PATH_TO_SAVED_MODEL/model.pth
+    param_path: PATH_TO_SAVED_MODEL/model_params.json
+    freeze_weights:
+      message_passing: true
+      batch_norm: false
+      ffn_layers: 0
+
+Freezable components vary by model architecture.
+Please refer to the specific model documentation for details on which parts can be frozen.
+
+Splitting
+~~~~~~~~~
 The ``split`` section defines how the dataset is divided into training, validation, and test sets.
 You can choose from different splitter types, each with its own parameters to control the splitting behavior.
 
@@ -396,15 +391,13 @@ You can choose from different splitter types, each with its own parameters to co
   * - :doc:`ScaffoldSplitter </_api/api/splitting/data_driven>`
     - Splits the dataset based on molecular scaffolds to ensure that similar compounds are grouped together in the same set.
   * - :doc:`MaxDissimilaritySplitter </_api/api/splitting/data_driven>`
-    - Splits the dataset based on maximum dissimilarity between training, validation, and test sets, promoting diversity in each set.
+    - Splits the dataset based on maximum dissimilarity between training, validation, and test sets, promoting diversity between sets.
   * - :doc:`PerimeterSplitter </_api/api/splitting/data_driven>`
-    - Splits the dataset by selecting compounds at the periphery of the chemical space, ensuring that edge cases are included in the training set.
+    - Splits the dataset by selecting compounds at the periphery of the chemical space, ensuring that edge cases are included in the test set.
 
 Example
 """""""
-
 .. code-block:: yaml
-
    split:
      type: ShuffleSplitter
      params:
@@ -413,11 +406,9 @@ Example
        test_size: 0.2
        random_state: 42
 
-
 Training
 ~~~~~~~~
-
-The ``training`` section configures the training process for the selected model.
+The ``train`` section configures the training process for the selected model.
 It allows you to specify the trainer type and various training parameters to control the training workflow.
 
 .. list-table::
@@ -435,11 +426,9 @@ It allows you to specify the trainer type and various training parameters to con
   * - :doc:`SKLearnSearchTrainer </_api/api/training/sklearn>`
     - Trainer that performs hyperparameter tuning using specified search object for sklearn models.
 
-
 Example
 """""""
 .. code-block:: yaml
-
   train:
     type: LightningTrainer
     params:
@@ -457,28 +446,46 @@ Ensemble
 ~~~~~~~~
 There is also an optional ``ensemble`` section that allows you to specify if you want to train an ensemble of models.
 You can define the number of models in the ensemble and the calibration method to be used.
-Currently we only offer a :doc:`CommitteeRegressor </_api/api/active_learning/committee>` to measure disagreement among the models in the ensemble.
+Currently we only offer a :doc:`CommitteeRegressor </_api/api/active_learning/committee>` to measure disagreement among
+the models in the ensemble as the standard deviation of their predictions.
 
-Models can also be calibrated after training using a scaling factor method to improve uncertainty estimates. This functionality is provided by the `uncertainty_toolbox <https://github.com/uncertainty-toolbox/uncertainty-toolbox>`_ package.
-See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` for more details.
+Models can also be calibrated after training using a scaling factor method to improve uncertainty estimates.
+This functionality is provided by the `uncertainty_toolbox <https://github.com/uncertainty-toolbox/uncertainty-toolbox>`_
+package. See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` for more details.
 
 Example
 """""""
 .. code-block:: yaml
-
   ensemble:
     type: CommitteeRegressor
     n_models: 10
     calibration_method: scaling-factor
 
+For deep learning ensembles, each model in the ensemble can load its own pretrained weights by specifying a list of paths
+in the ``serial_paths`` and ``param_paths`` fields in the ``ensemble`` section.
+
+.. code-block:: yaml
+  ensemble:
+    type: CommitteeRegressor
+    n_models: 10
+    calibration_method: scaling-factor
+    serial_paths:
+    - PATH_TO_SAVED_MODEL_1/model.pth
+    - PATH_TO_SAVED_MODEL_2/model.pth
+    - ...
+    param_paths:
+    - PATH_TO_SAVED_MODEL_1/model_params.json
+    - PATH_TO_SAVED_MODEL_2/model_params.json
+    - ...
+
 Report
 ^^^^^^
-
 The ``report`` section specifies the evaluations to be performed after training the model.
-You can choose from various evaluation types, each with its own parameters to customize the output. Regression models are only compatible with RegressionMetrics and similarly classification models only with ClassificationMetrics.
+You can choose from various evaluation types, each with its own parameters to customize the output.
+Regression models are only compatible with ``RegressionMetrics`` and similarly classification models only with ``ClassificationMetrics``.
 
-Importantly, the ``report`` section also allows for cross-validation to be performed as part of the evaluation to evaluate the robustness of the model. Note that cross-validation can be computationally expensive, especially for deep learning models.
-
+Importantly, the ``report`` section also allows for cross-validation to be performed to evaluate the robustness of the model.
+Note that cross-validation can be computationally expensive, especially for deep learning models.
 
 .. list-table::
   :header-rows: 1
@@ -508,7 +515,6 @@ Importantly, the ``report`` section also allows for cross-validation to be perfo
 Example
 """""""
 .. code-block:: yaml
-
   report:
     eval:
     - type: RegressionMetrics

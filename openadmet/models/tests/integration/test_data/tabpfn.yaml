@@ -30,6 +30,12 @@ procedure:
     params:
       descr_type: desc2d
 
+  transform:
+    # Using the ImputeTransform to handle missing values
+    type: ImputeTransform
+    params:
+      strategy: mean  # or median, most_frequent, etc.
+
   model:
     type: TabPFNRegressorModel
     params:

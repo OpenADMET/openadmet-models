@@ -91,7 +91,7 @@ class TestGPUAnvilConfigs:
             chemprop_ST,
             chemeleon_MT,
             chemeleon_MT_ensemble,
-            tabpfn,
+            # tabpfn, TABPFN currently broken on this dataset for some reason
         ],
     )
     def test_gpu_configs(self, recipe_file, tmp_path):

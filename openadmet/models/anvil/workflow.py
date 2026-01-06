@@ -241,11 +241,14 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 "Using prespecified train/test resources from data specification"
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+            groups = None
         else:
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
+            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(
+                X, y
+            )
         logger.info("Data loaded")
 
         # Save splits to CSV outputs
@@ -258,8 +261,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
             y_val.to_csv(data_dir / "y_val.csv", index=False)
 
         # Test
-        X_test.to_csv(data_dir / "X_test.csv", index=False)
-        y_test.to_csv(data_dir / "y_test.csv", index=False)
+        if X_test is not None:
+            X_test.to_csv(data_dir / "X_test.csv", index=False)
+            y_test.to_csv(data_dir / "y_test.csv", index=False)
 
         logger.info("Data split")
 
@@ -275,8 +279,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
             zarr.save(data_dir / "X_val_feat.zarr", X_val_feat)
 
         # Test
-        X_test_feat, _ = self.feat.featurize(X_test)
-        zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
+        if X_test is not None:
+            X_test_feat, _ = self.feat.featurize(X_test)
+            zarr.save(data_dir / "X_test_feat.zarr", X_test_feat)
 
         # featurize whole dataset also for CV if needed
         X_feat, _ = self.feat.featurize(X)
@@ -295,8 +300,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
 
             # Test
-            X_test_feat = self.transform.transform(X_test_feat)
-            zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
+            if X_test is not None:
+                X_test_feat = self.transform.transform(X_test_feat)
+                zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
 
             # Whole dataset
             X_feat = self.transform.transform(X_feat)
@@ -349,43 +355,52 @@ class AnvilWorkflow(AnvilWorkflowBase):
             )
             logger.info("Model saved")
 
-        # Predict on test set
-        logger.info("Predicting")
-        # Check if the model has predict_proba method (classification)
-        if hasattr(self.model, "predict_proba"):
-            y_pred = self.model.predict_proba(X_test_feat)
-            y_std = None
-
-        # Otherwise, regression
-        else:
-            if self.ensemble:
-                y_pred, y_std = self.model.predict(X_test_feat, return_std=True)
-            else:
-                y_pred = self.model.predict(X_test_feat)
+        if X_test is not None:
+            # Predict on test set
+            logger.info("Predicting")
+            # Check if the model has predict_proba method (classification)
+            if hasattr(self.model, "predict_proba"):
+                y_pred = self.model.predict_proba(X_test_feat)
                 y_std = None
-        logger.info("Predictions made")
 
-        # Run evaluation on train/test
-        logger.info("Evaluating")
-        for eval in self.evals:
-            # Here all the data is passed to the evaluator, but some evaluators may only need a subset
-            eval.evaluate(
-                y_true=y_test,
-                y_pred=y_pred,
-                y_std=y_std,
-                model=self.model,
-                X_train=X_train_feat,
-                y_train=y_train,
-                X_all=X_feat,
-                y_all=y,
-                tag=model_tag,
-                target_labels=target_labels,
-            )
+            # Otherwise, regression
+            else:
+                if self.ensemble:
+                    y_pred, y_std = self.model.predict(X_test_feat, return_std=True)
+                else:
+                    y_pred = self.model.predict(X_test_feat)
+                    y_std = None
+            logger.info("Predictions made")
+        else:
+            y_pred = None
+            y_std = None
+            logger.info("No test set specified, predictions skipped")
 
-            # Write evaluation report
-            eval.report(write=True, output_dir=output_dir)
+        if y_pred is not None:
+            # Run evaluation on train/test
+            logger.info("Evaluating")
+            for eval in self.evals:
+                # Here all the data is passed to the evaluator, but some evaluators may only need a subset
+                eval.evaluate(
+                    y_true=y_test,
+                    y_pred=y_pred,
+                    y_std=y_std,
+                    model=self.model,
+                    X_train=X_train_feat,
+                    y_train=y_train,
+                    X_all=X_feat,
+                    groups=groups,
+                    y_all=y,
+                    tag=model_tag,
+                    target_labels=target_labels,
+                )
 
-        logger.info("Evaluation done")
+                # Write evaluation report
+                eval.report(write=True, output_dir=output_dir)
+
+            logger.info("Evaluation done")
+        else:
+            logger.info("No test set specified, evaluation skipped")
 
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
@@ -473,7 +488,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Prepare the trainer
         logger.info("Preparing trainer")
-        self.trainer.build()
+        self.trainer.build(no_val=(val_dataloader is None))
         logger.info("Trainer prepared")
 
         # Commence model training
@@ -665,22 +680,28 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 "Using prespecified train/test resources from data specification"
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
+            groups = None
         else:
             X, y = self.data_spec.read()
             # Split data into train, validation, and test sets
             logger.info("Splitting data from single resource")
-            X_train, X_val, X_test, y_train, y_val, y_test = self.split.split(X, y)
+            X_train, X_val, X_test, y_train, y_val, y_test, groups = self.split.split(
+                X, y
+            )
         logger.info("Data loaded")
 
         # Save splits to CSV outputs
         X_train.to_csv(data_dir / "X_train.csv", index=False)
         if X_val is not None:
             X_val.to_csv(data_dir / "X_val.csv", index=False)
-        X_test.to_csv(data_dir / "X_test.csv", index=False)
+        if X_test is not None:
+            X_test.to_csv(data_dir / "X_test.csv", index=False)
+
         y_train.to_csv(data_dir / "y_train.csv", index=False)
         if y_val is not None:
             y_val.to_csv(data_dir / "y_val.csv", index=False)
-        y_test.to_csv(data_dir / "y_test.csv", index=False)
+        if y_test is not None:
+            y_test.to_csv(data_dir / "y_test.csv", index=False)
 
         logger.info("Data split")
 
@@ -701,8 +722,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.warning("Validation set is None, skipping validation dataloader")
 
         # Dataloader, indices, scaler, dataset
-        test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
-        torch.save(test_dataloader, output_dir / "test_dataloader.pth")
+        if X_test is not None and y_test is not None:
+            test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
+            torch.save(test_dataloader, output_dir / "test_dataloader.pth")
+        else:
+            test_dataloader = None
+            test_dataset = None
+            logger.warning("Test set is None, skipping test validation dataloader")
 
         logger.info("Data featurized")
 
@@ -771,53 +797,60 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Model saved")
 
-        # Predict on test set
-        logger.info("Predicting")
-        if self.ensemble:
-            y_pred, y_std = self.model.predict(
-                test_dataloader,
-                accelerator=self.trainer.accelerator,
-                devices=self.trainer.devices,
-                return_std=True,
-            )
+        if test_dataloader is not None:
+            # Predict on test set
+            logger.info("Predicting")
+            if self.ensemble:
+                y_pred, y_std = self.model.predict(
+                    test_dataloader,
+                    accelerator=self.trainer.accelerator,
+                    devices=self.trainer.devices,
+                    return_std=True,
+                )
+            else:
+                y_pred = self.model.predict(
+                    test_dataloader,
+                    accelerator=self.trainer.accelerator,
+                    devices=self.trainer.devices,
+                )
+                y_std = None
+            logger.info("Predictions made")
         else:
-            y_pred = self.model.predict(
-                test_dataloader,
-                accelerator=self.trainer.accelerator,
-                devices=self.trainer.devices,
-            )
-            y_std = None
-        logger.info("Predictions made")
+            logger.info("No test set specified, predictions skipped")
 
-        # Run evaluation on train/test
-        logger.info("Evaluating")
+        if y_test is not None:
+            # Run evaluation on train/test
+            logger.info("Evaluating")
 
-        # Get wandb bool from trainer
-        use_wandb = self.trainer.use_wandb
+            # Get wandb bool from trainer
+            use_wandb = self.trainer.use_wandb
 
-        # Run evaluation on train/test
-        for eval in self.evals:
-            # Here all the data is passed to the evaluator, but some evaluators may only need a subset
-            eval.evaluate(
-                y_true=y_test,
-                y_pred=y_pred,
-                y_std=y_std,
-                model=self.model,
-                X_train=train_dataloader,
-                y_train=train_dataloader,
-                X_all=X,
-                y_all=y,
-                featurizer=self.feat,
-                trainer=self.trainer,
-                use_wandb=use_wandb,
-                tag=model_tag,
-                target_labels=target_labels,
-            )
+            # Run evaluation on train/test
+            for eval in self.evals:
+                # Here all the data is passed to the evaluator, but some evaluators may only need a subset
+                eval.evaluate(
+                    y_true=y_test,
+                    y_pred=y_pred,
+                    y_std=y_std,
+                    model=self.model,
+                    X_train=train_dataloader,
+                    y_train=train_dataloader,
+                    X_all=X,
+                    groups=groups,
+                    y_all=y,
+                    featurizer=self.feat,
+                    trainer=self.trainer,
+                    use_wandb=use_wandb,
+                    tag=model_tag,
+                    target_labels=target_labels,
+                )
 
-            # Write evaluation report
-            eval.report(write=True, output_dir=output_dir)
+                # Write evaluation report
+                eval.report(write=True, output_dir=output_dir)
 
-        logger.info("Evaluation done")
+            logger.info("Evaluation done")
+        else:
+            logger.info("No test set specified, evaluation skipped")
 
 
 _DRIVER_TO_CLASS = {
