@@ -819,6 +819,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         logger.info("Evaluation done")
 
+
 def _trainer_to_driver(trainer: str) -> Drivers:
     """
     Map trainer type to driver type.

@@ -628,6 +628,7 @@ class ProcedureSpec(SpecBase):
     train: TrainerSpec
     transform: Optional[TransformSpec] = None  # Optional transform step
 
+
 class ReportSpec(SpecBase):
     """Report specification."""
 
