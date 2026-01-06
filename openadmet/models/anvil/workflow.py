@@ -820,30 +820,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Evaluation done")
 
 
-def _trainer_to_driver(trainer: str) -> Drivers:
-    """
-    Map trainer type to driver type.
-
-    Parameters
-    ----------
-    trainer : str
-        Trainer type as string.
-
-    Returns
-    -------
-    driver : Drivers
-        Corresponding driver enum.
-
-    Raises
-    ------
-    ValueError
-        If trainer type is unrecognized.
-
-    """
-    trainer_lower = trainer.lower()
-    if "sklearn" in trainer_lower:
-        return Drivers.SKLEARN
-    elif "pytorch" in trainer_lower or "lightning" in trainer_lower:
-        return Drivers.PYTORCH
-    else:
-        raise ValueError(f"Unrecognized trainer type: {trainer}")
+_DRIVER_TO_CLASS = {
+    Drivers.SKLEARN: AnvilWorkflow,
+    Drivers.PYTORCH: AnvilDeepLearningWorkflow,
+}
