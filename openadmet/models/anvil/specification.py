@@ -392,8 +392,8 @@ class Metadata(SpecBase):
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
     )
-    driver: str = Field(
-        DriverType.SKLEARN.value, description="The driver for the workflow."
+    driver: DriverType = Field(
+        DriverType.SKLEARN, description="The driver for the workflow."
     )
 
     name: str = Field(..., description="The name of the workflow.")
@@ -727,6 +727,7 @@ class AnvilSpecification(BaseModel):
         # Import here to avoid circular import
         from openadmet.models.anvil.workflow import _DRIVER_TO_CLASS
 
+        # Pull driver from associated trainer to choose the correct workflow
         trainer_class = self.procedure.train.to_class()
         driver = _DRIVER_TO_CLASS[trainer_class._driver_type]
 
