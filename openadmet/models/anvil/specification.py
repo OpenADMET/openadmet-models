@@ -392,9 +392,7 @@ class Metadata(SpecBase):
     version: Literal["v1"] = Field(
         ..., description="The version of the metadata schema."
     )
-    driver: str = Field(
-        "sklearn", description="The driver for the workflow."
-    )
+    driver: str = Field("sklearn", description="The driver for the workflow.")
 
     name: str = Field(..., description="The name of the workflow.")
     build_number: int = Field(
