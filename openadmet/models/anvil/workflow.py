@@ -29,7 +29,7 @@ def _safe_to_numpy(X):
 class AnvilWorkflow(AnvilWorkflowBase):
     """Workflow for running basic Anvil configuration."""
 
-    driver: DriverType = DriverType.SKLEARN
+    _driver_type: DriverType = DriverType.SKLEARN
 
     @model_validator(mode="after")
     def check_if_val_needed(self):
@@ -232,7 +232,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         logger.info(f"Running workflow from directory {output_dir}")
 
         # Log workflow driver selection
-        logger.info(f"Running with driver {self.driver}")
+        logger.info(f"Running with driver {self._driver_type}")
 
         # Load data from YAML specification
         logger.info("Loading data")
@@ -406,7 +406,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     """Workflow for running deep learning Anvil configuration."""
 
-    driver: DriverType = DriverType.LIGHTNING
+    _driver_type: DriverType = DriverType.LIGHTNING
 
     @model_validator(mode="after")
     def check_no_transform(self):
@@ -671,7 +671,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info(f"Running workflow from directory {output_dir}")
 
         # Log workflow driver selection
-        logger.info(f"Running with driver {self.driver}")
+        logger.info(f"Running with driver {self._driver_type}")
 
         # Load data from YAML specification
         logger.info("Loading data")
