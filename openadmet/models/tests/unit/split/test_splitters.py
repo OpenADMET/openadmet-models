@@ -123,8 +123,8 @@ def test_cluster_split(
     method,
 ):
     df = pd.read_csv(CYP3A4_chembl_pchembl)
-    X = df["CANONICAL_SMILES"].values[:2000]
-    y = df["pChEMBL mean"].values[:2000]
+    X = df["CANONICAL_SMILES"][:2000]
+    y = df["pChEMBL mean"][:2000]
 
     # Error expected
     if error is True:
@@ -152,6 +152,15 @@ def test_cluster_split(
 
     # Perform the split
     X_train, X_val, X_test, y_train, y_val, y_test, groups = splitter.split(X, y)
+
+    # Check type preservation
+    for obj in [X_train, X_val, X_test]:
+        if obj is not None:
+            assert isinstance(obj, pd.Series), "X split must preserve pandas Series"
+
+    for obj in [y_train, y_val, y_test]:
+        if obj is not None:
+            assert isinstance(obj, pd.Series), "y split must preserve pandas Series"
 
     # Check train
     assert abs(X_train.shape[0] - expected_train) <= 10

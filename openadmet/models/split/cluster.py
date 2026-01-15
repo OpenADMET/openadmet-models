@@ -174,5 +174,13 @@ def retrieve_data_by_idx(subarrays, all_inds):
         if len(idxs) == 0:
             to_return.append(None)
         else:
-            to_return.append(np.concatenate([subarrays[i] for i in idxs]))
+            items = [subarrays[i] for i in idxs]
+
+            if isinstance(items[0], pd.Series):
+                to_return.append(pd.concat(items))
+            elif isinstance(items[0], pd.DataFrame):
+                to_return.append(pd.concat(items, axis=0))
+            else:
+                to_return.append(np.concatenate(items))
+
     return to_return
