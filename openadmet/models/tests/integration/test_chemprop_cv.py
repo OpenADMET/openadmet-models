@@ -20,7 +20,7 @@ from openadmet.models.trainer.lightning import LightningTrainer
 def test_chemprop_cv_yaml_serialization():
     """
     Test ChemProp with CV to ensure Lightning can save hyperparameters.
-    
+
     This test specifically catches YAML serialization errors that occur
     when PyTorch Lightning tries to save model hyperparameters during
     cross-validation fold training.
@@ -49,19 +49,21 @@ def test_chemprop_cv_yaml_serialization():
         "CC(C)CCCCCCCCCO",
     ]
     target_values = [i * 0.1 for i in range(len(smiles_list))]
-    
-    df = pd.DataFrame({
-        "smiles": smiles_list,
-        "target": target_values,
-    })
-    
+
+    df = pd.DataFrame(
+        {
+            "smiles": smiles_list,
+            "target": target_values,
+        }
+    )
+
     # Create featurizer (CV evaluator will call it internally)
     featurizer = ChemPropFeaturizer()
 
     # CV evaluator expects DataFrames, not DataLoaders
     X = df[["smiles"]]
     y = df[["target"]]
-    
+
     # Create model
     model = ChemPropModel(
         n_tasks=1,
@@ -75,7 +77,7 @@ def test_chemprop_cv_yaml_serialization():
         warmup_epochs=0,  # No warmup for speed
     )
     model.build()
-    
+
     # Create trainer
     with tempfile.TemporaryDirectory() as tmpdir:
         trainer = LightningTrainer(
@@ -87,14 +89,14 @@ def test_chemprop_cv_yaml_serialization():
         )
         trainer.model = model
         trainer.build()
-        
+
         # Create CV evaluator (minimal folds/repeats for speed)
         cv_evaluator = PytorchLightningRepeatedKFoldCrossValidation(
             n_splits=2,  # Minimal splits
             n_repeats=1,  # Minimal repeats
             random_state=42,
         )
-        
+
         # This should NOT raise a YAML serialization error
         # The bug occurs when Lightning tries to save hyperparameters
         # during fold training
@@ -108,7 +110,7 @@ def test_chemprop_cv_yaml_serialization():
             trainer=trainer,
             tag="test_cv",
         )
-        
+
         # If we get here, the test passed - no YAML serialization error
         assert cv_evaluator.data is not None
         assert len(cv_evaluator.data) > 0
