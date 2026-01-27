@@ -22,7 +22,60 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Chemistry",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+
+dependencies = [
+  "ase",
+  "boto3",
+  "catboost",
+  "chemprop>=2.1.1",
+  "datamol",
+  "email-validator",
+  "hyperopt",
+  "ipython",
+  "intake",
+  "intake-parquet",
+  "jinja2",
+  "joblib",
+  "lightgbm",
+  "lightning",
+  "loguru",
+  "matplotlib",
+  "matplotlib-inline",
+  "mdanalysis",
+  "mordredcommunity",
+  "netCDF4",
+  "numpy>=1.21.0",
+  "pandas",
+  "phx-class-registry",
+  "pingouin",
+  "pydantic",
+  "pytorch-lightning",
+  "rdkit",
+  "reportlab",
+  "rich",
+  "scikit-learn>=1.0.0",
+  "seaborn",
+  "splito",
+  "statsmodels",
+  "tabulate",
+  "torch",
+  "torch-cluster",
+  "torch-geometric",
+  "torch-scatter",
+  "torch-sparse",
+  "tqdm",
+  "uncertainty-toolbox",
+  "wandb",
+  "xgboost",
+  "zarr>=3.0.0",
+  "molfeat @ git+https://github.com/OpenADMET/molfeat.git@main",
+  "mtenn @ git+https://github.com/OpenADMET/mtenn.git@main",
+  "nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git",
+  "tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@main",
+  "tabpfn-extensions",
+  "useful-rdkit-utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@master",
+]
 
 [project.urls]
 "Source" = "https://github.com/OpenADMET/openadmet-models"
@@ -31,6 +84,9 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 test = [
   "pytest>=6.1.2",
+  "pytest-cov",
+  "pytest-xdist",
+  "codecov",
 ]
 
 [project.scripts]
