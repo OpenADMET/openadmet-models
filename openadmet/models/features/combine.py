@@ -64,7 +64,7 @@ class FeatureConcatenator(FeaturizerBase):
         # Sort the featurizers by class name
         return sorted(processed_featurizers, key=lambda f: f.__class__.__name__)
 
-    def featurize(self, smiles: list[str]) -> np.ndarray:
+    def featurize(self, smiles: list[str]) -> tuple[np.ndarray, np.ndarray]:
         """
         Featurize a list of SMILES strings using all featurizers and concatenate the results.
 
@@ -75,8 +75,8 @@ class FeatureConcatenator(FeaturizerBase):
 
         Returns
         -------
-        np.ndarray
-            Concatenated feature array for all SMILES.
+        tuple
+            Tuple of (concatenated feature array, common indices).
 
         """
         features = []

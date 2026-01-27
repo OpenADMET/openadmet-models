@@ -34,6 +34,11 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
     fp_type: str = Field(
         ..., title="Fingerprint type", description="The type of fingerprint to use"
     )
+    length: int | None = Field(
+        None,
+        title="Fingerprint length",
+        description="The length/number of bits for the fingerprint (default depends on fp_type)",
+    )
     dtype: Any = Field(
         np.float32,
         title="Data type",
@@ -47,7 +52,14 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
 
     def _prepare(self):
         """Prepare the featurizer."""
-        vec_featurizer = FPVecTransformer(self.fp_type, dtype=self.dtype)
+        # Create FPVecTransformer with optional length parameter
+        if self.length is not None:
+            vec_featurizer = FPVecTransformer(
+                self.fp_type, length=self.length, dtype=self.dtype
+            )
+        else:
+            vec_featurizer = FPVecTransformer(self.fp_type, dtype=self.dtype)
+
         self._transformer = MoleculeTransformer(
             vec_featurizer,
             n_jobs=self.n_jobs,
@@ -75,5 +87,8 @@ class FingerprintFeaturizer(MolfeatFeaturizer):
         """
         with dm.without_rdkit_log():
             feat, indices = self._transformer(smiles, ignore_errors=True)
+
         # datamol returns with an extra dimension
-        return np.squeeze(feat), indices
+        feat = np.squeeze(feat)
+
+        return feat, indices
