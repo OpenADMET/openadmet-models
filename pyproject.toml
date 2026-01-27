@@ -67,6 +67,7 @@ dependencies = [
   "torch-scatter",
   "torch-sparse",
   "tqdm",
+  "umap-learn",
   "uncertainty-toolbox",
   "wandb",
   "xgboost",
