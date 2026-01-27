@@ -153,6 +153,13 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             - Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]: PyTorch Dataset containing the features and targets.
 
         """
+        # Handle numpy arrays from cross-validation
+        # CV evaluator converts DataFrames to 2D numpy arrays
+        if isinstance(smiles, np.ndarray):
+            if smiles.ndim == 2 and smiles.shape[1] == 1:
+                # Flatten 2D single-column array to 1D
+                smiles = smiles.flatten()
+
         if y is not None:
             # if a pandas dataframe or series
             if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):

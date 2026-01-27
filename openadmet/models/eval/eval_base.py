@@ -107,7 +107,14 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
         List of (t_true, t_pred) tuples for each task.
 
     """
-    if y_true.shape[0] != y_pred.shape[0]:
+    # For cross-validation, use fold-level data
+    if y_val is not None and y_pred_fold is not None:
+        t_true = y_val[:, task_id]
+        t_pred = y_pred_fold[:, task_id]
+    # For pairwise differences (when shapes don't match)
+    elif (
+        y_true is not None and y_pred is not None and y_true.shape[0] != y_pred.shape[0]
+    ):
         logger.warning(
             "y_true and y_pred have different number of samples, generating pairwise differences for true values"
         )
@@ -134,9 +141,7 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
         logger.warning(
             f"Sampled down to {t_true.shape[0]} pairwise differences for task {task_id}"
         )
-    elif y_val is not None and y_pred_fold is not None:
-        t_true = y_val[:, task_id]
-        t_pred = y_pred_fold[:, task_id]
+    # For standard evaluation
     else:
         t_true = y_true[:, task_id]
         t_pred = y_pred[:, task_id]

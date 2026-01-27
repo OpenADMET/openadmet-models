@@ -28,13 +28,33 @@ from openadmet.models.drivers import DriverType
 
 
 def wrap_ktau(y_true, y_pred):
-    """Wrap ktau nan omission."""
-    return nan_omit_ktau(y_true, y_pred).statistic
+    """
+    Wrap ktau nan omission.
+
+    Returns 0.0 if predictions are constant (zero variance), since correlation
+    is undefined in that case.
+    """
+    # Check if predictions have zero variance (constant predictions)
+    if np.std(y_pred) == 0 or np.std(y_true) == 0:
+        return 0.0
+    result = nan_omit_ktau(y_true, y_pred)
+    # If result is still NaN, return 0.0
+    return 0.0 if np.isnan(result.statistic) else result.statistic
 
 
 def wrap_spearmanr(y_true, y_pred):
-    """Wrap spearmanR nan omission."""
-    return nan_omit_spearmanr(y_true, y_pred).correlation
+    """
+    Wrap spearmanR nan omission.
+
+    Returns 0.0 if predictions are constant (zero variance), since correlation
+    is undefined in that case.
+    """
+    # Check if predictions have zero variance (constant predictions)
+    if np.std(y_pred) == 0 or np.std(y_true) == 0:
+        return 0.0
+    result = nan_omit_spearmanr(y_true, y_pred)
+    # If result is still NaN, return 0.0
+    return 0.0 if np.isnan(result.correlation) else result.correlation
 
 
 class CrossValidationBase(EvalBase):
@@ -176,16 +196,13 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             model is None
             or X_train is None
             or y_train is None
-            or y_pred is None
-            or y_true is None
             or X_all is None
             or y_all is None
         ):
-            raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_all, y_all must be provided"
-            )
+            raise ValueError("model, X_train, y_train, X_all, y_all must be provided")
 
-        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+        # y_pred and y_true are optional for CV evaluation
+        if y_true is not None and isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
@@ -263,7 +280,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         for plot_tag, plot in self.plots.items():
             if "ciplot" in plot_tag:
                 self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
-            elif "regplot" in plot_tag:
+            elif "regplot" in plot_tag and y_pred is not None and y_true is not None:
                 self.plot_data[plot_tag] = plot(
                     y_true,
                     y_pred,
@@ -371,6 +388,283 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             json.dump(self.data, f, indent=2)
 
         # write each plot to a file
+        for plot_tag, plot in self.plot_data.items():
+            plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
+
+
+@evaluators.register("SKLearnRepeatedNestedKFoldCrossValidation")
+class SKLearnRepeatedNestedKFoldCrossValidation(SKLearnRepeatedKFoldCrossValidation):
+    """
+    Nested cross-validation evaluator for sklearn models with HPO.
+
+    Performs nested CV where the outer loop evaluates model performance
+    and the inner loop performs hyperparameter optimization. This provides
+    an unbiased estimate of model performance that accounts for the
+    hyperparameter search process.
+
+    Attributes
+    ----------
+    n_splits : int
+        Number of outer CV splits.
+    n_repeats : int
+        Number of outer CV repeats.
+    random_state : int
+        Random state for reproducibility.
+    inner_cv : int
+        Number of inner CV folds for HPO.
+    n_trials : int
+        Number of Optuna trials for HPO.
+    sampler_seed : int | None
+        Random seed for Optuna sampler.
+    custom_outer_cv : Any | None
+        Custom CV splitter for outer loop (e.g., scaffold/cluster-based).
+    param_distributions : dict | None
+        Hyperparameter distributions for Optuna (stored from model).
+
+    """
+
+    inner_cv: int = Field(3, description="Number of inner CV folds for HPO")
+    n_trials: int = Field(50, description="Number of Optuna trials for HPO")
+    sampler_seed: int | None = Field(None, description="Random seed for Optuna sampler")
+    hpo_scoring: str | None = Field(
+        None, description="Scoring metric for HPO (e.g., 'neg_mean_squared_error')"
+    )
+    custom_outer_cv: Any | None = Field(
+        None, description="Custom CV splitter for outer loop"
+    )
+    param_distributions: dict | None = Field(
+        None, description="Hyperparameter distributions for Optuna"
+    )
+
+    def evaluate(
+        self,
+        model=None,
+        X_train=None,
+        y_train=None,
+        y_pred=None,
+        y_true=None,
+        X_all=None,
+        y_all=None,
+        tag=None,
+        target_labels=None,
+        **kwargs,
+    ):
+        """
+        Evaluate the model using nested cross-validation with HPO.
+
+        Parameters
+        ----------
+        model : sklearn-like estimator
+            The regression model to evaluate.
+        X_train : array-like
+            Training features.
+        y_train : array-like
+            Training targets.
+        y_pred : array-like
+            Predicted values (not used in nested CV, but required for
+            interface).
+        y_true : array-like
+            True values (not used in nested CV, but required for interface).
+        X_all : array-like
+            All data features.
+        y_all : array-like
+            All data targets.
+        tag : str, optional
+            Tag for the evaluation run.
+        target_labels : list of str, optional
+            List of target names.
+        kwargs : Dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary containing nested CV metrics and confidence intervals.
+
+        """
+        if (
+            model is None
+            or X_train is None
+            or y_train is None
+            or X_all is None
+            or y_all is None
+        ):
+            raise ValueError("model, X_train, y_train, X_all, y_all must be provided")
+
+        # y_pred and y_true are optional for CV evaluation
+        if y_true is not None and isinstance(y_true, (pd.Series, pd.DataFrame)):
+            y_true = y_true.to_numpy()
+        if isinstance(y_all, (pd.Series, pd.DataFrame)):
+            y_all = y_all.to_numpy()
+
+        # Import nested CV functions
+        from openadmet.models.anvil.nested_optuna import (
+            NestedSearchConfig,
+            run_nested_optuna_search,
+        )
+
+        # Store metric names and callables (needed for scoring)
+        self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
+
+        # Get param distributions from evaluator config (dict format)
+        if self.param_distributions is None:
+            raise ValueError(
+                "Nested CV evaluator requires param_distributions to be "
+                "configured in the evaluator specification"
+            )
+
+        # Convert param distributions from dict format to Optuna objects
+        from optuna.distributions import (
+            CategoricalDistribution,
+            FloatDistribution,
+            IntDistribution,
+        )
+
+        optuna_dists = {}
+        for param_name, dist_config in self.param_distributions.items():
+            dist_type = dist_config["type"]
+            if dist_type == "float":
+                optuna_dists[param_name] = FloatDistribution(
+                    low=dist_config["low"],
+                    high=dist_config["high"],
+                    log=dist_config.get("log", False),
+                )
+            elif dist_type == "int":
+                optuna_dists[param_name] = IntDistribution(
+                    low=dist_config["low"],
+                    high=dist_config["high"],
+                    log=dist_config.get("log", False),
+                )
+            elif dist_type == "categorical":
+                optuna_dists[param_name] = CategoricalDistribution(
+                    choices=dist_config["choices"]
+                )
+            else:
+                raise ValueError(f"Unknown distribution type: {dist_type}")
+
+        param_distributions = optuna_dists
+
+        # Get base estimator
+        base_estimator = model.estimator
+
+        # Configure nested search
+        # Note: OptunaSearchCV (inner HPO) uses a single metric, but
+        # cross_validate (outer evaluation) can compute multiple metrics
+        cfg = NestedSearchConfig(
+            outer_n_splits=self.n_splits,
+            outer_repeats=self.n_repeats,
+            inner_cv=self.inner_cv,
+            n_trials=self.n_trials,
+            sampler_seed=self.sampler_seed,
+            scoring=self.sklearn_metrics,  # Multiple metrics for outer CV
+            hpo_scoring=self.hpo_scoring,  # Single metric for HPO
+            n_jobs_outer=1,
+            custom_outer_cv=self.custom_outer_cv,
+        )
+
+        logger.info("Starting nested cross-validation with HPO")
+
+        # Run nested CV
+        results = run_nested_optuna_search(
+            X_all, y_all, base_estimator, param_distributions, cfg
+        )
+
+        logger.info("Nested cross-validation complete")
+
+        # Extract scores from nested CV results
+        # The outer_cv_results contains sklearn cross_validate output
+        cv_scores = results["outer_cv_results"]
+
+        n_tasks = 1
+        if target_labels is None:
+            target_labels = [f"task_{i}" for i in range(n_tasks)]
+
+        # Process scores same as parent class
+        clean_scores = {}
+        for k, v in cv_scores.items():
+            if k.startswith("test_"):
+                clean_scores[k.replace("test_", "")] = v
+
+        # Exclude fit_time and score_time
+        exclude = ["fit_time", "score_time"]
+
+        self.data = {"shape": [self.n_splits, self.n_repeats], "tag": tag}
+
+        # Store nested CV metadata
+        self.data["nested_cv_metadata"] = {
+            "inner_cv": self.inner_cv,
+            "n_trials": self.n_trials,
+            "outer_best_params": results["outer_best_params"],
+            "outer_best_scores": results["outer_best_scores"],
+        }
+
+        for task_id in range(n_tasks):
+            t_label = target_labels[task_id]
+            self.data[t_label] = {}
+            for k, v in clean_scores.items():
+                if k not in exclude:
+                    # Calculate confidence interval
+                    mean = v.mean()
+                    sigma = v.std(ddof=1)
+                    lower_ci, upper_ci = norm.interval(
+                        self.confidence_level, loc=mean, scale=sigma
+                    )
+                    metric_data = {
+                        "value": v.tolist(),
+                        "mean": float(np.mean(v)),
+                        "lower_ci": float(lower_ci),
+                        "upper_ci": float(upper_ci),
+                        "confidence_level": self.confidence_level,
+                    }
+                    self.data[t_label][k] = metric_data
+
+        self._evaluated = True
+
+        # Create plots using parent class logic
+        self.plots = {
+            "nested_cv_regplot": RegressionPlots.regplot,
+            "nested_cv_ciplot": RegressionPlots.ciplot,
+        }
+
+        self.plot_data = {}
+
+        stat_dict = self.get_stat_dict(t_label=t_label)
+
+        # Create plots
+        for plot_tag, plot in self.plots.items():
+            if "ciplot" in plot_tag:
+                self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
+            elif "regplot" in plot_tag and y_pred is not None and y_true is not None:
+                self.plot_data[plot_tag] = plot(
+                    y_true,
+                    y_pred,
+                    xlabel=self.axes_labels[0],
+                    ylabel=self.axes_labels[1],
+                    title=f"{self.title}\nTask: {t_label} (Nested CV w/ HPO)",
+                    stat_dict=stat_dict,
+                    pXC50=self.pXC50,
+                    min_val=self.min_val,
+                    max_val=self.max_val,
+                    plot_errbars=self.plot_errbars,
+                )
+
+        return self.data
+
+    def write_report(self, output_dir):
+        """
+        Write the nested CV evaluation report and plots to disk.
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory for the report and plots.
+
+        """
+        # Write to JSON
+        with open(output_dir / "nested_cv_metrics.json", "w") as f:
+            json.dump(self.data, f, indent=2)
+
+        # Write each plot to a file
         for plot_tag, plot in self.plot_data.items():
             plot.savefig(output_dir / f"{plot_tag}.png", bbox_inches="tight", dpi=900)
 
@@ -497,8 +791,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             model is None
             or X_train is None
             or y_train is None
-            or y_pred is None
-            or y_true is None
             or tag is None
             or featurizer is None
             or trainer is None
@@ -506,10 +798,10 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_all, y_all, and tag must be provided"
+                "model, X_train, y_train, X_all, y_all, featurizer, trainer, and tag must be provided"
             )
 
-        if isinstance(y_true, (pd.Series, pd.DataFrame)):
+        if y_true is not None and isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
 
         self.data = {"tag": tag}
@@ -579,6 +871,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 accelerator=trainer.accelerator,
                 devices=trainer.devices,
                 use_wandb=False,
+                logger=False,  # Disable all logging for CV folds
+                enable_checkpointing=False,  # Disable checkpointing for CV folds
                 output_dir=trainer.output_dir / "cv" / f"fold_{str(fold)}",
                 wandb_project=trainer.wandb_project,
             )

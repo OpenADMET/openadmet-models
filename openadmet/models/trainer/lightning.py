@@ -6,7 +6,7 @@ from typing import Any
 import torch
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import CSVLogger, WandbLogger
+from lightning.pytorch.loggers import CSVLogger, Logger, WandbLogger
 from loguru import logger
 from openadmet.models.drivers import DriverType
 from openadmet.models.trainer.trainer_base import TrainerBase, trainers
@@ -72,6 +72,8 @@ class LightningTrainer(TrainerBase):
     max_epochs: int = 20
     accelerator: str = "gpu"
     devices: int = 1
+    enable_checkpointing: bool = True
+    logger: Any = True  # bool | Logger | list[Logger]
     use_wandb: bool = False
     output_dir: Path = None
     wandb_project: str = "openadmet-testing"
@@ -119,18 +121,21 @@ class LightningTrainer(TrainerBase):
         )
 
         # Configure checkpoint callbacks
-        checkpoint_callback = ModelCheckpoint(
-            self.output_dir
-            / "checkpoints",  # Directory where model checkpoints will be saved
-            fmtstring,  # Filename format for checkpoints, including epoch and validation loss
-            self.model.estimator.monitor_metric,  # Metric used to select the best checkpoint (based on validation loss)
-            mode="min",  # Save the checkpoint with the lowest validation loss (minimization objective)
-            save_last=True,  # Always save the most recent checkpoint, even if it's not the best
-            save_top_k=1,  # Keep the top 1 checkpoints
-        )
+        if self.enable_checkpointing:
+            checkpoint_callback = ModelCheckpoint(
+                self.output_dir
+                / "checkpoints",  # Directory where model checkpoints will be saved
+                fmtstring,  # Filename format for checkpoints, including epoch and validation loss
+                self.model.estimator.monitor_metric,  # Metric used to select the best checkpoint (based on validation loss)
+                mode="min",  # Save the checkpoint with the lowest validation loss (minimization objective)
+                save_last=True,  # Always save the most recent checkpoint, even if it's not the best
+                save_top_k=1,  # Keep the top 1 checkpoints
+            )
 
-        # Append the checkpointing callback to the callbacks dict
-        self._callbacks[checkpoint_callback.__class__.__name__] = checkpoint_callback
+            # Append the checkpointing callback to the callbacks dict
+            self._callbacks[checkpoint_callback.__class__.__name__] = (
+                checkpoint_callback
+            )
 
         # Configure early stopping callback
         if self.early_stopping:
@@ -144,20 +149,38 @@ class LightningTrainer(TrainerBase):
                 early_stopping_callback
             )
 
-        # Append wandb longer if requested
-        if self.use_wandb:
-            self.wandb_logger = WandbLogger(
-                log_model=True, save_dir=self.output_dir, project=self.wandb_project
-            )
-            self._logger.append(self.wandb_logger)
+        # Configure logger
+        if self.logger is True:
+            # Default behavior: use CSV logger (and optionally wandb)
+            if self.use_wandb:
+                self.wandb_logger = WandbLogger(
+                    log_model=True,
+                    save_dir=self.output_dir,
+                    project=self.wandb_project,
+                )
+                self._logger.append(self.wandb_logger)
 
-        # Append CSV logger
-        self._logger.append(CSVLogger(self.output_dir / "logs", name="model"))
+            # Skip CSV logger for ChemProp models due to non-serializable hyperparameters
+            # ChemProp stores nn.Module objects in hparams which cannot be serialized to YAML
+            from openadmet.models.architecture.chemprop import ChemPropModel
+
+            if not isinstance(self.model, ChemPropModel):
+                self._logger.append(CSVLogger(self.output_dir / "logs", name="model"))
+        elif self.logger is False:
+            # Disable all logging
+            self._logger = False
+        elif isinstance(self.logger, list):
+            # Use provided list of loggers
+            self._logger = self.logger
+        else:
+            # Use single provided logger
+            self._logger = [self.logger]
 
         # Initialize the PyTorch Lightning trainer
         self._trainer = pl.Trainer(
             logger=self._logger,
             enable_progress_bar=True,
+            enable_checkpointing=self.enable_checkpointing,
             accelerator=self.accelerator,
             devices=self.devices,  # Use GPU if available
             max_epochs=self.max_epochs,  # number of epochs to train for
@@ -195,17 +218,19 @@ class LightningTrainer(TrainerBase):
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)
 
         # Load best checkpoint after training
-        try:
-            checkpoint = torch.load(
-                self._callbacks["ModelCheckpoint"].best_model_path, weights_only=False
-            )
+        if self.enable_checkpointing and "ModelCheckpoint" in self._callbacks:
+            try:
+                checkpoint = torch.load(
+                    self._callbacks["ModelCheckpoint"].best_model_path,
+                    weights_only=False,
+                )
 
-            self.model.estimator.load_state_dict(checkpoint["state_dict"])
-        except:
-            logger.debug(
-                "Warning: Training did not generate a best checkpoint. Using the latest checkpoint state-dict for evaluation."
-            )
-            pass
+                self.model.estimator.load_state_dict(checkpoint["state_dict"])
+            except:
+                logger.debug(
+                    "Warning: Training did not generate a best checkpoint. Using the latest checkpoint state-dict for evaluation."
+                )
+                pass
 
         return self.model
 

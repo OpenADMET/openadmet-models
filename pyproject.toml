@@ -46,6 +46,8 @@ dependencies = [
   "mordredcommunity",
   "netCDF4",
   "numpy>=1.21.0",
+  "optuna>=3.0.0",
+  "optuna-integration[sklearn]>=3.0.0",
   "pandas",
   "phx-class-registry",
   "pingouin",

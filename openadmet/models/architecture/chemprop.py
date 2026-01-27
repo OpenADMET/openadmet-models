@@ -6,6 +6,7 @@ from urllib.request import urlretrieve
 
 import numpy as np
 import torch
+import yaml
 from chemprop import models, nn
 from lightning import pytorch as pl
 from loguru import logger
@@ -13,12 +14,27 @@ from pydantic import field_validator, model_validator
 
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
+from pydantic import model_serializer
 
 _METRIC_TO_LOSS = {
     "mse": nn.metrics.MSE(),
     "mae": nn.metrics.MAE(),
     "rmse": nn.metrics.RMSE(),
 }
+
+
+class MPNN(models.MPNN):
+    """
+    MPNN subclass that handles non-serializable hyperparameters.
+
+    The base ChemProp MPNN class stores non-YAML-serializable objects
+    (metrics, message_passing, agg, predictor) in hyperparameters, which
+    causes errors when PyTorch Lightning's CSV logger tries to save them.
+    This is handled by disabling the CSV logger for ChemProp models in
+    the LightningTrainer.
+    """
+
+    pass
 
 
 @model_registry.register("ChemPropModel")
@@ -152,6 +168,37 @@ class ChemPropModel(LightningModelBase):
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
+    @model_serializer
+    def serialize_model(self):
+        """
+        Serialize model filtering non-YAML-serializable fields.
+
+        Iterates through each field and tests if it can be
+        serialized to YAML. This prevents errors when saving
+        the model config.
+
+        Returns
+        -------
+        dict
+            Serialized model data with YAML-serializable fields.
+
+        """
+        data = {}
+        for key, value in self.__dict__.items():
+            # Always skip the estimator
+            if key == "_estimator":
+                continue
+
+            # Test if the value is YAML-serializable
+            try:
+                yaml.safe_dump({key: value})
+                data[key] = value
+            except Exception:
+                # Skip non-serializable fields
+                logger.debug(f"Skipping non-YAML-serializable field: {key}")
+
+        return data
+
     def _get_output_transform(self, scaler):
         """
         Convert scaler to the output transform needed for predictions.
@@ -252,7 +299,7 @@ class ChemPropModel(LightningModelBase):
             )
 
             # Create the MPNN model
-            mpnn = models.MPNN(
+            mpnn = MPNN(
                 message_passing=mp,
                 agg=aggr,
                 predictor=ffn,
@@ -321,7 +368,7 @@ class ChemPropModel(LightningModelBase):
 
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None,
+                logger=False,  # Disable logging to avoid YAML serialization errors
                 enable_progress_bar=False,
                 accelerator=accelerator,
                 devices=devices,

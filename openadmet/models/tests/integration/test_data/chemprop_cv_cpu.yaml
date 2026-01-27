@@ -1,0 +1,61 @@
+data:
+  type: intake
+  cat_entry: null
+  input_col: OPENADMET_SMILES
+  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
+  target_cols:
+  - cyp3a4_pchembl_value_mean
+
+metadata:
+  authors: Greg Friedland
+  biotargets:
+  - CYP3A4
+  build_number: 0
+  description: ChemProp with CV on CPU to catch YAML serialization errors
+  driver: pytorch
+  email: greg@rezotx.com
+  name: chemprop_cv_cpu_test
+  tag: openadmet-chemprop-cv-test
+  tags:
+  - openadmet
+  - test
+  - chemprop
+  - cv
+  version: v1
+
+procedure:
+  feat:
+    type: ChemPropFeaturizer
+    params: {}
+
+  model:
+    type: ChemPropModel
+    params:
+      messages: bond
+      n_tasks: 1
+      depth: 2
+      message_hidden_dim: 100
+      ffn_hidden_dim: 100
+
+  split:
+    type: ShuffleSplitter
+    params:
+      random_state: 42
+      test_size: 0.0
+      train_size: 1.0
+      val_size: 0.0
+
+  train:
+    type: LightningTrainer
+    params:
+      accelerator: cpu
+      max_epochs: 1
+      use_wandb: false
+
+report:
+  eval:
+  - type: PytorchLightningRepeatedKFoldCrossValidation
+    params:
+      n_repeats: 1
+      n_splits: 2
+      random_state: 42

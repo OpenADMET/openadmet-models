@@ -24,6 +24,9 @@ lgbm_fp_ensemble = (_data_ref / "lgbm_fp_ensemble.yaml").as_posix()
 # Single epoch ChemProp with multitask
 chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 
+# ChemProp with cross-validation on CPU (catches YAML serialization bugs)
+chemprop_cv_cpu = (_data_ref / "chemprop_cv_cpu.yaml").as_posix()
+
 # XGBoost perimeter split
 xgboost_perimeter_cv = (_data_ref / "xgboost_prop_perimeter_cv.yaml").as_posix()
 
