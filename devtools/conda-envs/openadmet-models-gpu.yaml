@@ -39,6 +39,7 @@ dependencies:
   - rich
   - scikit-learn
   - seaborn
+  - setuptools
   - splito
   - statsmodels
   # - tabpfn
