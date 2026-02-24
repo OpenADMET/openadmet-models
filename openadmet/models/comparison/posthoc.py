@@ -208,7 +208,7 @@ class PostHocComparison(ComparisonBase):
 
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-
+        
         stats_dfs = []
         stats_dfs.append(self.levene_test(df, labels))
         stats_dfs.append(self.get_tukeys_df(df, labels))
@@ -556,6 +556,15 @@ class PostHocComparison(ComparisonBase):
             sharey=False,
             figsize=(8, 4 * len(self.metrics)),
         )
+
+        metric_label_map = {
+            "mae": "MAE",
+            "mse": "MSE",
+            "r2": r"$R^2$",
+            "ktau": r"Kendall's $\tau$",
+            "spearmanr": r"Spearman's $\rho$",
+        }
+
         if len(self.metrics) == 1:
             axes = [axes]
         for i, metric in enumerate(self.metrics):
@@ -572,7 +581,7 @@ class PostHocComparison(ComparisonBase):
             ses = anova_df.groupby("method")[metric].sem()
             ax = axes[i]
 
-            ax.set_xlim(left=0, right=None)
+            # ax.set_xlim(left=0, right=None)
 
             # Get Tukey HSD results for determining significance
             hsd_df = self.get_tukeys_df(df, labels)
@@ -622,8 +631,8 @@ class PostHocComparison(ComparisonBase):
                     ax.axvline(mean + se, color="grey", linestyle="--", linewidth=1)
             ax.set_yticks(np.arange(len(means)))
             ax.set_yticklabels(means.index)
-            ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]}")
-            ax.set_xlabel(metric)
+            ax.set_title(f"p={model.anova_table['Pr > F'].iloc[0]:.4e}")
+            ax.set_xlabel(metric_label_map[metric])
             ax.set_ylabel("method")
         plt.tight_layout()
 
