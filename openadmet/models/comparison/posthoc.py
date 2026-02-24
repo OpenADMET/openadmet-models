@@ -208,7 +208,7 @@ class PostHocComparison(ComparisonBase):
 
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        
+
         stats_dfs = []
         stats_dfs.append(self.levene_test(df, labels))
         stats_dfs.append(self.get_tukeys_df(df, labels))
