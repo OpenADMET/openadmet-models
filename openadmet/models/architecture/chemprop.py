@@ -1,5 +1,6 @@
 """ChemProp and Chemeleon model implementations."""
 
+import types
 from pathlib import Path
 from typing import ClassVar
 from urllib.request import urlretrieve
@@ -7,6 +8,7 @@ from urllib.request import urlretrieve
 import numpy as np
 import torch
 from chemprop import models, nn
+from chemprop.models.model import build_NoamLike_LRSched
 from lightning import pytorch as pl
 from loguru import logger
 from pydantic import field_validator, model_validator
@@ -19,6 +21,82 @@ _METRIC_TO_LOSS = {
     "mae": nn.metrics.MAE(),
     "rmse": nn.metrics.RMSE(),
 }
+
+
+def configure_optimizers(self):
+    """
+    Configure optimizers and learning rate schedulers.
+
+    This custom implementation allows for:
+    1. Separate learning rates for MPNN and FFN components.
+    2. Separate weight decay for MPNN and FFN components.
+    3. Option to use ReduceLROnPlateau scheduler.
+    """
+    # Separate parameters into groups
+    mpnn_params = []
+    ffn_params = []
+    
+    # Identify FFN parameters (usually named 'predictor')
+    for name, param in self.named_parameters():
+        if "predictor" in name:
+            ffn_params.append(param)
+        else:
+            mpnn_params.append(param)
+
+    # Determine learning rates
+    mpnn_lr = self.mpnn_lr
+    ffn_lr = self.ffn_lr
+
+    # Create parameter groups
+    param_groups = [
+        {"params": mpnn_params, "lr": mpnn_lr, "weight_decay": self.mpnn_weight_decay},
+        {"params": ffn_params, "lr": ffn_lr, "weight_decay": self.ffn_weight_decay},
+    ]
+
+    # Initialize optimizer (AdamW to support weight decay properly)
+    opt = torch.optim.AdamW(param_groups)
+
+    if self.reduce_lr_on_plateau:
+        # Use ReduceLROnPlateau scheduler
+        lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            mode='min',  # Assuming we are monitoring loss or error
+            factor=self.reduce_lr_factor,
+            patience=self.reduce_lr_patience,
+            verbose=True
+        )
+        
+        lr_sched_config = {
+            "scheduler": lr_sched,
+            "monitor": self.monitor_metric,
+            "interval": "epoch",
+            "frequency": 1
+        }
+    else:
+        # Use default Noam-like scheduler
+        if self.trainer.train_dataloader is None:
+            # Loading `train_dataloader` to estimate number of training batches.
+            self.trainer.estimated_stepping_batches
+        
+        steps_per_epoch = self.trainer.num_training_batches
+        warmup_steps = self.warmup_epochs * steps_per_epoch
+        
+        if self.trainer.max_epochs == -1:
+            logger.warning(
+                "For infinite training, the number of cooldown epochs in learning rate scheduler is set to 100 times the number of warmup epochs."
+            )
+            cooldown_steps = 100 * warmup_steps
+        else:
+            cooldown_epochs = self.trainer.max_epochs - self.warmup_epochs
+            cooldown_steps = cooldown_epochs * steps_per_epoch
+
+        lr_sched = build_NoamLike_LRSched(
+            opt, warmup_steps, cooldown_steps, self.init_lr, self.max_lr, self.final_lr
+        )
+
+        lr_sched_config = {"scheduler": lr_sched, "interval": "step"}
+
+    return {"optimizer": opt, "lr_scheduler": lr_sched_config}
 
 
 @model_registry.register("ChemPropModel")
@@ -93,6 +171,15 @@ class ChemPropModel(LightningModelBase):
     init_lr: float = 1e-4
     max_lr: float = 1e-3
     final_lr: float = 1e-4
+
+    # Optimization parameters
+    mpnn_weight_decay: float = 0.0
+    ffn_weight_decay: float = 0.0
+    mpnn_lr: float = 1e-4
+    ffn_lr: float = 1e-4
+    reduce_lr_on_plateau: bool = False
+    reduce_lr_factor: float = 0.1
+    reduce_lr_patience: int = 10
 
     _n_tasks: int = 1
 
@@ -268,6 +355,19 @@ class ChemPropModel(LightningModelBase):
             # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
             # is needed at the "module" level for use in both `configure_optimizers` and `LightningTrainer`
             mpnn.monitor_metric = self.monitor_metric
+            
+            # Attach custom optimization parameters to the MPNN instance
+            mpnn.mpnn_weight_decay = self.mpnn_weight_decay
+            mpnn.ffn_weight_decay = self.ffn_weight_decay
+            mpnn.mpnn_lr = self.mpnn_lr
+            mpnn.ffn_lr = self.ffn_lr
+            mpnn.reduce_lr_on_plateau = self.reduce_lr_on_plateau
+            mpnn.reduce_lr_factor = self.reduce_lr_factor
+            mpnn.reduce_lr_patience = self.reduce_lr_patience
+            
+            # Bind the custom configure_optimizers method
+            mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
+
             self.estimator = mpnn
 
         else:
