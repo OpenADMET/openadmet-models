@@ -5,9 +5,7 @@ import uuid
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
-
 from typing import Any, ClassVar, Literal, Optional
-
 
 import numpy as np
 import pandas as pd
@@ -17,8 +15,8 @@ from lightning import pytorch as pl
 from loguru import logger
 from pydantic import model_validator
 
-from openadmet.models.drivers import DriverType
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
+from openadmet.models.drivers import DriverType
 
 
 def _safe_to_numpy(X):
@@ -526,10 +524,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
+
         # Get bagging setting
         use_bagging = self.parent_spec.procedure.ensemble.use_bagging
+
         # Get global seed
-        global_seed = self.parent_spec.procedure.split.random_state
+        global_seed = self.split.random_state
 
         for i in range(self.parent_spec.procedure.ensemble.n_models):
             # Manage bootstrap directory
@@ -543,8 +543,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             # Seed everything for reproducibility
             pl.seed_everything(global_seed + i)
 
+            # Bootstrap data if using bagging
             if use_bagging:
-                # Bootstrap train data
                 logger.info("Bootstrapping train data")
                 bootstrap_indices = np.random.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
@@ -552,6 +552,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 X_train_bootstrap = X_train[bootstrap_indices]
                 y_train_bootstrap = y_train[bootstrap_indices]
                 logger.info("Data bootstrapped")
+
+            # Otherwise use full data for each model
             else:
                 X_train_bootstrap = X_train
                 y_train_bootstrap = y_train
@@ -564,6 +566,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     y_train_bootstrap,
                 )
             )
+
+            # Save dataloader
             torch.save(
                 bootstrap_dataloader,
                 bootstrap_dir / "train_dataloader.pth",
