@@ -24,6 +24,15 @@ _METRIC_TO_LOSS = {
 
 
 def configure_optimizers(self):
+    """
+    Configure optimizers and learning rate schedulers.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the optimizer and learning rate scheduler configurations.
+
+    """
     # Separate parameters into MPNN and FFN groups.
     mpnn_params = []
     ffn_params = []
