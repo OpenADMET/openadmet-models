@@ -262,13 +262,19 @@ class ChemPropModel(LightningModelBase):
         if self.scheduler == "noam":
             # Check for plateau params
             if "reduce_lr_factor" in self.model_fields_set:
-                 raise ValueError("reduce_lr_factor is not compatible with noam scheduler")
+                raise ValueError(
+                    "reduce_lr_factor is not compatible with noam scheduler"
+                )
             if "reduce_lr_patience" in self.model_fields_set:
-                 raise ValueError("reduce_lr_patience is not compatible with noam scheduler")
+                raise ValueError(
+                    "reduce_lr_patience is not compatible with noam scheduler"
+                )
         elif self.scheduler == "plateau":
             # Check for noam params
             if "warmup_epochs" in self.model_fields_set:
-                raise ValueError("warmup_epochs is not compatible with plateau scheduler")
+                raise ValueError(
+                    "warmup_epochs is not compatible with plateau scheduler"
+                )
             if self.reduce_lr_factor >= 1.0:
                 raise ValueError("reduce_lr_factor must be < 1.0 for plateau scheduler")
         return self
@@ -474,7 +480,7 @@ class ChemPropModel(LightningModelBase):
             mpnn.ffn_lr = self.ffn_lr
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
-            mpnn.scheduler = self.scheduler # Propagate scheduler choice
+            mpnn.scheduler = self.scheduler  # Propagate scheduler choice
 
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)

@@ -10,9 +10,9 @@ def test_chemprop_hyperparameters_overrides():
     model = ChemPropModel(
         max_lr=1e-3,
         mpnn_lr=1e-5,  # Override
-        ffn_lr=5e-4,   # Override
+        ffn_lr=5e-4,  # Override
         weight_decay=1e-6,
-        mpnn_weight_decay=1e-5, # Override
+        mpnn_weight_decay=1e-5,  # Override
         ffn_weight_decay=1e-4,  # Override
         scheduler="plateau",
         reduce_lr_factor=0.5,
@@ -32,17 +32,13 @@ def test_chemprop_hyperparameters_overrides():
 
 def test_chemprop_hyperparameters_defaults():
     """Test that ChemPropModel cascades defaults."""
-    model = ChemPropModel(
-        max_lr=1e-3,
-        weight_decay=1e-5,
-        scheduler="noam"
-    )
+    model = ChemPropModel(max_lr=1e-3, weight_decay=1e-5, scheduler="noam")
 
     # LRs should inherit max_lr or derived values
     assert model.mpnn_lr == 1e-3
     assert model.ffn_lr == 1e-3
     assert model.init_lr == 1e-4  # max_lr * 0.1
-    assert model.final_lr == 1e-5 # max_lr * 0.01
+    assert model.final_lr == 1e-5  # max_lr * 0.01
 
     # Weight decays should inherit global weight_decay
     assert model.mpnn_weight_decay == 1e-5
@@ -51,13 +47,17 @@ def test_chemprop_hyperparameters_defaults():
 
 def test_chemprop_scheduler_mutual_exclusivity():
     """Test mutual exclusivity of scheduler parameters."""
-    
+
     # Test plateau with noam param
-    with pytest.raises(ValueError, match="warmup_epochs is not compatible with plateau scheduler"):
+    with pytest.raises(
+        ValueError, match="warmup_epochs is not compatible with plateau scheduler"
+    ):
         ChemPropModel(scheduler="plateau", warmup_epochs=5)
 
     # Test noam with plateau param
-    with pytest.raises(ValueError, match="reduce_lr_factor is not compatible with noam scheduler"):
+    with pytest.raises(
+        ValueError, match="reduce_lr_factor is not compatible with noam scheduler"
+    ):
         ChemPropModel(scheduler="noam", reduce_lr_factor=0.5)
 
     # Test plateau factor validity
@@ -68,14 +68,11 @@ def test_chemprop_scheduler_mutual_exclusivity():
 def test_chemprop_configure_optimizers_plateau():
     """Test configure_optimizers with Plateau scheduler."""
     model = ChemPropModel(
-        max_lr=1e-3,
-        scheduler="plateau",
-        reduce_lr_factor=0.5,
-        reduce_lr_patience=5
+        max_lr=1e-3, scheduler="plateau", reduce_lr_factor=0.5, reduce_lr_patience=5
     )
 
     model.build()
-    
+
     # Mock trainer not needed for plateau config setup usually, but let's be safe
     # model.estimator.trainer = ...
 
@@ -87,7 +84,7 @@ def test_chemprop_configure_optimizers_plateau():
     assert len(opt.param_groups) == 2
     # Group 0 is MPNN (inherits max_lr=1e-3)
     assert opt.param_groups[0]["lr"] == 1e-3
-    
+
     # Check scheduler
     assert isinstance(
         scheduler_config["scheduler"], torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -105,7 +102,7 @@ def test_chemprop_configure_optimizers_noam():
 
     # Need to mock trainer attributes for Noam scheduler calculation
     class MockTrainer:
-        train_dataloader = None 
+        train_dataloader = None
         num_training_batches = 100
         max_epochs = 10
         estimated_stepping_batches = 1000
