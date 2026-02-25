@@ -149,7 +149,7 @@ class ChemPropModel(LightningModelBase):
     from_chemeleon : bool
         Whether to use the CheMeleon foundation model.
     monitor_metric : str
-        The metric to monitor during training.
+        The metric to monitor during training. Default is "val_loss".
     metric_list : list
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
     scheduler : str
