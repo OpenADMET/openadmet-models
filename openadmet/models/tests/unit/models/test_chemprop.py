@@ -45,6 +45,31 @@ def test_chemprop_hyperparameters_defaults():
     assert model.ffn_weight_decay == 1e-5
 
 
+def test_chemprop_hyperparameters_partial_overrides():
+    """Test that component overrides only affect explicitly provided fields."""
+    model = ChemPropModel(
+        max_lr=1e-3,
+        scheduler="noam",
+        mpnn_lr=1e-5,
+        mpnn_weight_decay=0.01,
+    )
+
+    assert model.mpnn_lr == 1e-5
+    assert model.ffn_lr == 1e-3
+    assert model.mpnn_weight_decay == 0.01
+    assert model.ffn_weight_decay == 0.0
+    assert model.init_lr == 1e-4
+    assert model.final_lr == 1e-5
+
+
+def test_chemprop_invalid_scheduler_value():
+    """Test scheduler field validator for allowed values."""
+    with pytest.raises(
+        ValueError, match="Scheduler must be either 'noam' or 'plateau'"
+    ):
+        ChemPropModel(scheduler="reduce_on_plateau")
+
+
 def test_chemprop_scheduler_mutual_exclusivity():
     """Test mutual exclusivity of scheduler parameters."""
 
@@ -59,6 +84,12 @@ def test_chemprop_scheduler_mutual_exclusivity():
         ValueError, match="reduce_lr_factor is not compatible with noam scheduler"
     ):
         ChemPropModel(scheduler="noam", reduce_lr_factor=0.5)
+
+    # Test noam with plateau param
+    with pytest.raises(
+        ValueError, match="reduce_lr_patience is not compatible with noam scheduler"
+    ):
+        ChemPropModel(scheduler="noam", reduce_lr_patience=5)
 
     # Test plateau factor validity
     with pytest.raises(ValueError, match="reduce_lr_factor must be < 1.0"):
