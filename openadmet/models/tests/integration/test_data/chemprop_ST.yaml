@@ -32,6 +32,13 @@ procedure:
     params:
       messages: bond
       n_tasks: 1
+      mpnn_lr: 1.0e-4
+      ffn_lr: 1.0e-4
+      mpnn_weight_decay: 0.0
+      ffn_weight_decay: 0.0
+      reduce_lr_on_plateau: false
+      reduce_lr_factor: 0.1
+      reduce_lr_patience: 10
 
   split:
     type: ShuffleSplitter
