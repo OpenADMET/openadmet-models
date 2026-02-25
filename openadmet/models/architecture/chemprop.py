@@ -24,45 +24,40 @@ _METRIC_TO_LOSS = {
 
 
 def configure_optimizers(self):
-    """
-    Configure optimizers and learning rate schedulers.
-
-    This custom implementation allows for:
-    1. Separate learning rates for MPNN and FFN components.
-    2. Separate weight decay for MPNN and FFN components.
-    3. Option to use ReduceLROnPlateau scheduler.
-    """
-    # Separate parameters into groups
+    # Separate parameters into MPNN and FFN groups.
     mpnn_params = []
     ffn_params = []
 
-    # Identify FFN parameters (usually named 'predictor')
     for name, param in self.named_parameters():
         if "predictor" in name:
             ffn_params.append(param)
         else:
             mpnn_params.append(param)
 
-    # Determine learning rates
-    mpnn_lr = self.mpnn_lr
-    ffn_lr = self.ffn_lr
-
-    # Create parameter groups
+    # Set the optimizer base learning rates to their peak values.
     param_groups = [
-        {"params": mpnn_params, "lr": mpnn_lr, "weight_decay": self.mpnn_weight_decay},
-        {"params": ffn_params, "lr": ffn_lr, "weight_decay": self.ffn_weight_decay},
+        {
+            "params": mpnn_params,
+            "lr": self.mpnn_lr,
+            "weight_decay": self.mpnn_weight_decay,
+        },
+        {
+            "params": ffn_params,
+            "lr": self.ffn_lr,
+            "weight_decay": self.ffn_weight_decay,
+        },
     ]
 
-    # Initialize optimizer (AdamW to support weight decay properly)
     opt = torch.optim.AdamW(param_groups)
 
-    if self.reduce_lr_on_plateau:
-        # Use ReduceLROnPlateau scheduler
+    if self.scheduler == "plateau":
+        # Configure the reduce on plateau scheduler.
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
-            mode="min",  # Assuming we are monitoring loss or error
+            mode="min",
             factor=self.reduce_lr_factor,
             patience=self.reduce_lr_patience,
+            min_lr=self.final_lr,
         )
 
         lr_sched_config = {
@@ -71,28 +66,47 @@ def configure_optimizers(self):
             "interval": "epoch",
             "frequency": 1,
         }
-    else:
-        # Use default Noam-like scheduler
-        if self.trainer.train_dataloader is None:
-            # Loading `train_dataloader` to estimate number of training batches.
-            self.trainer.estimated_stepping_batches
+    elif self.scheduler == "noam":
+        # Calculate steps per epoch safely using trainer properties.
+        if isinstance(
+            self.trainer.estimated_stepping_batches, int
+        ) and self.trainer.estimated_stepping_batches != float("inf"):
+            total_steps = self.trainer.estimated_stepping_batches
+            steps_per_epoch = total_steps // max(1, self.trainer.max_epochs)
+        else:
+            # Fallback for infinite training or uninitialized dataloaders.
+            steps_per_epoch = getattr(self.trainer, "num_training_batches", 1000)
 
-        steps_per_epoch = self.trainer.num_training_batches
         warmup_steps = self.warmup_epochs * steps_per_epoch
 
         if self.trainer.max_epochs == -1:
             logger.warning(
-                "For infinite training, the number of cooldown epochs in learning rate scheduler is set to 100 times the number of warmup epochs."
+                "Setting cooldown epochs to 100 times the warmup epochs for infinite training."
             )
             cooldown_steps = 100 * warmup_steps
         else:
             cooldown_epochs = self.trainer.max_epochs - self.warmup_epochs
             cooldown_steps = cooldown_epochs * steps_per_epoch
 
-        lr_sched = build_NoamLike_LRSched(
-            opt, warmup_steps, cooldown_steps, self.init_lr, self.max_lr, self.final_lr
-        )
+        # Convert vanilla absolute learning rates into relative scaling factors.
+        init_factor = self.init_lr / self.max_lr
+        final_factor = self.final_lr / self.max_lr
 
+        # Define the lambda function using relative factors scaling up to 1.0 at peak.
+        def lr_lambda(step: int):
+            if step < warmup_steps:
+                warmup_slope = (1.0 - init_factor) / max(1, warmup_steps)
+                return init_factor + (step * warmup_slope)
+
+            elif warmup_steps <= step < warmup_steps + cooldown_steps:
+                decay_steps = step - warmup_steps
+                cooldown_slope = final_factor ** (1.0 / max(1, cooldown_steps))
+                return 1.0 * (cooldown_slope**decay_steps)
+
+            else:
+                return final_factor
+
+        lr_sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda)
         lr_sched_config = {"scheduler": lr_sched, "interval": "step"}
 
     return {"optimizer": opt, "lr_scheduler": lr_sched_config}
@@ -137,15 +151,31 @@ class ChemPropModel(LightningModelBase):
     monitor_metric : str
         The metric to monitor during training.
     metric_list : list
-        List of metrics to use for evaluation.
+        List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
+    scheduler : str
+        Learning rate scheduler ("noam" or "plateau"). Default is "noam".
     warmup_epochs : int
-        Number of warmup epochs for learning rate scheduling.
-    init_lr : float
-        Initial learning rate.
+        Number of warmup epochs for learning rate scheduling (Noam scheduler only). Default is 2.
+    init_lr : float, optional
+        Initial learning rate. If None, defaults to max_lr * 0.1.
     max_lr : float
-        Maximum learning rate.
-    final_lr : float
-        Final learning rate.
+        Maximum learning rate (Global default). Default is 1e-3.
+    final_lr : float, optional
+        Final learning rate. If None, defaults to max_lr * 0.01.
+    weight_decay : float
+        Global weight decay. Default is 0.0.
+    mpnn_lr : float, optional
+        Learning rate for MPNN. If None, defaults to max_lr.
+    ffn_lr : float, optional
+        Learning rate for FFN. If None, defaults to max_lr.
+    mpnn_weight_decay : float, optional
+        Weight decay for MPNN. If None, defaults to weight_decay.
+    ffn_weight_decay : float, optional
+        Weight decay for FFN. If None, defaults to weight_decay.
+    reduce_lr_factor : float
+        Factor by which the learning rate will be reduced (Plateau scheduler only). Default is 0.1.
+    reduce_lr_patience : int
+        Number of epochs with no improvement after which learning rate will be reduced (Plateau scheduler only). Default is 10.
 
     """
 
@@ -166,21 +196,82 @@ class ChemPropModel(LightningModelBase):
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
-    warmup_epochs: int = 2
-    init_lr: float = 1e-4
-    max_lr: float = 1e-3
-    final_lr: float = 1e-4
 
-    # Optimization parameters
-    mpnn_weight_decay: float = 0.0
-    ffn_weight_decay: float = 0.0
-    mpnn_lr: float = 1e-4
-    ffn_lr: float = 1e-4
-    reduce_lr_on_plateau: bool = False
+    # Select scheduler among "noam" or "plateau"
+    scheduler: str = "noam"
+
+    # Global defaults (master values)
+    max_lr: float = 1e-3
+    weight_decay: float = 0.0
+
+    # Component overrides (optional - inherit from masters if None)
+    mpnn_lr: float | None = None
+    ffn_lr: float | None = None
+    mpnn_weight_decay: float | None = None
+    ffn_weight_decay: float | None = None
+
+    # Scheduler specifics (optional - inherit from max_lr if None)
+    init_lr: float | None = None
+    final_lr: float | None = None
+
+    # Noam-only parameters
+    warmup_epochs: int = 2
+
+    # Plateau-only parameters
     reduce_lr_factor: float = 0.1
     reduce_lr_patience: int = 10
 
     _n_tasks: int = 1
+
+    @model_validator(mode="after")
+    def resolve_hyperparameters(self) -> "ChemPropModel":
+        """
+        Resolve hyperparameters using global defaults and component overrides pattern.
+
+        Logic:
+        - Resolve learning rates:
+            - init_lr -> max_lr * 0.1
+            - final_lr -> max_lr * 0.01
+            - mpnn_lr -> max_lr
+            - ffn_lr -> max_lr
+        - Resolve weight decays:
+            - mpnn_weight_decay -> weight_decay
+            - ffn_weight_decay -> weight_decay
+        """
+        # Resolve LRs
+        if self.init_lr is None:
+            self.init_lr = self.max_lr * 0.1
+        if self.final_lr is None:
+            self.final_lr = self.max_lr * 0.01
+        if self.mpnn_lr is None:
+            self.mpnn_lr = self.max_lr
+        if self.ffn_lr is None:
+            self.ffn_lr = self.max_lr
+
+        # Resolve weight decays
+        if self.mpnn_weight_decay is None:
+            self.mpnn_weight_decay = self.weight_decay
+        if self.ffn_weight_decay is None:
+            self.ffn_weight_decay = self.weight_decay
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_scheduler_params(self) -> "ChemPropModel":
+        """Ensure scheduler-specific parameters are valid for the chosen scheduler."""
+        if self.scheduler == "noam":
+            # Check for plateau params
+            if "reduce_lr_factor" in self.model_fields_set:
+                 raise ValueError("reduce_lr_factor is not compatible with noam scheduler")
+            if "reduce_lr_patience" in self.model_fields_set:
+                 raise ValueError("reduce_lr_patience is not compatible with noam scheduler")
+        elif self.scheduler == "plateau":
+            # Check for noam params
+            if "warmup_epochs" in self.model_fields_set:
+                raise ValueError("warmup_epochs is not compatible with plateau scheduler")
+            if self.reduce_lr_factor >= 1.0:
+                raise ValueError("reduce_lr_factor must be < 1.0 for plateau scheduler")
+        return self
 
     @model_validator(mode="after")
     def set_n_tasks(self) -> "ChemPropModel":
@@ -236,6 +327,27 @@ class ChemPropModel(LightningModelBase):
         """
         if value not in ["mean", "norm"]:
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
+        return value
+
+    @field_validator("scheduler")
+    @classmethod
+    def validate_scheduler(cls, value):
+        """
+        Validate the scheduler parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        """
+        if value not in ["noam", "plateau"]:
+            raise ValueError("Scheduler must be either 'noam' or 'plateau'")
         return value
 
     def _get_output_transform(self, scaler):
@@ -360,9 +472,9 @@ class ChemPropModel(LightningModelBase):
             mpnn.ffn_weight_decay = self.ffn_weight_decay
             mpnn.mpnn_lr = self.mpnn_lr
             mpnn.ffn_lr = self.ffn_lr
-            mpnn.reduce_lr_on_plateau = self.reduce_lr_on_plateau
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
+            mpnn.scheduler = self.scheduler # Propagate scheduler choice
 
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
