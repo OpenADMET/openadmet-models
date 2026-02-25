@@ -119,7 +119,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.parent_spec.procedure.ensemble.use_bagging
         # Get global seed
-        global_seed = self.parent_spec.procedure.split.random_state
+        global_seed = self.split.random_state
 
         for i in range(self.parent_spec.procedure.ensemble.n_models):
             # Manage bootstrap directory
