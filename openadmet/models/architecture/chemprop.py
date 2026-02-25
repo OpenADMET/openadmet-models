@@ -35,7 +35,7 @@ def configure_optimizers(self):
     # Separate parameters into groups
     mpnn_params = []
     ffn_params = []
-    
+
     # Identify FFN parameters (usually named 'predictor')
     for name, param in self.named_parameters():
         if "predictor" in name:
@@ -60,27 +60,27 @@ def configure_optimizers(self):
         # Use ReduceLROnPlateau scheduler
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
-            mode='min',  # Assuming we are monitoring loss or error
+            mode="min",  # Assuming we are monitoring loss or error
             factor=self.reduce_lr_factor,
             patience=self.reduce_lr_patience,
-            verbose=True
+            verbose=True,
         )
-        
+
         lr_sched_config = {
             "scheduler": lr_sched,
             "monitor": self.monitor_metric,
             "interval": "epoch",
-            "frequency": 1
+            "frequency": 1,
         }
     else:
         # Use default Noam-like scheduler
         if self.trainer.train_dataloader is None:
             # Loading `train_dataloader` to estimate number of training batches.
             self.trainer.estimated_stepping_batches
-        
+
         steps_per_epoch = self.trainer.num_training_batches
         warmup_steps = self.warmup_epochs * steps_per_epoch
-        
+
         if self.trainer.max_epochs == -1:
             logger.warning(
                 "For infinite training, the number of cooldown epochs in learning rate scheduler is set to 100 times the number of warmup epochs."
@@ -355,7 +355,7 @@ class ChemPropModel(LightningModelBase):
             # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
             # is needed at the "module" level for use in both `configure_optimizers` and `LightningTrainer`
             mpnn.monitor_metric = self.monitor_metric
-            
+
             # Attach custom optimization parameters to the MPNN instance
             mpnn.mpnn_weight_decay = self.mpnn_weight_decay
             mpnn.ffn_weight_decay = self.ffn_weight_decay
@@ -364,7 +364,7 @@ class ChemPropModel(LightningModelBase):
             mpnn.reduce_lr_on_plateau = self.reduce_lr_on_plateau
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
-            
+
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
 
