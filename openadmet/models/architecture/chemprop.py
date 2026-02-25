@@ -63,7 +63,6 @@ def configure_optimizers(self):
             mode="min",  # Assuming we are monitoring loss or error
             factor=self.reduce_lr_factor,
             patience=self.reduce_lr_patience,
-            verbose=True,
         )
 
         lr_sched_config = {
