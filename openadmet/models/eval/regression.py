@@ -24,6 +24,58 @@ nan_omit_ktau = partial(kendalltau, nan_policy="omit")
 nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 
+def relative_absolute_error(y_true, y_pred):
+    """
+    Compute Relative Absolute Error (RAE).
+
+    RAE = sum(|y_true - y_pred|) / sum(|y_true - mean(y_true)|).
+    Lower is better; RAE < 1.0 means the model outperforms a naive
+    mean predictor.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values.
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Relative absolute error.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    numerator = np.sum(np.abs(y_true - y_pred))
+    denominator = np.sum(np.abs(y_true - np.mean(y_true)))
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
+
+
+def pct_within_1_log_unit(y_true, y_pred):
+    """
+    Compute the percentage of predictions within +/-1 log unit of the true value.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values (assumed to be on a log scale, e.g. pXC50).
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Fraction (0-1) of predictions within 1 log unit.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return np.mean(np.abs(y_true - y_pred) <= 1.0)
+
+
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
     """
@@ -54,6 +106,8 @@ class RegressionMetrics(EvalBase):
         "r2": (r2_score, False, "$R^2$"),
         "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
+        "rae": (relative_absolute_error, False, "RAE"),
+        "pct_within_1_log": (pct_within_1_log_unit, False, "% within ±1 log"),
     }
 
     def evaluate(

@@ -21,6 +21,8 @@ from openadmet.models.eval.regression import (
     RegressionPlots,
     nan_omit_ktau,
     nan_omit_spearmanr,
+    pct_within_1_log_unit,
+    relative_absolute_error,
 )
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
@@ -133,6 +135,8 @@ class CrossValidationBase(EvalBase):
         "r2": (make_scorer(r2_score), False, "$R^2$"),
         "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
         "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
+        "rae": (make_scorer(relative_absolute_error), False, "RAE"),
+        "pct_within_1_log": (make_scorer(pct_within_1_log_unit), False, "% within ±1 log"),
     }
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
@@ -484,6 +488,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         "r2": (r2_score, False, "$R^2$"),
         "ktau": (wrap_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (wrap_spearmanr, True, "Spearman's $\\rho$"),
+        "rae": (relative_absolute_error, False, "RAE"),
+        "pct_within_1_log": (pct_within_1_log_unit, False, "% within ±1 log"),
     }
 
     min_val: float = Field(None, description="Minimum value for the axes")
