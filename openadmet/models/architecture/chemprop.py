@@ -1,5 +1,6 @@
 """ChemProp and Chemeleon model implementations."""
 
+import json
 import types
 from pathlib import Path
 from typing import ClassVar
@@ -11,7 +12,7 @@ from chemprop import models, nn
 from chemprop.models.model import build_NoamLike_LRSched
 from lightning import pytorch as pl
 from loguru import logger
-from pydantic import field_validator, model_validator
+from pydantic import PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -231,6 +232,15 @@ class ChemPropModel(LightningModelBase):
     reduce_lr_patience: int = 10
 
     _n_tasks: int = 1
+    _explicit_init_fields: set[str] = PrivateAttr(default_factory=set)
+
+    def __init__(self, **data):
+        """Initialize the model and track explicitly provided fields."""
+        explicit_init_fields = set(data)
+        super().__init__(**data)
+        self._explicit_init_fields = explicit_init_fields.intersection(
+            type(self).model_fields.keys()
+        )
 
     @model_validator(mode="after")
     def resolve_hyperparameters(self) -> "ChemPropModel":
@@ -516,6 +526,23 @@ class ChemPropModel(LightningModelBase):
         raise NotImplementedError(
             "Training not implemented in model class, use a trainer"
         )
+
+    def serialize(self, param_path="model.json", serial_path="model.pth"):
+        """
+        Save the model with only explicitly provided parameter fields.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to save the model parameters to
+        serial_path: PathLike
+            Path to save the serialized model to
+
+        """
+        explicit_params = self.model_dump(include=self._explicit_init_fields)
+        with open(param_path, "w") as f:
+            json.dump(explicit_params, f, indent=2)
+        self.save(serial_path)
 
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
