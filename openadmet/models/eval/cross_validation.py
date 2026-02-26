@@ -71,14 +71,14 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
     split_rand_states = prng.randint(0, 10000, size=n_repeats)
 
     for i, split_rand_state in zip(range(n_repeats), split_rand_states):
-        gss = GroupKFold(
-            n_splits=n_splits,
-            shuffle=True,
-            random_state=split_rand_state,
-        )
-        for train_idx, test_idx in gss.split(X, y, groups=groups):
-            train_inds.append(train_idx)
-            test_inds.append(test_idx)
+        # GroupKFold does not support shuffle/random_state params.
+        # Shuffle via a random permutation of samples, then map indices back.
+        rng = np.random.RandomState(split_rand_state)
+        perm = rng.permutation(len(groups))
+        gss = GroupKFold(n_splits=n_splits)
+        for train_idx, test_idx in gss.split(X, y, groups=groups[perm]):
+            train_inds.append(perm[train_idx])
+            test_inds.append(perm[test_idx])
 
     return train_inds, test_inds
 
