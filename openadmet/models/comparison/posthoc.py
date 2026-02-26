@@ -310,9 +310,7 @@ class PostHocComparison(ComparisonBase):
                     for ind, col in enumerate(target_cols):
                         if mt_id.lower() in col.lower():
                             col_match.append(col)
-                            ind_for_biotarget = (
-                                ind.copy()
-                            )  # this is to get the index for the list of biotargets
+                            ind_for_biotarget = ind  # this is to get the index for the list of biotargets
 
                     # check that the multitask id provided by the user does not
                     # appear in multiple target columns
