@@ -114,9 +114,16 @@ class FeatureConcatenator(FeaturizerBase):
         # use indices to mask out the features that are not present in all datasets
         common_indices = reduce(np.intersect1d, indices)
 
+        # filter features to only include common indices
+        filtered_feats = []
+        for feat, idx in zip(feats, indices):
+            # find where common_indices are in idx
+            mask = np.isin(idx, common_indices)
+            filtered_feats.append(feat[mask])
+
         # handle 1d features from single input by making them 2d
         # concatenate the features column wise
-        concat_feats = np.concatenate(feats, axis=1)
+        concat_feats = np.concatenate(filtered_feats, axis=1)
         return (
             concat_feats,
             common_indices,
