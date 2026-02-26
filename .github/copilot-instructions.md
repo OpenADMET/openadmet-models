@@ -59,3 +59,13 @@ The CLI entry point is `openadmet` (`openadmet/models/cli/cli.py`), with subcomm
 - Ruff + Black formatting; isort with Black-compatible profile
 - Sentence case in comments and print statements; acronyms (MPNN, MVE, ADMET, FFN) stay capitalized
 - Do not number steps in comments; do not end comments with a period
+
+## Unit Testing & Refactoring Rules
+
+When writing or refactoring tests, you must strictly adhere to the following guidelines to ensure tests are mathematically sound, robust, and non-tautological:
+
+* **Avoid Tautological Mocks:** Do not mock the system under test. Mock heavy I/O, external dependencies, or heavy data loading, but ensure the core logic of the target function is actually executed. Use lightweight synthetic datasets (e.g., small tensors or pandas DataFrames) instead of bypassing the execution entirely.
+* **Standard Mocking:** Never write custom nested dummy classes or custom mock fixtures. Always use the standard `pytest-mock` library (the `mocker` fixture) to patch objects and verify calls.
+* **No Lazy Assertions:** Never use `assert True`. Assert actual state changes, specific dictionary keys, object types (e.g., `isinstance(obj, matplotlib.figure.Figure)`), or verify file creation via the `tmp_path` fixture.
+* **Robust ML Data Testing:** When testing data splitters or clustering algorithms, you must explicitly assert that the resulting train/validation/test sets are mutually exclusive (e.g., checking that set intersections of indices or arrays are empty). Ensure synthetic testing data has enough variance (e.g., diverse SMILES scaffolds) to meaningfully test the algorithm.
+* **Safe Floating-Point Math:** Never use strict equality (`==`) to compare floating-point numbers. Always use `pytest.approx()` or `numpy.testing.assert_almost_equal()` to prevent cross-platform precision failures. Assert the actual math (e.g., UQ or metric calculations), not just the existence of the output.
