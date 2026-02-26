@@ -42,8 +42,19 @@ def test_expected_improvement_matches_formula():
 
 
 def test_acquisition_aliases_map_to_same_function():
-    assert _ACQUISITION_FUNCTIONS["ur"] is _ACQUISITION_FUNCTIONS["max-uncertainty-reduction"]
+    assert (
+        _ACQUISITION_FUNCTIONS["ur"]
+        is _ACQUISITION_FUNCTIONS["max-uncertainty-reduction"]
+    )
     assert _ACQUISITION_FUNCTIONS["exp"] is _ACQUISITION_FUNCTIONS["exploitation"]
-    assert _ACQUISITION_FUNCTIONS["ucb"] is _ACQUISITION_FUNCTIONS["upper-confidence-bound"]
-    assert _ACQUISITION_FUNCTIONS["ei"] is _ACQUISITION_FUNCTIONS["expected-improvement"]
-    assert _ACQUISITION_FUNCTIONS["pi"] is _ACQUISITION_FUNCTIONS["probability-improvement"]
+    assert (
+        _ACQUISITION_FUNCTIONS["ucb"]
+        is _ACQUISITION_FUNCTIONS["upper-confidence-bound"]
+    )
+    assert (
+        _ACQUISITION_FUNCTIONS["ei"] is _ACQUISITION_FUNCTIONS["expected-improvement"]
+    )
+    assert (
+        _ACQUISITION_FUNCTIONS["pi"]
+        is _ACQUISITION_FUNCTIONS["probability-improvement"]
+    )

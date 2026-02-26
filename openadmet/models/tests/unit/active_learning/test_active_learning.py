@@ -34,7 +34,9 @@ def trained_committee(dummy_models, toy_data):
     X_train, X_val, _, y_train, y_val, _ = toy_data
     rng = np.random.default_rng(123)
     for model in dummy_models:
-        bootstrap_idx = rng.choice(X_train.shape[0], size=X_train.shape[0], replace=True)
+        bootstrap_idx = rng.choice(
+            X_train.shape[0], size=X_train.shape[0], replace=True
+        )
         model.train(X_train[bootstrap_idx], y_train[bootstrap_idx])
     return CommitteeRegressor.from_models(models=dummy_models), X_val, y_val
 
@@ -75,7 +77,9 @@ def test_calibration_paths(trained_committee, calibration_method):
 
 def test_train_and_train_validation(toy_data):
     X_train, _, X_test, y_train, _, _ = toy_data
-    committee = CommitteeRegressor.train(X_train, y_train, mod_class=DummyRegressorModel, n_models=4)
+    committee = CommitteeRegressor.train(
+        X_train, y_train, mod_class=DummyRegressorModel, n_models=4
+    )
     mean, std = committee.predict(X_test, return_std=True)
     assert committee.n_models == 4
     assert mean.shape == std.shape == (X_test.shape[0], 1)
