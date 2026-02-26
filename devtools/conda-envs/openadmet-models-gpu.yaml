@@ -33,6 +33,7 @@ dependencies:
   - pytorch_scatter
   - pytorch_sparse
   - pytest
+  - pytest-mock
   - pytest-cov
   - pytest-xdist
   - rdkit
