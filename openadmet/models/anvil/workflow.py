@@ -7,6 +7,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Optional
 
+import warnings
 import numpy as np
 import pandas as pd
 import torch
@@ -256,6 +257,13 @@ class AnvilWorkflow(AnvilWorkflowBase):
         if self.data_spec.using_train_test:
             logger.info(
                 "Using prespecified train/test resources from data specification"
+            )
+            warnings.warn(
+                "Predefined train/test splits detected in data specification. "
+                "The splitting step will be skipped and the provided splits will "
+                "be used as-is. Ensure the splits are appropriate for your use case.",
+                UserWarning,
+                stacklevel=2,
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
             groups = None
@@ -713,6 +721,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if self.data_spec.using_train_test:
             logger.info(
                 "Using prespecified train/test resources from data specification"
+            )
+            warnings.warn(
+                "Predefined train/test splits detected in data specification. "
+                "The splitting step will be skipped and the provided splits will "
+                "be used as-is. Ensure the splits are appropriate for your use case.",
+                UserWarning,
+                stacklevel=2,
             )
             X_train, X_val, X_test, y_train, y_val, y_test, X, y = self.data_spec.read()
             groups = None
