@@ -209,7 +209,7 @@ texinfo_documents = [
         "openadmet_models Documentation",
         author,
         "openadmet_models",
-        "A short description of the project (less than one line).",
+        "Scalable, reproducible machine learning framework for ADMET property prediction.",
         "Miscellaneous",
     ),
 ]
