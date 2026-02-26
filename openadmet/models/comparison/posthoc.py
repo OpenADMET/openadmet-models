@@ -401,7 +401,6 @@ class PostHocComparison(ComparisonBase):
                             full_label.append("ST")
 
                     else:
-                        print("here")
                         raise ValueError(
                             f"Label type {lab} not recognized, must be one of ['biotarget', 'model', 'feat', 'tasks']"
                         )
