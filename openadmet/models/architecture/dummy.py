@@ -4,7 +4,6 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from pydantic import ConfigDict
 from sklearn.dummy import DummyClassifier, DummyRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
@@ -37,7 +36,10 @@ class DummyModelBase(PickleableModelBase):
 
         """
         self.build()
-        self.estimator = self.estimator.fit(X, y, verbose=True)
+        y_arr = np.asarray(y)
+        if y_arr.ndim == 2 and y_arr.shape[1] == 1:
+            y_arr = y_arr.ravel()
+        self.estimator = self.estimator.fit(X, y_arr)
 
     def predict(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -58,7 +60,10 @@ class DummyModelBase(PickleableModelBase):
         """
         if not self.estimator:
             raise ValueError("Model not trained")
-        return np.expand_dims(self.estimator.predict(X), axis=1)
+        pred = self.estimator.predict(X)
+        if pred.ndim == 1:
+            pred = np.expand_dims(pred, axis=1)
+        return pred
 
 
 @models.register("DummyRegressorModel")
@@ -76,8 +81,8 @@ class DummyRegressorModel(DummyModelBase):
 
     # DummyRegressor parameters
     strategy: str = "mean"  # Default strategy for dummy models
-    constant: float = None  # Default constant value for dummy models
-    quantile: float = None  # Default quantile value for dummy models
+    constant: float | None = None  # Default constant value for dummy models
+    quantile: float | None = None  # Default quantile value for dummy models
 
 
 @models.register("DummyClassifierModel")
@@ -95,5 +100,5 @@ class DummyClassifierModel(DummyModelBase):
 
     # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
-    random_state: int = None  # Default random state for dummy models
+    random_state: int | None = None  # Default random state for dummy models
     constant: int | str = None  # Default constant value for dummy models
