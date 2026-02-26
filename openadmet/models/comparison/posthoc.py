@@ -752,15 +752,19 @@ class PostHocComparison(ComparisonBase):
             if reverse_cmap:
                 cmap = cmap + "_r"
 
-            significance = pd.DataFrame(hsd.pvalue)
-            significance[(hsd.pvalue < self.sig_levels[2]) & (hsd.pvalue >= 0)] = "***"
-            significance[
-                (hsd.pvalue < self.sig_levels[1]) & (hsd.pvalue >= self.sig_levels[2])
-            ] = "**"
-            significance[
-                (hsd.pvalue < self.sig_levels[0]) & (hsd.pvalue >= self.sig_levels[1])
-            ] = "*"
-            significance[(hsd.pvalue >= self.sig_levels[0])] = ""
+            significance = pd.DataFrame(
+                np.select(
+                    [
+                        (hsd.pvalue < self.sig_levels[2]) & (hsd.pvalue >= 0),
+                        (hsd.pvalue < self.sig_levels[1])
+                        & (hsd.pvalue >= self.sig_levels[2]),
+                        (hsd.pvalue < self.sig_levels[0])
+                        & (hsd.pvalue >= self.sig_levels[1]),
+                    ],
+                    ["***", "**", "*"],
+                    default="",
+                )
+            )
 
             # Create a DataFrame for the annotations
             annotations = (
