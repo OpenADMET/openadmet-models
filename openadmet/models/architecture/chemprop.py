@@ -544,6 +544,13 @@ class ChemPropModel(LightningModelBase):
             json.dump(explicit_params, f, indent=2)
         self.save(serial_path)
 
+    def make_new(self) -> "ChemPropModel":
+        """Copy parameters to a new model instance without copying the estimator."""
+        explict_params = self.model_dump(
+            include=self._explicit_init_fields, exclude={"estimator"}
+        )
+        return self.__class__(**explict_params)
+
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
     ) -> np.ndarray:
