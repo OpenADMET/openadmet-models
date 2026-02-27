@@ -36,6 +36,7 @@ class RawSmilesFeaturizer(FeaturizerBase):
         if isinstance(smiles, pd.Series):
             smiles = smiles.to_numpy()
 
-        smiles_array = np.asarray(list(smiles), dtype=object)
+        # Use a concrete string dtype so downstream storage (e.g., zarr) can persist the array.
+        smiles_array = np.asarray(list(smiles), dtype=str)
         indices = np.arange(len(smiles_array))
         return smiles_array, indices

@@ -105,6 +105,6 @@ def test_pairwise_featurizer(smiles):
 def test_raw_smiles_featurizer(smiles):
     featurizer = RawSmilesFeaturizer()
     X, idx = featurizer.featurize(smiles)
-    assert X.dtype == object
-    assert_array_equal(X, np.asarray(smiles, dtype=object))
+    assert X.dtype.kind in ("U", "S")
+    assert_array_equal(X, np.asarray(smiles, dtype=str))
     assert_array_equal(idx, np.arange(len(smiles)))

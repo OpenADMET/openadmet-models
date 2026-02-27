@@ -41,6 +41,8 @@ def test_kermt_train_predict_and_serialize(monkeypatch, tmp_path, smiles_y):
             ckpt.mkdir(parents=True, exist_ok=True)
             (ckpt / "model.pt").write_bytes(b"checkpoint-bytes")
         elif "predict" in args:
+            assert "--checkpoint_dir" in args
+            assert "--checkpoint_path" not in args
             output_csv = Path(args[args.index("--output_path") + 1])
             output_csv.parent.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({"target": expected}, index=smiles).to_csv(output_csv)

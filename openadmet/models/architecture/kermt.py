@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 from typing import ClassVar
 
@@ -36,7 +37,7 @@ class KERMTCliRegressor:
     """Thin estimator wrapper that delegates training and prediction to KERMT CLI."""
 
     kermt_repo_path: str
-    python_executable: str = "python3"
+    python_executable: str = sys.executable
     checkpoint_path: str | None = None
     checkpoint_blob: bytes | None = None
     epochs: int = 30
@@ -204,8 +205,8 @@ class KERMTCliRegressor:
             input_csv.as_posix(),
             "--output_path",
             output_csv.as_posix(),
-            "--checkpoint_path",
-            checkpoint.as_posix(),
+            "--checkpoint_dir",
+            checkpoint.parent.as_posix(),
             "--seed",
             str(self.seed),
         ]
@@ -222,12 +223,12 @@ class KERMTCliRegressor:
         if not output_csv.exists():
             raise FileNotFoundError("KERMT prediction did not create an output CSV file.")
 
-        preds = pd.read_csv(output_csv)
-        pred_columns = [c for c in preds.columns if not c.lower().startswith("unnamed")]
-        if not pred_columns:
+        # KERMT writes predictions indexed by SMILES (CSV includes an index column).
+        preds = pd.read_csv(output_csv, index_col=0)
+        if preds.shape[1] == 0:
             raise ValueError("KERMT prediction output CSV does not contain prediction columns.")
 
-        values = preds[pred_columns].to_numpy(dtype=float)
+        values = preds.to_numpy(dtype=float)
         if values.shape[1] == 1:
             return values[:, 0]
         return values
@@ -248,7 +249,7 @@ class KERMTRegressorModel(PickleableModelBase):
         default="",
         description="Path to a local KERMT repository checkout.",
     )
-    python_executable: str = "python3"
+    python_executable: str = Field(default_factory=lambda: sys.executable)
     checkpoint_path: str | None = None
     epochs: int = 30
     batch_size: int = 32
