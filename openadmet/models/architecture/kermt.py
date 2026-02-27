@@ -22,7 +22,9 @@ def _to_1d_array(values) -> np.ndarray:
     """Convert common tabular containers to a flat NumPy array."""
     if isinstance(values, pd.DataFrame):
         if values.shape[1] != 1:
-            raise ValueError("KERMTRegressorModel currently supports exactly one target.")
+            raise ValueError(
+                "KERMTRegressorModel currently supports exactly one target."
+            )
         values = values.iloc[:, 0]
     if isinstance(values, pd.Series):
         values = values.to_numpy()
@@ -221,12 +223,16 @@ class KERMTCliRegressor:
         self._run_cli(cmd, repo=repo)
 
         if not output_csv.exists():
-            raise FileNotFoundError("KERMT prediction did not create an output CSV file.")
+            raise FileNotFoundError(
+                "KERMT prediction did not create an output CSV file."
+            )
 
         # KERMT writes predictions indexed by SMILES (CSV includes an index column).
         preds = pd.read_csv(output_csv, index_col=0)
         if preds.shape[1] == 0:
-            raise ValueError("KERMT prediction output CSV does not contain prediction columns.")
+            raise ValueError(
+                "KERMT prediction output CSV does not contain prediction columns."
+            )
 
         values = preds.to_numpy(dtype=float)
         if values.shape[1] == 1:
@@ -285,7 +291,7 @@ class KERMTRegressorModel(PickleableModelBase):
         return value
 
     @model_validator(mode="after")
-    def validate_metric(self) -> "KERMTRegressorModel":
+    def validate_metric(self) -> KERMTRegressorModel:
         """Validate KERMT metric compatibility for regression tasks."""
         allowed = {"rmse", "mae", "r2", "spearmanr"}
         if self.metric not in allowed:

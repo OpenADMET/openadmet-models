@@ -46,7 +46,9 @@ def test_kermt_train_predict_and_serialize(monkeypatch, tmp_path, smiles_y):
             output_csv = Path(args[args.index("--output_path") + 1])
             output_csv.parent.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({"target": expected}, index=smiles).to_csv(output_csv)
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
 
     monkeypatch.setattr(
         "openadmet.models.architecture.kermt.subprocess.run",
