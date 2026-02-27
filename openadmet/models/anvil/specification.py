@@ -729,6 +729,25 @@ class AnvilSpecification(BaseModel):
         # Pull driver from associated trainer to choose the correct workflow
         trainer_class = self.procedure.train.to_class()
         driver = _DRIVER_TO_CLASS[trainer_class._driver_type]
+        model_kwargs = {
+            "param_path": self.procedure.model.param_path,
+            "serial_path": self.procedure.model.serial_path,
+            "freeze_weights": self.procedure.model.freeze_weights,
+        }
+        ensemble_kwargs = (
+            {
+                "n_models": self.procedure.ensemble.n_models,
+                "calibration_method": self.procedure.ensemble.calibration_method,
+                "param_paths": self.procedure.ensemble.param_paths,
+                "serial_paths": self.procedure.ensemble.serial_paths,
+            }
+            if self.procedure.ensemble
+            else {}
+        )
+        feat_kwargs = {
+            "type": self.procedure.feat.type,
+            "params": self.procedure.feat.params,
+        }
 
         return driver(
             metadata=self.metadata,
@@ -744,5 +763,34 @@ class AnvilSpecification(BaseModel):
             feat=self.procedure.feat.to_class(),
             trainer=self.procedure.train.to_class(),
             evals=[eval.to_class() for eval in self.report.eval],
-            parent_spec=self,
+            model_kwargs=model_kwargs,
+            ensemble_kwargs=ensemble_kwargs,
+            feat_kwargs=feat_kwargs,
         )
+
+    def run(
+        self,
+        output_dir: PathLike = "anvil_training",
+        debug: bool = False,
+        tag: str = None,
+    ):
+        """Run the Anvil workflow from this specification."""
+        workflow = self.to_workflow()
+        result = workflow.run(output_dir=output_dir, debug=debug, tag=tag)
+
+        resolved_output_dir = workflow.resolved_output_dir or Path(output_dir)
+        resolved_output_dir.mkdir(parents=True, exist_ok=True)
+        provenance_spec = self.model_copy(deep=True)
+        if tag is not None:
+            provenance_spec.metadata.tag = tag
+
+        provenance_spec.to_recipe(resolved_output_dir / "anvil_recipe.yaml")
+        recipe_components = resolved_output_dir / "recipe_components"
+        recipe_components.mkdir(parents=True, exist_ok=True)
+        provenance_spec.to_multi_yaml(
+            metadata_yaml=recipe_components / "metadata.yaml",
+            procedure_yaml=recipe_components / "procedure.yaml",
+            data_yaml=recipe_components / "data.yaml",
+            report_yaml=recipe_components / "eval.yaml",
+        )
+        return result
