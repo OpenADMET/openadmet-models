@@ -240,6 +240,8 @@ while traditional machine learning models return a a 2D ``NumPy`` array or ``pan
     - Uses the  `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular descriptors.
   * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
     - Uses the `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular fingerprints.
+  * - :doc:`RawSmilesFeaturizer </_api/api/featurization/raw_smiles>`
+    - Returns SMILES strings unchanged for model backends that featurize internally.
   * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
     - Combines multiple featurizers into a single feature array.
 
@@ -314,6 +316,8 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - TabPFN classification model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
   * - :doc:`TabPFNPostHocRegressorModel </_api/api/model_architectures/tabpfn>`
     - TabPFN regression model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
+  * - :doc:`KERMTRegressorModel </_api/api/model_architectures/kermt>`
+    - Wraps the `KERMT <https://github.com/NVIDIA-Digital-Bio/KERMT>`_ workflow through its official CLI for regression tasks.
   * - :doc:`MTENNSchNetModel </_api/api/model_architectures/mtenn>`
     - Modular Training and Evaluation of Neural Networks (`MTENN <https://github.com/choderalab/mtenn>`_) `SchNet <https://github.com/atomistic-machine-learning/SchNet>`_ implementation.
   * - :doc:`DummyClassifierModel </_api/api/model_architectures/dummy>`
@@ -324,6 +328,9 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - scikit-learn Support Vector Machine classifier `(SVC) <https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html>`_ .
   * - :doc:`SVMRegressorModel </_api/api/model_architectures/svm>`
     - scikit-learn Support Vector Machine regressor `(SVR) <https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html>`_ .
+
+``KERMTRegressorModel`` expects a local checkout of KERMT and should be paired with ``RawSmilesFeaturizer``.
+Set ``model.params.kermt_repo_path`` (or environment variable ``KERMT_REPO_PATH``) to the KERMT repository root.
 
 Example
 """""""

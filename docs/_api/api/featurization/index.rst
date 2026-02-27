@@ -11,4 +11,5 @@ Featurizers for input data for anvil models.
    fingerprints
    descriptors
    mtenn
+   raw_smiles
    feature_base
