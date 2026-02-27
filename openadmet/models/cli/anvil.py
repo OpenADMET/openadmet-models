@@ -40,7 +40,6 @@ def anvil(recipe_path, tag, debug, output_dir):
 
     """
     spec = AnvilSpecification.from_recipe(recipe_path)
-    wf = spec.to_workflow()
     click.echo(f"Workflow initialized successfully with recipe: {recipe_path}")
-    wf.run(tag=tag, debug=debug, output_dir=output_dir)
+    spec.run(tag=tag, debug=debug, output_dir=output_dir)
     click.echo("Workflow completed successfully")
