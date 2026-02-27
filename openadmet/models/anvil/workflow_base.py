@@ -2,14 +2,15 @@
 
 from abc import abstractmethod
 from os import PathLike
+from pathlib import Path
 from typing import Any, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
 )
-from openadmet.models.anvil.specification import AnvilSpecification, DataSpec, Metadata
+from openadmet.models.anvil.specification import DataSpec, Metadata
 from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.eval.eval_base import EvalBase
 from openadmet.models.features.feature_base import FeaturizerBase
@@ -45,8 +46,12 @@ class AnvilWorkflowBase(BaseModel):
         The trainer for the model.
     evals : list[EvalBase]
         List of evaluation metrics.
-    parent_spec : AnvilSpecification
-        The parent specification for the workflow.
+    model_kwargs : dict
+        Runtime model settings from the specification domain.
+    ensemble_kwargs : dict
+        Runtime ensemble settings from the specification domain.
+    feat_kwargs : dict
+        Runtime feature settings from the specification domain.
     debug : bool
         Whether to run in debug mode.
 
@@ -61,8 +66,11 @@ class AnvilWorkflowBase(BaseModel):
     ensemble: EnsembleBase | None = None
     trainer: TrainerBase
     evals: list[EvalBase]
-    parent_spec: AnvilSpecification
+    model_kwargs: dict = Field(default_factory=dict)
+    ensemble_kwargs: dict = Field(default_factory=dict)
+    feat_kwargs: dict = Field(default_factory=dict)
     debug: bool = False
+    resolved_output_dir: Path | None = None
 
     @abstractmethod
     def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any:
