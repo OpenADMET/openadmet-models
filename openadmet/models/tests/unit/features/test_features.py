@@ -6,6 +6,7 @@ from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
+from openadmet.models.features.raw_smiles import RawSmilesFeaturizer
 
 
 @pytest.fixture()
@@ -99,3 +100,11 @@ def test_pairwise_featurizer(smiles):
     expected_y = np.array([0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0])
     assert [dataset[i][2] for i in range(9)] == pytest.approx(expected_y)
     assert scaler is None  # No scaling applied in FingerprintFeaturizer
+
+
+def test_raw_smiles_featurizer(smiles):
+    featurizer = RawSmilesFeaturizer()
+    X, idx = featurizer.featurize(smiles)
+    assert X.dtype == object
+    assert_array_equal(X, np.asarray(smiles, dtype=object))
+    assert_array_equal(idx, np.arange(len(smiles)))

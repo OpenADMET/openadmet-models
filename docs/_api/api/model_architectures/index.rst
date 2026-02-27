@@ -9,6 +9,7 @@ Anvil implemenations of various architectures.
    catboost
    chemprop
    dummy
+   kermt
    lgbm
    model_base
    mtenn
