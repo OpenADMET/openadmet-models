@@ -449,9 +449,23 @@ class SplitSpec(AnvilSection):
 
 
 class FeatureSpec(AnvilSection):
-    """Featurization specification."""
+    """
+    Featurization specification.
+
+    Attributes
+    ----------
+    section_name : ClassVar[str]
+        The name of the section.
+    type : Optional[str]
+        The type of featurizer to use.
+    params : dict
+        The parameters for the featurizer.
+
+    """
 
     section_name: ClassVar[str] = "feat"
+    type: str | None = None
+    params: dict = Field(default_factory=dict)
 
 
 class ModelSpec(AnvilSection):
