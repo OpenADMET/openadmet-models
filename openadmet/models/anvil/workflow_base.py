@@ -105,7 +105,7 @@ class AnvilWorkflowBase(BaseModel):
         """
         if self.model._n_tasks != len(self.data_spec.target_cols):
             raise ValueError(
-                f"The model has {self.model.n_tasks} tasks but the data specification has {len(self.data_spec.target_cols)} target columns."
+                f"The model has {self.model._n_tasks} tasks but the data specification has {len(self.data_spec.target_cols)} target columns."
             )
 
         return self
