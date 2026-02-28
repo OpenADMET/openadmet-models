@@ -560,7 +560,7 @@ class EnsembleSpec(AnvilSection):
 
     section_name: ClassVar[str] = "ensemble"
     n_models: int
-    calibration_method: str | None = "isotonic-regression"
+    calibration_method: str | None = None
     use_bagging: bool = False
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
