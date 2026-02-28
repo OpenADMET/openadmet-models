@@ -343,9 +343,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 X_val_feat,
                 y_val,
-                method=self.ensemble_kwargs.get(
-                    "calibration_method", "isotonic-regression"
-                ),
+                method=self.ensemble_kwargs.get("calibration_method"),
             )
 
             # Save
@@ -844,9 +842,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 val_dataloader,
                 y_val,
-                method=self.ensemble_kwargs.get(
-                    "calibration_method", "isotonic-regression"
-                ),
+                method=self.ensemble_kwargs.get("calibration_method"),
                 accelerator=self.trainer.accelerator,
                 devices=self.trainer.devices,
             )
