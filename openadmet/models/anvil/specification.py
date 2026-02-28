@@ -15,8 +15,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
-from openadmet.models.drivers import DriverType
 from openadmet.models.architecture.model_base import get_mod_class
+from openadmet.models.drivers import DriverType
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.features.feature_base import get_featurizer_class
 from openadmet.models.registries import *  # noqa: F401, F403
@@ -547,7 +547,7 @@ class EnsembleSpec(AnvilSection):
     section_name: ClassVar[str] = "ensemble"
     n_models: int
     calibration_method: str | None = "isotonic-regression"
-    use_bagging: bool = True
+    use_bagging: bool = False
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
@@ -740,6 +740,7 @@ class AnvilSpecification(BaseModel):
                 "calibration_method": self.procedure.ensemble.calibration_method,
                 "param_paths": self.procedure.ensemble.param_paths,
                 "serial_paths": self.procedure.ensemble.serial_paths,
+                "use_bagging": self.procedure.ensemble.use_bagging,
             }
             if self.procedure.ensemble
             else {}
