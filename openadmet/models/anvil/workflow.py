@@ -114,6 +114,13 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
+        # Get bagging setting
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
+        # Get global seed
+        # Currently grabbing from `split`, should this be set separately?
+        global_seed = self.split.random_state
+
         # Bootstrap iterations
         models = []
         # Get bagging setting
@@ -126,7 +133,14 @@ class AnvilWorkflow(AnvilWorkflowBase):
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
 
+            # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
+                # Set seed for bootstrapping
+                logger.info(
+                    f"Using incremented seed={global_seed + i} for bootstrapping"
+                )
+                np.random.seed(global_seed + i)
+
                 # Bootstrap train data
                 logger.info("Bootstrapping train data")
                 bootstrap_indices = np.random.choice(
@@ -140,7 +154,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 y_train_bootstrap = y_train
 
             # Build model from scratch
-            logger.info(f"Building model {i}")
+            logger.info(
+                f"Building model {i} using incremented seed={global_seed + i} to vary model initialization"
+            )
             bootstrap_model = self.model.make_new()
 
             # Set seed for model
@@ -148,7 +164,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 bootstrap_model.random_state = global_seed + i
             else:
                 logger.warning(
-                    f"Model {bootstrap_model} does not support random_state seeding."
+                    f"Model {bootstrap_model} does not support random_state seeding"
                 )
 
             bootstrap_model.build()
@@ -527,7 +543,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Build model from scratch
         else:
-            logger.info("Building model")
+            logger.info(f"Building model")
             self.model.build(scaler=train_scaler, **kwargs)
             logger.info("Model built")
 
@@ -559,6 +575,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
 
+        # Get bagging setting
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
+        # Get global seed
+        # Currently grabbing from `split`, should this be set separately?
+        global_seed = self.split.random_state
+
         # Bootstrap iterations
         models = []
 
@@ -577,12 +600,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.feat = self.feat.make_new()
             self.trainer = self.trainer.make_new()
 
-            # Seed everything for reproducibility
-            pl.seed_everything(global_seed + i)
-
-            # Bootstrap data if using bagging
+            # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                logger.info("Bootstrapping train data")
+                # Set seed for bootstrapping
+                logger.info(
+                    f"Bootstrapping train data with incremented seed={global_seed + i}"
+                )
+                np.random.seed(global_seed + i)
+
                 bootstrap_indices = np.random.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
                 )
@@ -634,7 +659,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             else:
-                logger.info(f"Building model {i}")
+                # Set seed for bootstrap model
+                logger.info(
+                    f"Building model {i} with incremented seed={global_seed + i} to vary model initialization"
+                )
+                pl.seed_everything(global_seed + i)
+
                 self.model = self.model.make_new()
                 self.model.build(scaler=bootstrap_scaler, **kwargs)
                 logger.info(f"Model {i} built")
