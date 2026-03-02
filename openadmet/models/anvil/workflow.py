@@ -871,6 +871,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Model saved")
 
+        # initialize y_pred & y_std; needed if training a no split model
+        y_pred = None
+        y_std = None
+
         if test_dataloader is not None:
             # Predict on test set
             logger.info("Predicting")
