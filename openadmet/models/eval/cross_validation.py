@@ -318,7 +318,9 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             self.data[t_label] = {}
-            for k, v in clean_scores.items() if k not in exclude else {}:
+            for k, v in clean_scores.items():
+                if k in exclude:
+                    continue
                 # calculate the confidence interval, assuming normal distribution
                 mean = v.mean()
                 sigma = v.std(ddof=1)
@@ -708,6 +710,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             if not (n_tasks == y_pred_fold.shape[1]):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
+            
             for task_id in range(n_tasks):
                 t_true, t_pred = get_t_true_and_t_pred(
                     task_id, y_true, y_pred, y_val, y_pred_fold

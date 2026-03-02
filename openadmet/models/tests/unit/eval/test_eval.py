@@ -1,6 +1,10 @@
 import pytest
 
 import numpy as np
+import pandas as pd
+from pathlib import Path
+from unittest.mock import MagicMock, patch, call
+from sklearn.dummy import DummyRegressor
 from openadmet.models.eval.binary import PosthocBinaryMetrics
 from openadmet.models.eval.classification import (
     ClassificationMetrics,
@@ -11,12 +15,8 @@ from openadmet.models.eval.cross_validation import (
     SKLearnRepeatedKFoldCrossValidation,
 )
 from openadmet.models.eval.eval_base import get_eval_class
-from openadmet.models.eval.regression import (
-    RegressionMetrics,
-    RegressionPlots,
-    pct_within_1_log_unit,
-    relative_absolute_error,
-)
+from openadmet.models.eval.regression import RegressionMetrics, RegressionPlots
+from openadmet.models.eval.cross_validation import SKLearnRepeatedKFoldCrossValidation, PytorchLightningRepeatedKFoldCrossValidation
 
 
 def test_get_eval_class():
@@ -139,3 +139,132 @@ def test_posthoc_eval_metrics():
     precision, recall = pem.get_precision_recall(y_pred, y_true, cutoff)
     assert precision == 1.0
     assert recall == 1.0
+
+# for eval testing
+@pytest.fixture
+def X_all():
+    return pd.DataFrame(np.random.rand(20, 5))
+
+@pytest.fixture
+def y_all():
+    return pd.DataFrame(np.random.rand(20, 1))
+
+@pytest.fixture
+def pytorch_setup(tmp_path, X_all, y_all):
+    fold_model = MagicMock()
+    fold_model.predict.return_value = np.random.rand(10, 1)
+
+    mock_fold_trainer = MagicMock()
+    mock_fold_trainer.train.return_value = fold_model  # train() returns our fold_model
+
+    model = MagicMock()
+    model.make_new.return_value = MagicMock()
+
+    featurizer = MagicMock()
+    fold_featurizer = MagicMock()
+    featurizer.make_new.return_value = fold_featurizer
+    fold_featurizer.featurize.return_value = (MagicMock(), None, MagicMock(), None)
+
+    trainer = MagicMock()
+    trainer.max_epochs = 5
+    trainer.accelerator = "cpu"
+    trainer.devices = 1
+    trainer.output_dir = tmp_path
+    trainer.wandb_project = None
+
+    return dict(
+        model=model,
+        fold_model=fold_model,
+        mock_fold_trainer=mock_fold_trainer,
+        featurizer=featurizer,
+        trainer=trainer,
+        X_train=X_all,
+        y_train=y_all,
+        X_all=X_all,
+        y_all=y_all,
+        tag="test",
+        y_true=None,
+        y_pred=None,
+    )
+
+
+@pytest.mark.parametrize("save_cv_models", [True, False])
+@patch("openadmet.models.eval.cross_validation.LightningTrainer")
+def test_pytorch_save_cv_models(mock_trainer_cls, save_cv_models, pytorch_setup):
+    n_splits = 2
+    
+    mock_trainer_cls.return_value = pytorch_setup["mock_fold_trainer"]
+    
+    evaluator = PytorchLightningRepeatedKFoldCrossValidation(
+        n_splits=n_splits,
+        n_repeats=1,
+        save_cv_models=save_cv_models,
+    )
+
+    setup = pytorch_setup
+    evaluator.evaluate(**{k: v for k, v in setup.items() if k not in ("fold_model", "mock_fold_trainer")})
+
+    fold_model = setup["fold_model"]
+    if save_cv_models:
+        assert fold_model.serialize.call_count == n_splits
+    else:
+        fold_model.serialize.assert_not_called()
+
+@pytest.fixture
+def sklearn_setup(tmp_path, X_all, y_all):
+    estimator = DummyRegressor()
+    model = MagicMock()
+    model.estimator = estimator
+
+    return dict(
+        model=model,
+        X_train=X_all,
+        y_train=y_all,
+        X_all=X_all,
+        y_all=y_all,
+        tag="test",
+        y_true=None,
+        y_pred=None,
+        output_dir=tmp_path,
+    )
+
+
+@pytest.mark.parametrize("save_cv_models", [True, False])
+@patch("openadmet.models.eval.cross_validation.cross_validate")
+def test_sklearn_save_cv_models(mock_cross_validate, save_cv_models, sklearn_setup, tmp_path):
+    n_splits = 2
+    
+    # cross_validate returns estimators only when return_estimator=True
+    # mock_estimators = [MagicMock(), MagicMock()]
+    mock_cross_validate.return_value = {
+        "test_mse": np.array([0.1, 0.2]),
+        "test_mae": np.array([0.1, 0.2]),
+        "test_r2": np.array([0.8, 0.9]),
+        "test_ktau": np.array([0.7, 0.8]),
+        "test_spearmanr": np.array([0.7, 0.8]),
+        "fit_time": np.array([0.1, 0.1]),
+        "score_time": np.array([0.1, 0.1]),
+        **({"estimator": [DummyRegressor(), DummyRegressor()]} if save_cv_models else {}),
+    }
+
+    evaluator = SKLearnRepeatedKFoldCrossValidation(
+        n_splits=n_splits,
+        n_repeats=1,
+        save_cv_models=save_cv_models,
+    )
+
+    evaluator.evaluate(**sklearn_setup)
+
+    # Verify cross_validate was called with correct return_estimator flag
+    _, kwargs = mock_cross_validate.call_args
+    assert kwargs["return_estimator"] == save_cv_models
+
+    if save_cv_models:
+        # Check model files were saved for each fold
+        for fold in range(n_splits):
+            expected_path = tmp_path / "cv" / f"fold_{fold}" / "model.pkl"
+            assert expected_path.exists()
+    else:
+        # Check no cv model files were saved
+        cv_dir = tmp_path / "cv"
+        assert not cv_dir.exists()
