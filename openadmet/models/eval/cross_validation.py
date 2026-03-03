@@ -14,7 +14,7 @@ from sklearn.metrics import (
     mean_squared_error,
     r2_score,
 )
-from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
+from sklearn.model_selection import RepeatedKFold, cross_validate
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -22,7 +22,6 @@ from openadmet.models.eval.regression import (
     nan_omit_ktau,
     nan_omit_spearmanr,
 )
-from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 from openadmet.models.drivers import DriverType
 
@@ -66,19 +65,23 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
     """
     train_inds = []
     test_inds = []
-    # get reproducible set of random states to not generate same split each repeat
-    prng = np.random.RandomState(random_state)
-    split_rand_states = prng.randint(0, 10000, size=n_repeats)
 
-    for i, split_rand_state in zip(range(n_repeats), split_rand_states):
-        # GroupKFold does not support shuffle/random_state params.
-        # Shuffle via a random permutation of samples, then map indices back.
-        rng = np.random.RandomState(split_rand_state)
-        perm = rng.permutation(len(groups))
-        gss = GroupKFold(n_splits=n_splits)
-        for train_idx, test_idx in gss.split(X, y, groups=groups[perm]):
-            train_inds.append(perm[train_idx])
-            test_inds.append(perm[test_idx])
+    groups = np.asarray(groups)
+    unique_groups = np.unique(groups)
+    group_to_sample_inds = [
+        np.flatnonzero(groups == group) for group in unique_groups
+    ]
+
+    splitter = RepeatedKFold(
+        n_splits=n_splits,
+        n_repeats=n_repeats,
+        random_state=random_state,
+    )
+    for train_group_inds, test_group_inds in splitter.split(unique_groups):
+        train_idx = np.concatenate([group_to_sample_inds[i] for i in train_group_inds])
+        test_idx = np.concatenate([group_to_sample_inds[i] for i in test_group_inds])
+        train_inds.append(np.sort(train_idx))
+        test_inds.append(np.sort(test_idx))
 
     return train_inds, test_inds
 
@@ -603,6 +606,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
+
+        from openadmet.models.trainer.lightning import LightningTrainer
 
         for fold, (fold_train_ids, fold_val_ids) in enumerate(cv):
             logger.info(f"Fold {fold}")
