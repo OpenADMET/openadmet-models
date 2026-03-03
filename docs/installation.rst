@@ -29,4 +29,22 @@ If you want to use GPU acceleration, ensure you have the appropriate CUDA toolki
     conda activate openadmet-models
     pip install -e .
 
+Optional KERMT Setup
+--------------------
+
+``KERMTRegressorModel`` uses the external KERMT CLI checkout and is not bundled as a standard pip package dependency.
+After creating the OpenADMET environment, run:
+
+.. code-block:: bash
+
+    ./devtools/scripts/setup_kermt.sh
+    export KERMT_REPO_PATH="$HOME/.openadmet/KERMT"
+
+You can pass a custom destination path:
+
+.. code-block:: bash
+
+    ./devtools/scripts/setup_kermt.sh /path/to/KERMT
+    export KERMT_REPO_PATH="/path/to/KERMT"
+
 For more details, see the full documentation or the README.

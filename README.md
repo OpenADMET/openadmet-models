@@ -40,6 +40,23 @@ The `openadmet-models` library can then be installed via:
 python -m pip install -e --no-deps .
 ```
 
+### Optional: KERMT integration setup
+
+`KERMTRegressorModel` delegates training/prediction to the external KERMT CLI checkout.
+Set up a local checkout and environment variable:
+
+```bash
+./devtools/scripts/setup_kermt.sh
+export KERMT_REPO_PATH="$HOME/.openadmet/KERMT"
+```
+
+To use a custom location:
+
+```bash
+./devtools/scripts/setup_kermt.sh /path/to/KERMT
+export KERMT_REPO_PATH="/path/to/KERMT"
+```
+
 
 ## Authors
 
