@@ -1,7 +1,12 @@
 from pathlib import Path
+import warnings
+from unittest.mock import Mock
 
+import numpy as np
+import pandas as pd
 import pytest
 
+from openadmet.models.anvil import workflow as workflow_module
 from openadmet.models.anvil.specification import (
     AnvilSpecification,
 )
@@ -47,6 +52,159 @@ def test_anvil_spec_create_to_workflow():
     anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml)
     anvil_workflow = anvil_spec.to_workflow()
     assert anvil_workflow
+
+
+def _single_split_data():
+    X = pd.DataFrame({"SMILES": ["CCO"]})
+    y = pd.DataFrame({"target": [1.0]})
+    return X, y
+
+
+def _dl_featurize_output():
+    train_dataloader = [0]
+    train_scaler = object()
+    train_dataset = [(np.array([[1.0]]), np.array([1.0]))]
+    return train_dataloader, None, train_scaler, train_dataset
+
+
+def test_anvil_workflow_warns_and_skips_split_for_predefined_train_test(
+    tmp_path, monkeypatch
+):
+    anvil_workflow = AnvilSpecification.from_recipe(basic_anvil_yaml).to_workflow()
+    X_train, y_train = _single_split_data()
+    X_all, y_all = _single_split_data()
+    split_mock = Mock()
+    anvil_workflow.data_spec = Mock(
+        using_train_test=True,
+        target_cols=["target"],
+        read=Mock(return_value=(X_train, None, None, y_train, None, None, X_all, y_all)),
+    )
+    anvil_workflow.split = Mock(split=split_mock)
+    anvil_workflow.feat = Mock(featurize=Mock(return_value=(np.array([[1.0]]), None)))
+    anvil_workflow.model = Mock(
+        _model_json_name="model.json",
+        _model_save_name="model.pkl",
+        serialize=Mock(),
+    )
+    anvil_workflow._train = Mock()
+    anvil_workflow.evals = []
+    anvil_workflow.transform = None
+    monkeypatch.setattr(workflow_module.zarr, "save", Mock())
+
+    with pytest.warns(
+        UserWarning, match="Predefined train/test splits detected in data specification"
+    ):
+        anvil_workflow.run(output_dir=tmp_path / "anvil_warns")
+
+    split_mock.assert_not_called()
+
+
+def test_anvil_workflow_no_warning_when_splitter_is_used(tmp_path, monkeypatch):
+    anvil_workflow = AnvilSpecification.from_recipe(basic_anvil_yaml).to_workflow()
+    X_train, y_train = _single_split_data()
+    X_all, y_all = _single_split_data()
+    split_mock = Mock(
+        return_value=(X_train, None, None, y_train, None, None, None)
+    )
+    anvil_workflow.data_spec = Mock(
+        using_train_test=False,
+        target_cols=["target"],
+        read=Mock(return_value=(X_all, y_all)),
+    )
+    anvil_workflow.split = Mock(split=split_mock)
+    anvil_workflow.feat = Mock(featurize=Mock(return_value=(np.array([[1.0]]), None)))
+    anvil_workflow.model = Mock(
+        _model_json_name="model.json",
+        _model_save_name="model.pkl",
+        serialize=Mock(),
+    )
+    anvil_workflow._train = Mock()
+    anvil_workflow.evals = []
+    anvil_workflow.transform = None
+    monkeypatch.setattr(workflow_module.zarr, "save", Mock())
+
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always")
+        anvil_workflow.run(output_dir=tmp_path / "anvil_no_warn")
+
+    assert not any(
+        issubclass(record.category, UserWarning)
+        and "Predefined train/test splits detected in data specification"
+        in str(record.message)
+        for record in recorded_warnings
+    )
+    split_mock.assert_called_once()
+
+
+def test_deep_learning_workflow_warns_and_skips_split_for_predefined_train_test(
+    tmp_path, monkeypatch
+):
+    anvil_workflow = AnvilSpecification.from_recipe(
+        acetylcholinesterase_anvil_chemprop_yaml
+    ).to_workflow()
+    X_train, y_train = _single_split_data()
+    X_all, y_all = _single_split_data()
+    split_mock = Mock()
+    anvil_workflow.data_spec = Mock(
+        using_train_test=True,
+        target_cols=["target"],
+        read=Mock(return_value=(X_train, None, None, y_train, None, None, X_all, y_all)),
+    )
+    anvil_workflow.split = Mock(split=split_mock)
+    anvil_workflow.feat = Mock(featurize=Mock(return_value=_dl_featurize_output()))
+    anvil_workflow.model = Mock(
+        _model_json_name="model.json",
+        _model_save_name="model.pth",
+        serialize=Mock(),
+    )
+    anvil_workflow._train = Mock()
+    anvil_workflow.evals = []
+    monkeypatch.setattr(workflow_module.torch, "save", Mock())
+
+    with pytest.warns(
+        UserWarning, match="Predefined train/test splits detected in data specification"
+    ):
+        anvil_workflow.run(output_dir=tmp_path / "anvil_deep_warns")
+
+    split_mock.assert_not_called()
+
+
+def test_deep_learning_workflow_no_warning_when_splitter_is_used(tmp_path, monkeypatch):
+    anvil_workflow = AnvilSpecification.from_recipe(
+        acetylcholinesterase_anvil_chemprop_yaml
+    ).to_workflow()
+    X_train, y_train = _single_split_data()
+    X_all, y_all = _single_split_data()
+    split_mock = Mock(
+        return_value=(X_train, None, None, y_train, None, None, None)
+    )
+    anvil_workflow.data_spec = Mock(
+        using_train_test=False,
+        target_cols=["target"],
+        read=Mock(return_value=(X_all, y_all)),
+    )
+    anvil_workflow.split = Mock(split=split_mock)
+    anvil_workflow.feat = Mock(featurize=Mock(return_value=_dl_featurize_output()))
+    anvil_workflow.model = Mock(
+        _model_json_name="model.json",
+        _model_save_name="model.pth",
+        serialize=Mock(),
+    )
+    anvil_workflow._train = Mock()
+    anvil_workflow.evals = []
+    monkeypatch.setattr(workflow_module.torch, "save", Mock())
+
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always")
+        anvil_workflow.run(output_dir=tmp_path / "anvil_deep_no_warn")
+
+    assert not any(
+        issubclass(record.category, UserWarning)
+        and "Predefined train/test splits detected in data specification"
+        in str(record.message)
+        for record in recorded_warnings
+    )
+    split_mock.assert_called_once()
 
 
 @pytest.mark.parametrize("anvil_full_recipie", all_anvil_full_recipes())
