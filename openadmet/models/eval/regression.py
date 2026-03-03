@@ -56,7 +56,7 @@ def relative_absolute_error(y_true, y_pred):
 
 def pct_within_1_log_unit(y_true, y_pred):
     """
-    Compute the percentage of predictions within +/-1 log unit of the true value.
+    Compute the fraction of predictions within +/-1 log unit of the true value.
 
     Parameters
     ----------
@@ -107,7 +107,11 @@ class RegressionMetrics(EvalBase):
         "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
         "rae": (relative_absolute_error, False, "RAE"),
-        "pct_within_1_log": (pct_within_1_log_unit, False, "% within ±1 log"),
+        "pct_within_1_log": (
+            pct_within_1_log_unit,
+            False,
+            "Fraction within ±1 log",
+        ),
     }
 
     def evaluate(

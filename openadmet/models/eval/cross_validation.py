@@ -135,8 +135,16 @@ class CrossValidationBase(EvalBase):
         "r2": (make_scorer(r2_score), False, "$R^2$"),
         "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
         "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
-        "rae": (make_scorer(relative_absolute_error), False, "RAE"),
-        "pct_within_1_log": (make_scorer(pct_within_1_log_unit), False, "% within ±1 log"),
+        "rae": (
+            make_scorer(relative_absolute_error, greater_is_better=False),
+            False,
+            "RAE",
+        ),
+        "pct_within_1_log": (
+            make_scorer(pct_within_1_log_unit),
+            False,
+            "Fraction within ±1 log",
+        ),
     }
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
@@ -489,7 +497,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         "ktau": (wrap_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (wrap_spearmanr, True, "Spearman's $\\rho$"),
         "rae": (relative_absolute_error, False, "RAE"),
-        "pct_within_1_log": (pct_within_1_log_unit, False, "% within ±1 log"),
+        "pct_within_1_log": (
+            pct_within_1_log_unit,
+            False,
+            "Fraction within ±1 log",
+        ),
     }
 
     min_val: float = Field(None, description="Minimum value for the axes")
