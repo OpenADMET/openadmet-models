@@ -68,9 +68,7 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
 
     groups = np.asarray(groups)
     unique_groups = np.unique(groups)
-    group_to_sample_inds = [
-        np.flatnonzero(groups == group) for group in unique_groups
-    ]
+    group_to_sample_inds = [np.flatnonzero(groups == group) for group in unique_groups]
 
     splitter = RepeatedKFold(
         n_splits=n_splits,
