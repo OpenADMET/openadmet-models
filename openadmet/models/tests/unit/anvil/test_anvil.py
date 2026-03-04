@@ -77,7 +77,9 @@ def test_anvil_workflow_warns_and_skips_split_for_predefined_train_test(
     anvil_workflow.data_spec = Mock(
         using_train_test=True,
         target_cols=["target"],
-        read=Mock(return_value=(X_train, None, None, y_train, None, None, X_all, y_all)),
+        read=Mock(
+            return_value=(X_train, None, None, y_train, None, None, X_all, y_all)
+        ),
     )
     anvil_workflow.split = Mock(split=split_mock)
     anvil_workflow.feat = Mock(featurize=Mock(return_value=(np.array([[1.0]]), None)))
@@ -103,9 +105,7 @@ def test_anvil_workflow_no_warning_when_splitter_is_used(tmp_path, monkeypatch):
     anvil_workflow = AnvilSpecification.from_recipe(basic_anvil_yaml).to_workflow()
     X_train, y_train = _single_split_data()
     X_all, y_all = _single_split_data()
-    split_mock = Mock(
-        return_value=(X_train, None, None, y_train, None, None, None)
-    )
+    split_mock = Mock(return_value=(X_train, None, None, y_train, None, None, None))
     anvil_workflow.data_spec = Mock(
         using_train_test=False,
         target_cols=["target"],
@@ -148,7 +148,9 @@ def test_deep_learning_workflow_warns_and_skips_split_for_predefined_train_test(
     anvil_workflow.data_spec = Mock(
         using_train_test=True,
         target_cols=["target"],
-        read=Mock(return_value=(X_train, None, None, y_train, None, None, X_all, y_all)),
+        read=Mock(
+            return_value=(X_train, None, None, y_train, None, None, X_all, y_all)
+        ),
     )
     anvil_workflow.split = Mock(split=split_mock)
     anvil_workflow.feat = Mock(featurize=Mock(return_value=_dl_featurize_output()))
@@ -175,9 +177,7 @@ def test_deep_learning_workflow_no_warning_when_splitter_is_used(tmp_path, monke
     ).to_workflow()
     X_train, y_train = _single_split_data()
     X_all, y_all = _single_split_data()
-    split_mock = Mock(
-        return_value=(X_train, None, None, y_train, None, None, None)
-    )
+    split_mock = Mock(return_value=(X_train, None, None, y_train, None, None, None))
     anvil_workflow.data_spec = Mock(
         using_train_test=False,
         target_cols=["target"],
