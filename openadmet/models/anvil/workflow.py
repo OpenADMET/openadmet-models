@@ -17,7 +17,7 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
-from openadmet.models.features import PairwiseFeaturizer
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 def _safe_to_numpy(X):
