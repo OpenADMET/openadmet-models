@@ -759,10 +759,6 @@ class AnvilSpecification(BaseModel):
             if self.procedure.ensemble
             else {}
         )
-        feat_kwargs = {
-            "type": self.procedure.feat.type,
-            "params": self.procedure.feat.params,
-        }
 
         return driver(
             metadata=self.metadata,
@@ -780,7 +776,6 @@ class AnvilSpecification(BaseModel):
             evals=[eval.to_class() for eval in self.report.eval],
             model_kwargs=model_kwargs,
             ensemble_kwargs=ensemble_kwargs,
-            feat_kwargs=feat_kwargs,
         )
 
     def run(

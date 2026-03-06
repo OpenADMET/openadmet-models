@@ -50,8 +50,6 @@ class AnvilWorkflowBase(BaseModel):
         Runtime model settings from the specification domain.
     ensemble_kwargs : dict
         Runtime ensemble settings from the specification domain.
-    feat_kwargs : dict
-        Runtime feature settings from the specification domain.
     debug : bool
         Whether to run in debug mode.
 
@@ -68,7 +66,6 @@ class AnvilWorkflowBase(BaseModel):
     evals: list[EvalBase]
     model_kwargs: dict = Field(default_factory=dict)
     ensemble_kwargs: dict = Field(default_factory=dict)
-    feat_kwargs: dict = Field(default_factory=dict)
     debug: bool = False
     resolved_output_dir: Path | None = None
 
