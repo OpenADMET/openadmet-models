@@ -464,9 +464,6 @@ class FeatureSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "feat"
-    type: str | None = None
-    params: dict = Field(default_factory=dict)
-
 
 class ModelSpec(AnvilSection):
     """
