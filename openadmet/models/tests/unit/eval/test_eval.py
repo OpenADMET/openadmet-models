@@ -11,6 +11,7 @@ from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.eval.regression import (
     RegressionMetrics,
     RegressionPlots,
+    pct_within_1_log_unit,
     relative_absolute_error,
 )
 
@@ -33,14 +34,22 @@ def test_regression_metrics():
     assert metrics["task_0"]["r2"]["value"] == 0.9486081370449679
 
 
-def test_regression_metrics_and_cv_include_rae_and_pct_within_1_log():
+def test_regression_metrics_and_cv_include_rae_and_pct_within_1_log_for_pxc50():
     rm = RegressionMetrics()
     cv = SKLearnRepeatedKFoldCrossValidation()
 
     assert "rae" in rm.metric_names
-    assert "pct_within_1_log" in rm.metric_names
+    assert "pct_within_1_log" not in rm.metric_names
     assert "rae" in cv.metric_names
-    assert "pct_within_1_log" in cv.metric_names
+    assert "pct_within_1_log" not in cv.metric_names
+
+    rm_pxc50 = RegressionMetrics(pXC50=True)
+    cv_pxc50 = SKLearnRepeatedKFoldCrossValidation(pXC50=True)
+
+    assert "rae" in rm_pxc50.metric_names
+    assert "pct_within_1_log" in rm_pxc50.metric_names
+    assert "rae" in cv_pxc50.metric_names
+    assert "pct_within_1_log" in cv_pxc50.metric_names
 
 
 def test_relative_absolute_error_formula():
@@ -55,6 +64,16 @@ def test_relative_absolute_error_denominator_zero():
     y_pred = np.array([1.0, 2.0, 3.0])
 
     assert relative_absolute_error(y_true, y_pred) == 0.0
+
+
+def test_pct_within_1_log_unit_requires_pxc50():
+    y_true = np.array([6.0, 7.0, 8.0])
+    y_pred = np.array([6.5, 7.2, 9.5])
+
+    with pytest.raises(ValueError, match="pXC50=True"):
+        pct_within_1_log_unit(y_true, y_pred)
+
+    assert pct_within_1_log_unit(y_true, y_pred, pXC50=True) == pytest.approx(2 / 3)
 
 
 def test_cv_rae_scorer_is_minimization():
