@@ -6,7 +6,10 @@ from openadmet.models.eval.classification import (
     ClassificationMetrics,
     ClassificationPlots,
 )
-from openadmet.models.eval.cross_validation import SKLearnRepeatedKFoldCrossValidation
+from openadmet.models.eval.cross_validation import (
+    PytorchLightningRepeatedKFoldCrossValidation,
+    SKLearnRepeatedKFoldCrossValidation,
+)
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.eval.regression import (
     RegressionMetrics,
@@ -81,6 +84,16 @@ def test_cv_rae_scorer_is_minimization():
     rae_scorer, _, _ = cv._metrics["rae"]
 
     assert rae_scorer._sign == -1
+
+
+def test_lightning_cv_pct_within_1_log_uses_raw_metric_callable():
+    cv = PytorchLightningRepeatedKFoldCrossValidation(pXC50=True)
+    pct_within_1_log, _, _ = cv.active_metrics["pct_within_1_log"]
+
+    y_true = np.array([6.0, 7.0, 8.0])
+    y_pred = np.array([6.5, 7.2, 9.5])
+
+    assert pct_within_1_log(y_true, y_pred) == pytest.approx(2 / 3)
 
 
 def test_regression_plots():

@@ -1,6 +1,7 @@
 """Cross-validation evaluators for regression models."""
 
 import json
+from functools import partial
 from collections import defaultdict
 from typing import Any, ClassVar
 import pandas as pd
@@ -509,6 +510,18 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
+
+    @property
+    def active_metrics(self):
+        """Return metrics applicable to Lightning CV using raw metric callables."""
+        metrics = dict(self._metrics)
+        if self.pXC50:
+            metrics["pct_within_1_log"] = (
+                partial(pct_within_1_log_unit, pXC50=True),
+                False,
+                "Fraction within ±1 log",
+            )
+        return metrics
 
     def evaluate(
         self,
