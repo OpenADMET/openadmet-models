@@ -155,9 +155,9 @@ class ClusterSplitter(SplitterBase):
         )
 
         if (
-            self.train_size != len(X_train) / total_elements
-            or self.val_size != len(X_val) / total_elements
-            or self.test_size != len(X_test) / total_elements
+            (X_train is not None and self.train_size != len(X_train) / total_elements)
+            or (X_val is not None and self.val_size != len(X_val) / total_elements)
+            or (X_test is not None and self.test_size != len(X_test) / total_elements)
         ):
             logging.warning(
                 f"Train/val/test sizes DO NOT match input requests due to cluster sizes: Train: {len(X_train) / total_elements}, Val: {len(X_val) / total_elements}, Test: {len(X_test) / total_elements}"
