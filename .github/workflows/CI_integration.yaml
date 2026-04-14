@@ -36,10 +36,11 @@ jobs:
           ulimit -a
 
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/openadmet-models.yaml
           environment-name: openadmet-models
+          cache-environment: true
           condarc: |
             channels:
               - conda-forge
