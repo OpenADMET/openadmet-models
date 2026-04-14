@@ -6,6 +6,7 @@ channels:
 dependencies:
     # Base depends
   - ase
+  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
@@ -22,12 +23,11 @@ dependencies:
   - matplotlib
   - mdanalysis
   - modal
-  - molfeat
   - mordredcommunity
   - numpy
   - pandas
   - pip
-  - python >= 3.12
+  - python >= 3.12,<3.14
   - pytorch
   - pytorch-lightning
   - pytorch_cluster
@@ -61,6 +61,8 @@ dependencies:
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
+    - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
+    - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main
