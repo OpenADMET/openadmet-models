@@ -32,6 +32,11 @@ procedure:
     params:
       messages: bond
       n_tasks: 1
+      mpnn_lr: 1.0e-4
+      ffn_lr: 1.0e-4
+      mpnn_weight_decay: 0.0
+      ffn_weight_decay: 0.0
+      scheduler: "noam"
 
   split:
     type: ShuffleSplitter

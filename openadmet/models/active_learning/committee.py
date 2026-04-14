@@ -259,6 +259,7 @@ class CommitteeRegressor(EnsembleBase):
         mod_class: ModelBase = None,
         mod_params: dict = {},
         n_models: int = 1,
+        use_bagging: bool = True,
     ):
         """
         Train committee regressor members on bootstrapped data subsets.
@@ -275,6 +276,9 @@ class CommitteeRegressor(EnsembleBase):
             The parameters to pass to the model.
         n_models : int
             The number of models in the committee, by default 1.
+        use_bagging : bool
+            Whether to use bagging (bootstrap aggregation) for training models.
+            If False, models are trained on the full dataset.
 
         Returns
         -------
@@ -289,15 +293,30 @@ class CommitteeRegressor(EnsembleBase):
         # Initialize set of models
         models = []
         for i in range(n_models):
+            # Update random state if present
+            current_mod_params = mod_params.copy()
+            if (
+                "random_state" in current_mod_params
+                and current_mod_params["random_state"] is not None
+            ):
+                current_mod_params["random_state"] += i
+
             # Initialize model
-            model = mod_class(**mod_params)
+            model = mod_class(**current_mod_params)
             model.build()
 
-            # Bootstrap the data
-            bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
+            if use_bagging:
+                # Bootstrap the data
+                bootstrap_idx = np.random.choice(
+                    X.shape[0], size=X.shape[0], replace=True
+                )
 
-            # Train the model on the bootstrapped data
-            model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
+                # Train the model on the bootstrapped data
+                model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
+
+            else:
+                # Train the model on the full data
+                model.train(X, y)
 
             # Add to list
             models.append(model)

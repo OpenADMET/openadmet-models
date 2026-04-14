@@ -11,6 +11,7 @@ from openadmet.models.active_learning.committee import (
     CommitteeRegressor,
 )
 from openadmet.models.architecture.lgbm import LGBMRegressorModel
+from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.inference.inference import load_anvil_model_and_metadata
 from openadmet.models.split.sklearn import ShuffleSplitter
 from openadmet.models.tests.unit.datafiles import (
@@ -105,6 +106,110 @@ def toy_data():
     )
 
     return X_train, X_val, X_test, y_train, y_val, y_test
+
+
+class MockCommitteeModel(ModelBase):
+    """
+    Mock model for testing CommitteeRegressor.
+    Tracks random_state and training data shape.
+    """
+
+    random_state: int | None = None
+    _trained_data_shape: tuple | None = None
+    _trained_unique_samples: int | None = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def build(self):
+        pass
+
+    def train(self, X, y):
+        self._trained_data_shape = X.shape
+        # Count unique samples to detect bagging (duplicates)
+        # Using simple row hashing for uniqueness check
+        if X.ndim > 1:
+            X_view = np.ascontiguousarray(X).view(
+                np.dtype((np.void, X.dtype.itemsize * X.shape[1]))
+            )
+            self._trained_unique_samples = len(np.unique(X_view))
+        else:
+            self._trained_unique_samples = len(np.unique(X))
+
+    def predict(self, input: np.ndarray, **kwargs):
+        # Return dummy predictions
+        n_samples = input.shape[0]
+        # Return (n_samples, 1) to match regression output shape
+        return np.zeros((n_samples, 1))
+
+    def save(self, path):
+        pass
+
+    def load(self, path):
+        pass
+
+    def serialize(self, param_path, serial_path):
+        pass
+
+    def deserialize(self, param_path, serial_path):
+        pass
+
+
+def test_committee_bagging_logic(toy_data):
+    """Test that use_bagging flag correctly controls bootstrap aggregation."""
+    X_train, _, _, y_train, _, _ = toy_data
+    n_samples = X_train.shape[0]
+
+    # Test use_bagging=True (Default)
+    committee = CommitteeRegressor.train(
+        X_train,
+        y_train,
+        mod_class=MockCommitteeModel,
+        mod_params={"random_state": 42},
+        n_models=3,
+        use_bagging=True,
+    )
+
+    for i, model in enumerate(committee.models):
+        # Verify random_state increment
+        assert model.random_state == 42 + i
+
+        # Verify bagging occurred:
+        # With replacement sampling, unique samples should be approx ~63.2% of total
+        # Definitely should be less than total n_samples for large N
+        assert model._trained_unique_samples < n_samples
+        assert model._trained_data_shape[0] == n_samples
+
+    # Test use_bagging=False
+    committee_nb = CommitteeRegressor.train(
+        X_train,
+        y_train,
+        mod_class=MockCommitteeModel,
+        mod_params={"random_state": 10},
+        n_models=2,
+        use_bagging=False,
+    )
+
+    for i, model in enumerate(committee_nb.models):
+        # Verify random_state increment
+        assert model.random_state == 10 + i
+
+        # Verify NO bagging occurred:
+        # Unique samples should equal total samples (training on full set)
+        assert model._trained_unique_samples == n_samples
+        assert model._trained_data_shape[0] == n_samples
+
+    # Test random_state=None (should handle gracefully)
+    committee_none = CommitteeRegressor.train(
+        X_train,
+        y_train,
+        mod_class=MockCommitteeModel,
+        mod_params={"random_state": None},
+        n_models=2,
+    )
+
+    for model in committee_none.models:
+        assert model.random_state is None
 
 
 @pytest.mark.parametrize(
