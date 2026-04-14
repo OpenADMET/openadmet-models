@@ -50,11 +50,11 @@ def relative_absolute_error(y_true, y_pred):
     numerator = np.sum(np.abs(y_true - y_pred))
     denominator = np.sum(np.abs(y_true - np.mean(y_true)))
     if denominator == 0:
-        return 0.0
+        return np.nan
     return numerator / denominator
 
 
-def pct_within_1_log_unit(y_true, y_pred, pXC50=False):
+def pct_within_1_log_unit(y_true, y_pred):
     """
     Compute the fraction of predictions within +/-1 log unit of the true value.
 
@@ -64,8 +64,6 @@ def pct_within_1_log_unit(y_true, y_pred, pXC50=False):
         True values (assumed to be on a log scale, e.g. pXC50).
     y_pred : array-like
         Predicted values.
-    pXC50 : bool, optional
-        Whether the target is in pXC50/log units.
 
     Returns
     -------
@@ -73,9 +71,6 @@ def pct_within_1_log_unit(y_true, y_pred, pXC50=False):
         Fraction (0-1) of predictions within 1 log unit.
 
     """
-    if not pXC50:
-        raise ValueError("pct_within_1_log_unit is only valid when pXC50=True")
-
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     return np.mean(np.abs(y_true - y_pred) <= 1.0)
@@ -124,7 +119,7 @@ class RegressionMetrics(EvalBase):
         metrics = dict(self._metrics)
         if self.pXC50:
             metrics["pct_within_1_log"] = (
-                partial(pct_within_1_log_unit, pXC50=True),
+                pct_within_1_log_unit,
                 False,
                 "Fraction within ±1 log",
             )

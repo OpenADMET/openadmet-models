@@ -151,7 +151,7 @@ class CrossValidationBase(EvalBase):
         metrics = dict(self._metrics)
         if self.pXC50:
             metrics["pct_within_1_log"] = (
-                make_scorer(pct_within_1_log_unit, pXC50=True),
+                make_scorer(pct_within_1_log_unit),
                 False,
                 "Fraction within ±1 log",
             )
@@ -517,7 +517,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         metrics = dict(self._metrics)
         if self.pXC50:
             metrics["pct_within_1_log"] = (
-                partial(pct_within_1_log_unit, pXC50=True),
+                pct_within_1_log_unit,
                 False,
                 "Fraction within ±1 log",
             )

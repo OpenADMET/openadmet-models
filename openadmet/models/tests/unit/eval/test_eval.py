@@ -66,17 +66,14 @@ def test_relative_absolute_error_denominator_zero():
     y_true = np.array([2.0, 2.0, 2.0])
     y_pred = np.array([1.0, 2.0, 3.0])
 
-    assert relative_absolute_error(y_true, y_pred) == 0.0
+    assert np.isnan(relative_absolute_error(y_true, y_pred))
 
 
-def test_pct_within_1_log_unit_requires_pxc50():
+def test_pct_within_1_log_unit():
     y_true = np.array([6.0, 7.0, 8.0])
     y_pred = np.array([6.5, 7.2, 9.5])
 
-    with pytest.raises(ValueError, match="pXC50=True"):
-        pct_within_1_log_unit(y_true, y_pred)
-
-    assert pct_within_1_log_unit(y_true, y_pred, pXC50=True) == pytest.approx(2 / 3)
+    assert pct_within_1_log_unit(y_true, y_pred) == pytest.approx(2 / 3)
 
 
 def test_cv_rae_scorer_is_minimization():
