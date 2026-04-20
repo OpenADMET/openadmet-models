@@ -234,8 +234,6 @@ while traditional machine learning models return a a 2D ``NumPy`` array or ``pan
     - Description
   * - :doc:`ChemPropFeaturizer </_api/api/featurization/chemprop>`
     - Converts SMILES strings into a ChemProp compatible PyTorch DataLoader.
-  * - :doc:`MTENNFeaturizer </_api/api/featurization/mtenn>`
-    - Creates masked PDB features suitable for downstream use in MTENN models, uses a PyTorch DataLoader.
   * - :doc:`DescriptorFeaturizer </_api/api/featurization/descriptors>`
     - Uses the  `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular descriptors.
   * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
@@ -314,8 +312,6 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - TabPFN classification model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
   * - :doc:`TabPFNPostHocRegressorModel </_api/api/model_architectures/tabpfn>`
     - TabPFN regression model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
-  * - :doc:`MTENNSchNetModel </_api/api/model_architectures/mtenn>`
-    - Modular Training and Evaluation of Neural Networks (`MTENN <https://github.com/choderalab/mtenn>`_) `SchNet <https://github.com/atomistic-machine-learning/SchNet>`_ implementation.
   * - :doc:`DummyClassifierModel </_api/api/model_architectures/dummy>`
     - scikit-learn `Dummy Classifier <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html#sklearn.dummy.DummyClassifier>`_ for baseline comparisons.
   * - :doc:`DummyRegressorModel </_api/api/model_architectures/dummy>`

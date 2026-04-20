@@ -50,7 +50,6 @@ dependencies:
   - zarr >=3.0.0
   - pip:
     - email-validator
-    - git+https://github.com/OpenADMET/mtenn.git@main
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
