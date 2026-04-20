@@ -155,6 +155,39 @@ class MockCommitteeModel(ModelBase):
         pass
 
 
+def test_return_members(toy_data):
+    """Test that return_members exposes per-member predictions with correct shape."""
+    X_train, _, X_test, y_train, _, _ = toy_data
+    n_members = 4
+    n_tasks = 1
+
+    committee = CommitteeRegressor.train(
+        X_train,
+        y_train,
+        mod_class=MockCommitteeModel,
+        mod_params={},
+        n_models=n_members,
+        use_bagging=False,
+    )
+
+    # return_members only
+    mean, members = committee.predict(X_test, return_members=True)
+    assert members.shape == (X_test.shape[0], n_tasks, n_members)
+    assert mean.shape == (X_test.shape[0], n_tasks)
+    assert_allclose(mean, np.mean(members, axis=-1))
+
+    # return_members + return_std
+    mean2, std, members2 = committee.predict(X_test, return_std=True, return_members=True)
+    assert members2.shape == (X_test.shape[0], n_tasks, n_members)
+    assert std.shape == (X_test.shape[0], n_tasks)
+    assert_allclose(mean2, np.mean(members2, axis=-1))
+    assert_allclose(std, np.std(members2, axis=-1))
+
+    # Neither flag — plain mean returned (not a tuple)
+    result = committee.predict(X_test)
+    assert isinstance(result, np.ndarray)
+
+
 def test_committee_bagging_logic(toy_data):
     """Test that use_bagging flag correctly controls bootstrap aggregation."""
     X_train, _, _, y_train, _, _ = toy_data
