@@ -177,7 +177,9 @@ def test_return_members(toy_data):
     assert_allclose(mean, np.mean(members, axis=-1))
 
     # return_members + return_std
-    mean2, std, members2 = committee.predict(X_test, return_std=True, return_members=True)
+    mean2, std, members2 = committee.predict(
+        X_test, return_std=True, return_members=True
+    )
     assert members2.shape == (X_test.shape[0], n_tasks, n_members)
     assert std.shape == (X_test.shape[0], n_tasks)
     assert_allclose(mean2, np.mean(members2, axis=-1))
