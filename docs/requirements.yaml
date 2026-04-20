@@ -4,50 +4,29 @@ channels:
   - defaults
 
 dependencies:
-    # Base depends
-  - ase
-  - boto3
   - catboost
-  - chemprop >= 2.1.1
-  - codecov
   - datamol
-  - e3nn
-  - h5py
+  - fsspec
   - hyperopt
   - intake
   - intake-parquet
   - joblib
-  - jupyterlab
   - lightgbm
   - loguru
-  - matplotlib
-  - mdanalysis
-  - modal
   - mordredcommunity
   - numpy
   - pandas
   - pip
   - python >= 3.12,<3.14
-  - pytorch
-  - pytorch-lightning
-  - pytorch_cluster
-  - pytorch_geometric
-  - pytorch_scatter
-  - pytorch_sparse
-  - pytest
-  - pytest-cov
-  - pytest-xdist
   - rdkit
   - rich
   - scikit-learn
+  - scipy
   - seaborn
   - splito
   - statsmodels
-  # - tabpfn
   - tabulate
-  - umap-learn
   - uncertainty-toolbox
-  - wandb
   - xgboost
   - zarr >=3.0.0
 
@@ -58,10 +37,6 @@ dependencies:
   - pip:
     - email-validator
     - phx-class-registry
-    - tabpfn-extensions
-    - git+https://github.com/PriorLabs/TabPFN.git@main
-    - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
-    - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main
