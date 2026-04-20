@@ -62,6 +62,7 @@ autodoc_mock_imports = [
     "tabpfn",
     "tabpfn_extensions",
     "MDAnalysis",
+    "molfeat",
     "wandb",
     "modal",
     "e3nn",

@@ -37,7 +37,6 @@ dependencies:
   - pip:
     - email-validator
     - phx-class-registry
-    - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main
