@@ -581,7 +581,7 @@ class ChemPropModel(LightningModelBase):
 
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None,
+                logger=False,
                 enable_progress_bar=False,
                 accelerator=accelerator,
                 devices=devices,
