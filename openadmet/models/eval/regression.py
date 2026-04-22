@@ -24,6 +24,58 @@ nan_omit_ktau = partial(kendalltau, nan_policy="omit")
 nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 
+def relative_absolute_error(y_true, y_pred):
+    """
+    Compute Relative Absolute Error (RAE).
+
+    RAE = sum(|y_true - y_pred|) / sum(|y_true - mean(y_true)|).
+    Lower is better; RAE < 1.0 means the model outperforms a naive
+    mean predictor.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values.
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Relative absolute error.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    numerator = np.sum(np.abs(y_true - y_pred))
+    denominator = np.sum(np.abs(y_true - np.mean(y_true)))
+    if denominator == 0:
+        return np.nan
+    return numerator / denominator
+
+
+def pct_within_1_log_unit(y_true, y_pred):
+    """
+    Compute the fraction of predictions within +/-1 log unit of the true value.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values (assumed to be on a log scale, e.g. pXC50).
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Fraction (0-1) of predictions within 1 log unit.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return np.mean(np.abs(y_true - y_pred) <= 1.0)
+
+
 @evaluators.register("RegressionMetrics")
 class RegressionMetrics(EvalBase):
     """
@@ -46,6 +98,10 @@ class RegressionMetrics(EvalBase):
         0.95, description="Confidence level for the bootstrap"
     )
     use_wandb: bool = Field(False, description="Whether to use wandb")
+    pXC50: bool = Field(
+        False,
+        description="Whether targets are in pXC50/log units for log-based metrics",
+    )
     _evaluated: bool = False
 
     _metrics: dict = {
@@ -54,7 +110,20 @@ class RegressionMetrics(EvalBase):
         "r2": (r2_score, False, "$R^2$"),
         "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
+        "rae": (relative_absolute_error, False, "RAE"),
     }
+
+    @property
+    def active_metrics(self):
+        """Return metrics applicable to the current target scale."""
+        metrics = dict(self._metrics)
+        if self.pXC50:
+            metrics["pct_within_1_log"] = (
+                pct_within_1_log_unit,
+                False,
+                "Fraction within ±1 log",
+            )
+        return metrics
 
     def evaluate(
         self,
@@ -118,7 +187,7 @@ class RegressionMetrics(EvalBase):
 
             self.data[t_label] = {}
 
-            for metric_tag, (metric, is_scipy, _) in self._metrics.items():
+            for metric_tag, (metric, is_scipy, _) in self.active_metrics.items():
                 value, lower_ci, upper_ci = self.stat_and_bootstrap(
                     metric_tag,
                     t_pred,
@@ -172,7 +241,7 @@ class RegressionMetrics(EvalBase):
             List of metric names.
 
         """
-        return list(self._metrics.keys())
+        return list(self.active_metrics.keys())
 
     @property
     def task_names(self):
@@ -254,7 +323,7 @@ class RegressionMetrics(EvalBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.bootstrap_confidence_level,
             cv=False,
         )

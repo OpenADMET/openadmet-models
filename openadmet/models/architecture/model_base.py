@@ -379,7 +379,7 @@ class LightningModelBase(ModelBase):
             Path to load the model from
 
         """
-        self.estimator.load_state_dict(torch.load(path))
+        self.estimator.load_state_dict(torch.load(path, weights_only=True))
 
     def serialize(
         self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pth"

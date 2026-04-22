@@ -1,6 +1,7 @@
 """Cross-validation evaluators for regression models."""
 
 import json
+from functools import partial
 from collections import defaultdict
 from typing import Any, ClassVar
 import pandas as pd
@@ -21,6 +22,8 @@ from openadmet.models.eval.regression import (
     RegressionPlots,
     nan_omit_ktau,
     nan_omit_spearmanr,
+    pct_within_1_log_unit,
+    relative_absolute_error,
 )
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
@@ -133,9 +136,26 @@ class CrossValidationBase(EvalBase):
         "r2": (make_scorer(r2_score), False, "$R^2$"),
         "ktau": (make_scorer(wrap_ktau), True, "Kendall's $\\tau$"),
         "spearmanr": (make_scorer(wrap_spearmanr), True, "Spearman's $\\rho$"),
+        "rae": (
+            make_scorer(relative_absolute_error, greater_is_better=False),
+            False,
+            "RAE",
+        ),
     }
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
+
+    @property
+    def active_metrics(self):
+        """Return metrics applicable to the current target scale."""
+        metrics = dict(self._metrics)
+        if self.pXC50:
+            metrics["pct_within_1_log"] = (
+                make_scorer(pct_within_1_log_unit),
+                False,
+                "Fraction within ±1 log",
+            )
+        return metrics
 
     @property
     def metric_names(self):
@@ -148,7 +168,7 @@ class CrossValidationBase(EvalBase):
             List of metric names.
 
         """
-        return list(self._metrics.keys())
+        return list(self.active_metrics.keys())
 
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
@@ -238,7 +258,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             y_true = y_true.to_numpy()
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
-        self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
+        self.sklearn_metrics = {k: v[0] for k, v in self.active_metrics.items()}
 
         logger.info("Starting cross-validation")
 
@@ -354,7 +374,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.confidence_level,
             cv=True,
         )
@@ -382,7 +402,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.confidence_level,
             cv=True,
         )
@@ -484,11 +504,24 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         "r2": (r2_score, False, "$R^2$"),
         "ktau": (wrap_ktau, True, "Kendall's $\\tau$"),
         "spearmanr": (wrap_spearmanr, True, "Spearman's $\\rho$"),
+        "rae": (relative_absolute_error, False, "RAE"),
     }
 
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
+
+    @property
+    def active_metrics(self):
+        """Return metrics applicable to Lightning CV using raw metric callables."""
+        metrics = dict(self._metrics)
+        if self.pXC50:
+            metrics["pct_within_1_log"] = (
+                pct_within_1_log_unit,
+                False,
+                "Fraction within ±1 log",
+            )
+        return metrics
 
     def evaluate(
         self,
@@ -573,7 +606,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             self.use_wandb = use_wandb
 
         # store the metric names and callables in dict suitable for sklearn cross_validate
-        self.sklearn_metrics = {k: v[0] for k, v in self._metrics.items()}
+        self.sklearn_metrics = {k: v[0] for k, v in self.active_metrics.items()}
 
         if groups is None:
             groups = np.array([i for i in range(X_all.shape[0])])
@@ -662,7 +695,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 )
                 t_label = target_labels[task_id]
 
-                for metric_name, metric_data in self._metrics.items():
+                for metric_name, metric_data in self.active_metrics.items():
                     metric_func, is_scipy_metric, _ = metric_data
                     value = metric_func(t_true, t_pred)
                     self._metric_data[t_label][metric_name].append(value)
@@ -798,7 +831,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.confidence_level,
             cv=True,
         )
@@ -822,7 +855,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.confidence_level,
             cv=True,
         )

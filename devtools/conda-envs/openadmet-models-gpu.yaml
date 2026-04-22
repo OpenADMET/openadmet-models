@@ -25,7 +25,7 @@ dependencies:
   - numpy
   - pandas
   - pip
-  - python >= 3.12
+  - python >= 3.12,<3.14
   - pytorch-gpu
   - pytorch-lightning
   - pytorch_cluster
