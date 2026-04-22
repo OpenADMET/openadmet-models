@@ -60,4 +60,3 @@ dependencies:
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - setuptools <82.0.0
     - wandb
-
