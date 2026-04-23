@@ -1,7 +1,6 @@
 name: openadmet-models
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - ase
   - boto3
@@ -9,7 +8,6 @@ dependencies:
   - chemprop >= 2.1.1
   - codecov
   - datamol
-  - e3nn
   - h5py
   - hyperopt
   - intake
@@ -28,10 +26,6 @@ dependencies:
   - python >= 3.12,<3.14
   - pytorch-gpu
   - pytorch-lightning
-  - pytorch_cluster
-  - pytorch_geometric
-  - pytorch_scatter
-  - pytorch_sparse
   - pytest
   - pytest-mock
   - pytest-cov
@@ -48,10 +42,8 @@ dependencies:
   - uncertainty-toolbox
   - xgboost
   - zarr >=3.0.0
-  - cudatoolkit
   - pip:
     - email-validator
-    - git+https://github.com/OpenADMET/mtenn.git@main
     - phx-class-registry
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
