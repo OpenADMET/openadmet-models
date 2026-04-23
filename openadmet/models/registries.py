@@ -13,7 +13,6 @@ from openadmet.models.architecture.catboost import *  # noqa: F401 F403
 from openadmet.models.architecture.chemprop import *  # noqa: F401 F403  # noqa: F401 F403
 from openadmet.models.architecture.dummy import *  # noqa: F401 F403
 from openadmet.models.architecture.lgbm import *  # noqa: F401 F403  # noqa: F401 F403
-from openadmet.models.architecture.mtenn import *  # noqa: F401 F403
 from openadmet.models.architecture.nepare import *  # noqa: F401 F403
 from openadmet.models.architecture.rf import *  # noqa: F401 F403
 from openadmet.models.architecture.svm import *  # noqa: F401 F403
@@ -33,7 +32,6 @@ from openadmet.models.features.chemprop import *  # noqa: F401 F403
 from openadmet.models.features.combine import *  # noqa: F401 F403
 from openadmet.models.features.molfeat_fingerprint import *  # noqa: F401 F403
 from openadmet.models.features.molfeat_properties import *  # noqa: F401 F403
-from openadmet.models.features.mtenn import *  # noqa: F401 F403
 from openadmet.models.features.feature_base import featurizers  # noqa: F401 F403
 
 # util

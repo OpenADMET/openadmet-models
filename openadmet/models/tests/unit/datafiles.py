@@ -44,7 +44,6 @@ cyp3a4_json = (_data_ref / "cross_validation_metrics_3a4.json").as_posix()
 cyp1a2_json = (_data_ref / "cross_validation_metrics_1a2.json").as_posix()
 multi_task_json = _data_ref / "cross_validation_metrics_multitask.json"
 
-# ligand pose for reading and featurizing in MTENN
 ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()
 
 

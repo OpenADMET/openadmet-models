@@ -10,5 +10,4 @@ Featurizers for input data for anvil models.
    feature_combiner
    fingerprints
    descriptors
-   mtenn
    feature_base
