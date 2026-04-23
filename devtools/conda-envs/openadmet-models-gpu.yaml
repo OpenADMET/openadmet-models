@@ -46,6 +46,7 @@ dependencies:
   - tabulate
   - umap-learn
   - uncertainty-toolbox
+  - protobuf >= 6.32.1
   - wandb
   - xgboost
   - zarr >=3.0.0
