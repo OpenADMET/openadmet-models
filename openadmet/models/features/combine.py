@@ -106,23 +106,22 @@ class FeatureConcatenator(FeaturizerBase):
             Tuple of (concatenated feature array, common indices).
 
         """
-        # if the input arrays are 1d, make them 2d
+        # If the input arrays are 1d, make them 2d
         feats = [
             feat.reshape(1, -1) if len(feat.shape) == 1 else feat for feat in feats
         ]
 
-        # use indices to mask out the features that are not present in all datasets
+        # Use indices to mask out the features that are not present in all datasets
         common_indices = reduce(np.intersect1d, indices)
 
-        # filter features to only include common indices
+        # Filter features to only include common indices
         filtered_feats = []
         for feat, idx in zip(feats, indices):
-            # find where common_indices are in idx
+            # Find where common_indices are in idx
             mask = np.isin(idx, common_indices)
             filtered_feats.append(feat[mask])
 
-        # handle 1d features from single input by making them 2d
-        # concatenate the features column wise
+        # Handle 1d features from single input by making them 2, concatenate column wise
         concat_feats = np.concatenate(filtered_feats, axis=1)
         return (
             concat_feats,
