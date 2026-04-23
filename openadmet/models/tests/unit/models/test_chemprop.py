@@ -3,7 +3,6 @@ import pytest
 import torch
 
 from openadmet.models.architecture.chemprop import ChemPropModel
-from openadmet.models.tests.unit.datafiles import foundation_weights
 
 
 def test_chemprop_hyperparameters_overrides():
@@ -257,27 +256,55 @@ def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
         ChemPropModel(from_chemeleon=True, from_foundation="custom_model")
 
 
-def test_chemprop_load_weights():
+def test_chemprop_load_weights(tmp_path):
     """Test that load_weights correctly loads state dict."""
-
-    # Load weights
-    model = ChemPropModel(from_foundation=foundation_weights)
+    
+    # Create a ChemProp model and save it to a temporary file
+    source_model = ChemPropModel(
+        depth=3,
+        message_hidden_dim=300,
+        ffn_hidden_dim=200,
+        dropout=0.1
+    )
+    source_model.build()
+    
+    # Save the model in foundation format
+    temp_weights_path = tmp_path / "test_foundation.pt"
+    foundation_data = {
+        "hyper_parameters": {
+            'd_h': source_model.message_hidden_dim,
+            'depth': source_model.depth,
+            'dropout': source_model.dropout,
+            'bias': False,
+            'activation': 'relu',
+            'undirected': False,
+            'd_v': 72,
+            'd_e': 14,
+            'd_vd': None,
+            'V_d_transform': None,
+            'graph_transform': None
+        },
+        "aggregation": {},  # MeanAggregation expects empty dict
+        "state_dict": {}
+    }
+    
+    # Extract the message passing weights
+    mp_state_dict = source_model.estimator.message_passing.state_dict()
+    for key in mp_state_dict:
+        # Map from full state dict keys to foundation format keys
+        if key.endswith('.weight') or key.endswith('.bias'):
+            foundation_data["state_dict"][key] = mp_state_dict[key]
+    
+    torch.save(foundation_data, str(temp_weights_path))
+    
+    # Now test loading weights from the temporary file
+    model = ChemPropModel(from_foundation=str(temp_weights_path))
     model.build()
 
-    weights = torch.load(foundation_weights)
-    assert torch.all(
-        model.estimator.state_dict()["message_passing.W_i.weight"]
-        == weights["state_dict"]["W_i.weight"]
-    )
-    assert torch.all(
-        model.estimator.state_dict()["message_passing.W_o.weight"]
-        == weights["state_dict"]["W_o.weight"]
-    )
-    assert torch.all(
-        model.estimator.state_dict()["message_passing.W_h.weight"]
-        == weights["state_dict"]["W_h.weight"]
-    )
-    assert torch.all(
-        model.estimator.state_dict()["message_passing.W_o.bias"]
-        == weights["state_dict"]["W_o.bias"]
-    )
+    # Verify that the weights were loaded correctly
+    loaded_weights = torch.load(str(temp_weights_path))
+    for key in loaded_weights["state_dict"]:
+        assert torch.all(
+            model.estimator.state_dict()[f"message_passing.{key}"]
+            == loaded_weights["state_dict"][key]
+        )

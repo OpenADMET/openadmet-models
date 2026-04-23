@@ -54,6 +54,3 @@ anvil_chemprop_trained_model_dir = (
 ).as_posix()
 # test data for prediction
 pred_test_data_csv = (_data_ref / "ligands.csv").as_posix()
-
-# foundation models
-foundation_weights = (_data_ref / "best_cp.pt").as_posix()
