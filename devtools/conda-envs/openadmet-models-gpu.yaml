@@ -1,7 +1,6 @@
 name: openadmet-models
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - ase
   - boto3
@@ -9,7 +8,6 @@ dependencies:
   - chemprop >= 2.1.1
   - codecov
   - datamol
-  - e3nn
   - h5py
   - hyperopt
   - intake
@@ -28,11 +26,8 @@ dependencies:
   - python >= 3.12,<3.14
   - pytorch-gpu
   - pytorch-lightning
-  - pytorch_cluster
-  - pytorch_geometric
-  - pytorch_scatter
-  - pytorch_sparse
   - pytest
+  - pytest-mock
   - pytest-cov
   - pytest-xdist
   - rdkit
@@ -45,10 +40,8 @@ dependencies:
   - tabulate
   - umap-learn
   - uncertainty-toolbox
-  - wandb
   - xgboost
   - zarr >=3.0.0
-  - cudatoolkit
   - pip:
     - email-validator
     - phx-class-registry
@@ -58,3 +51,4 @@ dependencies:
     - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - setuptools <82.0.0
+    - wandb < 0.26.0
