@@ -463,7 +463,7 @@ class ChemPropModel(LightningModelBase):
                 mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
-                    "Using foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
+                    "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
                 )
             else:
                 aggregation_cls = (
