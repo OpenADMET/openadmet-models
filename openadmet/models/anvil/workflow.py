@@ -207,8 +207,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -664,8 +664,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
