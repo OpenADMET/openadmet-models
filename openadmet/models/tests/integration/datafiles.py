@@ -68,8 +68,6 @@ chemprop_ST = (_data_ref / "chemprop_ST.yaml").as_posix()
 chemeleon_MT = (_data_ref / "chemeleon_MT.yaml").as_posix()
 # TabPFN with multitask and cross-validation
 tabpfn = (_data_ref / "tabpfn.yaml").as_posix()
-# MTENN anvil
-mtenn_anvil = (_data_ref / "mtenn_anvil.yaml").as_posix()
 # Chemeleon ensemble
 chemeleon_MT_ensemble = (_data_ref / "chemeleon_MT_ensemble.yaml").as_posix()
 
