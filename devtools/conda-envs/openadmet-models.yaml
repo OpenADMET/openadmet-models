@@ -46,7 +46,6 @@ dependencies:
   - tabulate
   - umap-learn
   - uncertainty-toolbox
-  - wandb < 0.26.0
   - xgboost
   - zarr >=3.0.0
   - pip:
@@ -59,3 +58,4 @@ dependencies:
     - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - setuptools <82.0.0
+    - wandb < 0.26.0
