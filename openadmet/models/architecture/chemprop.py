@@ -437,7 +437,9 @@ class ChemPropModel(LightningModelBase):
                     )
                 else:
                     logger.info(f"Loading foundation model from {self.from_foundation}")
-                    foundation_mp = self._load_foundation_model(Path(self.from_foundation))
+                    foundation_mp = self._load_foundation_model(
+                        Path(self.from_foundation)
+                    )
                 aggr = nn.MeanAggregation(**foundation_mp["aggregation"])
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
                 mp.load_state_dict(foundation_mp["state_dict"])
@@ -538,7 +540,7 @@ class ChemPropModel(LightningModelBase):
         else:
             logger.info(f"Loading cached CheMeleon from {model_path}")
         return torch.load(model_path, weights_only=False)
-    
+
     def _load_foundation_model(self, model_path: Path) -> dict:
         """
         Load a foundation model from the specified path.
