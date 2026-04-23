@@ -101,4 +101,4 @@ class DummyClassifierModel(DummyModelBase):
     # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
     random_state: int | None = None  # Default random state for dummy models
-    constant: int | str = None  # Default constant value for dummy models
+    constant: int | str | None = None  # Default constant value for dummy models
