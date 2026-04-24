@@ -50,7 +50,7 @@ procedure:
       learning_rate: 0.05
 
   ensemble:
-    n_models: 3
+    n_models: 2
     type: CommitteeRegressor
 
   # Specify data splits
