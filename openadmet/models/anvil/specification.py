@@ -465,6 +465,7 @@ class FeatureSpec(AnvilSection):
 
     section_name: ClassVar[str] = "feat"
 
+
 class ModelSpec(AnvilSection):
     """
     Model specification.
