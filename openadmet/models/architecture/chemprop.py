@@ -440,7 +440,7 @@ class ChemPropModel(LightningModelBase):
                     foundation_mp = self._load_foundation_model(
                         Path(self.from_foundation)
                     )
-                aggr = nn.MeanAggregation(**foundation_mp["aggregation"])
+                aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
                 mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
