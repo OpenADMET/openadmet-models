@@ -124,11 +124,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
-        # Get bagging setting
-        use_bagging = self.parent_spec.procedure.ensemble.use_bagging
-        # Get global seed
-        global_seed = self.split.random_state
-
         for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
@@ -583,12 +578,6 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
-
-        # Get bagging setting
-        use_bagging = self.parent_spec.procedure.ensemble.use_bagging
-
-        # Get global seed
-        global_seed = self.split.random_state
 
         for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
