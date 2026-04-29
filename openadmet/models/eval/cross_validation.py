@@ -1,11 +1,11 @@
 """Cross-validation evaluators for regression models."""
 
 import json
-import threading
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from collections import defaultdict
 from typing import Any, ClassVar
-from joblib import Parallel, delayed
 import pandas as pd
 import numpy as np
 from loguru import logger
@@ -543,33 +543,32 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         fold_val_dataloader,
         fold_train_scaler,
         model,
-        trainer,
+        trainer_config,
         target_labels,
         n_tasks,
         active_metrics,
+        n_jobs,
     ):
-        logger.info(f"Fold {fold} starting on thread {threading.current_thread().name}")
+        logger.info(f"Fold {fold} starting")
 
         fold_model = model.make_new()
         fold_model.build(scaler=fold_train_scaler)
 
         fold_trainer = LightningTrainer(
-            max_epochs=trainer.max_epochs,
-            accelerator=trainer.accelerator,
-            devices=trainer.devices,
+            max_epochs=trainer_config["max_epochs"],
+            accelerator=trainer_config["accelerator"],
+            devices=trainer_config["devices"],
             use_wandb=False,
-            output_dir=trainer.output_dir / "cv" / f"fold_{str(fold)}",
-            wandb_project=trainer.wandb_project,
+            output_dir=trainer_config["output_dir"] / "cv" / f"fold_{str(fold)}",
+            wandb_project=trainer_config["wandb_project"],
+            enable_progress_bar=trainer_config["enable_progress_bar"] if n_jobs == 1 else False,
+            inference_mode=trainer_config["inference_mode"],
         )
         fold_trainer.model = fold_model
         fold_trainer.build()
 
         fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
-        y_pred_fold = fold_model.predict(
-            fold_val_dataloader,
-            accelerator=trainer.accelerator,
-            devices=trainer.devices,
-        )
+        y_pred_fold = fold_model.predict(fold_val_dataloader)
 
         if not (n_tasks == y_pred_fold.shape[1]):
             raise ValueError("y_true and y_pred must have the same number of tasks")
@@ -723,21 +722,47 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 (fold, y_val, fold_train_dataloader, fold_val_dataloader, fold_train_scaler)
             )
 
+        trainer_config = {
+            "max_epochs": trainer.max_epochs,
+            "accelerator": trainer.accelerator,
+            "devices": trainer.devices,
+            "output_dir": trainer.output_dir,
+            "wandb_project": trainer.wandb_project,
+            "enable_progress_bar": trainer.enable_progress_bar,
+            "inference_mode": trainer.inference_mode,
+        }
+
         if self.n_jobs > 1 and trainer.accelerator == "gpu":
             logger.warning(
                 f"Running {self.n_jobs} CV folds in parallel on GPU. "
-                "Each fold loads a separate model — ensure sufficient VRAM."
+                "Each fold spawns its own process with an independent CUDA context — "
+                "ensure sufficient VRAM for n_jobs models simultaneously."
             )
 
-        fold_results = Parallel(n_jobs=self.n_jobs, prefer="threads")(
-            delayed(self._run_single_fold)(
-                fold, y_val, y_true, y_pred,
-                fold_train_dl, fold_val_dl, fold_train_scaler,
-                model, trainer,
-                target_labels, n_tasks, self.active_metrics,
-            )
-            for fold, y_val, fold_train_dl, fold_val_dl, fold_train_scaler in fold_inputs
-        )
+        if self.n_jobs == 1:
+            fold_results = [
+                self._run_single_fold(
+                    fold, y_val, y_true, y_pred,
+                    fold_train_dl, fold_val_dl, fold_train_scaler,
+                    model, trainer_config, target_labels, n_tasks,
+                    self.active_metrics, self.n_jobs,
+                )
+                for fold, y_val, fold_train_dl, fold_val_dl, fold_train_scaler in fold_inputs
+            ]
+        else:
+            spawn_ctx = mp.get_context("spawn")
+            with ProcessPoolExecutor(max_workers=self.n_jobs, mp_context=spawn_ctx) as pool:
+                futures = [
+                    pool.submit(
+                        PytorchLightningRepeatedKFoldCrossValidation._run_single_fold,
+                        fold, y_val, y_true, y_pred,
+                        fold_train_dl, fold_val_dl, fold_train_scaler,
+                        model, trainer_config, target_labels, n_tasks,
+                        self.active_metrics, self.n_jobs,
+                    )
+                    for fold, y_val, fold_train_dl, fold_val_dl, fold_train_scaler in fold_inputs
+                ]
+                fold_results = [f.result() for f in futures]
 
         for fold_metrics, y_val, y_pred_fold in fold_results:
             for t_label, metrics in fold_metrics.items():

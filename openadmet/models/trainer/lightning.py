@@ -79,6 +79,7 @@ class LightningTrainer(TrainerBase):
     early_stopping_patience: int = 10
     early_stopping_mode: str = "min"
     early_stopping_min_delta: float = 0.001
+    enable_progress_bar: bool = True
     gradient_clip_val: float = 0.0
     precision: int = 32
     accumulate_grad_batches: int = 1
@@ -86,6 +87,7 @@ class LightningTrainer(TrainerBase):
     fast_dev_run: bool = False
     limit_train_batches: float = 1.0
     limit_val_batches: float = 1.0
+    inference_mode: bool = False
 
     wandb_logger: Any = None
     _logger: Any
@@ -157,7 +159,7 @@ class LightningTrainer(TrainerBase):
         # Initialize the PyTorch Lightning trainer
         self._trainer = pl.Trainer(
             logger=self._logger,
-            enable_progress_bar=True,
+            enable_progress_bar=self.enable_progress_bar,
             accelerator=self.accelerator,
             devices=self.devices,  # Use GPU if available
             max_epochs=self.max_epochs,  # number of epochs to train for
@@ -169,6 +171,7 @@ class LightningTrainer(TrainerBase):
             fast_dev_run=self.fast_dev_run,
             limit_train_batches=self.limit_train_batches,
             limit_val_batches=self.limit_val_batches,
+            inference_mode=self.inference_mode,
         )
 
     def train(self, train_dataloader, val_dataloader):

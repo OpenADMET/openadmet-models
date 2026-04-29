@@ -18,9 +18,9 @@ from openadmet.models.architecture.model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
 _METRIC_TO_LOSS = {
-    "mse": nn.metrics.MSE(),
-    "mae": nn.metrics.MAE(),
-    "rmse": nn.metrics.RMSE(),
+    "mse": nn.metrics.MSE,
+    "mae": nn.metrics.MAE,
+    "rmse": nn.metrics.RMSE,
 }
 
 
@@ -420,7 +420,7 @@ class ChemPropModel(LightningModelBase):
 
         """
         if not self.estimator:
-            metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
+            metric_list = [_METRIC_TO_LOSS[metric]() for metric in self.metric_list]
 
             if self.from_chemeleon:
                 logger.info(
