@@ -71,7 +71,7 @@ class LightningTrainer(TrainerBase):
 
     max_epochs: int = 20
     accelerator: str = "gpu"
-    devices: int = 1
+    devices: int | list[int] = 1
     use_wandb: bool = False
     output_dir: Path = None
     wandb_project: str = "openadmet-testing"

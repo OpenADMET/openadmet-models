@@ -3,6 +3,7 @@
 import json
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
+import torch
 from functools import partial
 from collections import defaultdict
 from typing import Any, ClassVar
@@ -554,10 +555,19 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         fold_model = model.make_new()
         fold_model.build(scaler=fold_train_scaler)
 
+        # On multi-GPU parallel runs, pin each fold to a specific GPU so folds
+        # on different GPUs train simultaneously. Falls back to the configured
+        # devices for n_jobs=1 or CPU runs.
+        num_gpus = trainer_config.get("num_gpus", 0)
+        if n_jobs > 1 and trainer_config["accelerator"] == "gpu" and num_gpus > 0:
+            effective_devices = [fold % num_gpus]
+        else:
+            effective_devices = trainer_config["devices"]
+
         fold_trainer = LightningTrainer(
             max_epochs=trainer_config["max_epochs"],
             accelerator=trainer_config["accelerator"],
-            devices=trainer_config["devices"],
+            devices=effective_devices,
             use_wandb=False,
             output_dir=trainer_config["output_dir"] / "cv" / f"fold_{str(fold)}",
             wandb_project=trainer_config["wandb_project"],
@@ -722,6 +732,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 (fold, y_val, fold_train_dataloader, fold_val_dataloader, fold_train_scaler)
             )
 
+        num_gpus = torch.cuda.device_count() if trainer.accelerator == "gpu" else 0
+
         trainer_config = {
             "max_epochs": trainer.max_epochs,
             "accelerator": trainer.accelerator,
@@ -730,13 +742,14 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             "wandb_project": trainer.wandb_project,
             "enable_progress_bar": trainer.enable_progress_bar,
             "inference_mode": trainer.inference_mode,
+            "num_gpus": num_gpus,
         }
 
         if self.n_jobs > 1 and trainer.accelerator == "gpu":
-            logger.warning(
-                f"Running {self.n_jobs} CV folds in parallel on GPU. "
-                "Each fold spawns its own process with an independent CUDA context — "
-                "ensure sufficient VRAM for n_jobs models simultaneously."
+            logger.info(
+                f"Distributing {len(cv_list)} CV folds across {num_gpus} GPU(s) "
+                f"with n_jobs={self.n_jobs}. Each fold is assigned to GPU "
+                f"fold % {num_gpus}. Ensure sufficient VRAM per GPU."
             )
 
         if self.n_jobs == 1:
