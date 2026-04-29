@@ -1,9 +1,11 @@
 """Cross-validation evaluators for regression models."""
 
 import json
+import threading
 from functools import partial
 from collections import defaultdict
 from typing import Any, ClassVar
+from joblib import Parallel, delayed
 import pandas as pd
 import numpy as np
 from loguru import logger
@@ -484,6 +486,14 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
     random_state: int = Field(42, description="Random state for reproducibility")
+    n_jobs: int = Field(
+        1,
+        description=(
+            "Number of parallel jobs for fold execution. n_jobs=1 is serial (default). "
+            "When n_jobs > 1 with GPU acceleration, all folds share the same GPU — "
+            "ensure sufficient VRAM for n_jobs models simultaneously."
+        ),
+    )
     _evaluated: bool = False
     _driver_type: DriverType = DriverType.LIGHTNING
     axes_labels: list[str] = Field(
@@ -522,6 +532,60 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 "Fraction within ±1 log",
             )
         return metrics
+
+    @staticmethod
+    def _run_single_fold(
+        fold,
+        y_val,
+        y_true,
+        y_pred,
+        fold_train_dataloader,
+        fold_val_dataloader,
+        fold_train_scaler,
+        model,
+        trainer,
+        target_labels,
+        n_tasks,
+        active_metrics,
+    ):
+        logger.info(f"Fold {fold} starting on thread {threading.current_thread().name}")
+
+        fold_model = model.make_new()
+        fold_model.build(scaler=fold_train_scaler)
+
+        fold_trainer = LightningTrainer(
+            max_epochs=trainer.max_epochs,
+            accelerator=trainer.accelerator,
+            devices=trainer.devices,
+            use_wandb=False,
+            output_dir=trainer.output_dir / "cv" / f"fold_{str(fold)}",
+            wandb_project=trainer.wandb_project,
+        )
+        fold_trainer.model = fold_model
+        fold_trainer.build()
+
+        fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
+        y_pred_fold = fold_model.predict(
+            fold_val_dataloader,
+            accelerator=trainer.accelerator,
+            devices=trainer.devices,
+        )
+
+        if not (n_tasks == y_pred_fold.shape[1]):
+            raise ValueError("y_true and y_pred must have the same number of tasks")
+
+        fold_metrics = {}
+        for task_id in range(n_tasks):
+            t_true, t_pred = get_t_true_and_t_pred(
+                task_id, y_true, y_pred, y_val, y_pred_fold
+            )
+            t_label = target_labels[task_id]
+            fold_metrics[t_label] = {}
+            for metric_name, metric_data in active_metrics.items():
+                metric_func, _, _ = metric_data
+                fold_metrics[t_label][metric_name] = metric_func(t_true, t_pred)
+
+        return fold_metrics, y_val, y_pred_fold
 
     def evaluate(
         self,
@@ -615,7 +679,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_state
         )
 
-        cv = iter(zip(train_inds, test_inds))
+        cv_list = list(zip(train_inds, test_inds))
 
         self.data = {
             "shape": [self.n_splits, self.n_repeats],
@@ -637,70 +701,53 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             t_label = target_labels[task_id]
             self._metric_data[t_label] = defaultdict(list)
 
-        for fold, (fold_train_ids, fold_val_ids) in enumerate(cv):
-            logger.info(f"Fold {fold}")
-
+        # Featurize all folds serially — RDKit is not thread-safe
+        fold_inputs = []
+        for fold, (fold_train_ids, fold_val_ids) in enumerate(cv_list):
             X_train = X_all[fold_train_ids]
             y_train = y_all[fold_train_ids]
             X_val = X_all[fold_val_ids]
             y_val = y_all[fold_val_ids]
 
-            # print shapes of matrices
             logger.debug(f"X_train shape: {X_train.shape}")
             logger.debug(f"y_train shape: {y_train.shape}")
             logger.debug(f"X_val shape: {X_val.shape}")
             logger.debug(f"y_val shape: {y_val.shape}")
 
-            # Create a new featurizer and model for each fold
             fold_featurizer = featurizer.make_new()
-
             fold_train_dataloader, _, fold_train_scaler, _ = fold_featurizer.featurize(
                 X_train, y_train
             )
-
             fold_val_dataloader, _, _, _ = fold_featurizer.featurize(X_val, y_val)
-            fold_model = model.make_new()
-            fold_model.build(scaler=fold_train_scaler)
-
-            fold_trainer = LightningTrainer(
-                max_epochs=trainer.max_epochs,
-                accelerator=trainer.accelerator,
-                devices=trainer.devices,
-                use_wandb=False,
-                output_dir=trainer.output_dir / "cv" / f"fold_{str(fold)}",
-                wandb_project=trainer.wandb_project,
+            fold_inputs.append(
+                (fold, y_val, fold_train_dataloader, fold_val_dataloader, fold_train_scaler)
             )
 
-            # Pass model to trainer
-            fold_trainer.model = fold_model
-            fold_trainer.build()
-
-            # Pass the dataloaders to the trainer
-            fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
-            # evaluate the model
-            y_pred_fold = fold_model.predict(
-                fold_val_dataloader,
-                accelerator=trainer.accelerator,
-                devices=trainer.devices,
+        if self.n_jobs > 1 and trainer.accelerator == "gpu":
+            logger.warning(
+                f"Running {self.n_jobs} CV folds in parallel on GPU. "
+                "Each fold loads a separate model — ensure sufficient VRAM."
             )
 
-            # calculate the mean and confidence interval for each metric
-            # loop over tasks and calculate the statistics
-            if not (n_tasks == y_pred_fold.shape[1]):
-                raise ValueError("y_true and y_pred must have the same number of tasks")
+        fold_results = Parallel(n_jobs=self.n_jobs, prefer="threads")(
+            delayed(self._run_single_fold)(
+                fold, y_val, y_true, y_pred,
+                fold_train_dl, fold_val_dl, fold_train_scaler,
+                model, trainer,
+                target_labels, n_tasks, self.active_metrics,
+            )
+            for fold, y_val, fold_train_dl, fold_val_dl, fold_train_scaler in fold_inputs
+        )
 
-            for task_id in range(n_tasks):
-                t_true, t_pred = get_t_true_and_t_pred(
-                    task_id, y_true, y_pred, y_val, y_pred_fold
-                )
-                t_label = target_labels[task_id]
-
-                for metric_name, metric_data in self.active_metrics.items():
-                    metric_func, is_scipy_metric, _ = metric_data
-                    value = metric_func(t_true, t_pred)
+        for fold_metrics, y_val, y_pred_fold in fold_results:
+            for t_label, metrics in fold_metrics.items():
+                for metric_name, value in metrics.items():
                     self._metric_data[t_label][metric_name].append(value)
 
-        logger.info(f"Fold {fold} complete")
+        # y_val and y_pred_fold from the last fold are used for the regression plot
+        _, y_val, y_pred_fold = fold_results[-1]
+
+        logger.info(f"All {len(cv_list)} folds complete")
 
         # now we have the metric data for each task, calculate the mean and confidence interval
         for t_label in target_labels:
