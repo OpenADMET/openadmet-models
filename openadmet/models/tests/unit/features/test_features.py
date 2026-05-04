@@ -73,6 +73,9 @@ def test_feature_concatenator_failed_diff_positions(one_invalid_smi):
 
 
 def test_feature_concatenator_order_independence(smiles):
+    """
+    Ensure that changing the order of featurizers in the list results in the same outcome due to sorting.
+    """
     desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
     fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
 
