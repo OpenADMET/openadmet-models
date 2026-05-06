@@ -243,12 +243,12 @@ class ChemPropModel(LightningModelBase):
             type(self).model_fields.keys()
         )
         # Handle backwards compatibility for from_chemeleon and from_foundation fields
+        if self.from_chemeleon and self.from_foundation is None:
+            self.from_foundation = "chemeleon"
         if self.from_foundation != "chemeleon" and self.from_chemeleon:
             raise ValueError(
                 f"Cannot specify both from_chemeleon and user-specified from_foundation: {self.from_foundation}"
             )
-        if self.from_chemeleon and self.from_foundation is None:
-            self.from_foundation = "chemeleon"
 
     @model_validator(mode="after")
     def resolve_hyperparameters(self) -> "ChemPropModel":
