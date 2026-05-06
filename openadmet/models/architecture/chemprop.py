@@ -157,7 +157,8 @@ class ChemPropModel(LightningModelBase):
     dropout : float
         Dropout rate.
     from_chemeleon : bool
-        Whether to use the CheMeleon foundation model.
+        Whether to use the CheMeleon foundation model. Deprecated — use
+        ``from_foundation='chemeleon'`` instead.
     monitor_metric : str
         The metric to monitor during training. Default is "val_loss".
     metric_list : list
@@ -235,6 +236,29 @@ class ChemPropModel(LightningModelBase):
     _n_tasks: int = 1
     _explicit_init_fields: set[str] = PrivateAttr(default_factory=set)
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_from_chemeleon_compat(cls, data: dict) -> dict:
+        """Translate deprecated ``from_chemeleon`` flag into ``from_foundation``."""
+        if not isinstance(data, dict):
+            return data
+        from_chemeleon = data.get("from_chemeleon", False)
+        from_foundation = data.get("from_foundation")
+        if from_chemeleon:
+            import warnings
+
+            warnings.warn(
+                "from_chemeleon is deprecated; use from_foundation='chemeleon' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if from_foundation is not None and from_foundation != "chemeleon":
+                raise ValueError(
+                    f"Cannot specify both from_chemeleon and user-specified from_foundation: {from_foundation}"
+                )
+            data["from_foundation"] = "chemeleon"
+        return data
+
     def __init__(self, **data):
         """Initialize the model and track explicitly provided fields."""
         explicit_init_fields = set(data)
@@ -242,13 +266,6 @@ class ChemPropModel(LightningModelBase):
         self._explicit_init_fields = explicit_init_fields.intersection(
             type(self).model_fields.keys()
         )
-        # Handle backwards compatibility for from_chemeleon and from_foundation fields
-        if self.from_chemeleon and self.from_foundation is None:
-            self.from_foundation = "chemeleon"
-        if self.from_foundation != "chemeleon" and self.from_chemeleon:
-            raise ValueError(
-                f"Cannot specify both from_chemeleon and user-specified from_foundation: {self.from_foundation}"
-            )
 
     @model_validator(mode="after")
     def resolve_hyperparameters(self) -> "ChemPropModel":

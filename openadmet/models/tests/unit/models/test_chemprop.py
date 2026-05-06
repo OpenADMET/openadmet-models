@@ -256,6 +256,19 @@ def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
         ChemPropModel(from_chemeleon=True, from_foundation="custom_model")
 
 
+def test_chemprop_from_chemeleon_compat_success():
+    """Test that from_chemeleon=True correctly maps to from_foundation='chemeleon'."""
+    with pytest.warns(DeprecationWarning, match="from_chemeleon is deprecated"):
+        model = ChemPropModel(from_chemeleon=True)
+    assert model.from_foundation == "chemeleon"
+
+
+def test_chemprop_from_chemeleon_deprecation_warning():
+    """Test that using from_chemeleon emits a DeprecationWarning."""
+    with pytest.warns(DeprecationWarning, match="from_chemeleon is deprecated"):
+        ChemPropModel(from_chemeleon=True)
+
+
 def test_chemprop_load_weights(tmp_path):
     """Test that load_weights correctly loads state dict."""
 
