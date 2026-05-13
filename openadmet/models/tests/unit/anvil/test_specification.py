@@ -448,7 +448,16 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type():
 def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
     tmp_path, mocker
 ):
-    """Test that run() writes the recipe to the output directory."""
+    """Test that run() writes provenance YAML files to the resolved output directory.
+
+    The system under test is the provenance-writing logic that executes *after*
+    workflow.run() returns — i.e. to_recipe() and to_multi_yaml(). Patching
+    to_workflow() here is appropriate: it is the boundary between specification
+    and training, and real workflow execution requires data, featurizers, and a
+    trained model, all of which are orthogonal to provenance writing. The mock
+    supplies a controlled resolved_output_dir so assertions can target the
+    correct location.
+    """
     spec = AnvilSpecification(
         metadata=Metadata(
             version="v1",
@@ -488,7 +497,12 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
 
 
 def test_anvilspecification_run_tag_override(tmp_path, mocker):
-    """Test that providing a tag to run() overrides the metadata tag in provenance."""
+    """Test that providing a tag to run() overrides the metadata tag in provenance.
+
+    Same mocking rationale as test_anvilspecification_run_writes_provenance_to_resolved_output_dir:
+    to_workflow() is patched to skip training and focus solely on the tag-override
+    and deep-copy logic inside run().
+    """
     spec = AnvilSpecification(
         metadata=Metadata(
             version="v1",
