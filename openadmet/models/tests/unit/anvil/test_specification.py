@@ -452,11 +452,12 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
 
     The system under test is the provenance-writing logic that executes *after*
     workflow.run() returns — i.e. to_recipe() and to_multi_yaml(). Patching
-    to_workflow() here is appropriate: it is the boundary between specification
-    and training, and real workflow execution requires data, featurizers, and a
-    trained model, all of which are orthogonal to provenance writing. The mock
-    supplies a controlled resolved_output_dir so assertions can target the
-    correct location.
+    to_workflow() is appropriate: it is the boundary between specification and
+    training, and real workflow execution requires data, featurizers, and a trained
+    model, all orthogonal to provenance writing. create_autospec is used (rather
+    than a plain Mock) so that any rename of resolved_output_dir or run() on
+    AnvilWorkflow will cause this test to fail, keeping the mock honest to the
+    real interface.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -480,8 +481,7 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
         report=ReportSpec(eval=[]),
     )
 
-    # Mock workflow run to avoid real execution
-    mock_workflow = mocker.Mock()
+    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
     mock_workflow.resolved_output_dir = tmp_path / "resolved"
     mock_workflow.run.return_value = None
 
@@ -499,9 +499,10 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
 def test_anvilspecification_run_tag_override(tmp_path, mocker):
     """Test that providing a tag to run() overrides the metadata tag in provenance.
 
-    Same mocking rationale as test_anvilspecification_run_writes_provenance_to_resolved_output_dir:
-    to_workflow() is patched to skip training and focus solely on the tag-override
-    and deep-copy logic inside run().
+    Same mocking rationale as
+    test_anvilspecification_run_writes_provenance_to_resolved_output_dir:
+    to_workflow() is patched with a create_autospec mock to skip training while
+    keeping the mock interface-honest to AnvilWorkflow.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -525,7 +526,7 @@ def test_anvilspecification_run_tag_override(tmp_path, mocker):
         report=ReportSpec(eval=[]),
     )
 
-    mock_workflow = mocker.Mock()
+    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
     mock_workflow.resolved_output_dir = tmp_path / "resolved"
     mocker.patch.object(
         AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
