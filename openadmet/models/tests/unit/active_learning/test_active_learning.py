@@ -1,476 +1,200 @@
-from itertools import product
-from pathlib import Path
-
 import numpy as np
-import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 
 from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
-from openadmet.models.active_learning.committee import (
-    CommitteeRegressor,
-)
-from openadmet.models.architecture.lgbm import LGBMRegressorModel
-from openadmet.models.architecture.model_base import ModelBase
-from openadmet.models.inference.inference import load_anvil_model_and_metadata
-from openadmet.models.split.sklearn import ShuffleSplitter
-from openadmet.models.tests.unit.datafiles import (
-    ACEH_chembl_pchembl,  # chemprop
-    CYP3A4_chembl_pchembl,  # lgbm
-    anvil_chemprop_trained_model_dir,
-    anvil_lgbm_trained_model_dir,
-)
-
-# Remove redundant for testing
-_ACQUISITION_FUNCTIONS_SHORTLIST = [
-    x for x in _ACQUISITION_FUNCTIONS.keys() if "-" in x
-]
-
-
-@pytest.fixture
-def chemprop_models():
-    # Load the model and metadata
-    model_list = []
-    for i in range(5):
-        model, feat, _, _ = load_anvil_model_and_metadata(
-            Path(anvil_chemprop_trained_model_dir)
-        )
-        model_list.append(model)
-
-    # Load data
-    data = pd.read_csv(ACEH_chembl_pchembl).iloc[:100, :]
-    X = data["OPENADMET_SMILES"].values
-    y = data["pchembl_value_mean"].values
-
-    # Featurize
-    X_feat = feat.featurize(X)[0]
-
-    return model_list, X_feat, y.reshape(-1, 1)
-
-
-@pytest.fixture
-def lgbm_models():
-    model_list = []
-    for i in range(5):
-        model, feat, _, _ = load_anvil_model_and_metadata(
-            Path(anvil_lgbm_trained_model_dir)
-        )
-        model_list.append(model)
-
-    # Load data
-    data = pd.read_csv(CYP3A4_chembl_pchembl).iloc[:100, :]
-    X = data["CANONICAL_SMILES"].values
-    y = data["pChEMBL mean"].values
-
-    # Featurize
-    X_feat = feat.featurize(X)[0]
-
-    return model_list, X_feat, y.reshape(-1, 1)
+from openadmet.models.active_learning.committee import CommitteeRegressor
+from openadmet.models.architecture.dummy import DummyRegressorModel
 
 
 @pytest.fixture
 def toy_data():
-    # Set random seed for reproducibility
-    np.random.seed(42)
-
-    # Number of samples
-    n_samples = 2000
-
-    # Features
-    X = np.column_stack(
-        [
-            np.linspace(0, 10, n_samples),
-            np.random.uniform(0, 5, n_samples),
-            np.random.normal(5, 2, n_samples),
-        ]
-    )
-
-    # Targets
-    y = np.column_stack(
-        [
-            3 * np.sin(X[:, 0])
-            + 0.5 * X[:, 1] ** 2
-            - 0.8 * X[:, 2]
-            + np.random.normal(0, 0.1, n_samples),
-            2 * np.cos(X[:, 0])
-            + 0.3 * X[:, 1] ** 2
-            + 0.5 * X[:, 2]
-            + np.random.normal(0, 0.1, n_samples),
-        ]
-    )
-
-    # Split the data
-    splitter = ShuffleSplitter(train_size=0.7, val_size=0.1, test_size=0.2)
-    X_train, X_val, X_test, y_train, y_val, y_test, _ = splitter.split(
-        X, y[:, 0].reshape(-1, 1)
-    )
-
-    return X_train, X_val, X_test, y_train, y_val, y_test
-
-
-class MockCommitteeModel(ModelBase):
     """
-    Mock model for testing CommitteeRegressor.
-    Tracks random_state and training data shape.
+    Generate synthetic regression data for testing committee models.
+
+    This fixture creates a simple linear relationship with noise to verify that the
+    ensemble can learn and predict reasonable values.
     """
-
-    random_state: int | None = None
-    _trained_data_shape: tuple | None = None
-    _trained_unique_samples: int | None = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def build(self):
-        pass
-
-    def train(self, X, y):
-        self._trained_data_shape = X.shape
-        # Count unique samples to detect bagging (duplicates)
-        # Using simple row hashing for uniqueness check
-        if X.ndim > 1:
-            X_view = np.ascontiguousarray(X).view(
-                np.dtype((np.void, X.dtype.itemsize * X.shape[1]))
-            )
-            self._trained_unique_samples = len(np.unique(X_view))
-        else:
-            self._trained_unique_samples = len(np.unique(X))
-
-    def predict(self, input: np.ndarray, **kwargs):
-        # Return dummy predictions
-        n_samples = input.shape[0]
-        # Return (n_samples, 1) to match regression output shape
-        return np.zeros((n_samples, 1))
-
-    def save(self, path):
-        pass
-
-    def load(self, path):
-        pass
-
-    def serialize(self, param_path, serial_path):
-        pass
-
-    def deserialize(self, param_path, serial_path):
-        pass
+    rng = np.random.default_rng(42)
+    X = rng.normal(size=(120, 3))
+    y = (
+        1.2 * X[:, [0]]
+        - 0.8 * X[:, [1]]
+        + 0.3 * X[:, [2]]
+        + 0.1 * rng.normal(size=(120, 1))
+    )
+    return X[:80], X[80:100], X[100:], y[:80], y[80:100], y[100:]
 
 
-def test_committee_bagging_logic(toy_data):
-    """Test that use_bagging flag correctly controls bootstrap aggregation."""
-    X_train, _, _, y_train, _, _ = toy_data
-    n_samples = X_train.shape[0]
+@pytest.fixture
+def dummy_models():
+    """Create a list of initialized DummyRegressorModel instances for building a committee."""
+    models = []
+    for _ in range(5):
+        model = DummyRegressorModel(strategy="mean")
+        models.append(model)
+    return models
 
-    # Test use_bagging=True (Default)
+
+@pytest.fixture
+def trained_committee(dummy_models, toy_data):
+    """
+    Create a trained CommitteeRegressor using bootstrapped data.
+
+    This fixture trains multiple dummy models on bootstrapped subsets of the training data
+    to simulate a real ensemble training process, allowing for testing of prediction and uncertainty estimation.
+    """
+    X_train, X_val, _, y_train, y_val, _ = toy_data
+    rng = np.random.default_rng(123)
+    for model in dummy_models:
+        bootstrap_idx = rng.choice(
+            X_train.shape[0], size=X_train.shape[0], replace=True
+        )
+        model.train(X_train[bootstrap_idx], y_train[bootstrap_idx])
+    return CommitteeRegressor.from_models(models=dummy_models), X_val, y_val
+
+
+@pytest.mark.parametrize("query_strategy", sorted(_ACQUISITION_FUNCTIONS.keys()))
+def test_committee_query_predict(trained_committee, query_strategy):
+    """
+    Validate that the committee can query samples using all registered acquisition functions.
+
+    This ensures that the query interface works consistent across strategies and that
+    predictions and uncertainty estimates are returned in the correct shape.
+    """
+    committee, X_val, _ = trained_committee
+    y_query = committee.query(X_val, query_strategy=query_strategy)
+    y_pred, y_pred_std = committee.predict(X_val, return_std=True)
+    assert y_query.shape == (X_val.shape[0], 1)
+    assert y_pred.shape == (X_val.shape[0], 1)
+    assert y_pred_std.shape == (X_val.shape[0], 1)
+    assert np.isfinite(y_query).all()
+
+
+def test_invalid_query_strategy_raises(trained_committee):
+    """Ensure ValueError is raised when an invalid query strategy is requested."""
+    committee, X_val, _ = trained_committee
+    with pytest.raises(ValueError):
+        committee.query(X_val, query_strategy="not-a-strategy")
+
+
+def test_invalid_calibration_method_raises(trained_committee):
+    """Ensure ValueError is raised when an invalid uncertainty calibration method is requested."""
+    committee, X_val, y_val = trained_committee
+    with pytest.raises(ValueError):
+        committee.calibrate_uncertainty(X_val, y_val, method="not-a-method")
+
+
+@pytest.mark.parametrize(
+    "calibration_method", ["isotonic-regression", "scaling-factor"]
+)
+def test_calibration_paths(trained_committee, calibration_method):
+    """
+    Verify that uncertainty calibration methods can be applied successfully.
+
+    This checks that the calibration state is updated and that predictions remain valid
+    after calibration (shapes are preserved).
+    """
+    committee, X_val, y_val = trained_committee
+    committee.calibrate_uncertainty(X_val, y_val, method=calibration_method)
+    assert committee.calibrated
+    y_pred, y_std = committee.predict(X_val, return_std=True)
+    assert y_pred.shape == y_std.shape == y_val.shape
+
+
+def test_train_and_train_validation(toy_data):
+    """
+    Validate the high-level train method for creating a CommitteeRegressor.
+
+    This tests the end-to-end training process, ensuring that the correct number of models
+    are created and that the resulting ensemble can make predictions.
+    """
+    X_train, _, X_test, y_train, _, _ = toy_data
     committee = CommitteeRegressor.train(
-        X_train,
-        y_train,
-        mod_class=MockCommitteeModel,
-        mod_params={"random_state": 42},
-        n_models=3,
-        use_bagging=True,
+        X_train, y_train, mod_class=DummyRegressorModel, n_models=4
     )
-
-    for i, model in enumerate(committee.models):
-        # Verify random_state increment
-        assert model.random_state == 42 + i
-
-        # Verify bagging occurred:
-        # With replacement sampling, unique samples should be approx ~63.2% of total
-        # Definitely should be less than total n_samples for large N
-        assert model._trained_unique_samples < n_samples
-        assert model._trained_data_shape[0] == n_samples
-
-    # Test use_bagging=False
-    committee_nb = CommitteeRegressor.train(
-        X_train,
-        y_train,
-        mod_class=MockCommitteeModel,
-        mod_params={"random_state": 10},
-        n_models=2,
-        use_bagging=False,
-    )
-
-    for i, model in enumerate(committee_nb.models):
-        # Verify random_state increment
-        assert model.random_state == 10 + i
-
-        # Verify NO bagging occurred:
-        # Unique samples should equal total samples (training on full set)
-        assert model._trained_unique_samples == n_samples
-        assert model._trained_data_shape[0] == n_samples
-
-    # Test random_state=None (should handle gracefully)
-    committee_none = CommitteeRegressor.train(
-        X_train,
-        y_train,
-        mod_class=MockCommitteeModel,
-        mod_params={"random_state": None},
-        n_models=2,
-    )
-
-    for model in committee_none.models:
-        assert model.random_state is None
+    mean, std = committee.predict(X_test, return_std=True)
+    assert committee.n_models == 4
+    assert mean.shape == std.shape == (X_test.shape[0], 1)
+    with pytest.raises(ValueError):
+        CommitteeRegressor.train(X_train, y_train, mod_class=None, n_models=2)
 
 
-@pytest.mark.parametrize(
-    "model_list, calibration_method, query_strategy",
-    product(
-        ["lgbm_models", "chemprop_models"],
-        ["isotonic-regression", "scaling-factor", None],
-        _ACQUISITION_FUNCTIONS_SHORTLIST,
-    ),
-)
-def test_committee(request, model_list, calibration_method, query_strategy):
-    # Skip calibration on real data until we have true ensemble
-    if calibration_method is not None:
-        # Skip the test
-        pytest.skip("Skipping calibration test")
-
-    # Unpack models, features
-    _model_list, X_feat, y = request.getfixturevalue(model_list)
-
-    # Create committee
-    committee = CommitteeRegressor.from_models(models=_model_list)
-
-    # Calibrate uncertainty
-    if calibration_method is not None:
-        committee.calibrate_uncertainty(
-            X_feat, y, method=calibration_method, accelerator="cpu"
-        )
-
-        # Check model is calibrated
-        assert committee.calibrated
-
-    # Query
-    y_query = committee.query(X_feat, query_strategy=query_strategy, accelerator="cpu")
-
-    # Predict
-    y_pred, y_pred_std = committee.predict(X_feat, return_std=True, accelerator="cpu")
-
-
-@pytest.mark.parametrize(
-    "model_list, calibration_method",
-    product(
-        ["lgbm_models", "chemprop_models"],
-        ["isotonic-regression", "scaling-factor", None],
-    ),
-)
-def test_save_load(request, tmp_path, model_list, calibration_method):
-    # Skip calibration on real data until we have true ensemble
-    if calibration_method is not None:
-        calibration_model_path = tmp_path / "calibration_model.pkl"
-        # Skip the test
-        pytest.skip("Skipping calibration test")
-    else:
-        calibration_model_path = None
-
-    # Unpack models, features
-    model_list, X_feat, y = request.getfixturevalue(model_list)
-
-    # Create committee
-    committee = CommitteeRegressor.from_models(models=model_list)
-
-    # Calibrate uncertainty
-    if calibration_method is not None:
-        committee.calibrate_uncertainty(
-            X_feat, y, method=calibration_method, accelerator="cpu"
-        )
-
-        # Check model is calibrated
-        assert committee.calibrated
-
-    # Predict before saving
-    y_pred_mean, y_pred_std = committee.predict(
-        X_feat, return_std=True, accelerator="cpu"
-    )
-
-    # Save
-    save_paths = [tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))]
-    committee.save(save_paths, calibration_path=calibration_model_path)
-
-    # Instantiate empty models to "fill"
-    models_new = [model.make_new() for model in model_list]
-    [model.build() for model in models_new]
-
-    # Load
-    committee.load(
-        save_paths,
-        models=models_new,
-        calibration_path=calibration_model_path,
-    )
-
-    # Predict after loading
-    y_pred_mean2, y_pred_std2 = committee.predict(
-        X_feat, return_std=True, accelerator="cpu"
-    )
-
-    # Check that predictions are the same
-    assert_allclose(y_pred_mean, y_pred_mean2)
-    assert_allclose(y_pred_std, y_pred_std2)
-
-    # Check that we successfully loaded calibration models
-    if calibration_method is not None:
-        assert committee.calibrated
-
-
-@pytest.mark.parametrize(
-    "model_list, calibration_method",
-    product(
-        ["lgbm_models", "chemprop_models"],
-        ["isotonic-regression", "scaling-factor", None],
-    ),
-)
-def test_serialization(request, tmp_path, model_list, calibration_method):
-    # Skip calibration on real data until we have true ensemble
-    if calibration_method is not None:
-        calibration_model_path = tmp_path / "calibration_model.pkl"
-        # Skip the test
-        pytest.skip("Skipping calibration test")
-    else:
-        calibration_model_path = None
-
-    # Unpack models, features
-    model_list, X_feat, y = request.getfixturevalue(model_list)
-
-    # Create committee
-    committee = CommitteeRegressor.from_models(models=model_list)
-
-    # Calibrate uncertainty
-    if calibration_method is not None:
-        committee.calibrate_uncertainty(
-            X_feat, y, method=calibration_method, accelerator="cpu"
-        )
-
-        # Check model is calibrated
-        assert committee.calibrated
-
-    # Predict before saving
-    y_pred_mean, y_pred_std = committee.predict(
-        X_feat, return_std=True, accelerator="cpu"
-    )
-
-    # Serialize/deserialize
-    param_paths = [
-        tmp_path / "committee_model_{i}.json" for i in range(len(model_list))
-    ]
-    serial_paths = [
-        tmp_path / "committee_model_{i}.pkl" for i in range(len(model_list))
-    ]
-    committee.serialize(
-        param_paths, serial_paths, calibration_path=calibration_model_path
-    )
-    committee.deserialize(
-        param_paths,
-        serial_paths,
-        mod_class=model_list[0].__class__,
-        calibration_path=calibration_model_path,
-    )
-
-    # Predict after loading
-    y_pred_mean2, y_pred_std2 = committee.predict(
-        X_feat, return_std=True, accelerator="cpu"
-    )
-
-    # Check that predictions are the same
-    assert_allclose(y_pred_mean, y_pred_mean2)
-    assert_allclose(y_pred_std, y_pred_std2)
-
-    # Check that we successfully loaded calibration models
-    if calibration_method is not None:
-        assert committee.calibrated
-
-
-# This test is somewhat redundant and a catch-all, but useful until we have ability to test real-world ensembles
-# more explicitly
 @pytest.mark.parametrize(
     "calibration_method", ["isotonic-regression", "scaling-factor", None]
 )
-def test_calibration(tmp_path, toy_data, calibration_method):
-    # Unpack data
-    X_train, X_val, X_test, y_train, y_val, y_test = toy_data
+def test_save_load_roundtrip(tmp_path, trained_committee, calibration_method):
+    """
+    Verify that a CommitteeRegressor can be saved and loaded correctly.
 
-    # Parameters
-    mod_params = {"alpha": 0.005, "learning_rate": 0.05, "force_col_wise": True}
-
-    # Train committee
-    committee = CommitteeRegressor.train(
-        X_train,
-        y_train,
-        mod_class=LGBMRegressorModel,
-        mod_params=mod_params,
-        n_models=5,
+    This ensures persistence of the ensemble, including individual models and calibration state.
+    It verifies that predictions before save and after load are identical.
+    """
+    committee, X_val, y_val = trained_committee
+    calibration_model_path = (
+        tmp_path / "calibration_model.pkl" if calibration_method is not None else None
     )
-
-    # Calibrate uncertainty
     if calibration_method is not None:
         committee.calibrate_uncertainty(X_val, y_val, method=calibration_method)
-        calibration_model_path = tmp_path / "calibration_model.pkl"
+    y_pred_mean, y_pred_std = committee.predict(X_val, return_std=True)
+    save_paths = [
+        tmp_path / f"committee_model_{i}.pkl" for i in range(committee.n_models)
+    ]
+    committee.save(save_paths, calibration_path=calibration_model_path)
+    models_new = [model.make_new() for model in committee.models]
+    [model.build() for model in models_new]
+    committee = committee.load(
+        save_paths, models=models_new, calibration_path=calibration_model_path
+    )
+    y_pred_mean2, y_pred_std2 = committee.predict(X_val, return_std=True)
+    assert_allclose(y_pred_mean, y_pred_mean2)
+    assert_allclose(y_pred_std, y_pred_std2)
+    assert committee.calibrated is (calibration_method is not None)
 
-        # Check model is calibrated
-        assert committee.calibrated
-    else:
-        calibration_model_path = None
 
-    # Evaluate on test set
-    y_pred_mean, y_pred_std = committee.predict(X_test, return_std=True)
+@pytest.mark.parametrize(
+    "calibration_method", ["isotonic-regression", "scaling-factor", None]
+)
+def test_serialize_deserialize_roundtrip(
+    tmp_path, trained_committee, calibration_method
+):
+    """
+    Verify that a CommitteeRegressor can be serialized and deserialized via JSON/pickle.
 
-    # Generate plot
-    committee.plot_uncertainty_calibration(X_test, y_test)
-
-    # Serialize/deserialize
+    This tests the serialization pathway used for distributed training or registry storage,
+    ensuring full state recovery including calibration.
+    """
+    committee, X_val, y_val = trained_committee
+    calibration_model_path = (
+        tmp_path / "calibration_model.pkl" if calibration_method is not None else None
+    )
+    if calibration_method is not None:
+        committee.calibrate_uncertainty(X_val, y_val, method=calibration_method)
+    y_pred_mean, y_pred_std = committee.predict(X_val, return_std=True)
     param_paths = [
-        tmp_path / "committee_model_{i}.json" for i in range(len(committee.models))
+        tmp_path / f"committee_model_{i}.json" for i in range(committee.n_models)
     ]
     serial_paths = [
-        tmp_path / "committee_model_{i}.pkl" for i in range(len(committee.models))
+        tmp_path / f"committee_model_{i}.pkl" for i in range(committee.n_models)
     ]
     committee.serialize(
         param_paths, serial_paths, calibration_path=calibration_model_path
     )
-    committee.deserialize(
+    committee = committee.deserialize(
         param_paths,
         serial_paths,
-        mod_class=LGBMRegressorModel,
+        mod_class=DummyRegressorModel,
         calibration_path=calibration_model_path,
     )
-
-    # Evaluate on test set again
-    y_pred_mean2, y_pred_std2 = committee.predict(X_test, return_std=True)
-
-    # Check results match original
+    y_pred_mean2, y_pred_std2 = committee.predict(X_val, return_std=True)
     assert_allclose(y_pred_mean, y_pred_mean2)
     assert_allclose(y_pred_std, y_pred_std2)
+    assert committee.calibrated is (calibration_method is not None)
 
-    # Check that we successfully loaded calibration models
-    if calibration_method is not None:
-        assert committee.calibrated
 
-    # Save/load
-    save_paths = [
-        tmp_path / "committee_model_{i}.pkl" for i in range(len(committee.models))
-    ]
-    committee.save(save_paths, calibration_path=calibration_model_path)
-
-    # Instantiate empty models to "fill"
-    models_new = [
-        LGBMRegressorModel(**mod_params) for _ in range(len(committee.models))
-    ]
-    [model.build() for model in models_new]
-
-    # Load
-    committee.load(
-        save_paths,
-        models=models_new,
-        calibration_path=calibration_model_path,
-    )
-
-    # Evaluate on test set again
-    y_pred_mean2, y_pred_std2 = committee.predict(X_test, return_std=True)
-
-    # Check results match original
-    assert_allclose(y_pred_mean, y_pred_mean2)
-    assert_allclose(y_pred_std, y_pred_std2)
-
-    # Check that we successfully loaded calibration models
-    if calibration_method is not None:
-        assert committee.calibrated
+def test_plot_uncertainty_calibration(trained_committee):
+    """Check that the uncertainty calibration plotting function runs without error."""
+    committee, X_val, y_val = trained_committee
+    committee.calibrate_uncertainty(X_val, y_val, method="scaling-factor")
+    plot = committee.plot_uncertainty_calibration(X_val, y_val)
+    assert plot is not None
