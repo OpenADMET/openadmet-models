@@ -400,10 +400,10 @@ def test_anvilspecification_to_multi_yaml_from_multi_yaml_roundtrip(tmp_path):
     assert reloaded.data.resource == spec.data.resource
 
 
-def test_anvilspecification_to_workflow_returns_correct_driver_type(mocker):
+def test_anvilspecification_to_workflow_returns_correct_driver_type():
     """Test that to_workflow returns correct workflow class based on trainer driver."""
 
-    def make_spec(trainer_type, feat_params=None):
+    def make_spec(model_type, trainer_type, feat_params=None):
         return AnvilSpecification(
             metadata=Metadata(
                 version="v1",
@@ -423,33 +423,19 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type(mocker):
                     type="FingerprintFeaturizer",
                     params=feat_params or {"fp_type": "ecfp:4"},
                 ),
-                model=ModelSpec(type="LGBMRegressorModel"),
+                model=ModelSpec(type=model_type),
                 train=TrainerSpec(type=trainer_type),
             ),
             report=ReportSpec(eval=[]),
         )
 
-    # Case 1: SKLEARN driver — use real registered types; no mocking needed
-    spec_sklearn = make_spec("SKLearnBasicTrainer")
+    # Case 1: SKLEARN driver
+    spec_sklearn = make_spec("LGBMRegressorModel", "SKLearnBasicTrainer")
     workflow_sklearn = spec_sklearn.to_workflow()
     assert isinstance(workflow_sklearn, AnvilWorkflow)
 
-    # Case 2: LIGHTNING driver — mock section.to_class() at class level since no DL model is registered
-    from openadmet.models.drivers import DriverType as _DriverType
-    from openadmet.models.trainer.lightning import LightningTrainer as _LightningTrainer
-
-    dl_model = mocker.create_autospec(LightningModelBase, instance=True)
-    dl_model._n_tasks = 1
-    dl_model._driver_type = _DriverType.LIGHTNING
-    dl_trainer = mocker.create_autospec(_LightningTrainer, instance=True)
-    dl_trainer._driver_type = _DriverType.LIGHTNING
-
-    spec_dl = make_spec("LightningTrainer")
-
-    # Patch only model and trainer to_class; split/feat use real registered types
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=dl_model)
-    mocker.patch.object(TrainerSpec, "to_class", autospec=True, return_value=dl_trainer)
-
+    # Case 2: LIGHTNING driver — use real ChemPropModel and LightningTrainer
+    spec_dl = make_spec("ChemPropModel", "LightningTrainer")
     workflow_dl = spec_dl.to_workflow()
     assert isinstance(workflow_dl, AnvilDeepLearningWorkflow)
     assert workflow_dl.model_kwargs == {
