@@ -216,7 +216,7 @@ def test_anvil_workflow_ensemble_without_val_raises(metadata, data_spec, sklearn
 
 
 def test_anvil_workflow_val_without_ensemble_raises(metadata, data_spec, sklearn_feat):
-    """Test that requesting a validation split without an ensemble raises ValueError."""
+    """Test that requesting a validation split for AnvilWorkflow without an ensemble raises ValueError."""
     split = ShuffleSplitter(train_size=0.7, val_size=0.1, test_size=0.2)
     with pytest.raises(ValueError, match="Validation set requested, but not used"):
         _make_anvil_workflow(
