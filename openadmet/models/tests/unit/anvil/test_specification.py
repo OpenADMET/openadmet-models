@@ -617,7 +617,15 @@ def test_dataspec_read_train_test_yaml_raises():
 
 
 def test_modelspec_freeze_weights_succeeds_when_supported(mocker):
-    """Test ModelSpec instantiates without error when freeze_weights is supported."""
+    """Test ModelSpec instantiates without error when freeze_weights is supported.
+
+    create_autospec(LightningModelBase) is used rather than a real model because
+    the validator calls build() and freeze_weights() as a side-effect probe during
+    construction. A real ChemPropModel.build() constructs a full MPNN, which is
+    heavyweight and orthogonal to what is being tested. The mock enforces the
+    LightningModelBase interface while keeping the test fast and focused on the
+    validator logic in ModelSpec.
+    """
     mock_model = mocker.create_autospec(LightningModelBase, instance=True)
     mock_model.build.return_value = None
     mock_model.freeze_weights.return_value = None
@@ -631,7 +639,14 @@ def test_modelspec_freeze_weights_succeeds_when_supported(mocker):
 
 
 def test_modelspec_freeze_weights_raises_when_not_implemented(mocker):
-    """Test ModelSpec raises ValueError when freeze_weights is not implemented."""
+    """Test ModelSpec raises ValueError when freeze_weights is not implemented.
+
+    Same rationale as test_modelspec_freeze_weights_succeeds_when_supported:
+    create_autospec enforces the LightningModelBase interface. freeze_weights
+    raising NotImplementedError is a base-class contract; no concrete model
+    needs to be instantiated to test that ModelSpec translates it into a
+    ValueError.
+    """
     mock_model = mocker.create_autospec(LightningModelBase, instance=True)
     mock_model.build.return_value = None
     mock_model.freeze_weights.side_effect = NotImplementedError("not implemented")
