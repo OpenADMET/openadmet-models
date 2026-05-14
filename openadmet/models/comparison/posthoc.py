@@ -755,7 +755,7 @@ class PostHocComparison(ComparisonBase):
             if reverse_cmap:
                 cmap = cmap + "_r"
 
-            significance = pd.DataFrame(hsd.pvalue)
+            significance = pd.DataFrame(hsd.pvalue).astype(object)
             significance[(hsd.pvalue < self.sig_levels[2]) & (hsd.pvalue >= 0)] = "***"
             significance[
                 (hsd.pvalue < self.sig_levels[1]) & (hsd.pvalue >= self.sig_levels[2])
