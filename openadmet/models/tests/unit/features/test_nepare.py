@@ -9,6 +9,12 @@ from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 def test_pairwise_make_new():
+    """
+    Verify that PairwiseFeaturizer can create a new independent instance via make_new().
+
+    This is important for factory-like creation patterns in the registry or during cross-validation
+    where fresh featurizers are needed.
+    """
     featurizer = PairwiseFeaturizer(
         how_to_pair="full", featurizer=FingerprintFeaturizer(fp_type="ecfp:4")
     )

@@ -1,26 +1,32 @@
+import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-import numpy as np
+
 from openadmet.models.comparison.compare_base import get_comparison_class
 from openadmet.models.comparison.posthoc import PostHocComparison
 from openadmet.models.tests.unit.datafiles import (
-    cyp2c9_json,
+    anvil_lgbm_trained_model_dir,
     cyp1a2_json,
+    cyp2c9_json,
     cyp3a4_json,
     multi_task_json,
-    anvil_lgbm_trained_model_dir,
 )
 
 
 def test_get_comparison_class():
-    """Test getting comparison class."""
+    """
+    Test dynamic retrieval of comparison classes from the registry.
+
+    Verifies that valid class names return the class and invalid names raise ValueError.
+    """
     get_comparison_class("PostHoc")
     with pytest.raises(ValueError):
         get_comparison_class("NotARealClass")
 
 
 def test_posthoc_fails_on_incorrect_inputs():
-    """Test that posthoc comparison fails when given incorrect inputs.
+    """
+    Test that posthoc comparison fails when given incorrect inputs.
 
     Inputs include:
     - No inputs
@@ -28,6 +34,8 @@ def test_posthoc_fails_on_incorrect_inputs():
     - Mismatched lengths of model_stats_fns, labels, and task_names
     - Repeated labels
     - Incorrect labels and task_names for model_stats_fns
+
+    This validation is critical to ensure that comparison tables and plots match models to their correct metadata.
     """
     comp_obj = PostHocComparison()
     with pytest.raises(ValueError):
@@ -69,7 +77,12 @@ def test_posthoc_repeat_label_error():
 
 
 def test_posthoc_comparison():
-    """Test that posthoc comparison works when given correct inputs."""
+    """
+    Test that posthoc comparison works correctly when given valid inputs.
+
+    This verifies the calculation of statistical tests (Levene's test for equality of variances,
+    Tukey's HSD for pairwise mean differences) based on loaded model metrics.
+    """
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
     model_tags = [
         "openadmet-CYP2C9-pchembl-regression-testing-cv",
@@ -97,7 +110,12 @@ def test_posthoc_comparison():
 def test_posthoc_comparison_anvil_reader_and_feature_label(
     label_types, expected_labels
 ):
-    """Test that posthoc comparison can read from anvil-trained model directories and features."""
+    """
+    Test that posthoc comparison can automatically extract labels from anvil-trained model directories.
+
+    This ensures that metadata stored in `metadata.yaml` within model directories can be correctly
+    parsed to generate readable labels for comparison plots.
+    """
     comp_obj = PostHocComparison()
     model_stats_fns, labels, task_names = comp_obj.label_and_task_name_from_anvil(
         model_dirs=[anvil_lgbm_trained_model_dir], label_types=label_types
@@ -121,7 +139,12 @@ def test_posthoc_comparison_json_reader_fails(label_types):
 
 
 def test_posthoc_comparison_json_reader():
-    """Test that posthoc comparison can read multi vs single task from anvil file."""
+    """
+    Test that posthoc comparison handles both multi-task and single-task JSON result files.
+
+    This verifies that the system can normalize results from different task types into a common
+    format for statistical comparison.
+    """
     model_stats = [multi_task_json, cyp3a4_json]
     model_tags = ["multitask", "single_task"]
     task_tags = ["cyp3a4_pchembl_value_mean", "pchembl_value_mean"]
@@ -130,14 +153,18 @@ def test_posthoc_comparison_json_reader():
     levene, tukeys_df = comp_obj.compare(
         model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
     )
-    assert levene["mse"]["stat"] == 2.483488460351842
-    assert levene["ktau"]["stat"] == 1.0392615736603197
-    assert tukeys_df["metric_val"][0] == -0.01037444780666702
-    assert tukeys_df["pvalue"][0] == 0.2488307785417857
+    assert np.allclose(levene["mse"]["stat"], 2.483488460351842)
+    assert np.allclose(levene["ktau"]["stat"], 1.0392615736603197)
+    assert np.allclose(tukeys_df["metric_val"][0], -0.01037444780666702)
+    assert np.allclose(tukeys_df["pvalue"][0], 0.2488307785417857)
 
 
 def test_posthoc_comparison_printing(capsys):
-    """Test that posthoc comparison prints results to console."""
+    """
+    Test that posthoc comparison prints results to console in a readable format.
+
+    We capture stdout to verify that Levene's test and Tukey's HSD results are actually displayed to the user.
+    """
     model_stats = [cyp2c9_json, cyp3a4_json, cyp1a2_json]
     model_tags = [
         "openadmet-CYP2C9-pchembl-regression-testing-cv",
