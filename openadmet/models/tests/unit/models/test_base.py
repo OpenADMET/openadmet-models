@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from unittest.mock import Mock
 
 import pytest
 
@@ -48,12 +47,18 @@ def test_save_load_torch_model(mclass, tmp_path):
     loaded_model.load(tmp_path / "test_model.pth")
 
 
-def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
-    state_dict = {"layer.weight": "dummy"}
-    torch_load = Mock(return_value=state_dict)
-    monkeypatch.setattr(model_base.torch, "load", torch_load)
+def test_lightning_model_load_uses_weights_only(mocker, tmp_path):
+    """
+    Verify that LightningModelBase.load calls torch.load with weights_only=True.
 
-    estimator = Mock()
+    We mock torch.load to avoid requiring a real .pth file and to capture the call arguments.
+    We mock estimator.load_state_dict because both calls are in a single expression in the
+    implementation, making it impossible to test one without the other.
+    """
+    state_dict = {"layer.weight": "dummy"}
+    torch_load = mocker.patch.object(model_base.torch, "load", return_value=state_dict)
+
+    estimator = mocker.Mock()
     model = SimpleNamespace(estimator=estimator)
     path = tmp_path / "test_model.pth"
 

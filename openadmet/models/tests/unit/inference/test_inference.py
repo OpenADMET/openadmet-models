@@ -111,6 +111,7 @@ def test_predict_with_real_single_model(
     mock_loader = mocker.patch.object(
         inference_module,
         "load_anvil_model_and_metadata",
+        autospec=True,
         return_value=(
             trained_single_model,
             real_featurizer,
@@ -152,6 +153,7 @@ def test_predict_with_real_ensemble_and_acquisition(
     mock_loader = mocker.patch.object(
         inference_module,
         "load_anvil_model_and_metadata",
+        autospec=True,
         return_value=(
             trained_ensemble,
             real_featurizer,
