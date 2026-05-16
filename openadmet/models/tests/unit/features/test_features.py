@@ -113,7 +113,10 @@ def test_feature_concatenator_drops_intersection(mocker):
     desc_features = np.zeros((3, 1613))
     desc_indices = np.array([0, 2, 3])
     mocker.patch.object(
-        DescriptorFeaturizer, "featurize", autospec=True, return_value=(desc_features, desc_indices)
+        DescriptorFeaturizer,
+        "featurize",
+        autospec=True,
+        return_value=(desc_features, desc_indices),
     )
 
     # Mock fingerprint featurizer to return 3 valid outputs (fails on index 2)
@@ -122,7 +125,10 @@ def test_feature_concatenator_drops_intersection(mocker):
     fp_features = np.zeros((3, 2000))
     fp_indices = np.array([0, 1, 3])
     mocker.patch.object(
-        FingerprintFeaturizer, "featurize", autospec=True, return_value=(fp_features, fp_indices)
+        FingerprintFeaturizer,
+        "featurize",
+        autospec=True,
+        return_value=(fp_features, fp_indices),
     )
 
     smiles = ["SMI0", "SMI1", "SMI2", "SMI3"]

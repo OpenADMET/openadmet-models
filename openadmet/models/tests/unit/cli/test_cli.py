@@ -43,7 +43,9 @@ def test_predict_cli_invokes_inference(tmp_path, runner, mocker):
     model_dir = tmp_path / "model_dir"
     model_dir.mkdir()
 
-    mock_inference = mocker.patch.object(predict_cli_module, "inference_func", autospec=True)
+    mock_inference = mocker.patch.object(
+        predict_cli_module, "inference_func", autospec=True
+    )
 
     result = runner.invoke(
         cli,
@@ -77,9 +79,14 @@ def test_anvil_cli_invokes_workflow(tmp_path, runner, mocker):
     We mock the `AnvilSpecification` and workflow execution to verify that the CLI correctly handles
     recipe paths and output directories without actually running a full ML training job.
     """
-    mock_spec = mocker.create_autospec(anvil_cli_module.AnvilSpecification, instance=True)
+    mock_spec = mocker.create_autospec(
+        anvil_cli_module.AnvilSpecification, instance=True
+    )
     mock_from_recipe = mocker.patch.object(
-        anvil_cli_module.AnvilSpecification, "from_recipe", autospec=True, return_value=mock_spec
+        anvil_cli_module.AnvilSpecification,
+        "from_recipe",
+        autospec=True,
+        return_value=mock_spec,
     )
 
     result = runner.invoke(
