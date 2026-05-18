@@ -3,11 +3,10 @@
 from abc import abstractmethod
 from typing import Callable, ClassVar
 
-from loguru import logger
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
+from loguru import logger
 from pydantic import BaseModel
-from scipy.stats import bootstrap
 
 evaluators = ClassRegistry(unique=True)
 
@@ -32,6 +31,9 @@ def get_eval_class(eval_type):
         If the evaluation type is not found in the registry.
 
     """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("evaluators")
     try:
         eval_class = evaluators.get_class(eval_type)
     except RegistryKeyError:
@@ -237,6 +239,8 @@ class EvalBase(BaseModel):
 
         """
         # calculate the metric and confidence intervals
+        from scipy.stats import bootstrap
+
         if is_scipy_statistic:
             metric = statistic(y_true, y_pred).statistic
             conf_interval = bootstrap(

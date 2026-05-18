@@ -1,16 +1,10 @@
 """Regression metrics and plots for model evaluation."""
 
 import json
-from functools import partial
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import wandb
-from matplotlib import pyplot as plt
 from pydantic import Field
-from scipy.stats import kendalltau, spearmanr
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from openadmet.models.eval.eval_base import (
     EvalBase,
@@ -18,10 +12,6 @@ from openadmet.models.eval.eval_base import (
     get_t_true_and_t_pred,
 )
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
-
-# create partial functions for the scipy stats
-nan_omit_ktau = partial(kendalltau, nan_policy="omit")
-nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
 
 
 def relative_absolute_error(y_true, y_pred):
@@ -104,19 +94,28 @@ class RegressionMetrics(EvalBase):
     )
     _evaluated: bool = False
 
-    _metrics: dict = {
-        "mse": (mean_squared_error, False, "MSE"),
-        "mae": (mean_absolute_error, False, "MAE"),
-        "r2": (r2_score, False, "$R^2$"),
-        "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
-        "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
-        "rae": (relative_absolute_error, False, "RAE"),
-    }
+    @classmethod
+    def _base_metrics(cls) -> dict:
+        from functools import partial
+
+        from scipy.stats import kendalltau, spearmanr
+        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+        nan_omit_ktau = partial(kendalltau, nan_policy="omit")
+        nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
+        return {
+            "mse": (mean_squared_error, False, "MSE"),
+            "mae": (mean_absolute_error, False, "MAE"),
+            "r2": (r2_score, False, "$R^2$"),
+            "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
+            "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
+            "rae": (relative_absolute_error, False, "RAE"),
+        }
 
     @property
     def active_metrics(self):
         """Return metrics applicable to the current target scale."""
-        metrics = dict(self._metrics)
+        metrics = self._base_metrics()
         if self.pXC50:
             metrics["pct_within_1_log"] = (
                 pct_within_1_log_unit,
@@ -205,6 +204,8 @@ class RegressionMetrics(EvalBase):
                 }
 
         if self.use_wandb:
+            import wandb
+
             for t_label in target_labels:
                 # make a table for the metrics
                 table = wandb.Table(
@@ -294,6 +295,8 @@ class RegressionMetrics(EvalBase):
 
         # also log the json to wandb
         if self.use_wandb:
+            import wandb
+
             artifact = wandb.Artifact(name="metrics_json", type="metric_json")
             # Add a file to the artifact
             artifact.add_file(json_path)
@@ -351,7 +354,7 @@ class RegressionMetrics(EvalBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self._base_metrics(),
             confidence_level=self.bootstrap_confidence_level,
             cv=False,
         )
@@ -574,6 +577,7 @@ class RegressionPlots(EvalBase):
         else:
             max_ax = max_val
         # set the limits to be the same for both axes
+        import seaborn as sns
 
         g = sns.jointplot(
             x=np.ravel(y_true),
@@ -718,6 +722,8 @@ class RegressionPlots(EvalBase):
         }
 
         n_metrics = len(metrics)
+        from matplotlib import pyplot as plt
+
         fig, axes = plt.subplots(1, n_metrics, figsize=(8, n_metrics), sharex=False)
 
         if n_metrics == 1:
@@ -783,4 +789,6 @@ class RegressionPlots(EvalBase):
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)
             if self.use_wandb:
+                import wandb
+
                 wandb.log({plot_tag: wandb.Image(str(plot_path))})

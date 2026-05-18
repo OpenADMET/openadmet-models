@@ -9,7 +9,7 @@ from chemprop import models, nn
 from collections import OrderedDict
 
 from openadmet.models.architecture.model_base import models as model_registry
-from openadmet.models.architecture.model_base import (
+from openadmet.models.architecture.lightning_model_base import (
     LightningModuleBase,
     LightningModelBase,
 )

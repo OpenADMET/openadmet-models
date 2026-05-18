@@ -1,32 +1,20 @@
 """ChemProp featurizer implementation."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
 from typing import Any, Union
+
 import numpy as np
 import pandas as pd
-from chemprop.data import (
-    MoleculeDatapoint,
-    MoleculeDataset,
-    MulticomponentDataset,
-    ReactionDataset,
-)
-from chemprop.data.collate import collate_batch, collate_multicomponent
-from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader
 
-from openadmet.models.features.chemprop import (
-    MoleculeDataset,
-    MulticomponentDataset,
-    ReactionDataset,
-)
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
 
 # we vendor this from chemprop so that we can pass custom samplers
 # taken directly from https://github.com/chemprop/chemprop/blob/main/chemprop/data/dataloader.py
 def _vendor_build_dataloader(
-    dataset: MoleculeDataset | ReactionDataset | MulticomponentDataset,
+    dataset,
     batch_size: int = 64,
     num_workers: int = 0,
     class_balance: bool = False,
@@ -68,6 +56,11 @@ def _vendor_build_dataloader(
         A PyTorch DataLoader for the given MoleculeDataset, ReactionDataset, or MulticomponentDataset.
 
     """
+    from chemprop.data import MulticomponentDataset
+    from chemprop.data.collate import collate_batch, collate_multicomponent
+    from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
+    from torch.utils.data import DataLoader
+
     if sampler is not None:
         if class_balance:
             sampler = ClassBalanceSampler(dataset.Y, seed, shuffle)
@@ -153,6 +146,8 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             - Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]: PyTorch Dataset containing the features and targets.
 
         """
+        from chemprop.data import MoleculeDatapoint, MoleculeDataset
+
         if y is not None:
             # if a pandas dataframe or series
             if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):

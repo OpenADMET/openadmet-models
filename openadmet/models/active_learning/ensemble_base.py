@@ -11,6 +11,9 @@ ensemblers = ClassRegistry(unique=True)
 
 def get_ensemble_class(ensemble_type):
     """Get the ensemble class."""
+    from openadmet.models._registry_loader import load_group
+
+    load_group("active_learning")
     try:
         ensemble_class = ensemblers.get_class(ensemble_type)
     except RegistryKeyError:

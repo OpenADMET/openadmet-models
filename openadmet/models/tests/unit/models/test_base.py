@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
+import openadmet.models.architecture.lightning_model_base as lightning_model_base
 import openadmet.models.architecture.model_base as model_base
 from openadmet.models.architecture.model_base import (
     LightningModelBase,
@@ -38,7 +39,7 @@ def test_save_load_torch_model(mclass, tmp_path):
 def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
     state_dict = {"layer.weight": "dummy"}
     torch_load = Mock(return_value=state_dict)
-    monkeypatch.setattr(model_base.torch, "load", torch_load)
+    monkeypatch.setattr(lightning_model_base.torch, "load", torch_load)
 
     estimator = Mock()
     model = SimpleNamespace(estimator=estimator)

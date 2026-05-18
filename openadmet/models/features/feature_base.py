@@ -1,20 +1,28 @@
 """Base classes and utilities for molecular featurizers."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from molfeat.trans import MoleculeTransformer
 from pydantic import BaseModel
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, Dataset
+
+if TYPE_CHECKING:
+    from molfeat.trans import MoleculeTransformer
+    from sklearn.preprocessing import StandardScaler
+    from torch.utils.data import DataLoader, Dataset
 
 featurizers = ClassRegistry(unique=True)
 
 
 def get_featurizer_class(feat_type):
     """Retrieve a featurizer class from the registry by type."""
+    from openadmet.models._registry_loader import load_group
+
+    load_group("featurizers")
     try:
         feat_class = featurizers.get_class(feat_type)
     except RegistryKeyError:
@@ -107,7 +115,7 @@ class MolfeatFeaturizer(FeaturizerBase):
 
     """
 
-    _transformer: MoleculeTransformer = None
+    _transformer: Any = None
 
     def __init__(self, *args, **kwargs):
         """

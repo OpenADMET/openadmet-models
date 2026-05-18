@@ -1,16 +1,11 @@
 """TabPFN model implementations."""
 
-from typing import ClassVar, Literal, Optional, Union
+import warnings
+from typing import ClassVar, Literal, Optional
 
 import numpy as np
 from loguru import logger
 from pydantic import Field, field_validator
-from tabpfn import TabPFNClassifier, TabPFNRegressor
-from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
-    AutoTabPFNClassifier,
-    AutoTabPFNRegressor,
-)
-import warnings
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -26,8 +21,6 @@ class TabPFNExtensionModelBase(PickleableModelBase):
     ----------
     type : ClassVar[str]
         Model type identifier.
-    mod_class : ClassVar[type]
-        The TabPFN model class (e.g., AutoTabPFNRegressor or AutoTabPFNClassifier).
     max_time : Optional[int]
         Maximum time to spend on fitting the post hoc ensemble.
     accelerator : Literal["cpu", "gpu", "auto"]
@@ -43,7 +36,11 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the TabPFN extension estimator class (deferred import)."""
+        raise NotImplementedError
 
     # TabPFN parameters
     max_time: Optional[int] = Field(
@@ -96,7 +93,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
             "TabPFN 2.5 is distributed under the TabPFN 2.5 License: https://priorlabs.ai/tabpfn-license which prohibits commercial use. Review the license and ensure you are compliant before using this model. A commercial license can be obtained from the TabPFN team."
         )
         if not self.estimator:
-            self.estimator = self.mod_class(
+            self.estimator = self._get_estimator_class()(
                 max_time=self.max_time,
                 device=accelerator,
                 random_state=self.random_state,
@@ -149,7 +146,12 @@ class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocRegressorModel"
-    mod_class: ClassVar[type] = AutoTabPFNRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNRegressor
+
+        return AutoTabPFNRegressor
 
 
 @models.register("TabPFNPostHocClassifierModel")
@@ -158,7 +160,12 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocClassifierModel"
-    mod_class: ClassVar[type] = AutoTabPFNClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNClassifier
+
+        return AutoTabPFNClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -197,7 +204,11 @@ class TabPFNModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the basic TabPFN estimator class (deferred import)."""
+        raise NotImplementedError
 
     # TabPFN parameters
     accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
@@ -208,7 +219,7 @@ class TabPFNModelBase(PickleableModelBase):
         """Prepare and build the model instance."""
         accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
         if not self.estimator:
-            self.estimator = self.mod_class(
+            self.estimator = self._get_estimator_class()(
                 device=accelerator,
                 random_state=self.random_state,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
@@ -264,7 +275,12 @@ class TabPFNRegressorModel(TabPFNModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNRegressorModel"
-    mod_class: ClassVar[type] = TabPFNRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn import TabPFNRegressor
+
+        return TabPFNRegressor
 
 
 @models.register("TabPFNClassifierModel")
@@ -273,4 +289,9 @@ class TabPFNClassifierModel(TabPFNModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNClassifierModel"
-    mod_class: ClassVar[type] = TabPFNClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn import TabPFNClassifier
+
+        return TabPFNClassifier
