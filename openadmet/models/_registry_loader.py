@@ -1,4 +1,5 @@
-"""Lazy registry loader — zero heavy imports at module level.
+"""
+Lazy registry loader — zero heavy imports at module level.
 
 Call ``load_group(name)`` to load a specific registry group, or ``load_all()``
 to populate every registry at once.  Both are idempotent.

@@ -124,7 +124,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         DataLoader,
         np.ndarray,
         StandardScaler,
-        Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
+        MoleculeDataset | ReactionDataset | MulticomponentDataset,
     ]:
         """
         Featurize a list of SMILES strings.
@@ -217,6 +217,6 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             **kwargs,
         )
 
-    def make_new(self) -> "ChemPropFeaturizer":
+    def make_new(self) -> ChemPropFeaturizer:
         """Copy parameters to a new ChemPropFeaturizer instance."""
         return self.__class__(**self.dict())

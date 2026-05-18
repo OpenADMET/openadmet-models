@@ -1,4 +1,5 @@
-"""Registry objects and lazy loader for all model components.
+"""
+Registry objects and lazy loader for all model components.
 
 Importing this module is intentionally cheap.  Concrete classes are registered
 only when the relevant group is first accessed.  To eagerly load everything

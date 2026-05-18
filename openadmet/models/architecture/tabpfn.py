@@ -149,7 +149,9 @@ class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
 
     @classmethod
     def _get_estimator_class(cls) -> type:
-        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNRegressor
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
+            AutoTabPFNRegressor,
+        )
 
         return AutoTabPFNRegressor
 
@@ -163,7 +165,9 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
 
     @classmethod
     def _get_estimator_class(cls) -> type:
-        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNClassifier
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
+            AutoTabPFNClassifier,
+        )
 
         return AutoTabPFNClassifier
 

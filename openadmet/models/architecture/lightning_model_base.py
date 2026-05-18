@@ -1,4 +1,5 @@
-"""Lightning-specific base classes for deep learning models.
+"""
+Lightning-specific base classes for deep learning models.
 
 This module is intentionally separate from model_base so that importing
 PickleableModelBase (sklearn-style models) does not incur the cost of
