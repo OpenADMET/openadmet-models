@@ -19,7 +19,25 @@ featurizers = ClassRegistry(unique=True)
 
 
 def get_featurizer_class(feat_type):
-    """Retrieve a featurizer class from the registry by type."""
+    """
+    Retrieve a featurizer class from the registry by type.
+
+    Parameters
+    ----------
+    feat_type : str
+        The registered key for the featurizer (e.g., ``"MolfeatFeaturizer"``).
+
+    Returns
+    -------
+    type
+        The featurizer class corresponding to the given type.
+
+    Raises
+    ------
+    ValueError
+        If ``feat_type`` is not found in the featurizer registry.
+
+    """
     from openadmet.models._registry_loader import load_group
 
     load_group("featurizers")

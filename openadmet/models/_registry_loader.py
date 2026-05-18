@@ -67,7 +67,17 @@ _loaded: set[str] = set()
 
 
 def load_group(name: str) -> None:
-    """Import all modules in the named registry group (idempotent)."""
+    """
+    Import all modules in the named registry group (idempotent).
+
+    Parameters
+    ----------
+    name : str
+        Registry group key.  Must be one of: ``"models"``, ``"evaluators"``,
+        ``"featurizers"``, ``"splitters"``, ``"trainers"``, ``"transforms"``,
+        ``"active_learning"``.
+
+    """
     if name in _loaded:
         return
     for mod in _GROUPS[name]:
@@ -76,6 +86,6 @@ def load_group(name: str) -> None:
 
 
 def load_all() -> None:
-    """Import all registry groups (idempotent)."""
+    """Import all registry groups, making every registered class available (idempotent)."""
     for name in _GROUPS:
         load_group(name)

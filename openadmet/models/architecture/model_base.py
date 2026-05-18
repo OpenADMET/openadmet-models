@@ -15,7 +15,25 @@ models = ClassRegistry(unique=True)
 
 
 def get_mod_class(model_type):
-    """Get the model class from the registry."""
+    """
+    Get the model class from the registry by type.
+
+    Parameters
+    ----------
+    model_type : str
+        The registered key for the model (e.g., ``"XGBRegressorModel"``).
+
+    Returns
+    -------
+    type
+        The model class corresponding to the given type.
+
+    Raises
+    ------
+    ValueError
+        If ``model_type`` is not found in the model registry.
+
+    """
     from openadmet.models._registry_loader import load_group
 
     load_group("models")

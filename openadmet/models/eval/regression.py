@@ -96,6 +96,16 @@ class RegressionMetrics(EvalBase):
 
     @classmethod
     def _base_metrics(cls) -> dict:
+        """
+        Build the base metrics dictionary with deferred 3rd-party imports.
+
+        Returns
+        -------
+        dict
+            Mapping of metric key to ``(callable, is_scipy_statistic, display_label)``
+            tuples for MSE, MAE, R², Kendall's τ, Spearman's ρ, and RAE.
+
+        """
         from functools import partial
 
         from scipy.stats import kendalltau, spearmanr
