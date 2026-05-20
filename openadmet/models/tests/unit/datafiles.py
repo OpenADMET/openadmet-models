@@ -15,6 +15,7 @@ basic_anvil_yaml_classification = (
     _data_ref / "basic_anvil_classification.yaml"
 ).as_posix()
 tabpfn_anvil_classification_yaml = (_data_ref / "tabpfn_ache.yaml").as_posix()
+dummy_null_anvil_yaml = (_data_ref / "dummy_null_anvil.yaml").as_posix()
 
 # individual sections for multi-yaml
 metadata_yaml = (_data_ref / "basic_anvil_metadata.yaml").as_posix()

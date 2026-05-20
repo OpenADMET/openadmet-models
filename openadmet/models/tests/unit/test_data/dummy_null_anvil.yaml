@@ -1,0 +1,42 @@
+metadata:
+  version: v1
+  name: "dummy-null-test"
+  build_number: 0
+  description: "minimal test workflow using NullFeaturizer and DummyRegressorModel"
+  tag: "UNIT"
+  authors: "Test Author"
+  email: "test@test.com"
+  biotargets:
+    - "test"
+  tags:
+    - "test"
+
+data:
+  type: csv
+  resource: "{{ANVIL_DIR}}/test_data.csv"
+  input_col: "SMILES"
+  target_cols: ["data1"]
+
+procedure:
+  split:
+    type: ShuffleSplitter
+    params:
+      train_size: 0.8
+      test_size: 0.2
+      random_state: 42
+
+  feat:
+    type: NullFeaturizer
+    params: {}
+
+  model:
+    type: DummyRegressorModel
+    params: {}
+
+  train:
+    type: SKLearnBasicTrainer
+    params: {}
+
+report:
+  eval:
+    - type: RegressionMetrics
