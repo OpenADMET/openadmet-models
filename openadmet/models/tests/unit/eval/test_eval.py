@@ -29,7 +29,7 @@ def test_regression_metrics():
     y_true = np.array([3, -0.5, 2, 7]).reshape(-1, 1)
     y_pred = np.array([2.5, 0.0, 2, 8]).reshape(-1, 1)
 
-    rm = RegressionMetrics()
+    rm = RegressionMetrics(n_resamples=100)
     metrics = rm.evaluate(y_true, y_pred)
 
     assert metrics["task_0"]["mse"]["value"] == 0.375
@@ -110,7 +110,7 @@ def test_classification_metrics():
     # Classes would be [0, 1, 1, 1]
     y_pred = [[1, 0], [0, 1], [0, 1], [0, 1]]
 
-    cm = ClassificationMetrics()
+    cm = ClassificationMetrics(n_resamples=100)
     metrics = cm.evaluate(y_true, y_pred)
 
     assert metrics["accuracy"]["value"] == 0.75
