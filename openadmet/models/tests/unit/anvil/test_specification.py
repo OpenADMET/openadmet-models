@@ -20,7 +20,7 @@ from openadmet.models.anvil.specification import (
     TransformSpec,
 )
 from openadmet.models.anvil.workflow import AnvilDeepLearningWorkflow, AnvilWorkflow
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.tests.unit import datafiles
 
 # --- DataSpec Tests ---
 
@@ -445,19 +445,12 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type():
     }
 
 
-def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
-    tmp_path, mocker
-):
+def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(tmp_path):
     """Test that run() writes provenance YAML files to the resolved output directory.
 
-    The system under test is the provenance-writing logic that executes *after*
-    workflow.run() returns — i.e. to_recipe() and to_multi_yaml(). Patching
-    to_workflow() is appropriate: it is the boundary between specification and
-    training, and real workflow execution requires data, featurizers, and a trained
-    model, all orthogonal to provenance writing. create_autospec is used (rather
-    than a plain Mock) so that any rename of resolved_output_dir or run() on
-    AnvilWorkflow will cause this test to fail, keeping the mock honest to the
-    real interface.
+    Uses a NullFeaturizer + DummyRegressorModel spec for a real end-to-end run,
+    verifying both the provenance-writing logic and the to_workflow() path that
+    resolves the output directory.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -471,38 +464,29 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(type="csv", resource=datafiles.test_csv, input_col="SMILES", target_cols=["data1"]),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
-    )
-
-    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mock_workflow.run.return_value = None
-
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
     )
 
     spec.run(output_dir=tmp_path / "out")
 
     # Check that provenance files were written
-    assert (tmp_path / "resolved" / "anvil_recipe.yaml").exists()
-    assert (tmp_path / "resolved" / "recipe_components" / "metadata.yaml").exists()
+    assert (tmp_path / "out" / "anvil_recipe.yaml").exists()
+    assert (tmp_path / "out" / "recipe_components" / "metadata.yaml").exists()
 
 
-def test_anvilspecification_run_tag_override(tmp_path, mocker):
+def test_anvilspecification_run_tag_override(tmp_path):
     """Test that providing a tag to run() overrides the metadata tag in provenance.
 
-    Same mocking rationale as
-    test_anvilspecification_run_writes_provenance_to_resolved_output_dir:
-    to_workflow() is patched with a create_autospec mock to skip training while
-    keeping the mock interface-honest to AnvilWorkflow.
+    Uses a NullFeaturizer + DummyRegressorModel spec so the full run() executes
+    end-to-end, verifying both the tag-override logic and that the original spec
+    object is not mutated.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -516,26 +500,20 @@ def test_anvilspecification_run_tag_override(tmp_path, mocker):
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(type="csv", resource=datafiles.test_csv, input_col="SMILES", target_cols=["data1"]),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
     )
 
-    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
-    )
-
     spec.run(output_dir=tmp_path / "out", tag="new_tag")
 
     # Check the saved yaml has the new tag
-    saved_yaml = tmp_path / "resolved" / "anvil_recipe.yaml"
+    saved_yaml = tmp_path / "out" / "anvil_recipe.yaml"
     with open(saved_yaml) as f:
         saved_data = yaml.safe_load(f)
     assert saved_data["metadata"]["tag"] == "new_tag"
@@ -616,42 +594,33 @@ def test_dataspec_read_train_test_yaml_raises():
 # --- ModelSpec freeze_weights tests (Refinement 6) ---
 
 
-def test_modelspec_freeze_weights_succeeds_when_supported(mocker):
-    """Test ModelSpec instantiates without error when freeze_weights is supported.
+@pytest.mark.parametrize(
+    "freeze_config",
+    [
+        {"message_passing": True},
+        {"batch_norm": True},
+        {"message_passing": True, "batch_norm": True},
+        {"message_passing": True, "batch_norm": True, "ffn_layers": 1},
+    ],
+)
+def test_modelspec_freeze_weights_succeeds_when_supported(freeze_config):
+    """Test ModelSpec instantiates without error for each valid ChemPropModel freeze configuration.
 
-    create_autospec(LightningModelBase) is used rather than a real model because
-    the validator calls build() and freeze_weights() as a side-effect probe during
-    construction. A real ChemPropModel.build() constructs a full MPNN, which is
-    heavyweight and orthogonal to what is being tested. The mock enforces the
-    LightningModelBase interface while keeping the test fast and focused on the
-    validator logic in ModelSpec.
+    Parametrizes over all supported freeze_weights combinations. The validator calls
+    build() + freeze_weights() (with no args) as a side-effect probe during construction;
+    passing means the model supports weight freezing. ChemPropModel.build() takes ~6ms
+    and freeze_weights() is instantaneous.
     """
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.return_value = None
-
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
-    spec = ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+    spec = ModelSpec(type="ChemPropModel", freeze_weights=freeze_config)
     assert spec is not None
-    mock_model.build.assert_called_once()
-    mock_model.freeze_weights.assert_called_once()
 
 
-def test_modelspec_freeze_weights_raises_when_not_implemented(mocker):
+def test_modelspec_freeze_weights_raises_when_not_implemented():
     """Test ModelSpec raises ValueError when freeze_weights is not implemented.
 
-    Same rationale as test_modelspec_freeze_weights_succeeds_when_supported:
-    create_autospec enforces the LightningModelBase interface. freeze_weights
-    raising NotImplementedError is a base-class contract; no concrete model
-    needs to be instantiated to test that ModelSpec translates it into a
-    ValueError.
+    NeuralPairwiseRegressorModel inherits LightningModelBase.freeze_weights() which
+    raises NotImplementedError. The validator translates this to ValueError so that
+    misconfigured recipes fail at parse time rather than at training time.
     """
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.side_effect = NotImplementedError("not implemented")
-
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
     with pytest.raises(ValueError, match="Weight freezing not implemented"):
-        ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+        ModelSpec(type="NeuralPairwiseRegressorModel", freeze_weights={"message_passing": True})
