@@ -1,6 +1,5 @@
 import matplotlib.figure
 import numpy as np
-import pytest
 import seaborn as sns
 
 from openadmet.models.eval.binary import PosthocBinaryMetrics
@@ -41,9 +40,9 @@ def test_regression_metrics():
     rm = RegressionMetrics(n_resamples=100)
     metrics = rm.evaluate(y_true, y_pred)
 
-    assert metrics["task_0"]["mse"]["value"] == pytest.approx(0.375, abs=0.001)
-    assert metrics["task_0"]["mae"]["value"] == pytest.approx(0.5, abs=0.001)
-    assert metrics["task_0"]["r2"]["value"] == pytest.approx(0.94860, abs=0.001)
+    assert np.allclose(metrics["task_0"]["mse"]["value"], 0.375, atol=0.001)
+    assert np.allclose(metrics["task_0"]["mae"]["value"], 0.5, atol=0.001)
+    assert np.allclose(metrics["task_0"]["r2"]["value"], 0.94860, atol=0.001)
 
 
 def test_regression_metrics_and_cv_include_rae_and_pct_within_1_log_for_pxc50():
@@ -68,7 +67,7 @@ def test_relative_absolute_error_formula():
     y_true = np.array([1.0, 2.0, 3.0])
     y_pred = np.array([1.0, 2.0, 4.0])
 
-    assert relative_absolute_error(y_true, y_pred) == pytest.approx(0.5)
+    assert np.allclose(relative_absolute_error(y_true, y_pred), 0.5)
 
 
 def test_relative_absolute_error_denominator_zero():
@@ -82,7 +81,7 @@ def test_pct_within_1_log_unit():
     y_true = np.array([6.0, 7.0, 8.0])
     y_pred = np.array([6.5, 7.2, 9.5])
 
-    assert pct_within_1_log_unit(y_true, y_pred) == pytest.approx(2 / 3)
+    assert np.allclose(pct_within_1_log_unit(y_true, y_pred), 2 / 3)
 
 
 def test_cv_rae_scorer_is_minimization():
@@ -99,7 +98,7 @@ def test_lightning_cv_pct_within_1_log_uses_raw_metric_callable():
     y_true = np.array([6.0, 7.0, 8.0])
     y_pred = np.array([6.5, 7.2, 9.5])
 
-    assert pct_within_1_log(y_true, y_pred) == pytest.approx(2 / 3)
+    assert np.allclose(pct_within_1_log(y_true, y_pred), 2 / 3)
 
 
 def test_regression_plots():
@@ -138,12 +137,12 @@ def test_classification_metrics():
     cm = ClassificationMetrics(n_resamples=100)
     metrics = cm.evaluate(y_true, y_pred)
 
-    assert metrics["accuracy"]["value"] == pytest.approx(0.75)
-    assert metrics["precision"]["value"] == pytest.approx(0.667, abs=0.001)
-    assert metrics["recall"]["value"] == pytest.approx(1.0)
-    assert metrics["f1"]["value"] == pytest.approx(0.8)
-    assert metrics["roc_auc"]["value"] == pytest.approx(0.75)
-    assert metrics["pr_auc"]["value"] == pytest.approx(0.833, abs=0.001)
+    assert np.allclose(metrics["accuracy"]["value"], 0.75)
+    assert np.allclose(metrics["precision"]["value"], 0.667, atol=0.001)
+    assert np.allclose(metrics["recall"]["value"], 1.0)
+    assert np.allclose(metrics["f1"]["value"], 0.8)
+    assert np.allclose(metrics["roc_auc"]["value"], 0.75)
+    assert np.allclose(metrics["pr_auc"]["value"], 0.833, atol=0.001)
 
 
 def test_classification_plots():
