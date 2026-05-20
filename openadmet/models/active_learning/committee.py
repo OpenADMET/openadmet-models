@@ -432,9 +432,7 @@ class CommitteeRegressor(EnsembleBase):
                 "Standard deviation not calibrated: consider calling `calibrate_uncertainty`."
             )
 
-        return self._predict(
-            X, return_std=return_std, return_all=return_all, **kwargs
-        )
+        return self._predict(X, return_std=return_std, return_all=return_all, **kwargs)
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Save calibration model
