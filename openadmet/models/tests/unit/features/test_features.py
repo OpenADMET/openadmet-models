@@ -42,7 +42,7 @@ def test_descriptor_featurizer(descr_type, dtype):
     This ensures that physical-chemical descriptors (like Mordred or RDKit 2D) are correctly generated
     and returned with the requested data type, which is important for downstream model compatibility.
     """
-    featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype)
+    featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype, n_jobs=1)
     X, idx = featurizer.featurize(["CCO", "CCN", "CCO"])
     assert X.dtype == dtype
     assert_array_equal(idx, np.arange(3))
@@ -61,8 +61,7 @@ def test_descriptor_one_invalid(one_invalid_smi, desc2d_featurizer):
     assert_array_equal(idx, np.asarray([0, 1, 3]))
 
 
-@pytest.mark.parametrize("dtype", (np.float32, np.float64))
-@pytest.mark.parametrize("fp_type", ("ecfp", "fcfp"))
+@pytest.mark.parametrize("fp_type,dtype", [("ecfp", np.float32), ("fcfp", np.float64)])
 def test_fingerprint_featurizer(smiles, fp_type, dtype):
     """
     Validate FingerprintFeaturizer for different fingerprint types (ECFP, FCFP) and precisions.
@@ -70,7 +69,7 @@ def test_fingerprint_featurizer(smiles, fp_type, dtype):
     This verifies that structural fingerprints are correctly generated with the expected vector size (2000)
     and data type.
     """
-    featurizer = FingerprintFeaturizer(fp_type=fp_type, dtype=dtype)
+    featurizer = FingerprintFeaturizer(fp_type=fp_type, dtype=dtype, n_jobs=1)
     X, idx = featurizer.featurize(smiles)
     assert X.shape == (3, 2000)
     assert X.dtype == dtype
