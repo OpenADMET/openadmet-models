@@ -155,8 +155,8 @@ class MockCommitteeModel(ModelBase):
         pass
 
 
-def test_return_members(toy_data):
-    """Test that return_members exposes per-member predictions with correct shape."""
+def test_return_all(toy_data):
+    """Test that return_all exposes raw per-member predictions with correct shape."""
     X_train, _, X_test, y_train, _, _ = toy_data
     n_members = 4
     n_tasks = 1
@@ -170,20 +170,16 @@ def test_return_members(toy_data):
         use_bagging=False,
     )
 
-    # return_members only
-    mean, members = committee.predict(X_test, return_members=True)
-    assert members.shape == (X_test.shape[0], n_tasks, n_members)
-    assert mean.shape == (X_test.shape[0], n_tasks)
-    assert_allclose(mean, np.mean(members, axis=-1))
+    # return_all returns only the raw array
+    preds = committee.predict(X_test, return_all=True)
+    assert preds.shape == (X_test.shape[0], n_tasks, n_members)
+    # mean and std are derivable from the returned array
+    assert_allclose(np.mean(preds, axis=-1).shape, (X_test.shape[0], n_tasks))
+    assert_allclose(np.std(preds, axis=-1).shape, (X_test.shape[0], n_tasks))
 
-    # return_members + return_std
-    mean2, std, members2 = committee.predict(
-        X_test, return_std=True, return_members=True
-    )
-    assert members2.shape == (X_test.shape[0], n_tasks, n_members)
-    assert std.shape == (X_test.shape[0], n_tasks)
-    assert_allclose(mean2, np.mean(members2, axis=-1))
-    assert_allclose(std, np.std(members2, axis=-1))
+    # return_all and return_std are mutually exclusive
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        committee.predict(X_test, return_std=True, return_all=True)
 
     # Neither flag — plain mean returned (not a tuple)
     result = committee.predict(X_test)

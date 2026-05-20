@@ -353,7 +353,7 @@ class CommitteeRegressor(EnsembleBase):
 
         return _ACQUISITION_FUNCTIONS[query_strategy](mean, std, **kwargs)
 
-    def _predict(self, X, return_std=False, return_members=False, **kwargs):
+    def _predict(self, X, return_std=False, return_all=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -363,43 +363,45 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to predict.
         return_std : bool, optional
             Whether to return the standard deviation of the predictions.
-        return_members : bool, optional
+            Mutually exclusive with ``return_all``.
+        return_all : bool, optional
             Whether to return the raw per-member predictions of shape
-            (n_samples, n_tasks, n_members). When True, returned as the
-            last element of the tuple.
+            (n_samples, n_tasks, n_members) instead of the mean (and std).
+            Mutually exclusive with ``return_std``.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
         Returns
         -------
         array-like or tuple
-            mean, or (mean, std), or (mean, members), or (mean, std, members)
-            depending on the values of return_std and return_members.
+            mean, or (mean, std), or ndarray of shape (n_samples, n_tasks, n_members)
+            depending on the values of return_std and return_all.
 
         """
+        if return_std and return_all:
+            raise ValueError(
+                "return_std and return_all are mutually exclusive. "
+                "When return_all=True, compute mean and std from the returned array as needed."
+            )
+
         # Make predictions: (n_samples, n_tasks, n_members)
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
+
+        if return_all:
+            return preds
 
         # Compute mean
         mean = np.mean(preds, axis=-1)
 
-        if not return_std and not return_members:
+        if not return_std:
             return mean
 
-        result = (mean,)
+        std = np.std(preds, axis=-1)
+        if self.calibrated:
+            std = self._get_calibration_function()(std)
+        return mean, std
 
-        if return_std:
-            std = np.std(preds, axis=-1)
-            if self.calibrated:
-                std = self._get_calibration_function()(std)
-            result += (std,)
-
-        if return_members:
-            result += (preds,)
-
-        return result
-
-    def predict(self, X, return_std=False, return_members=False, **kwargs):
+    def predict(self, X, return_std=False, return_all=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -409,18 +411,19 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to predict.
         return_std : bool, optional
             Whether to return the standard deviation of the predictions.
-        return_members : bool, optional
+            Mutually exclusive with ``return_all``.
+        return_all : bool, optional
             Whether to return the raw per-member predictions of shape
-            (n_samples, n_tasks, n_members). When True, returned as the
-            last element of the tuple.
+            (n_samples, n_tasks, n_members) instead of the mean (and std).
+            Mutually exclusive with ``return_std``.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
         Returns
         -------
         array-like or tuple
-            mean, or (mean, std), or (mean, members), or (mean, std, members)
-            depending on the values of return_std and return_members.
+            mean, or (mean, std), or ndarray of shape (n_samples, n_tasks, n_members)
+            depending on the values of return_std and return_all.
 
         """
         if return_std is True and not self.calibrated:
@@ -429,7 +432,7 @@ class CommitteeRegressor(EnsembleBase):
             )
 
         return self._predict(
-            X, return_std=return_std, return_members=return_members, **kwargs
+            X, return_std=return_std, return_all=return_all, **kwargs
         )
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
