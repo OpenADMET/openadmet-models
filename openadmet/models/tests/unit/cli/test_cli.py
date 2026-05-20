@@ -1,13 +1,13 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from click.testing import CliRunner
 
-from openadmet.models.cli import anvil as anvil_cli_module
 from openadmet.models.cli import predict as predict_cli_module
 from openadmet.models.cli.cli import cli
 from openadmet.models.tests.test_utils import click_success
-from openadmet.models.tests.unit.datafiles import basic_anvil_yaml_cv
+from openadmet.models.tests.unit.datafiles import dummy_null_anvil_yaml
 
 
 @pytest.fixture
@@ -31,81 +31,64 @@ def test_subcommand_runnable(runner, args):
     assert click_success(result)
 
 
-def test_predict_cli_invokes_inference(tmp_path, runner, mocker):
+def test_predict_cli_invokes_inference(tmp_path, runner, null_single_model_dir):
     """
-    Validate that the 'predict' subcommand correctly parses arguments and calls the underlying inference function.
+    Validate that the 'predict' subcommand runs inference end-to-end and writes predictions.
 
-    We mock `inference_func` to avoid loading real models (which is heavy and requires trained artifacts).
-    This ensures that the CLI layer correctly passes paths, column names, and flags to the logic layer.
+    Uses a real NullFeaturizer + DummyRegressorModel fixture so that the CLI path,
+    featurization, and prediction logic all execute without mocking any layer.
     """
     input_csv = tmp_path / "input.csv"
     input_csv.write_text("MY_SMILES\nCCO\n")
-    model_dir = tmp_path / "model_dir"
-    model_dir.mkdir()
-
-    mock_inference = mocker.patch.object(
-        predict_cli_module, "inference_func", autospec=True
-    )
+    output_csv = tmp_path / "predictions.csv"
 
     result = runner.invoke(
         cli,
         [
             "predict",
             "--input-path",
-            input_csv,
+            str(input_csv),
             "--input-col",
             "MY_SMILES",
             "--model-dir",
-            model_dir,
+            str(null_single_model_dir),
             "--output-csv",
-            tmp_path / "predictions.csv",
+            str(output_csv),
             "--accelerator",
             "cpu",
         ],
     )
     assert click_success(result)
-    mock_inference.assert_called_once()
-    called = mock_inference.call_args.kwargs
-    assert called["input_col"] == "MY_SMILES"
-    assert called["accelerator"] == "cpu"
-    assert called["write_csv"] is True
-    assert list(called["model_dir"]) == [model_dir]
+    assert output_csv.exists()
+    df = pd.read_csv(output_csv)
+    assert "OADMET_PRED_UNIT_task_0" in df.columns
+    assert "OADMET_STD_UNIT_task_0" in df.columns
 
 
-def test_anvil_cli_invokes_workflow(tmp_path, runner, mocker):
+def test_anvil_cli_invokes_workflow(tmp_path, runner):
     """
-    Validate that the 'anvil' subcommand correctly initializes and runs a workflow from a recipe.
+    Validate that the 'anvil' subcommand runs a lightweight workflow end-to-end.
 
-    We mock the `AnvilSpecification` and workflow execution to verify that the CLI correctly handles
-    recipe paths and output directories without actually running a full ML training job.
+    Uses the dummy_null_anvil recipe (NullFeaturizer + DummyRegressorModel) so the full
+    parse → train → save pipeline executes without mocking any layer.
     """
-    mock_spec = mocker.create_autospec(
-        anvil_cli_module.AnvilSpecification, instance=True
-    )
-    mock_from_recipe = mocker.patch.object(
-        anvil_cli_module.AnvilSpecification,
-        "from_recipe",
-        autospec=True,
-        return_value=mock_spec,
-    )
+    output_dir = tmp_path / "anvil_output"
 
     result = runner.invoke(
         cli,
         [
             "anvil",
             "--recipe-path",
-            basic_anvil_yaml_cv,
+            dummy_null_anvil_yaml,
             "--output-dir",
-            tmp_path / "anvil_output",
+            str(output_dir),
         ],
     )
 
     assert click_success(result)
-    mock_from_recipe.assert_called_once_with(basic_anvil_yaml_cv)
-    mock_spec.run.assert_called_once()
-    called = mock_spec.run.call_args.kwargs
-    assert Path(called["output_dir"]) == tmp_path / "anvil_output"
-    assert called["debug"] is False
+    assert output_dir.exists()
+    assert (output_dir / "model.pkl").exists()
+    assert (output_dir / "recipe_components").is_dir()
 
 
 @pytest.mark.parametrize(
