@@ -464,7 +464,12 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(tmp_pat
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource=datafiles.test_csv, input_col="SMILES", target_cols=["data1"]),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
             split=SplitSpec(type="ShuffleSplitter"),
             feat=FeatureSpec(type="NullFeaturizer"),
@@ -500,7 +505,12 @@ def test_anvilspecification_run_tag_override(tmp_path):
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource=datafiles.test_csv, input_col="SMILES", target_cols=["data1"]),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
             split=SplitSpec(type="ShuffleSplitter"),
             feat=FeatureSpec(type="NullFeaturizer"),
@@ -623,4 +633,7 @@ def test_modelspec_freeze_weights_raises_when_not_implemented():
     misconfigured recipes fail at parse time rather than at training time.
     """
     with pytest.raises(ValueError, match="Weight freezing not implemented"):
-        ModelSpec(type="NeuralPairwiseRegressorModel", freeze_weights={"message_passing": True})
+        ModelSpec(
+            type="NeuralPairwiseRegressorModel",
+            freeze_weights={"message_passing": True},
+        )

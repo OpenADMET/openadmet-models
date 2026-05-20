@@ -44,7 +44,11 @@ def _write_recipe_components(recipe_dir, tag, ensemble=False):
         "train": {"type": "SKLearnBasicTrainer", "params": {}},
     }
     if ensemble:
-        procedure["ensemble"] = {"type": "CommitteeRegressor", "n_models": 2, "params": {}}
+        procedure["ensemble"] = {
+            "type": "CommitteeRegressor",
+            "n_models": 2,
+            "params": {},
+        }
 
     with open(recipe_dir / "procedure.yaml", "w") as f:
         yaml.safe_dump(procedure, f)
