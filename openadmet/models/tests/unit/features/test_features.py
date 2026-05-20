@@ -32,7 +32,9 @@ def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
 
 
-@pytest.mark.parametrize("descr_type,dtype", [("mordred", np.float32), ("desc2d", np.float64)])
+@pytest.mark.parametrize(
+    "descr_type,dtype", [("mordred", np.float32), ("desc2d", np.float64)]
+)
 def test_descriptor_featurizer(descr_type, dtype):
     """
     Validate DescriptorFeaturizer for different descriptor types and floating point precisions.
@@ -100,7 +102,9 @@ def test_feature_concatenator(smiles, desc2d_featurizer, ecfp_featurizer):
     assert_array_equal(idx, np.arange(3))
 
 
-def test_feature_concatenator_drops_intersection(mocker, desc2d_featurizer, ecfp_featurizer):
+def test_feature_concatenator_drops_intersection(
+    mocker, desc2d_featurizer, ecfp_featurizer
+):
     """
     Verify that FeatureConcatenator only keeps molecules valid across ALL featurizers.
 
@@ -148,7 +152,9 @@ def test_feature_concatenator_drops_intersection(mocker, desc2d_featurizer, ecfp
     assert_array_equal(idx, np.array([0, 3]))
 
 
-def test_feature_concatenator_order_independence(smiles, desc2d_featurizer, ecfp_featurizer):
+def test_feature_concatenator_order_independence(
+    smiles, desc2d_featurizer, ecfp_featurizer
+):
     """
     Ensure that changing the order of featurizers in the list results in the same outcome due to sorting.
     """
