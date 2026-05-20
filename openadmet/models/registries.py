@@ -32,6 +32,7 @@ from openadmet.models.features.chemprop import *  # noqa: F401 F403
 from openadmet.models.features.combine import *  # noqa: F401 F403
 from openadmet.models.features.molfeat_fingerprint import *  # noqa: F401 F403
 from openadmet.models.features.molfeat_properties import *  # noqa: F401 F403
+from openadmet.models.features.null_featurizer import *  # noqa: F401 F403
 from openadmet.models.features.feature_base import featurizers  # noqa: F401 F403
 
 # util
