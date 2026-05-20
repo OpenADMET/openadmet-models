@@ -111,7 +111,7 @@ def test_regression_plots():
     y_true = np.array([3, -0.5, 2, 7]).reshape(-1, 1)
     y_pred = np.array([2.5, 0.0, 2, 8]).reshape(-1, 1)
 
-    rm = RegressionPlots()
+    rm = RegressionPlots(n_resamples=100)
     plot_data = rm.evaluate(y_true, y_pred)
 
     assert isinstance(plot_data, dict)
