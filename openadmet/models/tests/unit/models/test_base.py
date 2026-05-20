@@ -42,4 +42,3 @@ def test_save_load_torch_model(mclass, tmp_path):
     loaded_model = mclass()
     loaded_model.build()
     loaded_model.load(tmp_path / "test_model.pth")
-
