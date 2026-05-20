@@ -175,7 +175,13 @@ def test_pairwise_featurizer(smiles):
     (differences) are correctly computed.
     """
     featurizer = PairwiseFeaturizer(
-        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "dtype": np.float32, "n_jobs": 1}},
+        featurizer={
+            "FingerprintFeaturizer": {
+                "fp_type": "ecfp",
+                "dtype": np.float32,
+                "n_jobs": 1,
+            }
+        },
         how_to_pair="full",
         batch_size=2,
         shuffle=False,
