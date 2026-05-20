@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 def _safe_to_numpy(X):
@@ -71,8 +72,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Ensemble specified
         if self.ensemble:
             # Fine-tuning paths specified
-            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
-                self.parent_spec.procedure.ensemble.serial_paths is not None
+            if (self.ensemble_kwargs.get("param_paths") is not None) or (
+                self.ensemble_kwargs.get("serial_paths") is not None
             ):
                 raise ValueError(
                     "Finetuning from serialized ensemble models is not supported in this workflow."
@@ -81,8 +82,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # No ensemble
         else:
             # Fine-tuning paths supplied
-            if (self.parent_spec.procedure.model.param_path is not None) or (
-                self.parent_spec.procedure.model.serial_path is not None
+            if (self.model_kwargs.get("param_path") is not None) or (
+                self.model_kwargs.get("serial_path") is not None
             ):
                 raise ValueError(
                     "Finetuning from serialized model is not supported in this workflow."
@@ -114,19 +115,28 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
-        # Bootstrap iterations
-        models = []
         # Get bagging setting
-        use_bagging = self.parent_spec.procedure.ensemble.use_bagging
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
         # Get global seed
+        # Currently grabbing from `split`, should this be set separately?
         global_seed = self.split.random_state
 
-        for i in range(self.parent_spec.procedure.ensemble.n_models):
+        # Bootstrap iterations
+        models = []
+        for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
 
+            # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
+                # Set seed for bootstrapping
+                logger.info(
+                    f"Using incremented seed={global_seed + i} for bootstrapping"
+                )
+                np.random.seed(global_seed + i)
+
                 # Bootstrap train data
                 logger.info("Bootstrapping train data")
                 bootstrap_indices = np.random.choice(
@@ -140,7 +150,9 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 y_train_bootstrap = y_train
 
             # Build model from scratch
-            logger.info(f"Building model {i}")
+            logger.info(
+                f"Building model {i} using incremented seed={global_seed + i} to vary model initialization"
+            )
             bootstrap_model = self.model.make_new()
 
             # Set seed for model
@@ -148,7 +160,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 bootstrap_model.random_state = global_seed + i
             else:
                 logger.warning(
-                    f"Model {bootstrap_model} does not support random_state seeding."
+                    f"Model {bootstrap_model} does not support random_state seeding"
                 )
 
             bootstrap_model.build()
@@ -207,8 +219,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -227,23 +239,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Create the output directory
         output_dir.mkdir(parents=True, exist_ok=True)
+        self.resolved_output_dir = output_dir
 
         # Create data subdirectory
         data_dir = output_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write recipe to output directory
-        self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
-
-        # Split recipe into components and save
-        recipe_components = Path(output_dir / "recipe_components")
-        recipe_components.mkdir(parents=True, exist_ok=True)
-        self.parent_spec.to_multi_yaml(
-            metadata_yaml=recipe_components / "metadata.yaml",
-            procedure_yaml=recipe_components / "procedure.yaml",
-            data_yaml=recipe_components / "data.yaml",
-            report_yaml=recipe_components / "eval.yaml",
-        )
 
         # Log output directory information
         logger.info(f"Running workflow from directory {output_dir}")
@@ -339,7 +339,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 X_val_feat,
                 y_val,
-                method=self.parent_spec.procedure.ensemble.calibration_method,
+                method=self.ensemble_kwargs.get("calibration_method"),
             )
 
             # Save
@@ -462,18 +462,67 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         return self
 
+    @model_validator(mode="after")
+    def check_finetuning_paths(self):
+        """
+        Check that finetuning path pairs are consistent and exist on disk.
+
+        Both ``param_path`` and ``serial_path`` must be provided together (or
+        neither). When both are provided, both paths must exist before training
+        begins. The same requirement applies to ``param_paths`` / ``serial_paths``
+        for ensemble workflows, which must additionally be equal-length lists.
+
+        Raises
+        ------
+        ValueError
+            If exactly one of the path pair is provided, if provided paths do
+            not exist on disk, or if ensemble path lists have unequal length.
+
+        """
+        if not self.ensemble:
+            param_path = self.model_kwargs.get("param_path")
+            serial_path = self.model_kwargs.get("serial_path")
+            if (param_path is None) != (serial_path is None):
+                raise ValueError(
+                    "Both param_path and serial_path must be provided together for finetuning."
+                )
+            if param_path is not None:
+                if not Path(param_path).exists():
+                    raise ValueError(f"param_path '{param_path}' does not exist.")
+                if not Path(serial_path).exists():
+                    raise ValueError(f"serial_path '{serial_path}' does not exist.")
+        else:
+            param_paths = self.ensemble_kwargs.get("param_paths")
+            serial_paths = self.ensemble_kwargs.get("serial_paths")
+            if (param_paths is None) != (serial_paths is None):
+                raise ValueError(
+                    "Both param_paths and serial_paths must be provided together for ensemble finetuning."
+                )
+            if param_paths is not None:
+                if len(param_paths) != len(serial_paths):
+                    raise ValueError(
+                        "param_paths and serial_paths must have equal length."
+                    )
+                for p in param_paths:
+                    if not Path(p).exists():
+                        raise ValueError(f"param_path '{p}' does not exist.")
+                for s in serial_paths:
+                    if not Path(s).exists():
+                        raise ValueError(f"serial_path '{s}' does not exist.")
+        return self
+
     def _train(
         self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
         # Load model from disk
         if (
-            self.parent_spec.procedure.model.param_path is not None
-            and self.parent_spec.procedure.model.serial_path is not None
+            self.model_kwargs.get("param_path") is not None
+            and self.model_kwargs.get("serial_path") is not None
         ):
             logger.info("Loading model from disk, overrides any specified parameters.")
             self.model = self.model.deserialize(
-                self.parent_spec.procedure.model.param_path,
-                self.parent_spec.procedure.model.serial_path,
+                self.model_kwargs.get("param_path"),
+                self.model_kwargs.get("serial_path"),
                 scaler=train_scaler,
                 **kwargs,
             )
@@ -481,16 +530,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Model loaded")
 
             # Optionally freeze weights
-            if self.parent_spec.procedure.model.freeze_weights is not None:
+            if self.model_kwargs.get("freeze_weights") is not None:
                 logger.info(f"Freezing model weights")
-                self.model.freeze_weights(
-                    **self.parent_spec.procedure.model.freeze_weights
-                )
+                self.model.freeze_weights(**self.model_kwargs.get("freeze_weights"))
                 logger.info(f"Model weights frozen")
 
         # Build model from scratch
         else:
-            logger.info("Building model")
+            logger.info(f"Building model")
             self.model.build(scaler=train_scaler, **kwargs)
             logger.info("Model built")
 
@@ -522,16 +569,17 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
 
+        # Get bagging setting
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
+        # Get global seed
+        # Currently grabbing from `split`, should this be set separately?
+        global_seed = self.split.random_state
+
         # Bootstrap iterations
         models = []
 
-        # Get bagging setting
-        use_bagging = self.parent_spec.procedure.ensemble.use_bagging
-
-        # Get global seed
-        global_seed = self.split.random_state
-
-        for i in range(self.parent_spec.procedure.ensemble.n_models):
+        for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
@@ -540,12 +588,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.feat = self.feat.make_new()
             self.trainer = self.trainer.make_new()
 
-            # Seed everything for reproducibility
-            pl.seed_everything(global_seed + i)
-
-            # Bootstrap data if using bagging
+            # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                logger.info("Bootstrapping train data")
+                # Set seed for bootstrapping
+                logger.info(
+                    f"Bootstrapping train data with incremented seed={global_seed + i}"
+                )
+                np.random.seed(global_seed + i)
+
                 bootstrap_indices = np.random.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
                 )
@@ -575,31 +625,34 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Data featurized")
 
             # Load model from disk
-            if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
-                self.parent_spec.procedure.ensemble.serial_paths is not None
+            if (self.ensemble_kwargs.get("param_paths") is not None) and (
+                self.ensemble_kwargs.get("serial_paths") is not None
             ):
                 logger.info(
                     f"Loading model {i} from disk, overrides any specified parameters."
                 )
                 self.model = self.model.deserialize(
-                    self.parent_spec.procedure.ensemble.param_paths[i],
-                    self.parent_spec.procedure.ensemble.serial_paths[i],
+                    self.ensemble_kwargs.get("param_paths")[i],
+                    self.ensemble_kwargs.get("serial_paths")[i],
                     scaler=bootstrap_scaler,
                     **kwargs,
                 )
                 logger.info(f"Model {i} loaded")
 
                 # Optionally freeze weights
-                if self.parent_spec.procedure.model.freeze_weights is not None:
+                if self.model_kwargs.get("freeze_weights") is not None:
                     logger.info(f"Freezing weights for model {i}")
-                    self.model.freeze_weights(
-                        **self.parent_spec.procedure.model.freeze_weights
-                    )
+                    self.model.freeze_weights(**self.model_kwargs.get("freeze_weights"))
                     logger.info(f"Model {i} frozen")
 
             # Build model from scratch
             else:
-                logger.info(f"Building model {i}")
+                # Set seed for bootstrap model
+                logger.info(
+                    f"Building model {i} with incremented seed={global_seed + i} to vary model initialization"
+                )
+                pl.seed_everything(global_seed + i)
+
                 self.model = self.model.make_new()
                 self.model.build(scaler=bootstrap_scaler, **kwargs)
                 logger.info(f"Model {i} built")
@@ -664,8 +717,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -684,23 +737,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Create the output directory
         output_dir.mkdir(parents=True, exist_ok=True)
+        self.resolved_output_dir = output_dir
 
         # Create data subdirectory
         data_dir = output_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write recipe to output directory
-        self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
-
-        # Split recipe into components and save
-        recipe_components = Path(output_dir / "recipe_components")
-        recipe_components.mkdir(parents=True, exist_ok=True)
-        self.parent_spec.to_multi_yaml(
-            metadata_yaml=recipe_components / "metadata.yaml",
-            procedure_yaml=recipe_components / "procedure.yaml",
-            data_yaml=recipe_components / "data.yaml",
-            report_yaml=recipe_components / "eval.yaml",
-        )
 
         # Log output directory information
         logger.info(f"Running workflow from directory {output_dir}")
@@ -768,7 +809,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data featurized")
 
         kwargs = {}
-        if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
+        if isinstance(self.feat, PairwiseFeaturizer):
             kwargs["input_dim"] = train_dataset[0][0].shape[
                 -1
             ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
@@ -791,7 +832,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 val_dataloader,
                 y_val,
-                method=self.parent_spec.procedure.ensemble.calibration_method,
+                method=self.ensemble_kwargs.get("calibration_method"),
                 accelerator=self.trainer.accelerator,
                 devices=self.trainer.devices,
             )

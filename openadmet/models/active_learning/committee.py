@@ -396,7 +396,8 @@ class CommitteeRegressor(EnsembleBase):
         if not return_std:
             return mean
 
-        std = np.std(preds, axis=-1)
+        # Compute standard deviation, guard against zero std
+        std = np.maximum(np.std(preds, axis=-1), 1e-8)
         if self.calibrated:
             std = self._get_calibration_function()(std)
         return mean, std

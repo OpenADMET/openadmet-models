@@ -84,8 +84,7 @@ def test_anvil_cross_val_run(tmp_path):
 
 def test_anvil_classification_run(tmp_path):
     anvil_spec = AnvilSpecification.from_recipe(basic_anvil_yaml_classification)
-    anvil_workflow = anvil_spec.to_workflow()
-    anvil_workflow.run(output_dir=tmp_path / "tst")
+    anvil_spec.run(output_dir=tmp_path / "tst")
 
     assert Path(tmp_path / "tst" / "anvil_recipe.yaml").exists()
     assert Path(tmp_path / "tst" / "model.json").exists()
