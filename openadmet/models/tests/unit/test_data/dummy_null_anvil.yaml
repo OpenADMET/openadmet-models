@@ -40,3 +40,5 @@ procedure:
 report:
   eval:
     - type: RegressionMetrics
+      params:
+        n_resamples: 100
