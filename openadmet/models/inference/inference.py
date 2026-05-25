@@ -93,30 +93,35 @@ def load_anvil_model_and_metadata(model_dir):
 
 
 def _generate_pairwise_df(
-    data, input_col, feat, predictions, predictions_tag, std_tag
+    data,
+    input_col,
+    feat,
+    predictions,
+    std,
+    predictions_tag,
+    std_tag,
+    task_idx=0,
+    pairwise_df=None,
 ) -> pd.DataFrame:
     """Generate a DataFrame for pairwise predictions."""
-    smiles = data[input_col].values
-    pairwise_dataset = PairwiseAugmentedDataset(smiles, None, how=feat.how_to_pair)
-    pairs = pairwise_dataset.idxs  # list of (i, j) tuples
+    if pairwise_df is None:
+        smiles = data[input_col].values
+        pairwise_dataset = PairwiseAugmentedDataset(smiles, None, how=feat.how_to_pair)
+        pairs = pairwise_dataset.idxs  # list of (i, j) tuples
 
-    smiles_i = [smiles[i] for i, j in pairs]
-    smiles_j = [smiles[j] for i, j in pairs]
-    pred = predictions[:, j]
+        pairwise_df = pd.DataFrame(
+            {
+                f"{input_col}_i": [smiles[i] for i, _ in pairs],
+                f"{input_col}_j": [smiles[j] for _, j in pairs],
+            }
+        )
+        pairwise_df[input_col] = (
+            pairwise_df[f"{input_col}_i"] + " - " + pairwise_df[f"{input_col}_j"]
+        )
 
-    pairwise_df = pd.DataFrame(
-        {
-            f"{input_col}_i": smiles_i,
-            f"{input_col}_j": smiles_j,
-            predictions_tag: pred,
-        }
-    )
-
-    pairwise_df[std_tag] = pd.Series(predictions[:, j], index=pairwise_df.index)
-
-    pairwise_df[input_col] = (
-        pairwise_df[f"{input_col}_i"] + " - " + pairwise_df[f"{input_col}_j"]
-    )
+    task_predictions = predictions[:, task_idx]
+    pairwise_df[predictions_tag] = pd.Series(task_predictions, index=pairwise_df.index)
+    pairwise_df[std_tag] = pd.Series(std[:, task_idx], index=pairwise_df.index)
 
     return pairwise_df
 
@@ -211,6 +216,9 @@ def predict(
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+    original_data = data.copy()
+    pairwise_df = None
+
     # Load the models
     for i, model_path in enumerate(model_dir):
         logger.info(f"Loading model {i} from {model_path}")
@@ -236,7 +244,8 @@ def predict(
         logger.debug(f"Feature: {feat}")
         # Returns a variable length tuple, first element is the featurized data or a dataloader
         # Second element is the indices of the original input that were featurized
-        feat_data = feat.featurize(data[input_col])
+        input_data = original_data if isinstance(feat, PairwiseFeaturizer) else data
+        feat_data = feat.featurize(input_data[input_col])
         # Features or dataloader
         X_feat = feat_data[0]
 
@@ -267,9 +276,18 @@ def predict(
                 logger.info(
                     "Detected pairwise featurizer, generating pairwise output DataFrame"
                 )
-                data = _generate_pairwise_df(
-                    data, input_col, feat, predictions, predictions_tag, std_tag
+                pairwise_df = _generate_pairwise_df(
+                    data=input_data,
+                    input_col=input_col,
+                    feat=feat,
+                    predictions=predictions,
+                    std=std,
+                    predictions_tag=predictions_tag,
+                    std_tag=std_tag,
+                    task_idx=j,
+                    pairwise_df=pairwise_df,
                 )
+                data = pairwise_df
 
             else:
                 # Add the predictions to the data DataFrame
