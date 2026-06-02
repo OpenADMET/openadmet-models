@@ -73,7 +73,9 @@ def test_load_anvil_forces_shuffle_false(tmp_path):
             "params": {"gpus": 1, "max_epochs": 10, "use_wandb": False},
         },
     }
-    (model_dir / "recipe_components" / "procedure.yaml").write_text(yaml.dump(procedure))
+    (model_dir / "recipe_components" / "procedure.yaml").write_text(
+        yaml.dump(procedure)
+    )
 
     # Patch model deserialization — loading weights is orthogonal to what we're testing
     with patch(
