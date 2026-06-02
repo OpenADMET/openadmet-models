@@ -108,28 +108,36 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
 
     """
     if y_val is not None and y_pred_fold is not None:
-            # CV case - use fold data directly
-            t_true = y_val[:, task_id]
-            t_pred = y_pred_fold[:, task_id]
+        # CV case - use fold data directly
+        t_true = y_val[:, task_id]
+        t_pred = y_pred_fold[:, task_id]
     elif y_true is not None and y_pred is not None:
         if y_true.shape[0] != y_pred.shape[0]:
             # pairwise differences case
-            logger.warning("y_true and y_pred have different number of samples, generating pairwise differences for true values")
+            logger.warning(
+                "y_true and y_pred have different number of samples, generating pairwise differences for true values"
+            )
             N = y_true.shape[0]
-            t_true = np.array([
-                y_true[i, task_id] - y_true[j, task_id]
-                for i in range(N)
-                for j in range(N)
-            ])
+            t_true = np.array(
+                [
+                    y_true[i, task_id] - y_true[j, task_id]
+                    for i in range(N)
+                    for j in range(N)
+                ]
+            )
             t_pred = y_pred[:, task_id]
-            sample_indices = np.random.choice(len(t_true), size=int(len(t_true) - 1), replace=False)
+            sample_indices = np.random.choice(
+                len(t_true), size=int(len(t_true) - 1), replace=False
+            )
             t_true = t_true[sample_indices]
             t_pred = t_pred[sample_indices]
         else:
             t_true = y_true[:, task_id]
             t_pred = y_pred[:, task_id]
     else:
-        raise ValueError(f"Cannot get true and predicted values for task {task_id}: y_true/y_pred and y_val/y_pred_fold are both None")
+        raise ValueError(
+            f"Cannot get true and predicted values for task {task_id}: y_true/y_pred and y_val/y_pred_fold are both None"
+        )
 
     t_true, t_pred = mask_nans(t_true, t_pred)
     return t_true, t_pred

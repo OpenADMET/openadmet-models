@@ -16,7 +16,10 @@ from openadmet.models.eval.cross_validation import (
 )
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.eval.regression import RegressionMetrics, RegressionPlots
-from openadmet.models.eval.cross_validation import SKLearnRepeatedKFoldCrossValidation, PytorchLightningRepeatedKFoldCrossValidation
+from openadmet.models.eval.cross_validation import (
+    SKLearnRepeatedKFoldCrossValidation,
+    PytorchLightningRepeatedKFoldCrossValidation,
+)
 
 
 def test_get_eval_class():
@@ -140,14 +143,17 @@ def test_posthoc_eval_metrics():
     assert precision == 1.0
     assert recall == 1.0
 
+
 # for eval testing
 @pytest.fixture
 def X_all():
     return pd.DataFrame(np.random.rand(20, 5))
 
+
 @pytest.fixture
 def y_all():
     return pd.DataFrame(np.random.rand(20, 1))
+
 
 @pytest.fixture
 def pytorch_setup(tmp_path, X_all, y_all):
@@ -192,9 +198,9 @@ def pytorch_setup(tmp_path, X_all, y_all):
 @patch("openadmet.models.eval.cross_validation.LightningTrainer")
 def test_pytorch_save_cv_models(mock_trainer_cls, save_cv_models, pytorch_setup):
     n_splits = 2
-    
+
     mock_trainer_cls.return_value = pytorch_setup["mock_fold_trainer"]
-    
+
     evaluator = PytorchLightningRepeatedKFoldCrossValidation(
         n_splits=n_splits,
         n_repeats=1,
@@ -202,13 +208,20 @@ def test_pytorch_save_cv_models(mock_trainer_cls, save_cv_models, pytorch_setup)
     )
 
     setup = pytorch_setup
-    evaluator.evaluate(**{k: v for k, v in setup.items() if k not in ("fold_model", "mock_fold_trainer")})
+    evaluator.evaluate(
+        **{
+            k: v
+            for k, v in setup.items()
+            if k not in ("fold_model", "mock_fold_trainer")
+        }
+    )
 
     fold_model = setup["fold_model"]
     if save_cv_models:
         assert fold_model.serialize.call_count == n_splits
     else:
         fold_model.serialize.assert_not_called()
+
 
 @pytest.fixture
 def sklearn_setup(tmp_path, X_all, y_all):
@@ -231,9 +244,11 @@ def sklearn_setup(tmp_path, X_all, y_all):
 
 @pytest.mark.parametrize("save_cv_models", [True, False])
 @patch("openadmet.models.eval.cross_validation.cross_validate")
-def test_sklearn_save_cv_models(mock_cross_validate, save_cv_models, sklearn_setup, tmp_path):
+def test_sklearn_save_cv_models(
+    mock_cross_validate, save_cv_models, sklearn_setup, tmp_path
+):
     n_splits = 2
-    
+
     # cross_validate returns estimators only when return_estimator=True
     # mock_estimators = [MagicMock(), MagicMock()]
     mock_cross_validate.return_value = {
@@ -244,7 +259,11 @@ def test_sklearn_save_cv_models(mock_cross_validate, save_cv_models, sklearn_set
         "test_spearmanr": np.array([0.7, 0.8]),
         "fit_time": np.array([0.1, 0.1]),
         "score_time": np.array([0.1, 0.1]),
-        **({"estimator": [DummyRegressor(), DummyRegressor()]} if save_cv_models else {}),
+        **(
+            {"estimator": [DummyRegressor(), DummyRegressor()]}
+            if save_cv_models
+            else {}
+        ),
     }
 
     evaluator = SKLearnRepeatedKFoldCrossValidation(

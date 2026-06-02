@@ -14,7 +14,7 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
     r2_score,
-    get_scorer
+    get_scorer,
 )
 from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 import joblib
@@ -194,7 +194,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
     random_state: int = Field(42, description="Random state for reproducibility")
-    save_cv_models: bool = Field(False, description="Whether or not to save the model trained in cross validation")
+    save_cv_models: bool = Field(
+        False,
+        description="Whether or not to save the model trained in cross validation",
+    )
 
     _driver_type: DriverType = DriverType.SKLEARN
 
@@ -256,9 +259,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             or X_all is None
             or y_all is None
         ):
-            raise ValueError(
-                "model, X_train, y_train, X_all, y_all must be provided"
-            )
+            raise ValueError("model, X_train, y_train, X_all, y_all must be provided")
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
@@ -276,7 +277,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             raise ValueError(
                 f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
             )
-        
+
         # CV
         if groups is None:
             groups = np.array([i for i in range(X_all.shape[0])])
@@ -292,7 +293,13 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation
         scores = cross_validate(
-            estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics, return_estimator=self.save_cv_models
+            estimator,
+            X_all,
+            y_all,
+            cv=cv,
+            n_jobs=1,
+            scoring=self.sklearn_metrics,
+            return_estimator=self.save_cv_models,
         )
 
         if self.save_cv_models and output_dir is not None:
@@ -528,7 +535,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
-    save_cv_models: bool = Field(False, description="Whether to save models trained during cross validation.")
+    save_cv_models: bool = Field(
+        False, description="Whether to save models trained during cross validation."
+    )
 
     @property
     def active_metrics(self):
@@ -696,7 +705,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
 
             if self.save_cv_models:
-                fold_model.serialize(trainer.output_dir / "cv" / f"fold_{str(fold)}" / "model.pth")
+                fold_model.serialize(
+                    trainer.output_dir / "cv" / f"fold_{str(fold)}" / "model.pth"
+                )
 
             # evaluate the model
             y_pred_fold = fold_model.predict(
@@ -710,7 +721,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             if not (n_tasks == y_pred_fold.shape[1]):
                 raise ValueError("y_true and y_pred must have the same number of tasks")
 
-            
             for task_id in range(n_tasks):
                 t_true, t_pred = get_t_true_and_t_pred(
                     task_id, y_true, y_pred, y_val, y_pred_fold

@@ -409,7 +409,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 y_all=y,
                 tag=model_tag,
                 target_labels=target_labels,
-                output_dir=output_dir
+                output_dir=output_dir,
             )
 
             # Write evaluation report
