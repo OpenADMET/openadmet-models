@@ -15,7 +15,12 @@ from openadmet.models.eval.cross_validation import (
     SKLearnRepeatedKFoldCrossValidation,
 )
 from openadmet.models.eval.eval_base import get_eval_class
-from openadmet.models.eval.regression import RegressionMetrics, RegressionPlots
+from openadmet.models.eval.regression import (
+    RegressionMetrics,
+    RegressionPlots,
+    pct_within_1_log_unit,
+    relative_absolute_error,
+)
 from openadmet.models.eval.cross_validation import (
     SKLearnRepeatedKFoldCrossValidation,
     PytorchLightningRepeatedKFoldCrossValidation,
@@ -257,6 +262,7 @@ def test_sklearn_save_cv_models(
         "test_r2": np.array([0.8, 0.9]),
         "test_ktau": np.array([0.7, 0.8]),
         "test_spearmanr": np.array([0.7, 0.8]),
+        "test_rae": np.array([0.5, 0.6]),
         "fit_time": np.array([0.1, 0.1]),
         "score_time": np.array([0.1, 0.1]),
         **(
