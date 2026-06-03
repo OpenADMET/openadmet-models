@@ -66,6 +66,9 @@ def load_anvil_model_and_metadata(model_dir):
     # Load the procedure specification
     procedure_spec = ProcedureSpec.from_yaml(procedure_spec)
     feat = procedure_spec.feat.to_class()
+    # Training-time shuffle must not apply at inference: output order must match input order
+    if hasattr(feat, "shuffle"):
+        feat.shuffle = False
     model = procedure_spec.model.to_class()
 
     # Load model ensemble
