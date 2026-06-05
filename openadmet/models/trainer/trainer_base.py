@@ -26,6 +26,9 @@ def get_trainer_class(model_type):
         The trainer class corresponding to the given type.
 
     """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("trainers")
     try:
         feat_class = trainers.get_class(model_type)
     except RegistryKeyError:

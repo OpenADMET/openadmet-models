@@ -14,14 +14,8 @@ from lightning import pytorch as pl
 from loguru import logger
 from pydantic import PrivateAttr, field_validator, model_validator
 
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
-
-_METRIC_TO_LOSS = {
-    "mse": nn.metrics.MSE(),
-    "mae": nn.metrics.MAE(),
-    "rmse": nn.metrics.RMSE(),
-}
 
 
 def configure_optimizers(self):
@@ -445,6 +439,11 @@ class ChemPropModel(LightningModelBase):
 
         """
         if not self.estimator:
+            _METRIC_TO_LOSS = {
+                "mse": nn.metrics.MSE(),
+                "mae": nn.metrics.MAE(),
+                "rmse": nn.metrics.RMSE(),
+            }
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
             if self.from_foundation:
                 if self.from_foundation == "chemeleon":

@@ -20,8 +20,6 @@ from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
-    nan_omit_ktau,
-    nan_omit_spearmanr,
     pct_within_1_log_unit,
     relative_absolute_error,
 )
@@ -32,11 +30,21 @@ from openadmet.models.drivers import DriverType
 
 def wrap_ktau(y_true, y_pred):
     """Wrap ktau nan omission."""
+    from functools import partial
+
+    from scipy.stats import kendalltau
+
+    nan_omit_ktau = partial(kendalltau, nan_policy="omit")
     return nan_omit_ktau(y_true, y_pred).statistic
 
 
 def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
+    from functools import partial
+
+    from scipy.stats import spearmanr
+
+    nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
     return nan_omit_spearmanr(y_true, y_pred).correlation
 
 
