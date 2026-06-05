@@ -3,7 +3,6 @@
 from typing import ClassVar
 
 import numpy as np
-from catboost import CatBoostClassifier, CatBoostRegressor
 from loguru import logger
 from pydantic import ConfigDict
 
@@ -18,9 +17,6 @@ class CatBoostModelBase(PickleableModelBase):
     ----------
     type : ClassVar[str]
         The type of the model.
-    mod_class : ClassVar[type]
-        To specify the CatBoost model class (e.g., CatBoostRegressor or CatBoost
-        Classifier)
 
     """
 
@@ -29,12 +25,16 @@ class CatBoostModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the CatBoost estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(**self.model_dump())
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -95,7 +95,12 @@ class CatBoostRegressorModel(CatBoostModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "CatBoostRegressorModel"
-    mod_class: ClassVar[type] = CatBoostRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from catboost import CatBoostRegressor
+
+        return CatBoostRegressor
 
 
 @models.register("CatBoostClassifierModel")
@@ -109,7 +114,12 @@ class CatBoostClassifierModel(CatBoostModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "CatBoostClassifierModel"
-    mod_class: ClassVar[type] = CatBoostClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from catboost import CatBoostClassifier
+
+        return CatBoostClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

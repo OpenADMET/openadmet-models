@@ -14,7 +14,7 @@ from openadmet.models.anvil.specification import DataSpec, Metadata
 from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.eval.eval_base import EvalBase
 from openadmet.models.features.feature_base import FeaturizerBase
-from openadmet.models.registries import *  # noqa: F401, F403
+from openadmet.models.registries import load_all  # noqa: F401
 from openadmet.models.split.split_base import SplitterBase
 from openadmet.models.trainer.trainer_base import TrainerBase
 from openadmet.models.transforms.transform_base import (

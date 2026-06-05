@@ -1,22 +1,13 @@
 """Cluster-based data splitting implementations."""
 
 import logging
-from pydantic import BaseModel, field_validator, model_validator
 from typing import Literal
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.cluster import KMeans
-from molfeat.trans import MoleculeTransformer
-from molfeat.trans.fp import FPVecTransformer
-import datamol as dm
+
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, field_validator, model_validator
+
 from openadmet.models.split.split_base import SplitterBase, splitters
-from useful_rdkit_utils import (
-    get_butina_clusters,
-    get_bemis_murcko_clusters,
-    get_scaffold,
-    smi2numpy_fp,
-)
 
 
 @splitters.register("ClusterSplitter")
@@ -78,13 +69,22 @@ class ClusterSplitter(SplitterBase):
         """
         # Get clusters based on the selected method
         if self.method == "butina":
+            from useful_rdkit_utils import get_butina_clusters
+
             clusters = get_butina_clusters(X, cutoff=self.butina_cutoff)
         elif self.method == "bemis-murcko":
+            from useful_rdkit_utils import get_bemis_murcko_clusters
+
             clusters = get_bemis_murcko_clusters(X)
         elif self.method == "kmeans":
             logging.warning(
                 "KMeans clustering is NOT DETERMINISTIC with random seed across platforms."
             )
+            import datamol as dm
+            from molfeat.trans import MoleculeTransformer
+            from molfeat.trans.fp import FPVecTransformer
+            from sklearn.cluster import KMeans
+
             km = KMeans(
                 n_clusters=self.k_clusters,
                 n_init=1,

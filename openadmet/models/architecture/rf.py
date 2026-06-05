@@ -4,7 +4,6 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -14,12 +13,16 @@ class RFModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the Random Forest estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(**self.model_dump())
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -66,7 +69,12 @@ class RFRegressorModel(RFModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "RFRegressorModel"
-    mod_class: ClassVar[type] = RandomForestRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.ensemble import RandomForestRegressor
+
+        return RandomForestRegressor
 
     # RF parameters
     n_estimators: int = 100
@@ -95,7 +103,12 @@ class RFClassifierModel(RFModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "RFClassifierModel"
-    mod_class: ClassVar[type] = RandomForestClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.ensemble import RandomForestClassifier
+
+        return RandomForestClassifier
 
     # RF parameters
     n_estimators: int = 100

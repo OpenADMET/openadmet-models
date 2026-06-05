@@ -1,10 +1,10 @@
 """Scaffold-based data splitting implementations."""
 
 import logging
-from sklearn.model_selection import train_test_split
-from splito import MaxDissimilaritySplit, PerimeterSplit, ScaffoldSplit
+
 import numpy as np
 import pandas as pd
+
 from openadmet.models.split.split_base import SplitterBase, splitters
 
 
@@ -40,6 +40,8 @@ class ScaffoldSplitter(SplitterBase):
 
         """
         logging.warning("ScaffoldSplitter is not available for cross-validation.")
+        from splito import ScaffoldSplit
+
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -87,6 +89,8 @@ class ScaffoldSplitter(SplitterBase):
             )
 
         # Split train+val into train and val sets
+        from sklearn.model_selection import train_test_split
+
         X_train, X_val, y_train, y_val = train_test_split(
             safe_index(X, train_val_idx),
             safe_index(y, train_val_idx),
@@ -135,6 +139,8 @@ class PerimeterSplitter(SplitterBase):
 
         """
         logging.warning("PerimeterSplitter is not available for cross-validation.")
+        from splito import PerimeterSplit
+
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -181,6 +187,8 @@ class PerimeterSplitter(SplitterBase):
             )
 
         # Split train+val into train and val sets using sklearn
+        from sklearn.model_selection import train_test_split
+
         X_train, X_val, y_train, y_val = train_test_split(
             safe_index(X, train_val_idx),
             safe_index(y, train_val_idx),
@@ -231,6 +239,8 @@ class MaxDissimilaritySplitter(SplitterBase):
         logging.warning(
             "MaxDissimilaritySplitter is not available for cross-validation."
         )
+        from splito import MaxDissimilaritySplit
+
         # No test set requested
         if self.test_size == 0:
             # Split into train and val
@@ -277,6 +287,8 @@ class MaxDissimilaritySplitter(SplitterBase):
             )
 
         # Split train+val into train and val sets using sklearn
+        from sklearn.model_selection import train_test_split
+
         X_train, X_val, y_train, y_val = train_test_split(
             safe_index(X, train_val_idx),
             safe_index(y, train_val_idx),

@@ -1,10 +1,16 @@
 """Tests for the inference orchestration pipeline using real, lightweight components."""
 
+import shutil
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 
 from openadmet.models.inference import inference as inference_module
+from openadmet.models.tests.unit.datafiles import anvil_chemprop_trained_model_dir
 
 
 @pytest.fixture
@@ -84,3 +90,33 @@ def test_load_anvil_model_and_metadata_missing_procedure_yaml(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="does not contain procedure.yaml"):
         inference_module.load_anvil_model_and_metadata(model_dir)
+
+
+def test_load_anvil_forces_shuffle_false(tmp_path):
+    """A featurizer saved with shuffle=True during training must have shuffle forced to False at load time."""
+    model_dir = tmp_path / "model"
+    shutil.copytree(anvil_chemprop_trained_model_dir, model_dir)
+
+    procedure = {
+        "feat": {"type": "ChemPropFeaturizer", "params": {"shuffle": True}},
+        "model": {"type": "ChemPropModel", "params": {}},
+        "split": {
+            "type": "ShuffleSplitter",
+            "params": {"random_state": 42, "test_size": 0.3, "train_size": 0.7},
+        },
+        "train": {
+            "type": "LightningTrainer",
+            "params": {"gpus": 1, "max_epochs": 10, "use_wandb": False},
+        },
+    }
+    (model_dir / "recipe_components" / "procedure.yaml").write_text(
+        yaml.dump(procedure)
+    )
+
+    with patch(
+        "openadmet.models.architecture.model_base.LightningModelBase.deserialize",
+        return_value=MagicMock(),
+    ):
+        _, feat, _, _ = inference_module.load_anvil_model_and_metadata(model_dir)
+
+    assert feat.shuffle is False
