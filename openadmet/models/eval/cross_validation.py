@@ -14,8 +14,10 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
     r2_score,
+    get_scorer,
 )
 from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
+import joblib
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
@@ -192,12 +194,18 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         Number of repeats for cross-validation.
     random_state : int
         Random state for reproducibility.
+    save_cv_models : bool
+        Whether or not to save the model trained in cross validation.
 
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
     random_state: int = Field(42, description="Random state for reproducibility")
+    save_cv_models: bool = Field(
+        False,
+        description="Whether or not to save the model trained in cross validation",
+    )
 
     _driver_type: DriverType = DriverType.SKLEARN
 
@@ -213,6 +221,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         groups=None,
         tag=None,
         target_labels=None,
+        output_dir=None,
         **kwargs,
     ):
         """
@@ -240,6 +249,8 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             Tag for the evaluation run.
         target_labels : list of str, optional
             List of target names.
+        output_dir: str
+            Where to save the models trained in cross validation.
         kwargs : Dict
             Additional keyword arguments.
 
@@ -253,14 +264,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
             model is None
             or X_train is None
             or y_train is None
-            or y_pred is None
-            or y_true is None
             or X_all is None
             or y_all is None
         ):
-            raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_all, y_all must be provided"
-            )
+            raise ValueError("model, X_train, y_train, X_all, y_all must be provided")
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
@@ -279,7 +286,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
                 f"Number of target labels ({len(target_labels)}) must match number of tasks ({n_tasks})"
             )
 
-        # run CV
+        # CV
         if groups is None:
             groups = np.array([i for i in range(X_all.shape[0])])
 
@@ -294,8 +301,20 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation
         scores = cross_validate(
-            estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
+            estimator,
+            X_all,
+            y_all,
+            cv=cv,
+            n_jobs=1,
+            scoring=self.sklearn_metrics,
+            return_estimator=self.save_cv_models,
         )
+
+        if self.save_cv_models and output_dir is not None:
+            for fold, estimator_fold in enumerate(scores["estimator"]):
+                save_path = output_dir / "cv" / f"fold_{fold}"
+                save_path.mkdir(parents=True, exist_ok=True)
+                joblib.dump(estimator_fold, save_path / "model.pkl")
 
         logger.info("Cross-validation complete")
 
@@ -303,7 +322,8 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # also convert the numpy arrays to lists so they can be serialized to JSON
         clean_scores = {}
         for k, v in scores.items():
-            clean_scores[k.replace("test_", "")] = v
+            if k != "estimator":
+                clean_scores[k.replace("test_", "")] = v
 
         # exclude fit_time and score_time
         exclude = ["fit_time", "score_time"]
@@ -313,7 +333,9 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             self.data[t_label] = {}
-            for k, v in clean_scores.items() if k not in exclude else {}:
+            for k, v in clean_scores.items():
+                if k in exclude:
+                    continue
                 # calculate the confidence interval, assuming normal distribution
                 mean = v.mean()
                 sigma = v.std(ddof=1)
@@ -340,22 +362,23 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         stat_dict = self.get_stat_dict(t_label=t_label)
 
         # create the plots
-        for plot_tag, plot in self.plots.items():
-            if "ciplot" in plot_tag:
-                self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
-            elif "regplot" in plot_tag:
-                self.plot_data[plot_tag] = plot(
-                    y_true,
-                    y_pred,
-                    xlabel=self.axes_labels[0],
-                    ylabel=self.axes_labels[1],
-                    title=f"{self.title}\nTask: {t_label}",
-                    stat_dict=stat_dict,
-                    pXC50=self.pXC50,
-                    min_val=self.min_val,
-                    max_val=self.max_val,
-                    plot_errbars=self.plot_errbars,
-                )
+        if y_true is not None:
+            for plot_tag, plot in self.plots.items():
+                if "ciplot" in plot_tag:
+                    self.plot_data[plot_tag] = plot(stat_dict=stat_dict)
+                elif "regplot" in plot_tag:
+                    self.plot_data[plot_tag] = plot(
+                        y_true,
+                        y_pred,
+                        xlabel=self.axes_labels[0],
+                        ylabel=self.axes_labels[1],
+                        title=f"{self.title}\nTask: {t_label}",
+                        stat_dict=stat_dict,
+                        pXC50=self.pXC50,
+                        min_val=self.min_val,
+                        max_val=self.max_val,
+                        plot_errbars=self.plot_errbars,
+                    )
 
         return self.data
 
@@ -486,6 +509,8 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         Maximum value for the axes.
     use_wandb : bool
         Whether to use wandb for logging.
+    save_cv_models: bool
+        Whether to save the models trained during cross validation.
 
     """
 
@@ -518,6 +543,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
+    save_cv_models: bool = Field(
+        False, description="Whether to save models trained during cross validation."
+    )
 
     @property
     def active_metrics(self):
@@ -593,8 +621,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             model is None
             or X_train is None
             or y_train is None
-            or y_pred is None
-            or y_true is None
             or tag is None
             or featurizer is None
             or trainer is None
@@ -602,7 +628,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             or y_all is None
         ):
             raise ValueError(
-                "model, X_train, y_train, y_pred, y_true, X_all, y_all, and tag must be provided"
+                "model, X_train, y_train, X_all, y_all, and tag must be provided"
             )
 
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
@@ -685,6 +711,12 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
             # Pass the dataloaders to the trainer
             fold_model = fold_trainer.train(fold_train_dataloader, fold_val_dataloader)
+
+            if self.save_cv_models:
+                fold_model.serialize(
+                    trainer.output_dir / "cv" / f"fold_{str(fold)}" / "model.pth"
+                )
+
             # evaluate the model
             y_pred_fold = fold_model.predict(
                 fold_val_dataloader,
@@ -708,7 +740,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                     value = metric_func(t_true, t_pred)
                     self._metric_data[t_label][metric_name].append(value)
 
-        logger.info(f"Fold {fold} complete")
+            logger.info(f"Fold {fold} complete")
 
         # now we have the metric data for each task, calculate the mean and confidence interval
         for t_label in target_labels:
@@ -739,30 +771,31 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self.plot_data = {}
 
-        # now the plots
-        for task_id in range(n_tasks):
-            t_label = target_labels[task_id]
-            t_true, t_pred = get_t_true_and_t_pred(
-                task_id, y_true, y_pred, y_val, y_pred_fold
-            )
-            stat_dict = self.get_stat_dict(t_label=t_label)
-            # create the plots
-            for plot_tag, plot in self.plots.items():
-                plot_tag_task = f"{plot_tag}_{t_label}"
-                if "ciplot" in plot_tag_task:
-                    self.plot_data[plot_tag_task] = plot(stat_dict=stat_dict)
-                elif "regplot" in plot_tag_task:
-                    self.plot_data[plot_tag_task] = plot(
-                        t_true,
-                        t_pred,
-                        xlabel=self.axes_labels[0],
-                        ylabel=self.axes_labels[1],
-                        title=f"{self.title}\nTask: {t_label}",
-                        stat_dict=stat_dict,
-                        pXC50=self.pXC50,
-                        min_val=self.min_val,
-                        max_val=self.max_val,
-                    )
+        if y_true is not None and y_pred is not None:
+            # now the plots
+            for task_id in range(n_tasks):
+                t_label = target_labels[task_id]
+                t_true, t_pred = get_t_true_and_t_pred(
+                    task_id, y_true, y_pred, y_val, y_pred_fold
+                )
+                stat_dict = self.get_stat_dict(t_label=t_label)
+                # create the plots
+                for plot_tag, plot in self.plots.items():
+                    plot_tag_task = f"{plot_tag}_{t_label}"
+                    if "ciplot" in plot_tag_task:
+                        self.plot_data[plot_tag_task] = plot(stat_dict=stat_dict)
+                    elif "regplot" in plot_tag_task:
+                        self.plot_data[plot_tag_task] = plot(
+                            t_true,
+                            t_pred,
+                            xlabel=self.axes_labels[0],
+                            ylabel=self.axes_labels[1],
+                            title=f"{self.title}\nTask: {t_label}",
+                            stat_dict=stat_dict,
+                            pXC50=self.pXC50,
+                            min_val=self.min_val,
+                            max_val=self.max_val,
+                        )
 
         return self.data
 

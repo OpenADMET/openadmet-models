@@ -393,31 +393,29 @@ class AnvilWorkflow(AnvilWorkflowBase):
             y_std = None
             logger.info("No test set specified, predictions skipped")
 
-        if y_pred is not None:
-            # Run evaluation on train/test
-            logger.info("Evaluating")
-            for eval in self.evals:
-                # Here all the data is passed to the evaluator, but some evaluators may only need a subset
-                eval.evaluate(
-                    y_true=y_test,
-                    y_pred=y_pred,
-                    y_std=y_std,
-                    model=self.model,
-                    X_train=X_train_feat,
-                    y_train=y_train,
-                    X_all=X_feat,
-                    groups=groups,
-                    y_all=y,
-                    tag=model_tag,
-                    target_labels=target_labels,
-                )
+        # Run evaluation on train/test
+        logger.info("Evaluating")
+        for eval in self.evals:
+            # Here all the data is passed to the evaluator, but some evaluators may only need a subset
+            eval.evaluate(
+                y_true=y_test,
+                y_pred=y_pred,
+                y_std=y_std,
+                model=self.model,
+                X_train=X_train_feat,
+                y_train=y_train,
+                X_all=X_feat,
+                groups=groups,
+                y_all=y,
+                tag=model_tag,
+                target_labels=target_labels,
+                output_dir=output_dir,
+            )
 
-                # Write evaluation report
-                eval.report(write=True, output_dir=output_dir)
+            # Write evaluation report
+            eval.report(write=True, output_dir=output_dir)
 
-            logger.info("Evaluation done")
-        else:
-            logger.info("No test set specified, evaluation skipped")
+        logger.info("Evaluation done")
 
 
 class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
@@ -873,6 +871,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             )
             logger.info("Model saved")
 
+        # initialize y_pred & y_std; needed if training a no split model
+        y_pred = None
+        y_std = None
+
         if test_dataloader is not None:
             # Predict on test set
             logger.info("Predicting")
@@ -894,39 +896,36 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         else:
             logger.info("No test set specified, predictions skipped")
 
-        if y_test is not None:
-            # Run evaluation on train/test
-            logger.info("Evaluating")
+        # Run evaluation on train/test
+        logger.info("Evaluating")
 
-            # Get wandb bool from trainer
-            use_wandb = self.trainer.use_wandb
+        # Get wandb bool from trainer
+        use_wandb = self.trainer.use_wandb
 
-            # Run evaluation on train/test
-            for eval in self.evals:
-                # Here all the data is passed to the evaluator, but some evaluators may only need a subset
-                eval.evaluate(
-                    y_true=y_test,
-                    y_pred=y_pred,
-                    y_std=y_std,
-                    model=self.model,
-                    X_train=train_dataloader,
-                    y_train=train_dataloader,
-                    X_all=X,
-                    groups=groups,
-                    y_all=y,
-                    featurizer=self.feat,
-                    trainer=self.trainer,
-                    use_wandb=use_wandb,
-                    tag=model_tag,
-                    target_labels=target_labels,
-                )
+        # Run evaluation on train/test
+        for eval in self.evals:
+            # Here all the data is passed to the evaluator, but some evaluators may only need a subset
+            eval.evaluate(
+                y_true=y_test,
+                y_pred=y_pred,
+                y_std=y_std,
+                model=self.model,
+                X_train=train_dataloader,
+                y_train=train_dataloader,
+                X_all=X,
+                groups=groups,
+                y_all=y,
+                featurizer=self.feat,
+                trainer=self.trainer,
+                use_wandb=use_wandb,
+                tag=model_tag,
+                target_labels=target_labels,
+            )
 
-                # Write evaluation report
-                eval.report(write=True, output_dir=output_dir)
+            # Write evaluation report
+            eval.report(write=True, output_dir=output_dir)
 
-            logger.info("Evaluation done")
-        else:
-            logger.info("No test set specified, evaluation skipped")
+        logger.info("Evaluation done")
 
 
 _DRIVER_TO_CLASS = {

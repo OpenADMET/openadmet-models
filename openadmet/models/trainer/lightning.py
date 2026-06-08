@@ -169,6 +169,7 @@ class LightningTrainer(TrainerBase):
             fast_dev_run=self.fast_dev_run,
             limit_train_batches=self.limit_train_batches,
             limit_val_batches=self.limit_val_batches,
+            default_root_dir=self.output_dir,
         )
 
     def train(self, train_dataloader, val_dataloader):
