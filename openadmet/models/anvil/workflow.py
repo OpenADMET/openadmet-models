@@ -26,12 +26,6 @@ def _safe_to_numpy(X):
     return X
 
 
-def _as_local_path(p: str) -> Path:
-    """Strip file:// protocol prefix so Path() resolves correctly."""
-    if isinstance(p, str) and p.startswith("file://"):
-        return Path(p[len("file://") :])
-    return Path(p)
-
 
 class AnvilWorkflow(AnvilWorkflowBase):
     """Workflow for running basic Anvil configuration."""
@@ -494,9 +488,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     "Both param_path and serial_path must be provided together for finetuning."
                 )
             if param_path is not None:
-                if not _as_local_path(param_path).exists():
+                if not Path(param_path).exists():
                     raise ValueError(f"param_path '{param_path}' does not exist.")
-                if not _as_local_path(serial_path).exists():
+                if not Path(serial_path).exists():
                     raise ValueError(f"serial_path '{serial_path}' does not exist.")
         else:
             param_paths = self.ensemble_kwargs.get("param_paths")
@@ -511,10 +505,10 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                         "param_paths and serial_paths must have equal length."
                     )
                 for p in param_paths:
-                    if not _as_local_path(p).exists():
+                    if not Path(p).exists():
                         raise ValueError(f"param_path '{p}' does not exist.")
                 for s in serial_paths:
-                    if not _as_local_path(s).exists():
+                    if not Path(s).exists():
                         raise ValueError(f"serial_path '{s}' does not exist.")
         return self
 

@@ -659,11 +659,11 @@ class ProcedureSpec(SpecBase):
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""
-        # Model paths are opened with plain open(), not fsspec — strip file:// so
-        # the stored strings are valid filesystem paths.
-        anvil_dir_str = str(anvil_dir)
-        if anvil_dir_str.startswith("file://"):
-            anvil_dir = Path(anvil_dir_str[len("file://") :])
+        # Model paths are consumed by plain open(), not fsspec — use url_to_fs to
+        # strip any protocol prefix (e.g. file://) so the stored strings are valid
+        # local filesystem paths.
+        _, local_path = fsspec.url_to_fs(str(anvil_dir))
+        anvil_dir = Path(local_path)
         self.model.template_anvil_dir(anvil_dir)
         if self.ensemble is not None:
             self.ensemble.template_anvil_dir(anvil_dir)
