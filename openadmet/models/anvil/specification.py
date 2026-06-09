@@ -138,11 +138,16 @@ class DataSpec(BaseModel):
     def template_anvil_dir(self, anvil_dir: Path):
         """Template all resources with ANVIL_DIR if present."""
         self.anvil_dir = anvil_dir
+        print(f"[DEBUG DataSpec.template_anvil_dir] anvil_dir={anvil_dir!r}")
 
         for attr in ["resource", "train_resource", "test_resource", "val_resource"]:
             value = getattr(self, attr, None)
             if value:
-                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
+                rendered = jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
+                print(f"[DEBUG DataSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}")
+                setattr(self, attr, rendered)
+            else:
+                print(f"[DEBUG DataSpec.template_anvil_dir] {attr}: not set, skipping")
 
     def read(self) -> tuple[pd.Series, pd.Series]:
         """
@@ -538,10 +543,15 @@ class ModelSpec(AnvilSection):
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template param_path and serial_path with ANVIL_DIR."""
+        print(f"[DEBUG ModelSpec.template_anvil_dir] anvil_dir={anvil_dir!r}")
         for attr in ["param_path", "serial_path"]:
             value = getattr(self, attr, None)
             if value:
-                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
+                rendered = jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
+                print(f"[DEBUG ModelSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}")
+                setattr(self, attr, rendered)
+            else:
+                print(f"[DEBUG ModelSpec.template_anvil_dir] {attr}: not set, skipping")
 
 
 class EnsembleSpec(AnvilSection):
@@ -617,14 +627,15 @@ class EnsembleSpec(AnvilSection):
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template param_paths and serial_paths with ANVIL_DIR."""
+        print(f"[DEBUG EnsembleSpec.template_anvil_dir] anvil_dir={anvil_dir!r}")
         for attr in ["param_paths", "serial_paths"]:
             values = getattr(self, attr, None)
             if values:
-                setattr(
-                    self,
-                    attr,
-                    [jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values],
-                )
+                rendered = [jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values]
+                print(f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: {values!r} -> {rendered!r}")
+                setattr(self, attr, rendered)
+            else:
+                print(f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: not set, skipping")
 
 
 class TrainerSpec(AnvilSection):
@@ -659,6 +670,11 @@ class ProcedureSpec(SpecBase):
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""
+        # Model paths are opened with plain open(), not fsspec — strip file:// so
+        # the stored strings are valid filesystem paths.
+        anvil_dir_str = str(anvil_dir)
+        if anvil_dir_str.startswith("file://"):
+            anvil_dir = Path(anvil_dir_str[len("file://") :])
         self.model.template_anvil_dir(anvil_dir)
         if self.ensemble is not None:
             self.ensemble.template_anvil_dir(anvil_dir)
