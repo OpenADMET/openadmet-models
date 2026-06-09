@@ -536,6 +536,13 @@ class ModelSpec(AnvilSection):
 
         return self
 
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template param_path and serial_path with ANVIL_DIR."""
+        for attr in ["param_path", "serial_path"]:
+            value = getattr(self, attr, None)
+            if value:
+                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
+
 
 class EnsembleSpec(AnvilSection):
     """
@@ -608,6 +615,17 @@ class EnsembleSpec(AnvilSection):
             "Both `param_paths` and `serial_paths` must be provided together."
         )
 
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template param_paths and serial_paths with ANVIL_DIR."""
+        for attr in ["param_paths", "serial_paths"]:
+            values = getattr(self, attr, None)
+            if values:
+                setattr(
+                    self,
+                    attr,
+                    [jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values],
+                )
+
 
 class TrainerSpec(AnvilSection):
     """Trainer specification."""
@@ -638,6 +656,17 @@ class ProcedureSpec(SpecBase):
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
     transform: Optional[TransformSpec] = None  # Optional transform step
+
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template ANVIL_DIR in model and ensemble path fields."""
+        # Model paths are consumed by plain open(), not fsspec — use url_to_fs to
+        # strip any protocol prefix (e.g. file://) so the stored strings are valid
+        # local filesystem paths.
+        _, local_path = fsspec.url_to_fs(str(anvil_dir))
+        anvil_dir = Path(local_path)
+        self.model.template_anvil_dir(anvil_dir)
+        if self.ensemble is not None:
+            self.ensemble.template_anvil_dir(anvil_dir)
 
 
 class ReportSpec(SpecBase):
@@ -671,6 +700,7 @@ class AnvilSpecification(BaseModel):
 
         # Set the anvil_dir
         instance.data.template_anvil_dir(parent)
+        instance.procedure.template_anvil_dir(parent)
 
         return instance
 
