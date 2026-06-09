@@ -26,7 +26,6 @@ def _safe_to_numpy(X):
     return X
 
 
-
 class AnvilWorkflow(AnvilWorkflowBase):
     """Workflow for running basic Anvil configuration."""
 
