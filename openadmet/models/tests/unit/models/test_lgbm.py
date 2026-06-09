@@ -6,17 +6,24 @@ from openadmet.models.architecture.lgbm import LGBMRegressorModel
 
 @pytest.fixture
 def X_y():
+    """Provide simple synthetic data for basic model training tests."""
     X = [[1, 2, 3], [4, 5, 6]]
     y = [1, 2]
     return X, y
 
 
 def test_lgbm():
+    """Verify that LGBMRegressorModel initializes with the correct type identifier."""
     lgbm_model = LGBMRegressorModel()
     assert lgbm_model.type == "LGBMRegressorModel"
 
 
 def test_lgbm_from_params():
+    """
+    Validate that hyperparameters passed to the constructor are correctly applied to the underlying estimator.
+
+    This ensures that user configurations (like n_estimators) are respected by the model.
+    """
     lgbm_model = LGBMRegressorModel(n_estimators=100, boosting_type="rf")
     lgbm_model.build()
     assert lgbm_model.type == "LGBMRegressorModel"
@@ -25,6 +32,11 @@ def test_lgbm_from_params():
 
 
 def test_lgbm_train_predict(X_y):
+    """
+    Verify the train and predict lifecycle of LGBMRegressorModel.
+
+    This checks that the model can fit to data and generate predictions with the expected shape and values.
+    """
     lgbm_model = LGBMRegressorModel(n_estimators=100)
     lgbm_model.build()
     X, y = X_y
@@ -41,6 +53,11 @@ def test_lgbm_train_predict(X_y):
 
 
 def test_lgbm_save_load(tmp_path, X_y):
+    """
+    Validate persistence of the LGBM model to disk.
+
+    Ensures that saving and reloading the model preserves its learned state and prediction behavior.
+    """
     lgbm_model = LGBMRegressorModel(n_estimators=100)
     lgbm_model.build()
     X, y = X_y
@@ -54,6 +71,12 @@ def test_lgbm_save_load(tmp_path, X_y):
 
 
 def test_serialization(tmp_path, X_y):
+    """
+    Validate JSON/pickle serialization workflow for LGBM models.
+
+    This tests the separate storage of hyperparameters (JSON) and model weights (pickle),
+    which is used for model registry and versioning.
+    """
     lgbm_model = LGBMRegressorModel(n_estimators=100)
     lgbm_model.build()
     X, y = X_y

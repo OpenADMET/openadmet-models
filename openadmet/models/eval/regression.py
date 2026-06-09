@@ -482,7 +482,7 @@ class RegressionPlots(EvalBase):
             t_label = target_labels[task_id]
 
             if self.do_stats:
-                rm = RegressionMetrics()
+                rm = RegressionMetrics(n_resamples=self.n_resamples)
                 rm.evaluate(
                     t_true.reshape(-1, 1),
                     t_pred.reshape(-1, 1),

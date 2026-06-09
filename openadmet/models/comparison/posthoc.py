@@ -216,11 +216,14 @@ class PostHocComparison(ComparisonBase):
             self.stats_to_json(stats_dfs, output_dir=output_dir)
 
         plot_data = {}
-        plot_data["normality"] = self.normality_plots(df, output_dir)
-        plot_data["anova"] = self.anova(df, labels, output_dir)
-        plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
-        plot_data["mean_diff"] = self.mean_diff_plots(df, labels, self.cl, output_dir)
-        plot_data["paired"] = self.paired_plots(df, labels, output_dir)
+        if output_dir:
+            plot_data["normality"] = self.normality_plots(df, output_dir)
+            plot_data["anova"] = self.anova(df, labels, output_dir)
+            plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
+            plot_data["mean_diff"] = self.mean_diff_plots(
+                df, labels, self.cl, output_dir
+            )
+            plot_data["paired"] = self.paired_plots(df, labels, output_dir)
 
         self.print_table(stats_dfs[0], stats_dfs[1])
         self.report(stats_dfs, report, output_dir)
