@@ -144,7 +144,9 @@ class DataSpec(BaseModel):
             value = getattr(self, attr, None)
             if value:
                 rendered = jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
-                print(f"[DEBUG DataSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}")
+                print(
+                    f"[DEBUG DataSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}"
+                )
                 setattr(self, attr, rendered)
             else:
                 print(f"[DEBUG DataSpec.template_anvil_dir] {attr}: not set, skipping")
@@ -548,7 +550,9 @@ class ModelSpec(AnvilSection):
             value = getattr(self, attr, None)
             if value:
                 rendered = jinja2.Template(value).render(ANVIL_DIR=anvil_dir)
-                print(f"[DEBUG ModelSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}")
+                print(
+                    f"[DEBUG ModelSpec.template_anvil_dir] {attr}: {value!r} -> {rendered!r}"
+                )
                 setattr(self, attr, rendered)
             else:
                 print(f"[DEBUG ModelSpec.template_anvil_dir] {attr}: not set, skipping")
@@ -631,11 +635,17 @@ class EnsembleSpec(AnvilSection):
         for attr in ["param_paths", "serial_paths"]:
             values = getattr(self, attr, None)
             if values:
-                rendered = [jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values]
-                print(f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: {values!r} -> {rendered!r}")
+                rendered = [
+                    jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values
+                ]
+                print(
+                    f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: {values!r} -> {rendered!r}"
+                )
                 setattr(self, attr, rendered)
             else:
-                print(f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: not set, skipping")
+                print(
+                    f"[DEBUG EnsembleSpec.template_anvil_dir] {attr}: not set, skipping"
+                )
 
 
 class TrainerSpec(AnvilSection):
