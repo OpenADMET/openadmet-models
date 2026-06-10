@@ -5,7 +5,6 @@ from collections.abc import Iterable
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from molfeat.trans import MoleculeTransformer
 from pydantic import BaseModel
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, Dataset
@@ -27,7 +26,15 @@ def get_transform_class(trans_type):
     TransformBase
         The transform class corresponding to the given type.
 
+    Raises
+    ------
+    ValueError
+        If ``trans_type`` is not found in the transform registry.
+
     """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("transforms")
     try:
         transf_class = transforms.get_class(trans_type)
     except RegistryKeyError:

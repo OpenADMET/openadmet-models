@@ -25,6 +25,9 @@ def get_splitter_class(feat_type):
         The splitter class corresponding to the given type.
 
     """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("splitters")
     try:
         split_class = splitters.get_class(feat_type)
     except RegistryKeyError:

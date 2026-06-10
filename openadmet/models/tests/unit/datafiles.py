@@ -15,6 +15,7 @@ basic_anvil_yaml_classification = (
     _data_ref / "basic_anvil_classification.yaml"
 ).as_posix()
 tabpfn_anvil_classification_yaml = (_data_ref / "tabpfn_ache.yaml").as_posix()
+dummy_null_anvil_yaml = (_data_ref / "dummy_null_anvil.yaml").as_posix()
 
 # individual sections for multi-yaml
 metadata_yaml = (_data_ref / "basic_anvil_metadata.yaml").as_posix()
@@ -44,7 +45,6 @@ cyp3a4_json = (_data_ref / "cross_validation_metrics_3a4.json").as_posix()
 cyp1a2_json = (_data_ref / "cross_validation_metrics_1a2.json").as_posix()
 multi_task_json = _data_ref / "cross_validation_metrics_multitask.json"
 
-# ligand pose for reading and featurizing in MTENN
 ligand_pose = (_data_ref / "7kvh_A.pdb").as_posix()
 
 

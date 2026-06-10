@@ -14,7 +14,7 @@ from openadmet.models.anvil.specification import DataSpec, Metadata
 from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.eval.eval_base import EvalBase
 from openadmet.models.features.feature_base import FeaturizerBase
-from openadmet.models.registries import *  # noqa: F401, F403
+from openadmet.models.registries import load_all  # noqa: F401
 from openadmet.models.split.split_base import SplitterBase
 from openadmet.models.trainer.trainer_base import TrainerBase
 from openadmet.models.transforms.transform_base import (
@@ -50,8 +50,6 @@ class AnvilWorkflowBase(BaseModel):
         Runtime model settings from the specification domain.
     ensemble_kwargs : dict
         Runtime ensemble settings from the specification domain.
-    feat_kwargs : dict
-        Runtime feature settings from the specification domain.
     debug : bool
         Whether to run in debug mode.
 
@@ -68,7 +66,6 @@ class AnvilWorkflowBase(BaseModel):
     evals: list[EvalBase]
     model_kwargs: dict = Field(default_factory=dict)
     ensemble_kwargs: dict = Field(default_factory=dict)
-    feat_kwargs: dict = Field(default_factory=dict)
     debug: bool = False
     resolved_output_dir: Path | None = None
 

@@ -1,5 +1,8 @@
 import pytest
+from types import SimpleNamespace
+from unittest.mock import Mock
 
+import openadmet.models.architecture.lightning_model_base as lightning_model_base
 from openadmet.models.architecture.model_base import (
     LightningModelBase,
     PickleableModelBase,
@@ -42,3 +45,18 @@ def test_save_load_torch_model(mclass, tmp_path):
     loaded_model = mclass()
     loaded_model.build()
     loaded_model.load(tmp_path / "test_model.pth")
+
+
+def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
+    state_dict = {"layer.weight": "dummy"}
+    torch_load = Mock(return_value=state_dict)
+    monkeypatch.setattr(lightning_model_base.torch, "load", torch_load)
+
+    estimator = Mock()
+    model = SimpleNamespace(estimator=estimator)
+    path = tmp_path / "test_model.pth"
+
+    LightningModelBase.load(model, path)
+
+    torch_load.assert_called_once_with(path, weights_only=True)
+    estimator.load_state_dict.assert_called_once_with(state_dict)

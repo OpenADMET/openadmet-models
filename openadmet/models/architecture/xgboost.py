@@ -5,7 +5,6 @@ from typing import ClassVar
 import numpy as np
 from loguru import logger
 from pydantic import ConfigDict
-from xgboost import XGBClassifier, XGBRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -18,12 +17,16 @@ class XGBoostModelBase(PickleableModelBase):
 
     # Meta-parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the XGBoost estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(**self.model_dump())
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -83,7 +86,12 @@ class XGBRegressorModel(XGBoostModelBase):
     """
 
     type: ClassVar[str] = "XGBRegressorModel"
-    mod_class: ClassVar[type] = XGBRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from xgboost import XGBRegressor
+
+        return XGBRegressor
 
 
 @models.register("XGBClassifierModel")
@@ -104,7 +112,12 @@ class XGBClassifierModel(XGBoostModelBase):
     """
 
     type: ClassVar[str] = "XGBoostClaXGBClassifierModelssifierModel"
-    mod_class: ClassVar[type] = XGBClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from xgboost import XGBClassifier
+
+        return XGBClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

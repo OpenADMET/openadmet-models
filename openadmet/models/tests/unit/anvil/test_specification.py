@@ -20,7 +20,7 @@ from openadmet.models.anvil.specification import (
     TransformSpec,
 )
 from openadmet.models.anvil.workflow import AnvilDeepLearningWorkflow, AnvilWorkflow
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.tests.unit import datafiles
 
 # --- DataSpec Tests ---
 
@@ -400,10 +400,10 @@ def test_anvilspecification_to_multi_yaml_from_multi_yaml_roundtrip(tmp_path):
     assert reloaded.data.resource == spec.data.resource
 
 
-def test_anvilspecification_to_workflow_returns_correct_driver_type(mocker):
+def test_anvilspecification_to_workflow_returns_correct_driver_type():
     """Test that to_workflow returns correct workflow class based on trainer driver."""
 
-    def make_spec(trainer_type, feat_params=None):
+    def make_spec(model_type, trainer_type, feat_params=None):
         return AnvilSpecification(
             metadata=Metadata(
                 version="v1",
@@ -423,33 +423,19 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type(mocker):
                     type="FingerprintFeaturizer",
                     params=feat_params or {"fp_type": "ecfp:4"},
                 ),
-                model=ModelSpec(type="LGBMRegressorModel"),
+                model=ModelSpec(type=model_type),
                 train=TrainerSpec(type=trainer_type),
             ),
             report=ReportSpec(eval=[]),
         )
 
-    # Case 1: SKLEARN driver — use real registered types; no mocking needed
-    spec_sklearn = make_spec("SKLearnBasicTrainer")
+    # Case 1: SKLEARN driver
+    spec_sklearn = make_spec("LGBMRegressorModel", "SKLearnBasicTrainer")
     workflow_sklearn = spec_sklearn.to_workflow()
     assert isinstance(workflow_sklearn, AnvilWorkflow)
 
-    # Case 2: LIGHTNING driver — mock section.to_class() at class level since no DL model is registered
-    from openadmet.models.drivers import DriverType as _DriverType
-    from openadmet.models.trainer.lightning import LightningTrainer as _LightningTrainer
-
-    dl_model = mocker.create_autospec(LightningModelBase, instance=True)
-    dl_model._n_tasks = 1
-    dl_model._driver_type = _DriverType.LIGHTNING
-    dl_trainer = mocker.create_autospec(_LightningTrainer, instance=True)
-    dl_trainer._driver_type = _DriverType.LIGHTNING
-
-    spec_dl = make_spec("LightningTrainer")
-
-    # Patch only model and trainer to_class; split/feat use real registered types
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=dl_model)
-    mocker.patch.object(TrainerSpec, "to_class", autospec=True, return_value=dl_trainer)
-
+    # Case 2: LIGHTNING driver — use real ChemPropModel and LightningTrainer
+    spec_dl = make_spec("ChemPropModel", "LightningTrainer")
     workflow_dl = spec_dl.to_workflow()
     assert isinstance(workflow_dl, AnvilDeepLearningWorkflow)
     assert workflow_dl.model_kwargs == {
@@ -457,16 +443,15 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type(mocker):
         "serial_path": None,
         "freeze_weights": None,
     }
-    assert workflow_dl.feat_kwargs == {
-        "type": "FingerprintFeaturizer",
-        "params": {"fp_type": "ecfp:4"},
-    }
 
 
-def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
-    tmp_path, mocker
-):
-    """Test that run() writes the recipe to the output directory."""
+def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(tmp_path):
+    """Test that run() writes provenance YAML files to the resolved output directory.
+
+    Uses a NullFeaturizer + DummyRegressorModel spec for a real end-to-end run,
+    verifying both the provenance-writing logic and the to_workflow() path that
+    resolves the output directory.
+    """
     spec = AnvilSpecification(
         metadata=Metadata(
             version="v1",
@@ -479,34 +464,35 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
-    )
-
-    # Mock workflow run to avoid real execution
-    mock_workflow = mocker.Mock()
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mock_workflow.run.return_value = None
-
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
     )
 
     spec.run(output_dir=tmp_path / "out")
 
     # Check that provenance files were written
-    assert (tmp_path / "resolved" / "anvil_recipe.yaml").exists()
-    assert (tmp_path / "resolved" / "recipe_components" / "metadata.yaml").exists()
+    assert (tmp_path / "out" / "anvil_recipe.yaml").exists()
+    assert (tmp_path / "out" / "recipe_components" / "metadata.yaml").exists()
 
 
-def test_anvilspecification_run_tag_override(tmp_path, mocker):
-    """Test that providing a tag to run() overrides the metadata tag in provenance."""
+def test_anvilspecification_run_tag_override(tmp_path):
+    """Test that providing a tag to run() overrides the metadata tag in provenance.
+
+    Uses a NullFeaturizer + DummyRegressorModel spec so the full run() executes
+    end-to-end, verifying both the tag-override logic and that the original spec
+    object is not mutated.
+    """
     spec = AnvilSpecification(
         metadata=Metadata(
             version="v1",
@@ -519,26 +505,25 @@ def test_anvilspecification_run_tag_override(tmp_path, mocker):
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
     )
 
-    mock_workflow = mocker.Mock()
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
-    )
-
     spec.run(output_dir=tmp_path / "out", tag="new_tag")
 
     # Check the saved yaml has the new tag
-    saved_yaml = tmp_path / "resolved" / "anvil_recipe.yaml"
+    saved_yaml = tmp_path / "out" / "anvil_recipe.yaml"
     with open(saved_yaml) as f:
         saved_data = yaml.safe_load(f)
     assert saved_data["metadata"]["tag"] == "new_tag"
@@ -619,27 +604,36 @@ def test_dataspec_read_train_test_yaml_raises():
 # --- ModelSpec freeze_weights tests (Refinement 6) ---
 
 
-def test_modelspec_freeze_weights_succeeds_when_supported(mocker):
-    """Test ModelSpec instantiates without error when freeze_weights is supported."""
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.return_value = None
+@pytest.mark.parametrize(
+    "freeze_config",
+    [
+        {"message_passing": True},
+        {"batch_norm": True},
+        {"message_passing": True, "batch_norm": True},
+        {"message_passing": True, "batch_norm": True, "ffn_layers": 1},
+    ],
+)
+def test_modelspec_freeze_weights_succeeds_when_supported(freeze_config):
+    """Test ModelSpec instantiates without error for each valid ChemPropModel freeze configuration.
 
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
-    spec = ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+    Parametrizes over all supported freeze_weights combinations. The validator calls
+    build() + freeze_weights() (with no args) as a side-effect probe during construction;
+    passing means the model supports weight freezing. ChemPropModel.build() takes ~6ms
+    and freeze_weights() is instantaneous.
+    """
+    spec = ModelSpec(type="ChemPropModel", freeze_weights=freeze_config)
     assert spec is not None
-    mock_model.build.assert_called_once()
-    mock_model.freeze_weights.assert_called_once()
 
 
-def test_modelspec_freeze_weights_raises_when_not_implemented(mocker):
-    """Test ModelSpec raises ValueError when freeze_weights is not implemented."""
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.side_effect = NotImplementedError("not implemented")
+def test_modelspec_freeze_weights_raises_when_not_implemented():
+    """Test ModelSpec raises ValueError when freeze_weights is not implemented.
 
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
+    NeuralPairwiseRegressorModel inherits LightningModelBase.freeze_weights() which
+    raises NotImplementedError. The validator translates this to ValueError so that
+    misconfigured recipes fail at parse time rather than at training time.
+    """
     with pytest.raises(ValueError, match="Weight freezing not implemented"):
-        ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+        ModelSpec(
+            type="NeuralPairwiseRegressorModel",
+            freeze_weights={"message_passing": True},
+        )

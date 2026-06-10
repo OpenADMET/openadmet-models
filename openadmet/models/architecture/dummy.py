@@ -4,7 +4,6 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from sklearn.dummy import DummyClassifier, DummyRegressor
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
@@ -14,12 +13,16 @@ class DummyModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the sklearn dummy estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(**self.model_dump())
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -77,7 +80,12 @@ class DummyRegressorModel(DummyModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "DummyRegressorModel"
-    mod_class: ClassVar[type] = DummyRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.dummy import DummyRegressor
+
+        return DummyRegressor
 
     # DummyRegressor parameters
     strategy: str = "mean"  # Default strategy for dummy models
@@ -96,9 +104,14 @@ class DummyClassifierModel(DummyModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "DummyClassifierModel"
-    mod_class: ClassVar[type] = DummyClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.dummy import DummyClassifier
+
+        return DummyClassifier
 
     # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
     random_state: int | None = None  # Default random state for dummy models
-    constant: int | str = None  # Default constant value for dummy models
+    constant: int | str | None = None  # Default constant value for dummy models

@@ -3,6 +3,7 @@
 import json
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import uncertainty_toolbox as uct
 import wandb
@@ -227,7 +228,12 @@ class UncertaintyMetrics(EvalBase):
         # Write to JSON
         json_path = output_dir / "uncertainty_calibration_metrics.json"
         with open(json_path, "w") as f:
-            json.dump(self._data, f, indent=2)
+            json.dump(
+                self._data,
+                f,
+                indent=2,
+                default=lambda o: o.item() if isinstance(o, np.generic) else o,
+            )
 
         # Also log the JSON to wandb
         if self.use_wandb:

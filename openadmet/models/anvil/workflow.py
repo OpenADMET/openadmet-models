@@ -17,6 +17,7 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 
 
 def _safe_to_numpy(X):
@@ -218,8 +219,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -577,6 +578,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Bootstrap iterations
         models = []
+
         for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
@@ -715,8 +717,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -807,7 +809,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data featurized")
 
         kwargs = {}
-        if self.feat_kwargs.get("type") == "PairwiseFeaturizer":
+        if isinstance(self.feat, PairwiseFeaturizer):
             kwargs["input_dim"] = train_dataset[0][0].shape[
                 -1
             ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors

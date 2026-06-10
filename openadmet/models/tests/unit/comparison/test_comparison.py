@@ -94,8 +94,8 @@ def test_posthoc_comparison():
     levene, tukeys_df = comp_obj.compare(
         model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
     )
-    assert_almost_equal(levene["mse"][0], 1.2975061710820235)
-    assert_almost_equal(levene["ktau"][0], 0.8835355632672074)
+    assert_almost_equal(levene["mse"]["stat"], 1.2975061710820235)
+    assert_almost_equal(levene["ktau"]["stat"], 0.8835355632672074)
     assert_almost_equal(tukeys_df["metric_val"][0], 0.10937620875054632)
     assert_almost_equal(tukeys_df["pvalue"][14], 0.00321143)
 
@@ -153,10 +153,10 @@ def test_posthoc_comparison_json_reader():
     levene, tukeys_df = comp_obj.compare(
         model_stats_fns=model_stats, labels=model_tags, task_names=task_tags
     )
-    assert levene["mse"][0] == pytest.approx(2.483, abs=0.001)
-    assert levene["ktau"][0] == pytest.approx(1.039, abs=0.001)
-    assert tukeys_df["metric_val"][0] == pytest.approx(-0.010, abs=0.001)
-    assert tukeys_df["pvalue"][0] == pytest.approx(0.248, abs=0.001)
+    assert np.allclose(levene["mse"]["stat"], 2.483488460351842)
+    assert np.allclose(levene["ktau"]["stat"], 1.0392615736603197)
+    assert np.allclose(tukeys_df["metric_val"][0], -0.01037444780666702)
+    assert np.allclose(tukeys_df["pvalue"][0], 0.2488307785417857)
 
 
 def test_posthoc_comparison_printing(capsys):

@@ -55,6 +55,20 @@ extensions = [
     "openff_sphinx_theme",
 ]
 
+autodoc_mock_imports = [
+    "torch",
+    "lightning",
+    "chemprop",
+    "tabpfn",
+    "tabpfn_extensions",
+    "MDAnalysis",
+    "molfeat",
+    "wandb",
+    "modal",
+    "e3nn",
+    "ase",
+]
+
 autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_use_param = False
@@ -209,7 +223,7 @@ texinfo_documents = [
         "openadmet_models Documentation",
         author,
         "openadmet_models",
-        "A short description of the project (less than one line).",
+        "Scalable, reproducible machine learning framework for ADMET property prediction.",
         "Miscellaneous",
     ),
 ]
