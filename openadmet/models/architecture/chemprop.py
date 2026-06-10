@@ -556,7 +556,7 @@ class ChemPropModel(LightningModelBase):
             )
         else:
             logger.info(f"Loading cached CheMeleon from {model_path}")
-        return torch.load(model_path, weights_only=False)
+        return torch.load(model_path, weights_only=True)
 
     def _load_foundation_model(self, model_path: Path) -> dict:
         """
@@ -575,7 +575,7 @@ class ChemPropModel(LightningModelBase):
         """
         if not model_path.exists():
             raise FileNotFoundError(f"Foundation model not found at {model_path}")
-        return torch.load(model_path, weights_only=False)
+        return torch.load(model_path, weights_only=True)
 
     def train(self, dataloader, scaler=None):
         """
