@@ -51,4 +51,4 @@ The CLI entry point is `openadmet` (`openadmet/models/cli/cli.py`) with subcomma
 
 ## Coding rules
 
-Scoped coding rules are committed under `.claude/rules/`. Before editing files matching a rule's `paths` frontmatter, read that rule. They cover Python core idioms, NumPy-style documentation, pytest discipline, machine learning methodology, and this repository's own registry and testing conventions (`openadmet-models.md`).
+Scoped coding rules are committed under `.claude/rules/`. Before editing files matching a rule's `paths` frontmatter, read that rule. They cover Python core idioms, NumPy-style documentation, pytest discipline, machine learning methodology, medicinal chemistry and SAR interpretation, cheminformatics data pipelines, experimental biology and assay interpretation, and this repository's own registry and testing conventions (`openadmet-models.md`).
