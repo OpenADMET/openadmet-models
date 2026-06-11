@@ -1,4 +1,4 @@
-# Project Context — openadmet-models
+# Project Context: openadmet-models
 
 `openadmet-models` is a machine learning library for ADMET (absorption, distribution, metabolism, excretion, toxicity) molecular property prediction, part of the [OpenADMET project](https://openadmet.org). It provides traditional ML, deep learning, and active learning workflows behind a single registry-based API, so models, featurizers, trainers, evaluators, and splitters are interchangeable by configuration.
 
