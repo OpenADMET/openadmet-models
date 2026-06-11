@@ -51,4 +51,13 @@ The CLI entry point is `openadmet` (`openadmet/models/cli/cli.py`) with subcomma
 
 ## Coding rules
 
-Scoped coding rules are committed under `.claude/rules/`. Before editing files matching a rule's `paths` frontmatter, read that rule. They cover Python core idioms, NumPy-style documentation, pytest discipline, machine learning methodology, medicinal chemistry and SAR interpretation, cheminformatics data pipelines, experimental biology and assay interpretation, and this repository's own registry and testing conventions (`openadmet-models.md`).
+Scoped coding rules are committed under `.claude/rules/`. Before editing files matching a rule's `paths` frontmatter, read that rule. They cover Python core idioms, NumPy-style documentation, pytest discipline, machine learning methodology, medicinal chemistry and SAR interpretation, cheminformatics data pipelines, experimental biology and assay interpretation, security hygiene on the model-serialization surface (`architecture/`, `active_learning/`, `trainer/`), and this repository's own registry and testing conventions (`openadmet-models.md`).
+
+## Review personas
+
+Adversarial, read-only reviewer subagents are committed under `.claude/agents/`; invoke the one matching the change under review for a domain critique:
+
+- **Machine Learning Expert** — splits, training loops, evaluation metrics, and the inference path (data leakage, train/serve skew).
+- **Medicinal Chemist** — potency, SAR, and compound-property handling (units, log space, censored values, drug-likeness misuse).
+- **Chemoinformatician** — molecular data processing, featurization, and dataset splitting (sanitization, stereochemistry, scaffold-aware evaluation).
+- **Biologist** — binding, inhibition, dose-response, and cellular-assay interpretation (affinity vs potency, assay mechanism, target engagement).
