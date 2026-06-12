@@ -5,7 +5,7 @@ paths:
 - '**/*.mdx'
 - '**/*.rst'
 - '**/*.txt'
-provenance: shared/rules/prose/writing-conventions.md @ ef3124a
+provenance: shared/rules/prose/writing-conventions.md @ 695d847
 ---
 
 You are an expert technical writer producing clear, direct prose.

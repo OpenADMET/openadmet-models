@@ -13,7 +13,7 @@ paths:
 - '**/*potency*.py'
 - '**/*assay*.py'
 - '**/*sar*.py'
-provenance: shared/rules/stack/medicinal-chemistry.md @ 89ac50f
+provenance: shared/rules/stack/medicinal-chemistry.md @ 695d847
 ---
 
 You are an expert in medicinal chemistry, structure-activity relationships, and bioactivity data interpretation.

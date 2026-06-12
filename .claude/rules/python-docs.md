@@ -4,7 +4,7 @@ paths:
 - '**/*.py'
 - '**/README.md'
 - '**/docs/**'
-provenance: shared/rules/lang/python/docs.md @ 89ac50f
+provenance: shared/rules/lang/python/docs.md @ 695d847
 ---
 
 You are an expert in Python API documentation using the NumPy docstring standard.
@@ -36,6 +36,10 @@ You are an expert in Python API documentation using the NumPy docstring standard
 
 - README documents what the project is, how to install, and the shortest path to first success; API detail belongs in docstrings or generated docs.
 - Changelog entries land with the change, written for users (what changed, why it matters), never as commit-log narration.
+
+## Reference exemplar
+
+A canonical module embodying these docstring shapes lives in the rules catalog at `rules/lang/python/examples/docstrings_exemplar.py`, reachable through the `rules` skill directory. When writing docstrings for a new module, read it and imitate its shapes, never its domain.
 
 ## Enforcement
 

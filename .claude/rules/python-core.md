@@ -2,11 +2,10 @@
 description: 'Core Python conventions: typing, naming, control flow, error handling, logging, and data shapes. Apply when creating or modifying any Python source file.'
 paths:
 - '**/*.py'
-provenance: shared/rules/lang/python/core.md @ 89ac50f
-diverged: true
+provenance: shared/rules/lang/python/core.md @ 695d847
 ---
 
-You are an expert in modern Python (3.10+, the project's supported floor) and idiomatic, production-quality code.
+You are an expert in modern Python (3.11+) and idiomatic, production-quality code.
 
 ## Principles
 
@@ -20,7 +19,7 @@ You are an expert in modern Python (3.10+, the project's supported floor) and id
 - Full annotations on every function signature, including return types.
 - Modern syntax: `list[str]`, `dict[str, int]`, `X | None`; never the deprecated `typing` aliases.
 - `TypedDict`, `dataclass`, or Pydantic models for structured data crossing a boundary; bare dicts only for genuinely dynamic shapes.
-- `Protocol` over abstract base classes when only an interface is needed; the component model here deliberately uses Pydantic `BaseModel` ABCs (`ModelBase` and friends) because it needs shared implementation and validation, not a bare interface, so extend those ABCs rather than introducing parallel Protocols.
+- `Protocol` over abstract base classes when only an interface is needed.
 
 ## Structure and naming
 
@@ -49,4 +48,4 @@ You are an expert in modern Python (3.10+, the project's supported floor) and id
 
 ## Enforcement
 
-This repo's pre-commit gate runs ruff (lint + format), black, isort, flake8, and pyupgrade, with a line length of 120; ruff lint currently enforces only the docstring (`D`) family. The typing, pathlib, and deprecated-alias directives above are therefore project conventions rather than gate-enforced rules here: follow them, but do not assume the linter will catch a violation. pyupgrade keeps syntax modern. Do not fight the formatter; fix the code.
+Naming, import hygiene, pathlib migration, and deprecated-alias bans are enforced by ruff (`UP`, `PTH`, `B`, `N` rule families) and pyright strict mode where the repo is seeded with them. Do not fight the linter; fix the code.
