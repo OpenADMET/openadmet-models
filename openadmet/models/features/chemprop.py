@@ -21,6 +21,7 @@ def _vendor_build_dataloader(
     sampler: Any = None,
     seed: int | None = None,
     shuffle: bool = True,
+    drop_last_on_singleton: bool = True,
     **kwargs,
 ):
     r"""
@@ -47,6 +48,9 @@ def _vendor_build_dataloader(
         Whether to shuffle the data at every epoch. If a sampler is specified, this is ignored
         (i.e., the sampler determines the shuffling). If class_balance is True, this is also ignored
         (i.e., class balancing determines the shuffling).
+    drop_last_on_singleton : bool, default=True
+        Whether to drop a size-1 final batch (when ``len(dataset) % batch_size == 1``) to avoid
+        batch-norm errors. Set False for evaluation and inference loaders so every row is returned.
     **kwargs
         Additional keyword arguments passed to the DataLoader.
 
@@ -61,7 +65,7 @@ def _vendor_build_dataloader(
     from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
     from torch.utils.data import DataLoader
 
-    if sampler is not None:
+    if sampler is None:
         if class_balance:
             sampler = ClassBalanceSampler(dataset.Y, seed, shuffle)
         elif shuffle and seed is not None:
@@ -74,11 +78,8 @@ def _vendor_build_dataloader(
     else:
         collate_fn = collate_batch
 
-    # Drop last batch of size 1 to avoid issues with batch normalization
-    if len(dataset) % batch_size == 1:
-        drop_last = True
-    else:
-        drop_last = False
+    # Drop a size-1 final batch only when requested (training), to avoid batch-norm errors
+    drop_last = drop_last_on_singleton and len(dataset) % batch_size == 1
 
     return DataLoader(
         dataset,
@@ -119,7 +120,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         """Prepare the featurizer."""
 
     def featurize(
-        self, smiles: Iterable[str], y: Iterable[Any] = None
+        self, smiles: Iterable[str], y: Iterable[Any] = None, train: bool = False
     ) -> tuple[
         DataLoader,
         np.ndarray,
@@ -135,6 +136,10 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             List or iterable of SMILES strings to featurize.
         y : Iterable[Any], optional
             Target values corresponding to the SMILES strings.
+        train : bool, optional
+            Whether this loader feeds model training, by default False. Shuffling and the
+            batch-norm ``drop_last`` guard apply only when True; otherwise the loader
+            preserves input order and returns every row.
 
         Returns
         -------
@@ -167,11 +172,14 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             )
             scaler = None
 
+        # Shuffle and the size-1 drop_last guard are training-only; evaluation and
+        # inference loaders preserve input order and length for correct y_true/y_pred pairing
         dataloader = self.dataset_to_dataloader(
             dataset,
             num_workers=self.n_jobs,
-            shuffle=self.shuffle,
+            shuffle=self.shuffle and train,
             batch_size=self.batch_size,
+            drop_last_on_singleton=train,
         )
 
         # Need to also return an index of the original input for which the features were computed

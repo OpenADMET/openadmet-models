@@ -94,7 +94,7 @@ class DeepLearningFeaturizer(FeaturizerBase):
 
     @abstractmethod
     def featurize(
-        self, smiles: Iterable[str], y: Iterable[float] = None
+        self, smiles: Iterable[str], y: Iterable[float] = None, train: bool = False
     ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
         Featurize a list of SMILES strings for deep learning models.
@@ -105,6 +105,10 @@ class DeepLearningFeaturizer(FeaturizerBase):
             List or iterable of SMILES strings to featurize.
         y : Iterable[float], optional
             Target values corresponding to the SMILES strings.
+        train : bool, optional
+            Whether this loader feeds model training, by default False. Shuffling and
+            the batch-norm ``drop_last`` guard apply only when True; validation, test,
+            and inference loaders (train=False) always preserve input order and length.
 
         Returns
         -------

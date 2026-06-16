@@ -614,6 +614,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.feat.featurize(
                     X_train_bootstrap,
                     y_train_bootstrap,
+                    train=True,
                 )
             )
 
@@ -786,6 +787,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
             X_train,
             y_train,
+            train=True,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
