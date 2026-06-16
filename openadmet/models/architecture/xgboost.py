@@ -19,6 +19,10 @@ class XGBoostModelBase(RandomSeedMixin, PickleableModelBase):
     # Meta-parameters for this class
     type: ClassVar[str]
 
+    # Declared so seed resolution can detect and fill it; remapped to XGBoost's
+    # native random_state in build(). The legacy random_state name is a deprecated alias.
+    random_seed: int | None = None
+
     @classmethod
     def _get_estimator_class(cls) -> type:
         """Return the XGBoost estimator class (deferred import)."""

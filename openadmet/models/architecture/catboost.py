@@ -27,6 +27,10 @@ class CatBoostModelBase(RandomSeedMixin, PickleableModelBase):
     # Meta parameters for this class
     type: ClassVar[str]
 
+    # CatBoost's native seed argument is already random_seed; declared so seed
+    # resolution can detect and fill it. The legacy random_state name is a deprecated alias.
+    random_seed: int | None = None
+
     @classmethod
     def _get_estimator_class(cls) -> type:
         """Return the CatBoost estimator class (deferred import)."""
