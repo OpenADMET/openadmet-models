@@ -174,7 +174,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
 
         # Shuffle and the size-1 drop_last guard are training-only; evaluation and
         # inference loaders preserve input order and length for correct y_true/y_pred pairing.
-        # Passing the seed makes the training shuffle reproducible via SeededSampler.
+        # Passing the seed makes the training shuffle reproducible via SeededSampler
         dataloader = self.dataset_to_dataloader(
             dataset,
             num_workers=self.n_jobs,

@@ -179,7 +179,7 @@ class PairwiseFeaturizer(DeepLearningFeaturizer):
 
         # Shuffle and the size-1 drop_last guard are training-only; evaluation and
         # inference loaders preserve input order and length for correct y_true/y_pred pairing.
-        # A seeded generator makes the training shuffle reproducible.
+        # A seeded generator makes the training shuffle reproducible
         shuffle = self.shuffle and train
         generator = None
         if shuffle and self.random_seed is not None:
