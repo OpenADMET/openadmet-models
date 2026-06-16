@@ -5,11 +5,14 @@ from typing import ClassVar
 import numpy as np
 from loguru import logger
 
-from openadmet.models._seed import RandomSeedMixin, seed_to_sklearn_kwargs
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
-class DummyModelBase(RandomSeedMixin, PickleableModelBase):
+class DummyModelBase(PickleableModelBase):
     """Base class for Dummy models, allows instantiation from parameters that are passable to the Dummy model classes."""
 
     # Meta parameters for this class

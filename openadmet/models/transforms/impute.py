@@ -1,6 +1,5 @@
 """Imputation transforms for handling missing data."""
 
-from openadmet.models._seed import RandomSeedMixin
 from openadmet.models.transforms.transform_base import TransformBase, transforms
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, IterativeImputer
@@ -10,7 +9,7 @@ from typing import Optional, Literal
 
 
 @transforms.register("ImputeTransform")
-class ImputeTransform(RandomSeedMixin, TransformBase):
+class ImputeTransform(TransformBase):
     """
     Impute missing values in the dataset using a specified strategy.
 

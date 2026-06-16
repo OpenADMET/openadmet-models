@@ -12,7 +12,6 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
-from openadmet.models._seed import DEFAULT_RANDOM_SEED
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
@@ -42,19 +41,13 @@ _SECTION_CLASS_GETTERS = {
 def _section_sets_seed(section_spec) -> bool:
     """Return whether a section explicitly sets a seed in its params."""
     params = getattr(section_spec, "params", {}) or {}
-    return "random_seed" in params or "random_state" in params
+    return "random_seed" in params
 
 
-def _resolve_model_init_seed(model_spec, global_seed: int | None) -> int:
-    """Resolve the model-initialization seed: per-section, then global, then default."""
+def _resolve_model_init_seed(model_spec, global_seed: int) -> int:
+    """Resolve the model-initialization seed: per-section if set, else the global."""
     params = model_spec.params or {}
-    if "random_seed" in params:
-        return params["random_seed"]
-    if "random_state" in params:
-        return params["random_state"]
-    if global_seed is not None:
-        return global_seed
-    return DEFAULT_RANDOM_SEED
+    return params.get("random_seed", global_seed)
 
 
 class DataSpec(BaseModel):
@@ -448,6 +441,26 @@ class AnvilSection(SpecBase):
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _map_deprecated_random_state(cls, data):
+        """Map a deprecated ``random_state`` param onto ``random_seed`` once, with a warning."""
+        if not isinstance(data, dict):
+            return data
+        params = data.get("params")
+        if isinstance(params, dict) and "random_state" in params:
+            import warnings
+
+            warnings.warn(
+                "`random_state` is deprecated in section params; use `random_seed` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            params = dict(params)
+            params.setdefault("random_seed", params.pop("random_state"))
+            data = {**data, "params": params}
+        return data
+
     def to_class(self):
         """
         Convert the specification to the corresponding class instance.
@@ -586,6 +599,7 @@ class EnsembleSpec(AnvilSection):
     n_models: int
     calibration_method: str | None = None
     use_bagging: bool = False
+    bootstrap_seed: int | None = None
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
@@ -670,16 +684,15 @@ class ProcedureSpec(SpecBase):
 
     Attributes
     ----------
-    random_seed : int or None
-        Global seed applied to any section that does not set its own seed. When
-        None, each component keeps its own default. A per-section seed (in that
-        section's ``params``) always takes precedence over this global.
+    random_seed : int
+        Global seed applied to any section that does not set its own seed. A
+        per-section seed (in that section's ``params``) takes precedence.
 
     """
 
     section_name: ClassVar[str] = "procedure"
 
-    random_seed: int | None = None
+    random_seed: int = 42
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
@@ -813,6 +826,7 @@ class AnvilSpecification(BaseModel):
                 "param_paths": self.procedure.ensemble.param_paths,
                 "serial_paths": self.procedure.ensemble.serial_paths,
                 "use_bagging": self.procedure.ensemble.use_bagging,
+                "bootstrap_seed": self.procedure.ensemble.bootstrap_seed,
             }
             if self.procedure.ensemble
             else {}
@@ -836,12 +850,13 @@ class AnvilSpecification(BaseModel):
             *([(self.procedure.transform, transform)] if transform else []),
             *zip(self.report.eval, evals),
         ]
-        if global_seed is not None:
-            for section_spec, component in seeded_sections:
-                if not _section_sets_seed(section_spec) and hasattr(
-                    component, "random_seed"
-                ):
-                    component.random_seed = global_seed
+        # Fill any section that did not set its own seed with the global; an
+        # explicit per-section seed always wins.
+        for section_spec, component in seeded_sections:
+            if not _section_sets_seed(section_spec) and hasattr(
+                component, "random_seed"
+            ):
+                component.random_seed = global_seed
 
         return driver(
             metadata=self.metadata,

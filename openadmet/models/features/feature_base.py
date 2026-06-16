@@ -10,8 +10,6 @@ import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
 
-from openadmet.models._seed import RandomSeedMixin
-
 if TYPE_CHECKING:
     from molfeat.trans import MoleculeTransformer
     from sklearn.preprocessing import StandardScaler
@@ -84,7 +82,7 @@ class FeaturizerBase(BaseModel, ABC):
         pass
 
 
-class DeepLearningFeaturizer(RandomSeedMixin, FeaturizerBase):
+class DeepLearningFeaturizer(FeaturizerBase):
     """
     Base class for deep learning featurizers.
 

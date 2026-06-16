@@ -17,7 +17,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 
-from openadmet.models._seed import RandomSeedMixin
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
@@ -95,7 +94,7 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
     return train_inds, test_inds
 
 
-class CrossValidationBase(RandomSeedMixin, EvalBase):
+class CrossValidationBase(EvalBase):
     """
     Base class for cross-validation evaluators.
 

@@ -5,11 +5,14 @@ from typing import ClassVar
 import numpy as np
 from loguru import logger
 
-from openadmet.models._seed import RandomSeedMixin, seed_to_sklearn_kwargs
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
-class SVMModelBase(RandomSeedMixin, PickleableModelBase):
+class SVMModelBase(PickleableModelBase):
     """Base class for SVM models."""
 
     # Meta parameters for this class

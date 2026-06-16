@@ -7,11 +7,10 @@ import numpy as np
 from loguru import logger
 from pydantic import Field, field_validator
 
-from openadmet.models._seed import DEFAULT_RANDOM_SEED, RandomSeedMixin
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-class TabPFNExtensionModelBase(RandomSeedMixin, PickleableModelBase):
+class TabPFNExtensionModelBase(PickleableModelBase):
     """
     Base class for TabPFN models using the tabpfn-extensions package.
 
@@ -53,7 +52,7 @@ class TabPFNExtensionModelBase(RandomSeedMixin, PickleableModelBase):
         default="auto", description="The device to use for training and prediction."
     )
     random_seed: int = Field(
-        default=DEFAULT_RANDOM_SEED,
+        default=42,
         description="Controls both the randomness of base models and the post hoc ensembling method.",
     )
     ignore_pretraining_limits: bool = Field(
@@ -193,7 +192,7 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
         return self.estimator.predict_proba(X)
 
 
-class TabPFNModelBase(RandomSeedMixin, PickleableModelBase):
+class TabPFNModelBase(PickleableModelBase):
     """
     Base class for TabPFN models using the basic TabPFN implementation.
 
@@ -219,7 +218,7 @@ class TabPFNModelBase(RandomSeedMixin, PickleableModelBase):
 
     # TabPFN parameters
     accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
-    random_seed: int = Field(default=DEFAULT_RANDOM_SEED)
+    random_seed: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
 
     def build(self):

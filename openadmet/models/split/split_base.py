@@ -7,8 +7,6 @@ from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel, model_validator
 from loguru import logger
 
-from openadmet.models._seed import DEFAULT_RANDOM_SEED, RandomSeedMixin
-
 splitters = ClassRegistry(unique=True)
 
 
@@ -37,7 +35,7 @@ def get_splitter_class(feat_type):
     return split_class
 
 
-class SplitterBase(RandomSeedMixin, BaseModel, ABC):
+class SplitterBase(BaseModel, ABC):
     """
     Base class for splitters, allows for arbitrary splitting of data.
 
@@ -58,7 +56,7 @@ class SplitterBase(RandomSeedMixin, BaseModel, ABC):
     train_size: float = 0.8
     val_size: float = 0.0
     test_size: float = 0.2
-    random_seed: int = DEFAULT_RANDOM_SEED
+    random_seed: int = 42
 
     @model_validator(mode="after")
     def check_sizes(self):

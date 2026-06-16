@@ -7,7 +7,6 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from openadmet.models._seed import DEFAULT_RANDOM_SEED
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
 )
@@ -68,7 +67,7 @@ class AnvilWorkflowBase(BaseModel):
     ensemble: EnsembleBase | None = None
     trainer: TrainerBase
     evals: list[EvalBase]
-    random_seed: int = DEFAULT_RANDOM_SEED
+    random_seed: int = 42
     model_kwargs: dict = Field(default_factory=dict)
     ensemble_kwargs: dict = Field(default_factory=dict)
     debug: bool = False

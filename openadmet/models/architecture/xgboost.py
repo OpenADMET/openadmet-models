@@ -6,11 +6,14 @@ import numpy as np
 from loguru import logger
 from pydantic import ConfigDict
 
-from openadmet.models._seed import RandomSeedMixin, seed_to_sklearn_kwargs
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
-class XGBoostModelBase(RandomSeedMixin, PickleableModelBase):
+class XGBoostModelBase(PickleableModelBase):
     """Base class for XGBoost models."""
 
     # Allow extra arguments
