@@ -133,7 +133,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Use a local generator so bootstrap sampling never mutates global NumPy state
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
                     f"Using incremented seed={bootstrap_seed + i} for bootstrapping"
                 )
@@ -157,7 +158,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
             )
             bootstrap_model = self.model.make_new()
 
-            # Set seed for model
+            # Increment random_seed (not bootstrap_seed) so weight init varies independently
+            # of how data was resampled; bootstrap_seed only controls the sampling RNG above
             if hasattr(bootstrap_model, "random_seed"):
                 bootstrap_model.random_seed = self.random_seed + i
             else:
@@ -599,7 +601,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Use a local generator so bootstrap sampling never mutates global NumPy state
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
                     f"Bootstrapping train data with incremented seed={bootstrap_seed + i}"
                 )
@@ -657,7 +660,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             else:
-                # Set seed for bootstrap model
+                # Increment random_seed (not bootstrap_seed) so weight init varies independently
+                # of how data was resampled; bootstrap_seed only controls the sampling RNG above
                 logger.info(
                     f"Building model {i} with incremented seed={self.random_seed + i} to vary model initialization"
                 )
