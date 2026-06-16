@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
+from torch.utils.data import RandomSampler, SequentialSampler
 
+from openadmet.models.features.chemprop import ChemPropFeaturizer
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
@@ -192,3 +194,67 @@ def test_pairwise_featurizer(smiles):
     expected_y = np.array([0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0])
     assert [dataset[i][2] for i in range(9)] == pytest.approx(expected_y)
     assert scaler is None  # No scaling applied in FingerprintFeaturizer
+
+
+# 3 SMILES at batch_size 2 leaves a size-1 final batch (len % batch_size == 1),
+# the condition that triggers the batch-norm drop_last guard.
+def test_chemprop_eval_loader_preserves_order_and_length(smiles):
+    """Regression (#383, #517): an eval loader must not shuffle or drop, even when shuffle=True."""
+    featurizer = ChemPropFeaturizer(shuffle=True, batch_size=2, n_jobs=0)
+
+    dataloader, _, _, dataset = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 3.0])
+    )
+
+    assert isinstance(dataloader.sampler, SequentialSampler)
+    assert dataloader.drop_last is False
+    assert sum(batch.Y.shape[0] for batch in dataloader) == len(dataset)
+
+
+def test_chemprop_train_loader_shuffles_and_drops_singleton(smiles):
+    """A training loader honors shuffle=True and drops a size-1 final batch for batch norm."""
+    featurizer = ChemPropFeaturizer(shuffle=True, batch_size=2, n_jobs=0)
+
+    dataloader, _, _, _ = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 3.0]), train=True
+    )
+
+    assert isinstance(dataloader.sampler, RandomSampler)
+    assert dataloader.drop_last is True
+
+
+def test_pairwise_eval_loader_preserves_order_and_length(smiles):
+    """Regression (#383, #517): an eval loader must not shuffle or drop, even when shuffle=True."""
+    featurizer = PairwiseFeaturizer(
+        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1}},
+        how_to_pair="full",
+        batch_size=2,  # 9 pairs % 2 == 1 -> size-1 final batch
+        shuffle=True,
+        n_jobs=0,
+    )
+
+    dataloader, _, _, dataset = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 1.0])
+    )
+
+    assert isinstance(dataloader.sampler, SequentialSampler)
+    assert dataloader.drop_last is False
+    assert sum(len(batch[2]) for batch in dataloader) == len(dataset)
+
+
+def test_pairwise_train_loader_shuffles_and_drops_singleton(smiles):
+    """A training loader honors shuffle=True and drops a size-1 final batch for batch norm."""
+    featurizer = PairwiseFeaturizer(
+        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1}},
+        how_to_pair="full",
+        batch_size=2,  # 9 pairs % 2 == 1 -> size-1 final batch
+        shuffle=True,
+        n_jobs=0,
+    )
+
+    dataloader, _, _, _ = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 1.0]), train=True
+    )
+
+    assert isinstance(dataloader.sampler, RandomSampler)
+    assert dataloader.drop_last is True
