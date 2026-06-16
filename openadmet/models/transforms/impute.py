@@ -20,8 +20,9 @@ class ImputeTransform(TransformBase):
     imputer : str
         The type of imputer to use. Options are 'simple' for SimpleImputer or
         'iterative' for IterativeImputer.
-    random_state : Optional[int]
-        Random state for reproducibility when using IterativeImputer.
+    random_seed : Optional[int]
+        Random seed for reproducibility when using IterativeImputer. The legacy
+        ``random_state`` name is accepted as a deprecated alias.
 
     """
 
@@ -29,7 +30,7 @@ class ImputeTransform(TransformBase):
         "mean"  # Default strategy is to replace missing values with the mean
     )
     imputer: Literal["simple", "iterative"] = "simple"  # Can be 'simple' or 'iterative'
-    random_state: Optional[int] = None  # Optional random state for reproducibility
+    random_seed: Optional[int] = None  # Optional random seed for reproducibility
     imputer_instance: Optional[object] = None  # Placeholder for the imputer instance
 
     @field_validator("strategy")
@@ -70,7 +71,7 @@ class ImputeTransform(TransformBase):
         if self.imputer == "simple":
             self.imputer_instance = SimpleImputer(strategy=self.strategy)
         elif self.imputer == "iterative":
-            self.imputer_instance = IterativeImputer(random_state=self.random_state)
+            self.imputer_instance = IterativeImputer(random_state=self.random_seed)
         else:
             raise ValueError("Invalid imputer type specified.")
 

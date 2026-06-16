@@ -39,7 +39,7 @@ def _write_recipe_components(recipe_dir, tag, ensemble=False):
         "model": {"type": "DummyRegressorModel", "params": {}},
         "split": {
             "type": "ShuffleSplitter",
-            "params": {"train_size": 0.8, "test_size": 0.2, "random_state": 42},
+            "params": {"train_size": 0.8, "test_size": 0.2, "random_seed": 42},
         },
         "train": {"type": "SKLearnBasicTrainer", "params": {}},
     }

@@ -57,7 +57,7 @@ procedure:
     type: MaxDissimilaritySplitter
     # Specify split parameters
     params:
-      random_state: 42
+      random_seed: 42
       train_size: 0.7
       val_size: 0.0
       test_size: 0.3

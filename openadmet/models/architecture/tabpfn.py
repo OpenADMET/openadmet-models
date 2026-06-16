@@ -25,8 +25,9 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         Maximum time to spend on fitting the post hoc ensemble.
     accelerator : Literal["cpu", "gpu", "auto"]
         Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
     phe_init_args : Optional[dict]
@@ -50,7 +51,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
     accelerator: Literal["cpu", "gpu", "auto"] = Field(
         default="auto", description="The device to use for training and prediction."
     )
-    random_state: int = Field(
+    random_seed: int = Field(
         default=42,
         description="Controls both the randomness of base models and the post hoc ensembling method.",
     )
@@ -96,7 +97,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
             self.estimator = self._get_estimator_class()(
                 max_time=self.max_time,
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
                 phe_init_args=self.phe_init_args,
             )
@@ -199,8 +200,9 @@ class TabPFNModelBase(PickleableModelBase):
     ----------
     accelerator : Literal["cpu", "cuda", "auto"]
         Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
 
@@ -216,7 +218,7 @@ class TabPFNModelBase(PickleableModelBase):
 
     # TabPFN parameters
     accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
-    random_state: int = Field(default=42)
+    random_seed: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
 
     def build(self):
@@ -225,7 +227,7 @@ class TabPFNModelBase(PickleableModelBase):
         if not self.estimator:
             self.estimator = self._get_estimator_class()(
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
             )
         else:

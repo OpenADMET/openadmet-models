@@ -47,12 +47,12 @@ def test_simple_split(
                 train_size=train_size,
                 val_size=val_size,
                 test_size=test_size,
-                random_state=42,
+                random_seed=42,
             )
         return
 
     splitter = ShuffleSplitter(
-        train_size=train_size, val_size=val_size, test_size=test_size, random_state=42
+        train_size=train_size, val_size=val_size, test_size=test_size, random_seed=42
     )
 
     # Generate synthetic random data for testing split logic
@@ -232,7 +232,7 @@ def test_cluster_split_synthetic_data(method, synthetic_cluster_data):
         train_size=0.7,
         val_size=0.1,
         test_size=0.2,
-        random_state=42,
+        random_seed=42,
         method=method,
         k_clusters=10,
     )
@@ -272,7 +272,7 @@ def test_cluster_split_invalid_size_configuration():
             train_size=1.0,
             val_size=0.0,
             test_size=0.0,
-            random_state=42,
+            random_seed=42,
             method="kmeans",
         )
 
@@ -284,6 +284,6 @@ def test_cluster_split_invalid_method():
             train_size=0.7,
             val_size=0.1,
             test_size=0.2,
-            random_state=42,
+            random_seed=42,
             method="not-a-method",
         )

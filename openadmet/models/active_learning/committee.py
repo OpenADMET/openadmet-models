@@ -293,13 +293,10 @@ class CommitteeRegressor(EnsembleBase):
         # Initialize set of models
         models = []
         for i in range(n_models):
-            # Update random state if present
+            # Vary each member's seed so the ensemble is not a set of identical models
             current_mod_params = mod_params.copy()
-            if (
-                "random_state" in current_mod_params
-                and current_mod_params["random_state"] is not None
-            ):
-                current_mod_params["random_state"] += i
+            if current_mod_params.get("random_seed") is not None:
+                current_mod_params["random_seed"] += i
 
             # Initialize model
             model = mod_class(**current_mod_params)

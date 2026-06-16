@@ -118,9 +118,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -131,15 +133,16 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
-                    f"Using incremented seed={global_seed + i} for bootstrapping"
+                    f"Using incremented seed={bootstrap_seed + i} for bootstrapping"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(bootstrap_seed + i)
 
                 # Bootstrap train data
                 logger.info("Bootstrapping train data")
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
                 )
                 X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
@@ -151,16 +154,17 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             logger.info(
-                f"Building model {i} using incremented seed={global_seed + i} to vary model initialization"
+                f"Building model {i} using incremented seed={self.random_seed + i} to vary model initialization"
             )
             bootstrap_model = self.model.make_new()
 
-            # Set seed for model
-            if hasattr(bootstrap_model, "random_state"):
-                bootstrap_model.random_state = global_seed + i
+            # Increment random_seed (not bootstrap_seed) so weight init varies independently
+            # of how data was resampled; bootstrap_seed only controls the sampling RNG above
+            if hasattr(bootstrap_model, "random_seed"):
+                bootstrap_model.random_seed = self.random_seed + i
             else:
                 logger.warning(
-                    f"Model {bootstrap_model} does not support random_state seeding"
+                    f"Model {bootstrap_model} does not support random_seed seeding"
                 )
 
             bootstrap_model.build()
@@ -514,6 +518,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     def _train(
         self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
+        # Seed model initialization (and finetune/deserialize) so single-model runs
+        # are reproducible, not just ensemble members
+        logger.info(f"Seeding model initialization with seed={self.random_seed}")
+        pl.seed_everything(self.random_seed)
+
         # Load model from disk
         if (
             self.model_kwargs.get("param_path") is not None
@@ -572,9 +581,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -590,13 +601,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
-                    f"Bootstrapping train data with incremented seed={global_seed + i}"
+                    f"Bootstrapping train data with incremented seed={bootstrap_seed + i}"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(bootstrap_seed + i)
 
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
                 )
                 X_train_bootstrap = X_train[bootstrap_indices]
@@ -648,11 +660,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             else:
-                # Set seed for bootstrap model
+                # Increment random_seed (not bootstrap_seed) so weight init varies independently
+                # of how data was resampled; bootstrap_seed only controls the sampling RNG above
                 logger.info(
-                    f"Building model {i} with incremented seed={global_seed + i} to vary model initialization"
+                    f"Building model {i} with incremented seed={self.random_seed + i} to vary model initialization"
                 )
-                pl.seed_everything(global_seed + i)
+                pl.seed_everything(self.random_seed + i)
 
                 self.model = self.model.make_new()
                 self.model.build(scaler=bootstrap_scaler, **kwargs)

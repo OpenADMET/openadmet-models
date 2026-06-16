@@ -5,7 +5,11 @@ from typing import ClassVar
 import numpy as np
 from loguru import logger
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
 class SVMModelBase(PickleableModelBase):
@@ -22,7 +26,9 @@ class SVMModelBase(PickleableModelBase):
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self._get_estimator_class()(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -145,7 +151,7 @@ class SVMClassifierModel(SVMModelBase):
     max_iter: int = -1
     decision_function_shape: str = "ovr"
     break_ties: bool = False
-    random_state: int | None = None
+    random_seed: int | None = None
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

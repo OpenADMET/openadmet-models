@@ -90,7 +90,17 @@ class DeepLearningFeaturizer(FeaturizerBase):
     Subclasses should implement the `featurize` method to return a DataLoader, indices,
     a StandardScaler, and a PyTorch Dataset.
 
+    Attributes
+    ----------
+    random_seed : int or None
+        Seed for the training DataLoader's shuffling, by default None. The legacy
+        ``random_state`` name is accepted as a deprecated alias. Only applied when a
+        training loader is built (``train=True``); evaluation and inference loaders
+        are never shuffled and ignore it.
+
     """
+
+    random_seed: int | None = None
 
     @abstractmethod
     def featurize(

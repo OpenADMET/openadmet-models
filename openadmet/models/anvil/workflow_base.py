@@ -50,6 +50,9 @@ class AnvilWorkflowBase(BaseModel):
         Runtime model settings from the specification domain.
     ensemble_kwargs : dict
         Runtime ensemble settings from the specification domain.
+    random_seed : int
+        Effective seed for model initialization and bootstrap resampling, resolved
+        from the procedure-level global seed. Decoupled from the split seed.
     debug : bool
         Whether to run in debug mode.
 
@@ -64,6 +67,7 @@ class AnvilWorkflowBase(BaseModel):
     ensemble: EnsembleBase | None = None
     trainer: TrainerBase
     evals: list[EvalBase]
+    random_seed: int = 42
     model_kwargs: dict = Field(default_factory=dict)
     ensemble_kwargs: dict = Field(default_factory=dict)
     debug: bool = False

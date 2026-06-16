@@ -47,15 +47,16 @@ class SplitterBase(BaseModel, ABC):
         The proportion of the data to use for validation, must be between 0 and 1.
     test_size : float
         The proportion of the data to use for testing, must be between 0 and 1.
-    random_state : int
-        The random seed to use for reproducibility.
+    random_seed : int
+        The random seed to use for reproducibility. The legacy ``random_state``
+        name is accepted as a deprecated alias.
 
     """
 
     train_size: float = 0.8
     val_size: float = 0.0
     test_size: float = 0.2
-    random_state: int = 42
+    random_seed: int = 42
 
     @model_validator(mode="after")
     def check_sizes(self):

@@ -258,3 +258,28 @@ def test_pairwise_train_loader_shuffles_and_drops_singleton(smiles):
 
     assert isinstance(dataloader.sampler, RandomSampler)
     assert dataloader.drop_last is True
+
+
+def _chemprop_train_sample_order(seed):
+    """Return the per-sample target order for a seeded ChemProp training loader."""
+    import torch
+
+    featurizer = ChemPropFeaturizer(
+        shuffle=True, batch_size=2, n_jobs=0, random_seed=seed
+    )
+    smiles = ["CCO", "CCN", "CCC", "CCCl", "CCBr", "CCCC", "CCCCC", "c1ccccc1"]
+    y = np.arange(1.0, 1.0 + len(smiles))
+    # Perturb the global RNG to prove reproducibility comes from the seed, not global state
+    torch.manual_seed(seed * 13 + 1)
+    dataloader, _, _, _ = featurizer.featurize(smiles, y=y, train=True)
+    return [float(v) for batch in dataloader for v in batch.Y.flatten()]
+
+
+def test_chemprop_training_shuffle_is_seed_reproducible():
+    """A seeded training loader yields the same sample order regardless of global RNG state."""
+    assert _chemprop_train_sample_order(7) == _chemprop_train_sample_order(7)
+
+
+def test_chemprop_training_shuffle_varies_with_seed():
+    """Different seeds produce different training sample orders."""
+    assert _chemprop_train_sample_order(7) != _chemprop_train_sample_order(8)

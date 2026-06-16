@@ -88,7 +88,7 @@ class ClusterSplitter(SplitterBase):
             km = KMeans(
                 n_clusters=self.k_clusters,
                 n_init=1,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 algorithm="lloyd",
             )
             vec_featurizer = FPVecTransformer(self.kmeans_fp_type)
@@ -117,7 +117,7 @@ class ClusterSplitter(SplitterBase):
 
         best_split = None
         min_error = float("inf")
-        rng = np.random.default_rng(self.random_state)
+        rng = np.random.default_rng(self.random_seed)
 
         # Search for best set of clusters to split with specified sizes
         for _ in range(num_iters):

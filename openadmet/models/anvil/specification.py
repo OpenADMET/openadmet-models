@@ -38,6 +38,18 @@ _SECTION_CLASS_GETTERS = {
 }
 
 
+def _section_sets_seed(section_spec) -> bool:
+    """Return whether a section explicitly sets a seed in its params."""
+    params = getattr(section_spec, "params", {}) or {}
+    return "random_seed" in params
+
+
+def _resolve_model_init_seed(model_spec, global_seed: int) -> int:
+    """Resolve the model-initialization seed: per-section if set, else the global."""
+    params = model_spec.params or {}
+    return params.get("random_seed", global_seed)
+
+
 class DataSpec(BaseModel):
     """
     Data specification for the workflow.
@@ -429,6 +441,26 @@ class AnvilSection(SpecBase):
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _map_deprecated_random_state(cls, data):
+        """Map a deprecated ``random_state`` param onto ``random_seed`` once, with a warning."""
+        if not isinstance(data, dict):
+            return data
+        params = data.get("params")
+        if isinstance(params, dict) and "random_state" in params:
+            import warnings
+
+            warnings.warn(
+                "`random_state` is deprecated in section params; use `random_seed` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            params = dict(params)
+            params.setdefault("random_seed", params.pop("random_state"))
+            data = {**data, "params": params}
+        return data
+
     def to_class(self):
         """
         Convert the specification to the corresponding class instance.
@@ -567,6 +599,7 @@ class EnsembleSpec(AnvilSection):
     n_models: int
     calibration_method: str | None = None
     use_bagging: bool = False
+    bootstrap_seed: int | None = None
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
@@ -646,10 +679,20 @@ class TransformSpec(AnvilSection):
 
 
 class ProcedureSpec(SpecBase):
-    """Procedure specification."""
+    """
+    Procedure specification.
+
+    Attributes
+    ----------
+    random_seed : int
+        Global seed applied to any section that does not set its own seed. A
+        per-section seed (in that section's ``params``) takes precedence.
+
+    """
 
     section_name: ClassVar[str] = "procedure"
 
+    random_seed: int = 42
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
@@ -783,27 +826,53 @@ class AnvilSpecification(BaseModel):
                 "param_paths": self.procedure.ensemble.param_paths,
                 "serial_paths": self.procedure.ensemble.serial_paths,
                 "use_bagging": self.procedure.ensemble.use_bagging,
+                "bootstrap_seed": self.procedure.ensemble.bootstrap_seed,
             }
             if self.procedure.ensemble
             else {}
         )
 
+        # Build components, then resolve seeds: a per-section seed wins, else the
+        # procedure-level global seed fills any section that did not set its own.
+        model = self.procedure.model.to_class()
+        split = self.procedure.split.to_class()
+        feat = self.procedure.feat.to_class()
+        transform = (
+            self.procedure.transform.to_class() if self.procedure.transform else None
+        )
+        evals = [eval.to_class() for eval in self.report.eval]
+
+        global_seed = self.procedure.random_seed
+        seeded_sections = [
+            (self.procedure.split, split),
+            (self.procedure.feat, feat),
+            (self.procedure.model, model),
+            *([(self.procedure.transform, transform)] if transform else []),
+            *zip(self.report.eval, evals),
+        ]
+        # Fill any section that did not set its own seed with the global; an
+        # explicit per-section seed always wins.
+        for section_spec, component in seeded_sections:
+            if not _section_sets_seed(section_spec) and hasattr(
+                component, "random_seed"
+            ):
+                component.random_seed = global_seed
+
         return driver(
             metadata=self.metadata,
             data_spec=self.data,
-            model=self.procedure.model.to_class(),
+            model=model,
             ensemble=self.procedure.ensemble.to_class()
             if self.procedure.ensemble
             else None,
-            transform=self.procedure.transform.to_class()
-            if self.procedure.transform
-            else None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
+            transform=transform,
+            split=split,
+            feat=feat,
             trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
+            evals=evals,
             model_kwargs=model_kwargs,
             ensemble_kwargs=ensemble_kwargs,
+            random_seed=_resolve_model_init_seed(self.procedure.model, global_seed),
         )
 
     def run(

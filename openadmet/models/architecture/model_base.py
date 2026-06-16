@@ -14,6 +14,31 @@ from openadmet.models.drivers import DriverType
 models = ClassRegistry(unique=True)
 
 
+def seed_to_sklearn_kwargs(params: dict) -> dict:
+    """
+    Rewrite a ``random_seed`` key to scikit-learn's ``random_state``.
+
+    Models that forward ``model_dump()`` straight into a scikit-learn-style
+    estimator expose ``random_seed`` but must hand the estimator its native
+    ``random_state`` argument.
+
+    Parameters
+    ----------
+    params : dict
+        Estimator keyword arguments, typically from ``model_dump()``.
+
+    Returns
+    -------
+    dict
+        The same mapping with ``random_seed`` renamed to ``random_state``.
+
+    """
+    params = dict(params)
+    if "random_seed" in params:
+        params["random_state"] = params.pop("random_seed")
+    return params
+
+
 def get_mod_class(model_type):
     """
     Get the model class from the registry by type.

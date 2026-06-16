@@ -5,7 +5,11 @@ from typing import ClassVar
 import numpy as np
 from loguru import logger
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
 class DummyModelBase(PickleableModelBase):
@@ -22,7 +26,9 @@ class DummyModelBase(PickleableModelBase):
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self._get_estimator_class()(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -113,5 +119,5 @@ class DummyClassifierModel(DummyModelBase):
 
     # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
-    random_state: int | None = None  # Default random state for dummy models
+    random_seed: int | None = None  # Default random seed for dummy models
     constant: int | str | None = None  # Default constant value for dummy models
