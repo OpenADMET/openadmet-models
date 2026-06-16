@@ -102,7 +102,7 @@ def test_load_anvil_forces_shuffle_false(tmp_path):
         "model": {"type": "ChemPropModel", "params": {}},
         "split": {
             "type": "ShuffleSplitter",
-            "params": {"random_state": 42, "test_size": 0.3, "train_size": 0.7},
+            "params": {"random_seed": 42, "test_size": 0.3, "train_size": 0.7},
         },
         "train": {
             "type": "LightningTrainer",

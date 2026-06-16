@@ -10,6 +10,8 @@ import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
 from pydantic import BaseModel
 
+from openadmet.models._seed import RandomSeedMixin
+
 if TYPE_CHECKING:
     from molfeat.trans import MoleculeTransformer
     from sklearn.preprocessing import StandardScaler
@@ -82,7 +84,7 @@ class FeaturizerBase(BaseModel, ABC):
         pass
 
 
-class DeepLearningFeaturizer(FeaturizerBase):
+class DeepLearningFeaturizer(RandomSeedMixin, FeaturizerBase):
     """
     Base class for deep learning featurizers.
 
@@ -90,7 +92,17 @@ class DeepLearningFeaturizer(FeaturizerBase):
     Subclasses should implement the `featurize` method to return a DataLoader, indices,
     a StandardScaler, and a PyTorch Dataset.
 
+    Attributes
+    ----------
+    random_seed : int or None
+        Seed for the training DataLoader's shuffling, by default None. The legacy
+        ``random_state`` name is accepted as a deprecated alias. Only applied when a
+        training loader is built (``train=True``); evaluation and inference loaders
+        are never shuffled and ignore it.
+
     """
+
+    random_seed: int | None = None
 
     @abstractmethod
     def featurize(

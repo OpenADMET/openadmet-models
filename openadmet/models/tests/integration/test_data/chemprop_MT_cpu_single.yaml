@@ -42,7 +42,7 @@ procedure:
   split:
     type: ShuffleSplitter
     params:
-      random_state: 42
+      random_seed: 42
       test_size: 0.2
       train_size: 0.7
       val_size: 0.1
@@ -77,5 +77,5 @@ report:
       n_repeats: 2
       n_splits: 5
       pXC50: true
-      random_state: 42
+      random_seed: 42
       title: Multitask True vs Predicted pChEMBL on test

@@ -38,7 +38,7 @@ procedure:
       train_size: 0.8
       test_size: 0.1
       val_size: 0.1
-      random_state: 42
+      random_seed: 42
 
   feat:
     type: PairwiseFeaturizer
@@ -87,5 +87,5 @@ report:
       n_repeats: 2
       n_splits: 2
       pXC50: true
-      random_state: 42
+      random_seed: 42
       title: Nepare

@@ -7,10 +7,11 @@ import numpy as np
 from loguru import logger
 from pydantic import Field, field_validator
 
+from openadmet.models._seed import DEFAULT_RANDOM_SEED, RandomSeedMixin
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-class TabPFNExtensionModelBase(PickleableModelBase):
+class TabPFNExtensionModelBase(RandomSeedMixin, PickleableModelBase):
     """
     Base class for TabPFN models using the tabpfn-extensions package.
 
@@ -25,8 +26,9 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         Maximum time to spend on fitting the post hoc ensemble.
     accelerator : Literal["cpu", "gpu", "auto"]
         Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
     phe_init_args : Optional[dict]
@@ -50,8 +52,8 @@ class TabPFNExtensionModelBase(PickleableModelBase):
     accelerator: Literal["cpu", "gpu", "auto"] = Field(
         default="auto", description="The device to use for training and prediction."
     )
-    random_state: int = Field(
-        default=42,
+    random_seed: int = Field(
+        default=DEFAULT_RANDOM_SEED,
         description="Controls both the randomness of base models and the post hoc ensembling method.",
     )
     ignore_pretraining_limits: bool = Field(
@@ -96,7 +98,7 @@ class TabPFNExtensionModelBase(PickleableModelBase):
             self.estimator = self._get_estimator_class()(
                 max_time=self.max_time,
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
                 phe_init_args=self.phe_init_args,
             )
@@ -191,7 +193,7 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
         return self.estimator.predict_proba(X)
 
 
-class TabPFNModelBase(PickleableModelBase):
+class TabPFNModelBase(RandomSeedMixin, PickleableModelBase):
     """
     Base class for TabPFN models using the basic TabPFN implementation.
 
@@ -199,8 +201,9 @@ class TabPFNModelBase(PickleableModelBase):
     ----------
     accelerator : Literal["cpu", "cuda", "auto"]
         Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
 
@@ -216,7 +219,7 @@ class TabPFNModelBase(PickleableModelBase):
 
     # TabPFN parameters
     accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
-    random_state: int = Field(default=42)
+    random_seed: int = Field(default=DEFAULT_RANDOM_SEED)
     ignore_pretraining_limits: bool = Field(default=False)
 
     def build(self):
@@ -225,7 +228,7 @@ class TabPFNModelBase(PickleableModelBase):
         if not self.estimator:
             self.estimator = self._get_estimator_class()(
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
             )
         else:

@@ -12,6 +12,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from openadmet.models._seed import DEFAULT_RANDOM_SEED
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
@@ -36,6 +37,24 @@ _SECTION_CLASS_GETTERS = {
     "transform": get_transform_class,
     "INVALID": lambda x: None,
 }
+
+
+def _section_sets_seed(section_spec) -> bool:
+    """Return whether a section explicitly sets a seed in its params."""
+    params = getattr(section_spec, "params", {}) or {}
+    return "random_seed" in params or "random_state" in params
+
+
+def _resolve_model_init_seed(model_spec, global_seed: int | None) -> int:
+    """Resolve the model-initialization seed: per-section, then global, then default."""
+    params = model_spec.params or {}
+    if "random_seed" in params:
+        return params["random_seed"]
+    if "random_state" in params:
+        return params["random_state"]
+    if global_seed is not None:
+        return global_seed
+    return DEFAULT_RANDOM_SEED
 
 
 class DataSpec(BaseModel):
@@ -646,10 +665,21 @@ class TransformSpec(AnvilSection):
 
 
 class ProcedureSpec(SpecBase):
-    """Procedure specification."""
+    """
+    Procedure specification.
+
+    Attributes
+    ----------
+    random_seed : int or None
+        Global seed applied to any section that does not set its own seed. When
+        None, each component keeps its own default. A per-section seed (in that
+        section's ``params``) always takes precedence over this global.
+
+    """
 
     section_name: ClassVar[str] = "procedure"
 
+    random_seed: int | None = None
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
@@ -788,22 +818,46 @@ class AnvilSpecification(BaseModel):
             else {}
         )
 
+        # Build components, then resolve seeds: a per-section seed wins, else the
+        # procedure-level global seed fills any section that did not set its own.
+        model = self.procedure.model.to_class()
+        split = self.procedure.split.to_class()
+        feat = self.procedure.feat.to_class()
+        transform = (
+            self.procedure.transform.to_class() if self.procedure.transform else None
+        )
+        evals = [eval.to_class() for eval in self.report.eval]
+
+        global_seed = self.procedure.random_seed
+        seeded_sections = [
+            (self.procedure.split, split),
+            (self.procedure.feat, feat),
+            (self.procedure.model, model),
+            *([(self.procedure.transform, transform)] if transform else []),
+            *zip(self.report.eval, evals),
+        ]
+        if global_seed is not None:
+            for section_spec, component in seeded_sections:
+                if not _section_sets_seed(section_spec) and hasattr(
+                    component, "random_seed"
+                ):
+                    component.random_seed = global_seed
+
         return driver(
             metadata=self.metadata,
             data_spec=self.data,
-            model=self.procedure.model.to_class(),
+            model=model,
             ensemble=self.procedure.ensemble.to_class()
             if self.procedure.ensemble
             else None,
-            transform=self.procedure.transform.to_class()
-            if self.procedure.transform
-            else None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
+            transform=transform,
+            split=split,
+            feat=feat,
             trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
+            evals=evals,
             model_kwargs=model_kwargs,
             ensemble_kwargs=ensemble_kwargs,
+            random_seed=_resolve_model_init_seed(self.procedure.model, global_seed),
         )
 
     def run(

@@ -50,7 +50,7 @@ class ScaffoldSplitter(SplitterBase):
                 n_jobs=-1,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
-                random_state=self.random_state,
+                random_state=self.random_seed,
             )
             groups = None
             train_idx, val_idx = next(splitter.split(X=X))
@@ -71,7 +71,7 @@ class ScaffoldSplitter(SplitterBase):
             n_jobs=-1,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
         groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
@@ -96,7 +96,7 @@ class ScaffoldSplitter(SplitterBase):
             safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
 
         # Return train, val, and test sets
@@ -149,7 +149,7 @@ class PerimeterSplitter(SplitterBase):
                 n_jobs=-1,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
-                random_state=self.random_state,
+                random_state=self.random_seed,
             )
             groups = None
             train_idx, val_idx = next(splitter.split(X=X))
@@ -169,7 +169,7 @@ class PerimeterSplitter(SplitterBase):
             n_jobs=-1,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
         groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
@@ -194,7 +194,7 @@ class PerimeterSplitter(SplitterBase):
             safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
 
         # Return train, val, and test sets
@@ -249,7 +249,7 @@ class MaxDissimilaritySplitter(SplitterBase):
                 n_jobs=-1,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
-                random_state=self.random_state,
+                random_state=self.random_seed,
             )
             groups = None
             train_idx, val_idx = next(splitter.split(X=X))
@@ -269,7 +269,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             n_jobs=-1,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
         groups = None
         train_val_idx, test_idx = next(splitter.split(X=X))
@@ -294,7 +294,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             safe_index(y, train_val_idx),
             train_size=None,
             test_size=int(self.val_size * X.shape[0]),
-            random_state=self.random_state,
+            random_state=self.random_seed,
         )
 
         # Return train, val and test sets

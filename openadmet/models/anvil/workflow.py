@@ -118,9 +118,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Model-init seed, resolved independently of the split seed
+        global_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -131,15 +130,15 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state
                 logger.info(
                     f"Using incremented seed={global_seed + i} for bootstrapping"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(global_seed + i)
 
                 # Bootstrap train data
                 logger.info("Bootstrapping train data")
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
                 )
                 X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
@@ -156,11 +155,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
             bootstrap_model = self.model.make_new()
 
             # Set seed for model
-            if hasattr(bootstrap_model, "random_state"):
-                bootstrap_model.random_state = global_seed + i
+            if hasattr(bootstrap_model, "random_seed"):
+                bootstrap_model.random_seed = global_seed + i
             else:
                 logger.warning(
-                    f"Model {bootstrap_model} does not support random_state seeding"
+                    f"Model {bootstrap_model} does not support random_seed seeding"
                 )
 
             bootstrap_model.build()
@@ -514,6 +513,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     def _train(
         self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
+        # Seed model initialization (and finetune/deserialize) so single-model runs
+        # are reproducible, not just ensemble members
+        logger.info(f"Seeding model initialization with seed={self.random_seed}")
+        pl.seed_everything(self.random_seed)
+
         # Load model from disk
         if (
             self.model_kwargs.get("param_path") is not None
@@ -572,9 +576,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Model-init seed, resolved independently of the split seed
+        global_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -590,13 +593,13 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state
                 logger.info(
                     f"Bootstrapping train data with incremented seed={global_seed + i}"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(global_seed + i)
 
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
                 )
                 X_train_bootstrap = X_train[bootstrap_indices]

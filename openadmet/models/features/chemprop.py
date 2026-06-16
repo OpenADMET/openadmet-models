@@ -173,13 +173,15 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             scaler = None
 
         # Shuffle and the size-1 drop_last guard are training-only; evaluation and
-        # inference loaders preserve input order and length for correct y_true/y_pred pairing
+        # inference loaders preserve input order and length for correct y_true/y_pred pairing.
+        # Passing the seed makes the training shuffle reproducible via SeededSampler.
         dataloader = self.dataset_to_dataloader(
             dataset,
             num_workers=self.n_jobs,
             shuffle=self.shuffle and train,
             batch_size=self.batch_size,
             drop_last_on_singleton=train,
+            seed=self.random_seed if train else None,
         )
 
         # Need to also return an index of the original input for which the features were computed

@@ -29,7 +29,7 @@ procedure:
       train_size: 0.7
       val_size: 0.2
       test_size: 0.1
-      random_state: 42
+      random_seed: 42
 
   feat:
     type: ChemPropFeaturizer
