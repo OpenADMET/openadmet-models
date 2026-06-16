@@ -6,10 +6,11 @@ import numpy as np
 from loguru import logger
 from pydantic import ConfigDict
 
+from openadmet.models._seed import RandomSeedMixin, seed_to_sklearn_kwargs
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-class XGBoostModelBase(PickleableModelBase):
+class XGBoostModelBase(RandomSeedMixin, PickleableModelBase):
     """Base class for XGBoost models."""
 
     # Allow extra arguments
@@ -25,8 +26,11 @@ class XGBoostModelBase(PickleableModelBase):
 
     def build(self):
         """Prepare the model."""
+        # XGBoost's native seed argument is random_state, so rewrite random_seed
         if not self.estimator:
-            self.estimator = self._get_estimator_class()(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 

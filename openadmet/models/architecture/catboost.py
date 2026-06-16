@@ -6,10 +6,11 @@ import numpy as np
 from loguru import logger
 from pydantic import ConfigDict
 
+from openadmet.models._seed import RandomSeedMixin
 from openadmet.models.architecture.model_base import PickleableModelBase, models
 
 
-class CatBoostModelBase(PickleableModelBase):
+class CatBoostModelBase(RandomSeedMixin, PickleableModelBase):
     """
     Base class for CatBoost models, allows instantiation from parameters that are passable to the CatBoost model classes.
 
