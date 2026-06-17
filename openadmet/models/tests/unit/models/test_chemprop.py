@@ -354,6 +354,7 @@ def test_chemprop_noam_lambda_boundaries():
     model.estimator._trainer = MockTrainer()
 
     opt_config = model.estimator.configure_optimizers()
+    opt = opt_config["optimizer"]
     lr_sched = opt_config["lr_scheduler"]["scheduler"]
 
     warmup_steps = 2 * 100  # warmup_epochs * steps_per_epoch
@@ -362,14 +363,17 @@ def test_chemprop_noam_lambda_boundaries():
     # Advance to the step just before the warmup peak; LR must still be below max_lr
     # Verifies the warmup branch owns the peak step via `warmup_steps > 0 and step <= warmup_steps`
     for _ in range(warmup_steps - 1):
+        opt.step()
         lr_sched.step()
     assert lr_sched.get_last_lr()[0] < 1e-3
 
     # At warmup_steps (inclusive), the warmup branch reaches exactly 1.0 * base_lr
+    opt.step()
     lr_sched.step()
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
 
     for _ in range(cooldown_steps):
+        opt.step()
         lr_sched.step()
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3 * 0.01, rel=1e-3)
 
@@ -400,8 +404,10 @@ def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr():
     assert any("cannot calibrate" in w for w in captured)
 
     # With warmup_steps=0 and cooldown_steps=0, lambda always returns 1.0
+    opt = opt_config["optimizer"]
     lr_sched = opt_config["lr_scheduler"]["scheduler"]
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+    opt.step()
     lr_sched.step()
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
 
@@ -452,12 +458,15 @@ def test_chemprop_noam_warmup_exceeds_max_epochs():
     assert any("warmup_epochs" in w and "max_epochs" in w for w in captured)
 
     # With cooldown_steps=0, the first step after warmup should drop directly to final_lr
+    opt = opt_config["optimizer"]
     lr_sched = opt_config["lr_scheduler"]["scheduler"]
     warmup_steps = 5 * 50  # warmup_epochs * num_training_batches
     for _ in range(warmup_steps):
+        opt.step()
         lr_sched.step()
     # Still at peak after warmup_steps
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+    opt.step()
     lr_sched.step()
     # First post-warmup step drops to final_lr (cooldown_steps=0, no intermediate decay)
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3 * 0.01, rel=1e-3)
