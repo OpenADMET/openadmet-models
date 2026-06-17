@@ -55,22 +55,9 @@ def configure_optimizers(self):
     opt = torch.optim.AdamW(param_groups)
 
     if self.scheduler == "plateau":
-        # Warn early when there is no validation dataloader; Lightning will fail at epoch
-        # end when it cannot find the monitored metric. Use the private _trainer attribute
-        # to avoid the RuntimeError Lightning raises when no trainer is attached yet.
-        _trainer = getattr(self, "_trainer", None)
-        num_val_batches = getattr(_trainer, "num_val_batches", None) if _trainer else None
-        has_val = num_val_batches is not None and (
-            not hasattr(num_val_batches, "__iter__")
-            or any(n > 0 for n in num_val_batches)
-        )
-        if _trainer is not None and not has_val:
-            logger.warning(
-                f"scheduler='plateau' monitors '{self.monitor_metric}' but no validation "
-                "dataloader is configured; the scheduler will never step and training will "
-                "fail when Lightning cannot find the metric. Use scheduler='noam' for "
-                "train-only runs."
-            )
+        # Compute per-group LR floors proportional to each group's peak,
+        # preserving the ratio final_lr / max_lr across param groups.
+        min_lrs = [group["lr"] * (self.final_lr / self.max_lr) for group in param_groups]
 
         # Configure the reduce on plateau scheduler.
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -78,7 +65,7 @@ def configure_optimizers(self):
             mode=self.monitor_metric_mode,
             factor=self.reduce_lr_factor,
             patience=self.reduce_lr_patience,
-            min_lr=self.final_lr,
+            min_lr=min_lrs,
         )
 
         lr_sched_config = {
@@ -88,16 +75,21 @@ def configure_optimizers(self):
             "frequency": 1,
         }
     elif self.scheduler == "noam":
-        # Calculate steps per epoch safely using trainer properties.
-        if isinstance(
-            self.trainer.estimated_stepping_batches, int
-        ) and self.trainer.estimated_stepping_batches != float("inf"):
-            total_steps = self.trainer.estimated_stepping_batches
-            steps_per_epoch = total_steps // max(1, self.trainer.max_epochs)
-        else:
-            # Fallback when the trainer cannot report batch counts.
-            steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
-            if steps_per_epoch is None:
+        # Raw batch count per epoch is the correct unit for interval="step" scheduling;
+        # estimated_stepping_batches is in optimizer-step units (divided by grad accumulation)
+        # and would shorten warmup when accumulate_grad_batches > 1.
+        steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
+        if steps_per_epoch is None or steps_per_epoch == float("inf"):
+            if (
+                isinstance(self.trainer.estimated_stepping_batches, int)
+                and self.trainer.estimated_stepping_batches != float("inf")
+            ):
+                # Convert optimizer steps back to batch steps for gradient accumulation
+                grad_accum = getattr(self.trainer, "accumulate_grad_batches", 1)
+                steps_per_epoch = (
+                    self.trainer.estimated_stepping_batches * grad_accum
+                ) // max(1, self.trainer.max_epochs)
+            else:
                 logger.warning(
                     "Could not determine steps_per_epoch from trainer; falling back to 1000. "
                     "Noam schedule timing will be incorrect unless the dataset has exactly "
@@ -118,26 +110,28 @@ def configure_optimizers(self):
                 logger.warning(
                     f"warmup_epochs ({self.warmup_epochs}) >= max_epochs "
                     f"({self.trainer.max_epochs}); the cooldown phase has zero steps and "
-                    "the LR will drop to final_lr immediately after warmup ends"
+                    "the LR will drop to final_lr on the first post-warmup step"
                 )
                 cooldown_steps = 0
             else:
                 cooldown_steps = cooldown_epochs * steps_per_epoch
 
         # Convert absolute learning rates into scaling factors relative to max_lr.
-        # Note: when mpnn_lr != max_lr the MPNN group's absolute starting LR is
-        # mpnn_lr * (init_lr / max_lr), not init_lr — the schedule shape is preserved
+        # When mpnn_lr != max_lr, the MPNN group's absolute starting LR is
+        # mpnn_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
         # proportionally for each param group around its own peak.
         init_factor = self.init_lr / self.max_lr
         final_factor = self.final_lr / self.max_lr
 
         # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
-        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary.
+        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
         def lr_lambda(step: int):
-            if step < warmup_steps:
+            if step <= warmup_steps:
+                # Linear ramp; warmup branch owns the peak step
                 return init_factor + (step / max(1, warmup_steps)) * (1.0 - init_factor)
-            elif step <= warmup_steps + cooldown_steps:
-                decay_frac = (step - warmup_steps) / max(1, cooldown_steps)
+            elif cooldown_steps > 0 and step <= warmup_steps + cooldown_steps:
+                # Geometric decay; no division guard needed since we require cooldown_steps > 0
+                decay_frac = (step - warmup_steps) / cooldown_steps
                 return final_factor**decay_frac
             else:
                 return final_factor
@@ -146,6 +140,33 @@ def configure_optimizers(self):
         lr_sched_config = {"scheduler": lr_sched, "interval": "step"}
 
     return {"optimizer": opt, "lr_scheduler": lr_sched_config}
+
+
+def _warn_if_no_val_dataloader(self) -> None:
+    """Emit a warning when plateau scheduler has no validation dataloader.
+
+    Bound to on_train_start so num_val_batches is fully populated by Lightning
+    before this check runs. configure_optimizers fires too early and sees an
+    empty list even when a val split is configured.
+    """
+    if self.scheduler != "plateau":
+        return
+    num_val_batches = getattr(self.trainer, "num_val_batches", None)
+    if num_val_batches is None:
+        # Trainer did not expose the attribute; assume val exists
+        return
+    if hasattr(num_val_batches, "__iter__"):
+        has_val = any(n > 0 for n in num_val_batches)
+    else:
+        # Integer path: 0 correctly means no validation
+        has_val = num_val_batches > 0
+    if not has_val:
+        logger.warning(
+            f"scheduler='plateau' monitors '{self.monitor_metric}' but no validation "
+            "dataloader is configured; the scheduler will never step and training will "
+            "fail when Lightning cannot find the metric. Use scheduler='noam' for "
+            "train-only runs."
+        )
 
 
 @model_registry.register("ChemPropModel")
@@ -607,6 +628,8 @@ class ChemPropModel(LightningModelBase):
             mpnn.ffn_weight_decay = self.ffn_weight_decay
             mpnn.mpnn_lr = self.mpnn_lr
             mpnn.ffn_lr = self.ffn_lr
+            mpnn.final_lr = self.final_lr
+            mpnn.max_lr = self.max_lr
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
             mpnn.scheduler = self.scheduler
@@ -614,6 +637,9 @@ class ChemPropModel(LightningModelBase):
 
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
+
+            # Bind the val-split check to on_train_start where num_val_batches is reliable
+            mpnn.on_train_start = types.MethodType(_warn_if_no_val_dataloader, mpnn)
 
             self.estimator = mpnn
 
@@ -688,10 +714,12 @@ class ChemPropModel(LightningModelBase):
         )
 
     # Effective training hyperparameters resolved at init time; always included in the
-    # serialized artifact so that reloading is self-contained regardless of max_lr.
-    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"init_lr", "final_lr", "mpnn_lr", "ffn_lr", "mpnn_weight_decay", "ffn_weight_decay"}
-    )
+    # serialized artifact so that reloading is self-contained regardless of max_lr
+    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        "init_lr", "final_lr", "mpnn_lr", "ffn_lr",
+        "mpnn_weight_decay", "ffn_weight_decay",
+        "warmup_epochs", "reduce_lr_factor", "reduce_lr_patience",
+    })
 
     def serialize(self, param_path="model.json", serial_path="model.pth"):
         """
