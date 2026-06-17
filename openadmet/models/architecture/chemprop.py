@@ -124,11 +124,13 @@ def configure_optimizers(self):
         final_factor = self.final_lr / self.max_lr
 
         # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
-        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
+        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary.
+        # When warmup_steps == 0, the warmup branch is skipped entirely and step 0 is
+        # handled by the decay branch (decay_frac = 0, returns 1.0 = max_lr immediately).
         def lr_lambda(step: int):
-            if step <= warmup_steps:
-                # Linear ramp; warmup branch owns the peak step
-                return init_factor + (step / max(1, warmup_steps)) * (1.0 - init_factor)
+            if warmup_steps > 0 and step <= warmup_steps:
+                # Linear ramp from init_lr to max_lr; owns the peak step
+                return init_factor + (step / warmup_steps) * (1.0 - init_factor)
             elif cooldown_steps > 0 and step <= warmup_steps + cooldown_steps:
                 # Geometric decay; no division guard needed since we require cooldown_steps > 0
                 decay_frac = (step - warmup_steps) / cooldown_steps
@@ -188,7 +190,8 @@ class ChemPropModel(LightningModelBase):
     messages : str
         Type of message passing ("bond" or "atom").
     aggregation : str
-        Aggregation method ("mean" or "norm").
+        Aggregation method ("mean" or "norm"). Default is "mean", matching the original
+        ChemProp paper baseline. "norm" uses a learned normalization parameter instead.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
@@ -196,7 +199,9 @@ class ChemPropModel(LightningModelBase):
     ffn_hidden_dim : int
         Hidden dimension size for the feed-forward network.
     ffn_num_layers : int
-        Number of layers in the feed-forward network.
+        Number of layers in the feed-forward network. Default is 2 (one hidden layer);
+        setting to 1 reduces the FFN to a single linear readout, making ffn_hidden_dim
+        irrelevant.
     normalized_targets : bool
         Whether targets are normalized.
     batch_norm : bool
@@ -204,7 +209,7 @@ class ChemPropModel(LightningModelBase):
     dropout : float
         Dropout rate.
     from_chemeleon : bool
-        Whether to use the CheMeleon foundation model. Deprecated — use
+        Whether to use the CheMeleon foundation model. Deprecated; use
         ``from_foundation='chemeleon'`` instead.
     monitor_metric : str
         The metric to monitor during training. Default is "val_loss".
@@ -213,12 +218,15 @@ class ChemPropModel(LightningModelBase):
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
     warmup_epochs : int, optional
-        Number of warmup epochs for Noam scheduler only. If None (default), resolves to 2.
-        Setting this field with scheduler="plateau" raises ValueError.
+        Number of linear-ramp epochs before geometric decay for the Noam scheduler. If None
+        (default), resolves to 0 (no warmup; training begins at max_lr). Setting this field
+        with scheduler="plateau" raises ValueError. The Noam schedule shape depends on
+        max_epochs being set correctly in the Lightning Trainer; leaving it at the Lightning
+        default (1000) when actual training runs shorter will under-decay the LR.
     init_lr : float, optional
         Starting LR when each param group's base LR equals max_lr. Defaults to max_lr * 0.1.
         When mpnn_lr or ffn_lr differ from max_lr, the absolute starting LR for that group is
-        group_lr * (init_lr / max_lr), not init_lr — the schedule shape is preserved
+        group_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
         proportionally around each group's peak.
     max_lr : float
         Peak learning rate (global reference). Default is 1e-3.
@@ -237,10 +245,10 @@ class ChemPropModel(LightningModelBase):
         Weight decay for FFN. If None, defaults to weight_decay.
     reduce_lr_factor : float, optional
         Multiplicative factor applied when plateau is detected (Plateau scheduler only).
-        If None (default), resolves to 0.1. Must be < 1.0. Setting with scheduler="noam" raises ValueError.
+        If None (default), resolves to 0.5. Must be < 1.0. Setting with scheduler="noam" raises ValueError.
     reduce_lr_patience : int, optional
         Epochs with no improvement before LR is reduced (Plateau scheduler only).
-        If None (default), resolves to 10. Setting with scheduler="noam" raises ValueError.
+        If None (default), resolves to 5. Setting with scheduler="noam" raises ValueError.
     monitor_metric_mode : str
         Direction for the plateau scheduler: "min" for loss-style metrics, "max" for score-style
         metrics. Default is "min". Must match the mode of any early-stopping callback monitoring
@@ -254,11 +262,11 @@ class ChemPropModel(LightningModelBase):
     # ChemProp parameters
     n_tasks: int = 1
     messages: str = "bond"
-    aggregation: str = "norm"
+    aggregation: str = "mean"
     depth: int = 3
     message_hidden_dim: int = 300
     ffn_hidden_dim: int = 300
-    ffn_num_layers: int = 1
+    ffn_num_layers: int = 2
     normalized_targets: bool = True
     batch_norm: bool = False
     dropout: float = 0.0
@@ -284,7 +292,7 @@ class ChemPropModel(LightningModelBase):
     init_lr: float | None = None
     final_lr: float | None = None
 
-    # Noam-only parameters (None = use scheduler default of 2)
+    # Noam-only parameters (None = 0, no warmup unless explicitly requested)
     warmup_epochs: int | None = None
 
     # Plateau-only parameters (None = use scheduler defaults)
@@ -343,8 +351,8 @@ class ChemPropModel(LightningModelBase):
             - mpnn_weight_decay -> weight_decay
             - ffn_weight_decay -> weight_decay
         - Fill scheduler-specific defaults (only for the active scheduler):
-            - noam: warmup_epochs -> 2
-            - plateau: reduce_lr_factor -> 0.1, reduce_lr_patience -> 10
+            - noam: warmup_epochs -> 0
+            - plateau: reduce_lr_factor -> 0.5, reduce_lr_patience -> 5
         """
         # Resolve LRs
         if self.init_lr is None:
@@ -365,12 +373,12 @@ class ChemPropModel(LightningModelBase):
         # Fill scheduler-specific defaults only for the active scheduler
         if self.scheduler == "noam":
             if self.warmup_epochs is None:
-                self.warmup_epochs = 2
+                self.warmup_epochs = 0
         elif self.scheduler == "plateau":
             if self.reduce_lr_factor is None:
-                self.reduce_lr_factor = 0.1
+                self.reduce_lr_factor = 0.5
             if self.reduce_lr_patience is None:
-                self.reduce_lr_patience = 10
+                self.reduce_lr_patience = 5
 
         return self
 
@@ -713,11 +721,25 @@ class ChemPropModel(LightningModelBase):
             "Training not implemented in model class, use a trainer"
         )
 
-    # Effective training hyperparameters resolved at init time; always included in the
-    # serialized artifact so that reloading is self-contained regardless of max_lr
+    # Fields always included in the serialized artifact regardless of whether the user
+    # set them explicitly. Covers two categories:
+    #   - Structural fields: determine model graph shape and checkpoint compatibility;
+    #     omitting any of these from the artifact makes reloading fragile when the class
+    #     default ever changes.
+    #   - Resolved LR fields: computed from max_lr at init time and needed for exact
+    #     schedule reproduction on reload.
+    # Scheduler-specific fields (warmup_epochs, reduce_lr_factor, reduce_lr_patience) are
+    # in this set but are None for the inactive scheduler; serialize() drops None entries
+    # so only the active scheduler's fields appear in the artifact.
     _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        # Structural
+        "scheduler", "n_tasks", "depth", "message_hidden_dim", "ffn_hidden_dim",
+        "ffn_num_layers", "aggregation", "messages", "batch_norm", "dropout",
+        "normalized_targets",
+        # Resolved LRs
         "init_lr", "final_lr", "mpnn_lr", "ffn_lr",
         "mpnn_weight_decay", "ffn_weight_decay",
+        # Scheduler-specific (None for inactive scheduler; excluded below)
         "warmup_epochs", "reduce_lr_factor", "reduce_lr_patience",
     })
 
@@ -733,8 +755,12 @@ class ChemPropModel(LightningModelBase):
             Path to save the serialized model to
 
         """
+        # Exclude None entries so inactive-scheduler fields don't appear in the artifact
+        non_none_resolved = {
+            k for k in self._RESOLVED_FIELDS if getattr(self, k, None) is not None
+        }
         explicit_params = self.model_dump(
-            include=self._explicit_init_fields | self._RESOLVED_FIELDS
+            include=self._explicit_init_fields | non_none_resolved
         )
         with open(param_path, "w") as f:
             json.dump(explicit_params, f, indent=2)

@@ -99,14 +99,14 @@ def test_chemprop_scheduler_mutual_exclusivity():
 def test_chemprop_scheduler_defaults_are_scheduler_specific():
     """Test that unset cross-scheduler params stay None and scheduler defaults are filled."""
     noam = ChemPropModel(scheduler="noam")
-    assert noam.warmup_epochs == 2
+    assert noam.warmup_epochs == 0
     assert noam.reduce_lr_factor is None
     assert noam.reduce_lr_patience is None
 
     plateau = ChemPropModel(scheduler="plateau")
     assert plateau.warmup_epochs is None
-    assert plateau.reduce_lr_factor == 0.1
-    assert plateau.reduce_lr_patience == 10
+    assert plateau.reduce_lr_factor == 0.5
+    assert plateau.reduce_lr_patience == 5
 
 
 def test_chemprop_configure_optimizers_plateau():
@@ -362,8 +362,7 @@ def test_chemprop_noam_lambda_boundaries():
     cooldown_steps = (10 - 2) * 100
 
     # Advance to the step just before the warmup peak; LR must still be below max_lr.
-    # This verifies that `<=` in the warmup branch means the peak step is NOT
-    # claimed by the decay branch with decay_frac=0.
+    # Verifies the warmup branch owns the peak step via `warmup_steps > 0 and step <= warmup_steps`.
     for _ in range(warmup_steps - 1):
         lr_sched.step()
     assert lr_sched.get_last_lr()[0] < 1e-3
@@ -375,6 +374,26 @@ def test_chemprop_noam_lambda_boundaries():
     for _ in range(cooldown_steps):
         lr_sched.step()
     assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3 * 0.01, rel=1e-3)
+
+
+def test_chemprop_noam_lambda_no_warmup_starts_at_max_lr():
+    """With warmup_epochs=0 (default), Noam starts at max_lr immediately."""
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam")
+    model.build()
+
+    class MockTrainer:
+        num_training_batches = 100
+        max_epochs = 10
+        estimated_stepping_batches = 1000
+
+    model.estimator._trainer = MockTrainer()
+
+    opt_config = model.estimator.configure_optimizers()
+    lr_sched = opt_config["lr_scheduler"]["scheduler"]
+
+    # LambdaLR applies the lambda at last_epoch=0 during construction.
+    # With warmup_steps=0, the warmup branch is skipped; decay_frac=0 gives 1.0.
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
 
 
 def test_chemprop_noam_warmup_exceeds_max_epochs():
@@ -449,7 +468,7 @@ def test_chemprop_monitor_metric_mode_invalid():
 
 
 def test_chemprop_serialize_includes_resolved_lr(tmp_path):
-    """serialize() includes resolved LR fields even when not explicitly set."""
+    """serialize() includes resolved LR fields and structural fields even when not explicitly set."""
     import json
 
     model = ChemPropModel(max_lr=2e-3, scheduler="noam")
@@ -462,16 +481,25 @@ def test_chemprop_serialize_includes_resolved_lr(tmp_path):
     with open(param_path) as f:
         saved = json.load(f)
 
+    # Resolved LR fields
     assert saved["init_lr"] == pytest.approx(2e-4)  # max_lr * 0.1
     assert saved["final_lr"] == pytest.approx(2e-5)  # max_lr * 0.01
-    assert saved["mpnn_lr"] == pytest.approx(2e-3)   # max_lr
+    assert saved["mpnn_lr"] == pytest.approx(2e-3)
     assert saved["ffn_lr"] == pytest.approx(2e-3)
-    # Scheduler-specific resolved fields are also persisted
-    assert saved["warmup_epochs"] == 2
+    # Active scheduler fields persisted; inactive plateau fields absent
+    assert saved["warmup_epochs"] == 0
+    assert "reduce_lr_factor" not in saved
+    assert "reduce_lr_patience" not in saved
+    # Structural fields always present for checkpoint compatibility
+    assert saved["n_tasks"] == 1
+    assert saved["depth"] == 3
+    assert saved["ffn_num_layers"] == 2
+    assert saved["aggregation"] == "mean"
+    assert saved["batch_norm"] is False
 
 
 def test_chemprop_serialize_includes_plateau_resolved_fields(tmp_path):
-    """serialize() includes resolved plateau-specific fields for plateau models."""
+    """serialize() includes resolved plateau-specific fields and excludes noam-specific fields."""
     import json
 
     model = ChemPropModel(max_lr=1e-3, scheduler="plateau")
@@ -484,8 +512,10 @@ def test_chemprop_serialize_includes_plateau_resolved_fields(tmp_path):
     with open(param_path) as f:
         saved = json.load(f)
 
-    assert saved["reduce_lr_factor"] == pytest.approx(0.1)
-    assert saved["reduce_lr_patience"] == 10
+    assert saved["reduce_lr_factor"] == pytest.approx(0.5)
+    assert saved["reduce_lr_patience"] == 5
+    # warmup_epochs is None for plateau; must not appear in the artifact
+    assert "warmup_epochs" not in saved
 
 
 def test_chemprop_plateau_warns_without_val_dataloader():
