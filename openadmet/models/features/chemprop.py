@@ -89,9 +89,6 @@ def _vendor_build_dataloader(
         num_workers=num_workers,
         collate_fn=collate_fn,
         drop_last=drop_last,
-        # keep workers alive across epochs to avoid re-spawning pipes each epoch,
-        # which exhausts file descriptors on long runs
-        persistent_workers=num_workers > 0,
         **kwargs,
     )
 
