@@ -343,9 +343,7 @@ def test_chemprop_load_weights(tmp_path):
 
 def test_chemprop_noam_lambda_boundaries():
     """Noam lambda reaches exactly max_lr at warmup_steps and final_lr at end of cooldown."""
-    model = ChemPropModel(
-        max_lr=1e-3, scheduler="noam", warmup_epochs=2
-    )
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=2)
     model.build()
 
     class MockTrainer:
@@ -411,7 +409,9 @@ def test_chemprop_noam_warmup_exceeds_max_epochs():
     model.estimator._trainer = MockTrainer()
 
     captured = []
-    handler_id = logger.add(lambda msg: captured.append(msg.record["message"]), level="WARNING")
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
     try:
         opt_config = model.estimator.configure_optimizers()
     finally:
@@ -463,7 +463,9 @@ def test_chemprop_monitor_metric_mode():
 
 def test_chemprop_monitor_metric_mode_invalid():
     """Invalid monitor_metric_mode raises ValueError."""
-    with pytest.raises(ValueError, match="monitor_metric_mode must be either 'min' or 'max'"):
+    with pytest.raises(
+        ValueError, match="monitor_metric_mode must be either 'min' or 'max'"
+    ):
         ChemPropModel(scheduler="plateau", monitor_metric_mode="median")
 
 
@@ -533,7 +535,9 @@ def test_chemprop_plateau_warns_without_val_dataloader():
     model.estimator._trainer = MockTrainer()
 
     captured = []
-    handler_id = logger.add(lambda msg: captured.append(msg.record["message"]), level="WARNING")
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
     try:
         model.estimator.on_train_start()
     finally:
@@ -555,7 +559,9 @@ def test_chemprop_plateau_no_spurious_warning_with_val():
     model.estimator._trainer = MockTrainer()
 
     captured = []
-    handler_id = logger.add(lambda msg: captured.append(msg.record["message"]), level="WARNING")
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
     try:
         model.estimator.on_train_start()
     finally:

@@ -57,7 +57,9 @@ def configure_optimizers(self):
     if self.scheduler == "plateau":
         # Compute per-group LR floors proportional to each group's peak,
         # preserving the ratio final_lr / max_lr across param groups.
-        min_lrs = [group["lr"] * (self.final_lr / self.max_lr) for group in param_groups]
+        min_lrs = [
+            group["lr"] * (self.final_lr / self.max_lr) for group in param_groups
+        ]
 
         # Configure the reduce on plateau scheduler.
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -80,10 +82,9 @@ def configure_optimizers(self):
         # and would shorten warmup when accumulate_grad_batches > 1.
         steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
         if steps_per_epoch is None or steps_per_epoch == float("inf"):
-            if (
-                isinstance(self.trainer.estimated_stepping_batches, int)
-                and self.trainer.estimated_stepping_batches != float("inf")
-            ):
+            if isinstance(
+                self.trainer.estimated_stepping_batches, int
+            ) and self.trainer.estimated_stepping_batches != float("inf"):
                 # Convert optimizer steps back to batch steps for gradient accumulation
                 grad_accum = getattr(self.trainer, "accumulate_grad_batches", 1)
                 steps_per_epoch = (
@@ -145,7 +146,8 @@ def configure_optimizers(self):
 
 
 def _warn_if_no_val_dataloader(self) -> None:
-    """Emit a warning when plateau scheduler has no validation dataloader.
+    """
+    Emit a warning when plateau scheduler has no validation dataloader.
 
     Bound to on_train_start so num_val_batches is fully populated by Lightning
     before this check runs. configure_optimizers fires too early and sees an
@@ -384,7 +386,8 @@ class ChemPropModel(LightningModelBase):
 
     @model_validator(mode="after")
     def validate_scheduler_params(self) -> "ChemPropModel":
-        """Ensure scheduler-specific parameters are valid for the chosen scheduler.
+        """
+        Ensure scheduler-specific parameters are valid for the chosen scheduler.
 
         Cross-scheduler params use None as the "not set" sentinel so this validator
         can distinguish user-supplied values from unset fields without relying on
@@ -392,12 +395,18 @@ class ChemPropModel(LightningModelBase):
         """
         if self.scheduler == "noam":
             if self.reduce_lr_factor is not None:
-                raise ValueError("reduce_lr_factor is not compatible with noam scheduler")
+                raise ValueError(
+                    "reduce_lr_factor is not compatible with noam scheduler"
+                )
             if self.reduce_lr_patience is not None:
-                raise ValueError("reduce_lr_patience is not compatible with noam scheduler")
+                raise ValueError(
+                    "reduce_lr_patience is not compatible with noam scheduler"
+                )
         elif self.scheduler == "plateau":
             if self.warmup_epochs is not None:
-                raise ValueError("warmup_epochs is not compatible with plateau scheduler")
+                raise ValueError(
+                    "warmup_epochs is not compatible with plateau scheduler"
+                )
             # reduce_lr_factor is filled by resolve_hyperparameters before this runs
             if self.reduce_lr_factor is not None and self.reduce_lr_factor >= 1.0:
                 raise ValueError("reduce_lr_factor must be < 1.0 for plateau scheduler")
@@ -731,17 +740,33 @@ class ChemPropModel(LightningModelBase):
     # Scheduler-specific fields (warmup_epochs, reduce_lr_factor, reduce_lr_patience) are
     # in this set but are None for the inactive scheduler; serialize() drops None entries
     # so only the active scheduler's fields appear in the artifact.
-    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset({
-        # Structural
-        "scheduler", "n_tasks", "depth", "message_hidden_dim", "ffn_hidden_dim",
-        "ffn_num_layers", "aggregation", "messages", "batch_norm", "dropout",
-        "normalized_targets",
-        # Resolved LRs
-        "init_lr", "final_lr", "mpnn_lr", "ffn_lr",
-        "mpnn_weight_decay", "ffn_weight_decay",
-        # Scheduler-specific (None for inactive scheduler; excluded below)
-        "warmup_epochs", "reduce_lr_factor", "reduce_lr_patience",
-    })
+    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            # Structural
+            "scheduler",
+            "n_tasks",
+            "depth",
+            "message_hidden_dim",
+            "ffn_hidden_dim",
+            "ffn_num_layers",
+            "aggregation",
+            "messages",
+            "batch_norm",
+            "dropout",
+            "normalized_targets",
+            # Resolved LRs
+            "init_lr",
+            "final_lr",
+            "mpnn_lr",
+            "ffn_lr",
+            "mpnn_weight_decay",
+            "ffn_weight_decay",
+            # Scheduler-specific (None for inactive scheduler; excluded below)
+            "warmup_epochs",
+            "reduce_lr_factor",
+            "reduce_lr_patience",
+        }
+    )
 
     def serialize(self, param_path="model.json", serial_path="model.pth"):
         """
