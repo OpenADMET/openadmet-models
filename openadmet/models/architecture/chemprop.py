@@ -9,7 +9,7 @@ from urllib.request import urlretrieve
 import numpy as np
 import torch
 from chemprop import models, nn
-from chemprop.models.model import build_NoamLike_LRSched
+
 from lightning import pytorch as pl
 from loguru import logger
 from pydantic import PrivateAttr, field_validator, model_validator
@@ -18,7 +18,7 @@ from openadmet.models.architecture.lightning_model_base import LightningModelBas
 from openadmet.models.architecture.model_base import models as model_registry
 
 
-def configure_optimizers(self):
+def configure_optimizers(self) -> dict:
     """
     Configure optimizers and learning rate schedulers.
 
@@ -28,7 +28,7 @@ def configure_optimizers(self):
         A dictionary containing the optimizer and learning rate scheduler configurations.
 
     """
-    # Separate parameters into MPNN and FFN groups.
+    # Separate parameters into MPNN and FFN groups
     mpnn_params = []
     ffn_params = []
 
@@ -38,7 +38,7 @@ def configure_optimizers(self):
         else:
             mpnn_params.append(param)
 
-    # Set the optimizer base learning rates to their peak values.
+    # Set the optimizer base learning rates to their peak values
     param_groups = [
         {
             "params": mpnn_params,
@@ -56,12 +56,10 @@ def configure_optimizers(self):
 
     if self.scheduler == "plateau":
         # Compute per-group LR floors proportional to each group's peak,
-        # preserving the ratio final_lr / max_lr across param groups.
-        min_lrs = [
-            group["lr"] * (self.final_lr / self.max_lr) for group in param_groups
-        ]
+        # preserving the ratio final_lr / max_lr across param groups
+        min_lrs = [group["lr"] * (self.final_lr / self.max_lr) for group in param_groups]
 
-        # Configure the reduce on plateau scheduler.
+        # Configure the reduce on plateau scheduler
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             mode=self.monitor_metric_mode,
@@ -79,7 +77,7 @@ def configure_optimizers(self):
     elif self.scheduler == "noam":
         # Raw batch count per epoch is the correct unit for interval="step" scheduling;
         # estimated_stepping_batches is in optimizer-step units (divided by grad accumulation)
-        # and would shorten warmup when accumulate_grad_batches > 1.
+        # and would shorten warmup when accumulate_grad_batches > 1
         steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
         if steps_per_epoch is None or steps_per_epoch == float("inf"):
             if isinstance(
@@ -101,10 +99,19 @@ def configure_optimizers(self):
         warmup_steps = self.warmup_epochs * steps_per_epoch
 
         if self.trainer.max_epochs == -1:
-            logger.warning(
-                "Setting cooldown steps to 100 times the warmup steps for infinite training."
-            )
-            cooldown_steps = 100 * warmup_steps
+            if warmup_steps == 0:
+                # No warmup and no epoch budget means no way to calibrate decay; hold at max_lr
+                logger.warning(
+                    "noam scheduler with max_epochs=-1 and warmup_epochs=0 cannot calibrate "
+                    "decay; LR will be constant at max_lr for the entire run. "
+                    "Set max_epochs or warmup_epochs > 0 to enable a meaningful schedule."
+                )
+                cooldown_steps = 0
+            else:
+                logger.warning(
+                    "Setting cooldown steps to 100 times the warmup steps for infinite training."
+                )
+                cooldown_steps = 100 * warmup_steps
         else:
             cooldown_epochs = self.trainer.max_epochs - self.warmup_epochs
             if cooldown_epochs <= 0:
@@ -117,18 +124,21 @@ def configure_optimizers(self):
             else:
                 cooldown_steps = cooldown_epochs * steps_per_epoch
 
-        # Convert absolute learning rates into scaling factors relative to max_lr.
+        # Convert absolute learning rates into scaling factors relative to max_lr
         # When mpnn_lr != max_lr, the MPNN group's absolute starting LR is
         # mpnn_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
-        # proportionally for each param group around its own peak.
+        # proportionally for each param group around its own peak
         init_factor = self.init_lr / self.max_lr
         final_factor = self.final_lr / self.max_lr
 
         # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
-        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary.
-        # When warmup_steps == 0, the warmup branch is skipped entirely and step 0 is
-        # handled by the decay branch (decay_frac = 0, returns 1.0 = max_lr immediately).
-        def lr_lambda(step: int):
+        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
+        # When both phases are zero (no warmup, infinite or unset max_epochs), the schedule
+        # is a constant at max_lr rather than silently collapsing to final_lr
+        def lr_lambda(step: int) -> float:
+            if warmup_steps == 0 and cooldown_steps == 0:
+                # No schedule configured; hold at max_lr for the entire run
+                return 1.0
             if warmup_steps > 0 and step <= warmup_steps:
                 # Linear ramp from init_lr to max_lr; owns the peak step
                 return init_factor + (step / warmup_steps) * (1.0 - init_factor)
@@ -607,7 +617,7 @@ class ChemPropModel(LightningModelBase):
             )
 
             # Pass Noam-specific constructor args only when they are used; omitting them
-            # for plateau keeps the hparams.yaml free of misleading Noam entries.
+            # for plateau keeps the hparams.yaml free of misleading Noam entries
             noam_kwargs = (
                 dict(
                     warmup_epochs=self.warmup_epochs,
@@ -629,11 +639,15 @@ class ChemPropModel(LightningModelBase):
                 **noam_kwargs,
             )
 
-            # Ensure scheduler is always recorded in Lightning hparams; also remove any
-            # Noam keys that MPNN stored via its default constructor values for plateau runs.
+            # Ensure scheduler is always recorded in Lightning hparams. For plateau, also
+            # correct the LR keys that MPNN stored from its constructor defaults (which may
+            # differ from the user's configured values since noam_kwargs is empty for plateau)
+            # and remove Noam-only keys that do not apply
             mpnn.hparams.update({"scheduler": self.scheduler})
             if self.scheduler == "plateau":
+                mpnn.hparams.update({"max_lr": self.max_lr, "final_lr": self.final_lr})
                 mpnn.hparams.pop("warmup_epochs", None)
+                mpnn.hparams.pop("init_lr", None)
 
             # Pass monitor metric from "model" to "module"
             # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
@@ -734,39 +748,23 @@ class ChemPropModel(LightningModelBase):
     # set them explicitly. Covers two categories:
     #   - Structural fields: determine model graph shape and checkpoint compatibility;
     #     omitting any of these from the artifact makes reloading fragile when the class
-    #     default ever changes.
+    #     default ever changes
     #   - Resolved LR fields: computed from max_lr at init time and needed for exact
-    #     schedule reproduction on reload.
+    #     schedule reproduction on reload
     # Scheduler-specific fields (warmup_epochs, reduce_lr_factor, reduce_lr_patience) are
     # in this set but are None for the inactive scheduler; serialize() drops None entries
-    # so only the active scheduler's fields appear in the artifact.
-    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {
-            # Structural
-            "scheduler",
-            "n_tasks",
-            "depth",
-            "message_hidden_dim",
-            "ffn_hidden_dim",
-            "ffn_num_layers",
-            "aggregation",
-            "messages",
-            "batch_norm",
-            "dropout",
-            "normalized_targets",
-            # Resolved LRs
-            "init_lr",
-            "final_lr",
-            "mpnn_lr",
-            "ffn_lr",
-            "mpnn_weight_decay",
-            "ffn_weight_decay",
-            # Scheduler-specific (None for inactive scheduler; excluded below)
-            "warmup_epochs",
-            "reduce_lr_factor",
-            "reduce_lr_patience",
-        }
-    )
+    # so only the active scheduler's fields appear in the artifact
+    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        # Structural
+        "scheduler", "n_tasks", "depth", "message_hidden_dim", "ffn_hidden_dim",
+        "ffn_num_layers", "aggregation", "messages", "batch_norm", "dropout",
+        "normalized_targets",
+        # Resolved LRs
+        "init_lr", "final_lr", "mpnn_lr", "ffn_lr",
+        "mpnn_weight_decay", "ffn_weight_decay",
+        # Scheduler-specific (None for inactive scheduler; excluded below)
+        "warmup_epochs", "reduce_lr_factor", "reduce_lr_patience",
+    })
 
     def serialize(self, param_path="model.json", serial_path="model.pth"):
         """
