@@ -671,14 +671,8 @@ class ChemPropModel(LightningModelBase):
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
 
-            # Wrap on_train_start to add the val-split check while preserving the original hook
-            _orig_on_train_start = mpnn.on_train_start
-
-            def _on_train_start(self) -> None:
-                _warn_if_no_val_dataloader(self)
-                _orig_on_train_start()
-
-            mpnn.on_train_start = types.MethodType(_on_train_start, mpnn)
+            # Bind the val-split check to on_train_start where num_val_batches is reliable
+            mpnn.on_train_start = types.MethodType(_warn_if_no_val_dataloader, mpnn)
 
             self.estimator = mpnn
 
