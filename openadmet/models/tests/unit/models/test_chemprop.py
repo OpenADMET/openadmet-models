@@ -389,7 +389,9 @@ def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr():
     model.estimator._trainer = MockTrainer()
 
     captured = []
-    handler_id = logger.add(lambda msg: captured.append(msg.record["message"]), level="WARNING")
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
     try:
         opt_config = model.estimator.configure_optimizers()
     finally:
