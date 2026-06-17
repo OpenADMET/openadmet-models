@@ -55,10 +55,27 @@ def configure_optimizers(self):
     opt = torch.optim.AdamW(param_groups)
 
     if self.scheduler == "plateau":
+        # Warn early when there is no validation dataloader; Lightning will fail at epoch
+        # end when it cannot find the monitored metric. Use the private _trainer attribute
+        # to avoid the RuntimeError Lightning raises when no trainer is attached yet.
+        _trainer = getattr(self, "_trainer", None)
+        num_val_batches = getattr(_trainer, "num_val_batches", None) if _trainer else None
+        has_val = num_val_batches is not None and (
+            not hasattr(num_val_batches, "__iter__")
+            or any(n > 0 for n in num_val_batches)
+        )
+        if _trainer is not None and not has_val:
+            logger.warning(
+                f"scheduler='plateau' monitors '{self.monitor_metric}' but no validation "
+                "dataloader is configured; the scheduler will never step and training will "
+                "fail when Lightning cannot find the metric. Use scheduler='noam' for "
+                "train-only runs."
+            )
+
         # Configure the reduce on plateau scheduler.
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
-            mode="min",
+            mode=self.monitor_metric_mode,
             factor=self.reduce_lr_factor,
             patience=self.reduce_lr_patience,
             min_lr=self.final_lr,
@@ -78,35 +95,50 @@ def configure_optimizers(self):
             total_steps = self.trainer.estimated_stepping_batches
             steps_per_epoch = total_steps // max(1, self.trainer.max_epochs)
         else:
-            # Fallback for infinite training or uninitialized dataloaders.
-            steps_per_epoch = getattr(self.trainer, "num_training_batches", 1000)
+            # Fallback when the trainer cannot report batch counts.
+            steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
+            if steps_per_epoch is None:
+                logger.warning(
+                    "Could not determine steps_per_epoch from trainer; falling back to 1000. "
+                    "Noam schedule timing will be incorrect unless the dataset has exactly "
+                    "1000 batches per epoch."
+                )
+                steps_per_epoch = 1000
 
         warmup_steps = self.warmup_epochs * steps_per_epoch
 
         if self.trainer.max_epochs == -1:
             logger.warning(
-                "Setting cooldown epochs to 100 times the warmup epochs for infinite training."
+                "Setting cooldown steps to 100 times the warmup steps for infinite training."
             )
             cooldown_steps = 100 * warmup_steps
         else:
             cooldown_epochs = self.trainer.max_epochs - self.warmup_epochs
-            cooldown_steps = cooldown_epochs * steps_per_epoch
+            if cooldown_epochs <= 0:
+                logger.warning(
+                    f"warmup_epochs ({self.warmup_epochs}) >= max_epochs "
+                    f"({self.trainer.max_epochs}); the cooldown phase has zero steps and "
+                    "the LR will drop to final_lr immediately after warmup ends"
+                )
+                cooldown_steps = 0
+            else:
+                cooldown_steps = cooldown_epochs * steps_per_epoch
 
-        # Convert vanilla absolute learning rates into relative scaling factors.
+        # Convert absolute learning rates into scaling factors relative to max_lr.
+        # Note: when mpnn_lr != max_lr the MPNN group's absolute starting LR is
+        # mpnn_lr * (init_lr / max_lr), not init_lr — the schedule shape is preserved
+        # proportionally for each param group around its own peak.
         init_factor = self.init_lr / self.max_lr
         final_factor = self.final_lr / self.max_lr
 
-        # Define the lambda function using relative factors scaling up to 1.0 at peak.
+        # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
+        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary.
         def lr_lambda(step: int):
             if step < warmup_steps:
-                warmup_slope = (1.0 - init_factor) / max(1, warmup_steps)
-                return init_factor + (step * warmup_slope)
-
-            elif warmup_steps <= step < warmup_steps + cooldown_steps:
-                decay_steps = step - warmup_steps
-                cooldown_slope = final_factor ** (1.0 / max(1, cooldown_steps))
-                return 1.0 * (cooldown_slope**decay_steps)
-
+                return init_factor + (step / max(1, warmup_steps)) * (1.0 - init_factor)
+            elif step <= warmup_steps + cooldown_steps:
+                decay_frac = (step - warmup_steps) / max(1, cooldown_steps)
+                return final_factor**decay_frac
             else:
                 return final_factor
 
@@ -159,28 +191,39 @@ class ChemPropModel(LightningModelBase):
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
-    warmup_epochs : int
-        Number of warmup epochs for learning rate scheduling (Noam scheduler only). Default is 2.
+    warmup_epochs : int, optional
+        Number of warmup epochs for Noam scheduler only. If None (default), resolves to 2.
+        Setting this field with scheduler="plateau" raises ValueError.
     init_lr : float, optional
-        Initial learning rate. If None, defaults to max_lr * 0.1.
+        Starting LR when each param group's base LR equals max_lr. Defaults to max_lr * 0.1.
+        When mpnn_lr or ffn_lr differ from max_lr, the absolute starting LR for that group is
+        group_lr * (init_lr / max_lr), not init_lr — the schedule shape is preserved
+        proportionally around each group's peak.
     max_lr : float
-        Maximum learning rate (Global default). Default is 1e-3.
+        Peak learning rate (global reference). Default is 1e-3.
     final_lr : float, optional
-        Final learning rate. If None, defaults to max_lr * 0.01.
+        Floor LR when each param group's base LR equals max_lr. Defaults to max_lr * 0.01.
+        Same proportional scaling applies as for init_lr when per-component LRs are set.
     weight_decay : float
         Global weight decay. Default is 0.0.
     mpnn_lr : float, optional
-        Learning rate for MPNN. If None, defaults to max_lr.
+        Peak learning rate for MPNN. If None, defaults to max_lr.
     ffn_lr : float, optional
-        Learning rate for FFN. If None, defaults to max_lr.
+        Peak learning rate for FFN. If None, defaults to max_lr.
     mpnn_weight_decay : float, optional
         Weight decay for MPNN. If None, defaults to weight_decay.
     ffn_weight_decay : float, optional
         Weight decay for FFN. If None, defaults to weight_decay.
-    reduce_lr_factor : float
-        Factor by which the learning rate will be reduced (Plateau scheduler only). Default is 0.1.
-    reduce_lr_patience : int
-        Number of epochs with no improvement after which learning rate will be reduced (Plateau scheduler only). Default is 10.
+    reduce_lr_factor : float, optional
+        Multiplicative factor applied when plateau is detected (Plateau scheduler only).
+        If None (default), resolves to 0.1. Must be < 1.0. Setting with scheduler="noam" raises ValueError.
+    reduce_lr_patience : int, optional
+        Epochs with no improvement before LR is reduced (Plateau scheduler only).
+        If None (default), resolves to 10. Setting with scheduler="noam" raises ValueError.
+    monitor_metric_mode : str
+        Direction for the plateau scheduler: "min" for loss-style metrics, "max" for score-style
+        metrics. Default is "min". Must match the mode of any early-stopping callback monitoring
+        the same metric to avoid conflicting signals.
 
     """
 
@@ -220,12 +263,15 @@ class ChemPropModel(LightningModelBase):
     init_lr: float | None = None
     final_lr: float | None = None
 
-    # Noam-only parameters
-    warmup_epochs: int = 2
+    # Noam-only parameters (None = use scheduler default of 2)
+    warmup_epochs: int | None = None
 
-    # Plateau-only parameters
-    reduce_lr_factor: float = 0.1
-    reduce_lr_patience: int = 10
+    # Plateau-only parameters (None = use scheduler defaults)
+    reduce_lr_factor: float | None = None
+    reduce_lr_patience: int | None = None
+
+    # Direction for plateau scheduler; must match any early-stopping callback on the same metric
+    monitor_metric_mode: str = "min"
 
     _n_tasks: int = 1
     _explicit_init_fields: set[str] = PrivateAttr(default_factory=set)
@@ -275,6 +321,9 @@ class ChemPropModel(LightningModelBase):
         - Resolve weight decays:
             - mpnn_weight_decay -> weight_decay
             - ffn_weight_decay -> weight_decay
+        - Fill scheduler-specific defaults (only for the active scheduler):
+            - noam: warmup_epochs -> 2
+            - plateau: reduce_lr_factor -> 0.1, reduce_lr_patience -> 10
         """
         # Resolve LRs
         if self.init_lr is None:
@@ -292,28 +341,36 @@ class ChemPropModel(LightningModelBase):
         if self.ffn_weight_decay is None:
             self.ffn_weight_decay = self.weight_decay
 
+        # Fill scheduler-specific defaults only for the active scheduler
+        if self.scheduler == "noam":
+            if self.warmup_epochs is None:
+                self.warmup_epochs = 2
+        elif self.scheduler == "plateau":
+            if self.reduce_lr_factor is None:
+                self.reduce_lr_factor = 0.1
+            if self.reduce_lr_patience is None:
+                self.reduce_lr_patience = 10
+
         return self
 
     @model_validator(mode="after")
     def validate_scheduler_params(self) -> "ChemPropModel":
-        """Ensure scheduler-specific parameters are valid for the chosen scheduler."""
+        """Ensure scheduler-specific parameters are valid for the chosen scheduler.
+
+        Cross-scheduler params use None as the "not set" sentinel so this validator
+        can distinguish user-supplied values from unset fields without relying on
+        model_fields_set (which only tracks explicitly provided keys).
+        """
         if self.scheduler == "noam":
-            # Check for plateau params
-            if "reduce_lr_factor" in self.model_fields_set:
-                raise ValueError(
-                    "reduce_lr_factor is not compatible with noam scheduler"
-                )
-            if "reduce_lr_patience" in self.model_fields_set:
-                raise ValueError(
-                    "reduce_lr_patience is not compatible with noam scheduler"
-                )
+            if self.reduce_lr_factor is not None:
+                raise ValueError("reduce_lr_factor is not compatible with noam scheduler")
+            if self.reduce_lr_patience is not None:
+                raise ValueError("reduce_lr_patience is not compatible with noam scheduler")
         elif self.scheduler == "plateau":
-            # Check for noam params
-            if "warmup_epochs" in self.model_fields_set:
-                raise ValueError(
-                    "warmup_epochs is not compatible with plateau scheduler"
-                )
-            if self.reduce_lr_factor >= 1.0:
+            if self.warmup_epochs is not None:
+                raise ValueError("warmup_epochs is not compatible with plateau scheduler")
+            # reduce_lr_factor is filled by resolve_hyperparameters before this runs
+            if self.reduce_lr_factor is not None and self.reduce_lr_factor >= 1.0:
                 raise ValueError("reduce_lr_factor must be < 1.0 for plateau scheduler")
         return self
 
@@ -392,6 +449,27 @@ class ChemPropModel(LightningModelBase):
         """
         if value not in ["noam", "plateau"]:
             raise ValueError("Scheduler must be either 'noam' or 'plateau'")
+        return value
+
+    @field_validator("monitor_metric_mode")
+    @classmethod
+    def validate_monitor_metric_mode(cls, value):
+        """
+        Validate the monitor_metric_mode parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        """
+        if value not in ["min", "max"]:
+            raise ValueError("monitor_metric_mode must be either 'min' or 'max'")
         return value
 
     def _get_output_transform(self, scaler):
@@ -490,6 +568,19 @@ class ChemPropModel(LightningModelBase):
                 dropout=self.dropout,
             )
 
+            # Pass Noam-specific constructor args only when they are used; omitting them
+            # for plateau keeps the hparams.yaml free of misleading Noam entries.
+            noam_kwargs = (
+                dict(
+                    warmup_epochs=self.warmup_epochs,
+                    init_lr=self.init_lr,
+                    max_lr=self.max_lr,
+                    final_lr=self.final_lr,
+                )
+                if self.scheduler == "noam"
+                else {}
+            )
+
             # Create the MPNN model
             mpnn = models.MPNN(
                 message_passing=mp,
@@ -497,11 +588,14 @@ class ChemPropModel(LightningModelBase):
                 predictor=ffn,
                 batch_norm=self.batch_norm,
                 metrics=metric_list,
-                warmup_epochs=self.warmup_epochs,
-                init_lr=self.init_lr,
-                max_lr=self.max_lr,
-                final_lr=self.final_lr,
+                **noam_kwargs,
             )
+
+            # Ensure scheduler is always recorded in Lightning hparams; also remove any
+            # Noam keys that MPNN stored via its default constructor values for plateau runs.
+            mpnn.hparams.update({"scheduler": self.scheduler})
+            if self.scheduler == "plateau":
+                mpnn.hparams.pop("warmup_epochs", None)
 
             # Pass monitor metric from "model" to "module"
             # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
@@ -515,7 +609,8 @@ class ChemPropModel(LightningModelBase):
             mpnn.ffn_lr = self.ffn_lr
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
-            mpnn.scheduler = self.scheduler  # Propagate scheduler choice
+            mpnn.scheduler = self.scheduler
+            mpnn.monitor_metric_mode = self.monitor_metric_mode
 
             # Bind the custom configure_optimizers method
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
@@ -592,9 +687,15 @@ class ChemPropModel(LightningModelBase):
             "Training not implemented in model class, use a trainer"
         )
 
+    # Effective training hyperparameters resolved at init time; always included in the
+    # serialized artifact so that reloading is self-contained regardless of max_lr.
+    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"init_lr", "final_lr", "mpnn_lr", "ffn_lr", "mpnn_weight_decay", "ffn_weight_decay"}
+    )
+
     def serialize(self, param_path="model.json", serial_path="model.pth"):
         """
-        Save the model with only explicitly provided parameter fields.
+        Save the model with explicitly provided fields plus resolved LR hyperparameters.
 
         Parameters
         ----------
@@ -604,7 +705,9 @@ class ChemPropModel(LightningModelBase):
             Path to save the serialized model to
 
         """
-        explicit_params = self.model_dump(include=self._explicit_init_fields)
+        explicit_params = self.model_dump(
+            include=self._explicit_init_fields | self._RESOLVED_FIELDS
+        )
         with open(param_path, "w") as f:
             json.dump(explicit_params, f, indent=2)
         self.save(serial_path)
@@ -709,8 +812,8 @@ class ChemPropModel(LightningModelBase):
             for idx in range(ffn_layers):
                 # No gradient updates
                 self.estimator.predictor.ffn[idx].requires_grad_(False)
-                # Evaluation mode
-                self.estimator.predictor.ffn[idx + 1].eval()
+                # Evaluation mode (same layer as the gradient freeze)
+                self.estimator.predictor.ffn[idx].eval()
 
             # Log for feedforward network
             logger.info(
