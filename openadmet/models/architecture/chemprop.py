@@ -231,42 +231,44 @@ class ChemPropModel(LightningModelBase):
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
-    warmup_epochs : int, optional
-        Number of linear-ramp epochs before geometric decay for the Noam scheduler. If None
-        (default), resolves to 2 (matching the original ChemProp paper default). Setting this
-        field with scheduler="plateau" raises ValueError. The Noam schedule shape depends on
-        max_epochs being set correctly in the Lightning Trainer; leaving it at the Lightning
-        default (1000) when actual training runs shorter will under-decay the LR.
-    init_lr : float, optional
-        Starting LR when each param group's base LR equals max_lr. Defaults to max_lr * 0.1.
-        When mpnn_lr or ffn_lr differ from max_lr, the absolute starting LR for that group is
-        group_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
-        proportionally around each group's peak.
     max_lr : float
         Peak learning rate (global reference). Default is 1e-3.
     final_lr : float, optional
-        Floor LR when each param group's base LR equals max_lr. Defaults to max_lr * 0.01.
-        Same proportional scaling applies as for init_lr when per-component LRs are set.
+        Floor LR for each param group. Defaults to max_lr * 0.01. When mpnn_lr or ffn_lr
+        differ from max_lr, the absolute floor for that group is group_lr * (final_lr /
+        max_lr); the ratio is preserved proportionally.
     weight_decay : float
         Global weight decay. Default is 0.0.
     mpnn_lr : float, optional
-        Peak learning rate for MPNN. If None, defaults to max_lr.
+        Peak learning rate for the MPNN param group. If None, defaults to max_lr.
     ffn_lr : float, optional
-        Peak learning rate for FFN. If None, defaults to max_lr.
+        Peak learning rate for the FFN param group. If None, defaults to max_lr.
     mpnn_weight_decay : float, optional
-        Weight decay for MPNN. If None, defaults to weight_decay.
+        Weight decay for the MPNN param group. If None, defaults to weight_decay.
     ffn_weight_decay : float, optional
-        Weight decay for FFN. If None, defaults to weight_decay.
+        Weight decay for the FFN param group. If None, defaults to weight_decay.
+    warmup_epochs : int, optional
+        [Noam only] Number of linear-ramp epochs before geometric decay. If None (default),
+        resolves to 2 (matching the original ChemProp paper default). Setting this field
+        with scheduler="plateau" raises ValueError. The schedule shape depends on max_epochs
+        being set correctly in the Lightning Trainer; leaving it at the Lightning default
+        (1000) when actual training runs shorter will under-decay the LR.
+    init_lr : float, optional
+        [Noam only] Starting LR at the beginning of the warmup ramp. Defaults to
+        max_lr * 0.1. When mpnn_lr or ffn_lr differ from max_lr, the absolute starting LR
+        for that group is group_lr * (init_lr / max_lr); the schedule shape is preserved
+        proportionally around each group's peak.
     reduce_lr_factor : float, optional
-        Multiplicative factor applied when plateau is detected (Plateau scheduler only).
-        If None (default), resolves to 0.5. Must be < 1.0. Setting with scheduler="noam" raises ValueError.
+        [Plateau only] Multiplicative factor applied when a plateau is detected. If None
+        (default), resolves to 0.5. Must be < 1.0. Setting with scheduler="noam" raises
+        ValueError.
     reduce_lr_patience : int, optional
-        Epochs with no improvement before LR is reduced (Plateau scheduler only).
-        If None (default), resolves to 5. Setting with scheduler="noam" raises ValueError.
+        [Plateau only] Epochs with no improvement before LR is reduced. If None (default),
+        resolves to 5. Setting with scheduler="noam" raises ValueError.
     monitor_metric_mode : str
-        Direction for the plateau scheduler: "min" for loss-style metrics, "max" for score-style
-        metrics. Default is "min". Must match the mode of any early-stopping callback monitoring
-        the same metric to avoid conflicting signals.
+        [Plateau only] Direction for plateau detection: "min" for loss-style metrics, "max"
+        for score-style metrics. Default is "min". Must match the mode of any early-stopping
+        callback monitoring the same metric to avoid conflicting signals.
 
     """
 
