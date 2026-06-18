@@ -265,7 +265,7 @@ def test_chemprop_load_weights_invalid_path():
     with pytest.raises(
         FileNotFoundError, match="Foundation model not found at doesnt_exist.pt"
     ):
-        model.build("non_existent_file.pt")
+        model.build()
 
 
 def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
@@ -333,7 +333,7 @@ def test_chemprop_load_weights(tmp_path):
     model.build()
 
     # Verify that the weights were loaded correctly
-    loaded_weights = torch.load(str(temp_weights_path))
+    loaded_weights = torch.load(str(temp_weights_path), weights_only=True)
     for key in loaded_weights["state_dict"]:
         assert torch.all(
             model.estimator.state_dict()[f"message_passing.{key}"]
