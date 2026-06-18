@@ -231,6 +231,23 @@ class ChemPropModel(LightningModelBase):
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
+
+        Selection depends on the training regime:
+
+        - "noam": for fixed-length training where the epoch budget is known in
+          advance. The learning rate follows a preset trajectory, a linear ramp
+          followed by a smooth decay across the configured run. This is the
+          original ChemProp recipe and the appropriate default for standard
+          from-scratch training. It depends on max_epochs being set correctly;
+          an incorrect or open-ended budget distorts the trajectory.
+        - "plateau": for runs whose length is not fixed in advance, such as
+          early-stopped training or fine-tuning from a foundation model. The
+          learning rate is reduced only when the monitored metric stops
+          improving, adapting to observed progress rather than a preset
+          timeline. Requires a validation set.
+
+        For open-ended training (max_epochs=-1) or early stopping, prefer
+        "plateau"; "noam" cannot shape its trajectory without a known budget.
     max_lr : float
         Peak learning rate (global reference). Default is 1e-3.
     final_lr : float, optional
