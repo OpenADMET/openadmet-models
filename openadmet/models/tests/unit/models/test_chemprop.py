@@ -15,7 +15,9 @@ def make_noam_trainer():
     Override any attribute to exercise edge-case schedule shapes.
     """
 
-    def _factory(num_training_batches=100, max_epochs=10, estimated_stepping_batches=1000):
+    def _factory(
+        num_training_batches=100, max_epochs=10, estimated_stepping_batches=1000
+    ):
         return types.SimpleNamespace(
             num_training_batches=num_training_batches,
             max_epochs=max_epochs,
@@ -399,7 +401,9 @@ def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr(make_noam_traine
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=0)
     model.build()
 
-    model.estimator._trainer = make_noam_trainer(max_epochs=-1, estimated_stepping_batches=float("inf"))
+    model.estimator._trainer = make_noam_trainer(
+        max_epochs=-1, estimated_stepping_batches=float("inf")
+    )
 
     captured = []
     handler_id = logger.add(
@@ -441,7 +445,9 @@ def test_chemprop_noam_warmup_exceeds_max_epochs(make_noam_trainer):
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=5)
     model.build()
 
-    model.estimator._trainer = make_noam_trainer(num_training_batches=50, max_epochs=3, estimated_stepping_batches=150)
+    model.estimator._trainer = make_noam_trainer(
+        num_training_batches=50, max_epochs=3, estimated_stepping_batches=150
+    )
 
     captured = []
     handler_id = logger.add(
