@@ -193,7 +193,9 @@ def test_chemprop_get_output_transform():
     assert isinstance(transform, nn.UnscaleTransform)
     transform.eval()
     x = torch.tensor([[3.5]])
-    assert transform(x) == pytest.approx(3.5), "no-scaler transform must pass predictions through unchanged"
+    assert transform(x) == pytest.approx(3.5), (
+        "no-scaler transform must pass predictions through unchanged"
+    )
 
     # Case 3: normalized_targets=False, no scaler
     model.normalized_targets = False
