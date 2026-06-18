@@ -233,8 +233,8 @@ class ChemPropModel(LightningModelBase):
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
     warmup_epochs : int, optional
         Number of linear-ramp epochs before geometric decay for the Noam scheduler. If None
-        (default), resolves to 0 (no warmup; training begins at max_lr). Setting this field
-        with scheduler="plateau" raises ValueError. The Noam schedule shape depends on
+        (default), resolves to 2 (matching the original ChemProp paper default). Setting this
+        field with scheduler="plateau" raises ValueError. The Noam schedule shape depends on
         max_epochs being set correctly in the Lightning Trainer; leaving it at the Lightning
         default (1000) when actual training runs shorter will under-decay the LR.
     init_lr : float, optional
@@ -365,7 +365,7 @@ class ChemPropModel(LightningModelBase):
             - mpnn_weight_decay -> weight_decay
             - ffn_weight_decay -> weight_decay
         - Fill scheduler-specific defaults (only for the active scheduler):
-            - noam: warmup_epochs -> 0
+            - noam: warmup_epochs -> 2
             - plateau: reduce_lr_factor -> 0.5, reduce_lr_patience -> 5
         """
         # Resolve LRs
@@ -387,7 +387,7 @@ class ChemPropModel(LightningModelBase):
         # Fill scheduler-specific defaults only for the active scheduler
         if self.scheduler == "noam":
             if self.warmup_epochs is None:
-                self.warmup_epochs = 0
+                self.warmup_epochs = 2
         elif self.scheduler == "plateau":
             if self.reduce_lr_factor is None:
                 self.reduce_lr_factor = 0.5
