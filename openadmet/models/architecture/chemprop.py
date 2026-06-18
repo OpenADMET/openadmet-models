@@ -618,8 +618,11 @@ class ChemPropModel(LightningModelBase):
                 dropout=self.dropout,
             )
 
-            # Pass Noam-specific constructor args only when they are used; omitting them
-            # for plateau keeps the hparams.yaml free of misleading Noam entries
+            # warmup_epochs, init_lr, max_lr, and final_lr are MPNN constructor parameters,
+            # so Lightning records them in hparams.yaml automatically. Omit them for plateau
+            # to avoid misleading entries. Plateau-specific params (reduce_lr_factor, etc.)
+            # are not constructor args and are set as plain attributes below, so they never
+            # appear in hparams regardless of scheduler — no plateau_kwargs needed
             noam_kwargs = (
                 dict(
                     warmup_epochs=self.warmup_epochs,
