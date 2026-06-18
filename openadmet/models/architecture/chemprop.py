@@ -266,9 +266,9 @@ class ChemPropModel(LightningModelBase):
         [Plateau only] Epochs with no improvement before LR is reduced. If None (default),
         resolves to 5. Setting with scheduler="noam" raises ValueError.
     monitor_metric_mode : str
-        [Plateau only] Direction for plateau detection: "min" for loss-style metrics, "max"
-        for score-style metrics. Default is "min". Must match the mode of any early-stopping
-        callback monitoring the same metric to avoid conflicting signals.
+        Direction for metric monitoring: "min" for loss-style metrics, "max" for score-style
+        metrics. Default is "min". Currently consumed by the plateau scheduler; must also
+        match any early-stopping callback monitoring the same metric.
 
     """
 
