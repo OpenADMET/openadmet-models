@@ -10,6 +10,69 @@ import pandas as pd
 
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
+# Fixed KDE bandwidth (raw target units, e.g. log units) for inverse-density weighting. Held
+# constant rather than data-derived (e.g. Scott's rule) so weights are reproducible across
+# dataset versions; 0.5 is half the conventional assay noise floor of one log unit.
+KDE_BANDWIDTH = 0.5
+
+# Per-task weights are clipped to this multiple of the median weight so a single very rare
+# target value cannot dominate the gradient.
+WEIGHT_CLIP_MEDIAN_FACTOR = 5.0
+
+
+def _inverse_density_weights(y: np.ndarray) -> np.ndarray:
+    """
+    Compute per-sample inverse-density weights from training targets.
+
+    A Gaussian KDE is fit per task on that task's finite target values, and each
+    value is weighted by the inverse of its estimated density, clipped to a
+    bounded multiple of the median and normalized to unit mean. For multitask
+    targets, the per-sample weight is the mean of the per-task weights across the
+    tasks present for that sample (NaN entries are missing measurements). The
+    final weights are renormalized to unit mean so the overall loss scale is
+    preserved regardless of dataset composition.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        Target array of shape ``(n_samples, n_tasks)`` in raw units. Missing
+        measurements are encoded as NaN.
+
+    Returns
+    -------
+    np.ndarray
+        Per-sample weights of shape ``(n_samples,)`` with mean 1.
+
+    """
+    from sklearn.neighbors import KernelDensity
+
+    n_samples, n_tasks = y.shape
+    per_task_weights = np.full((n_samples, n_tasks), np.nan)
+
+    # fit one KDE per task on its observed values; weight each value by inverse density
+    for task in range(n_tasks):
+        column = y[:, task]
+        present = np.isfinite(column)
+        if not present.any():
+            continue
+        values = column[present].reshape(-1, 1)
+        kde = KernelDensity(kernel="gaussian", bandwidth=KDE_BANDWIDTH).fit(values)
+        raw_weights = 1.0 / np.exp(kde.score_samples(values))
+        weight_ceiling = np.median(raw_weights) * WEIGHT_CLIP_MEDIAN_FACTOR
+        clipped = np.clip(raw_weights, a_min=1.0, a_max=weight_ceiling)
+        per_task_weights[present, task] = clipped / clipped.mean()
+
+    # collapse to one scalar per sample (mean over present tasks); all-missing rows keep
+    # unit weight and are excluded from the mean to avoid empty-slice warnings
+    sample_weights = np.ones(n_samples)
+    has_measurement = np.isfinite(per_task_weights).any(axis=1)
+    sample_weights[has_measurement] = np.nanmean(
+        per_task_weights[has_measurement], axis=1
+    )
+
+    # renormalize so mean weight is 1, preserving overall loss scale
+    return sample_weights / sample_weights.mean()
+
 
 # we vendor this from chemprop so that we can pass custom samplers
 # taken directly from https://github.com/chemprop/chemprop/blob/main/chemprop/data/dataloader.py
@@ -111,6 +174,14 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Batch size for the DataLoader, by default 128
     shuffle : bool, optional
         Whether to shuffle the data in the DataLoader, by default False
+    inverse_density_weighting : bool, optional
+        Whether to weight training samples by the inverse density of their target values, by
+        default False. When True, a Gaussian KDE is fit on the (raw) training targets and each
+        sample is weighted by the inverse of its estimated density, upweighting rare tail
+        compounds and suppressing the dense mean region. Weights are attached to the chemprop
+        datapoints and flow through chemprop's existing per-sample loss weighting. Weighting is
+        applied only to the training loader (``train=True``); validation and inference loaders
+        keep unit weights so the monitored loss stays unweighted.
 
     """
 
@@ -118,6 +189,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
     n_jobs: int = 4
     batch_size: int = 128
     shuffle: bool = False
+    inverse_density_weighting: bool = False
 
     def _prepare(self):
         """Prepare the featurizer."""
@@ -162,9 +234,19 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
                 y = y.to_numpy()
             y = y.reshape(-1, 1) if y.ndim == 1 else y
 
-            dataset = MoleculeDataset(
-                [MoleculeDatapoint.from_smi(smi, y_) for smi, y_ in zip(smiles, y)]
-            )
+            # density weighting applies only to the training loader; validation and inference
+            # keep unit weights so the monitored loss stays unweighted
+            if self.inverse_density_weighting and train:
+                weights = _inverse_density_weights(np.asarray(y))
+                datapoints = [
+                    MoleculeDatapoint.from_smi(smi, y_, weight=w_)
+                    for smi, y_, w_ in zip(smiles, y, weights)
+                ]
+            else:
+                datapoints = [
+                    MoleculeDatapoint.from_smi(smi, y_) for smi, y_ in zip(smiles, y)
+                ]
+            dataset = MoleculeDataset(datapoints)
             if self.normalize_targets:
                 scaler = dataset.normalize_targets()
             else:

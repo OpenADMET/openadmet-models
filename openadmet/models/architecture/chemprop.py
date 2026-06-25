@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
+from openadmet.models.architecture.losses import NoiseThresholdedMSE
 from openadmet.models.architecture.model_base import models as model_registry
 
 
@@ -315,6 +316,15 @@ class ChemPropModel(LightningModelBase):
         Direction for metric monitoring: "min" for loss-style metrics, "max" for score-style
         metrics. Default is "min". Currently consumed by the plateau scheduler; must also
         match any early-stopping callback monitoring the same metric.
+    experimental_uncertainty : float
+        Measurement-noise floor in raw target units (e.g. log units). Default is 0.0, which
+        keeps the standard MSE criterion and reproduces existing behavior exactly. When
+        positive, the training criterion becomes an epsilon-insensitive squared error
+        (:class:`NoiseThresholdedMSE`): residuals smaller than this threshold contribute no
+        loss, attenuating the pressure to refine predictions below the assay noise floor. The
+        threshold is converted to per-task normalized space using the training-target scaler
+        before it enters the loss, so it is specified once in interpretable raw units. Must be
+        non-negative.
 
     """
 
@@ -339,6 +349,10 @@ class ChemPropModel(LightningModelBase):
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
+
+    # Measurement-noise floor (raw target units) for the training criterion. 0 keeps the
+    # default MSE; > 0 switches to an epsilon-insensitive squared loss with this threshold.
+    experimental_uncertainty: float = 0.0
 
     # Select scheduler among "noam" or "plateau"; structural (resolved=True)
     scheduler: str = ResolvedField("noam")
@@ -500,6 +514,27 @@ class ChemPropModel(LightningModelBase):
         self._n_tasks = self.n_tasks
         return self
 
+    @field_validator("experimental_uncertainty")
+    @classmethod
+    def validate_experimental_uncertainty(cls, value: float) -> float:
+        """
+        Validate that the noise floor is non-negative.
+
+        Parameters
+        ----------
+        value : float
+            The experimental_uncertainty value to validate.
+
+        Returns
+        -------
+        float
+            The validated value.
+
+        """
+        if value < 0:
+            raise ValueError("experimental_uncertainty must be non-negative")
+        return value
+
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
@@ -610,6 +645,40 @@ class ChemPropModel(LightningModelBase):
             output_transform = None
         return output_transform
 
+    def _build_criterion(self, scaler):
+        """
+        Build the training criterion for the regression head.
+
+        Returns ``None`` when ``experimental_uncertainty`` is 0 so that
+        ``RegressionFFN`` falls back to its default MSE criterion (no behavior
+        change). When positive, returns a :class:`NoiseThresholdedMSE` whose
+        per-task threshold is the noise floor converted from raw target units to
+        normalized space via the training-target scaler. Training residuals are
+        in normalized space (ChemProp's UnscaleTransform is a no-op in training
+        mode), so an unscaled threshold would not match the loss space.
+
+        Parameters
+        ----------
+        scaler : object, optional
+            StandardScaler fit on the training targets, exposing ``scale_``.
+            When ``None``, the raw threshold is used directly (residuals are in
+            raw units, or unit-scaled).
+
+        Returns
+        -------
+        NoiseThresholdedMSE or None
+            The criterion to pass to ``RegressionFFN``, or ``None`` for default.
+
+        """
+        if self.experimental_uncertainty == 0:
+            return None
+        if scaler is not None:
+            scale = np.asarray(scaler.scale_, dtype=float).reshape(-1)
+            delta = self.experimental_uncertainty / scale
+        else:
+            delta = np.full(self.n_tasks, self.experimental_uncertainty, dtype=float)
+        return NoiseThresholdedMSE(delta=delta, task_weights=torch.ones(self.n_tasks))
+
     def build(self, scaler=None):
         """
         Prepare and build the ChemProp model.
@@ -678,6 +747,7 @@ class ChemPropModel(LightningModelBase):
                 n_layers=self.ffn_num_layers,
                 output_transform=self._get_output_transform(scaler),
                 dropout=self.dropout,
+                criterion=self._build_criterion(scaler),
             )
 
             # max_lr and final_lr are MPNN constructor parameters that Lightning records
