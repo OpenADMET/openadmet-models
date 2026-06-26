@@ -69,3 +69,55 @@ def test_disabled_flag_leaves_unit_weights():
     _, _, _, dataset = featurizer.featurize(smiles, targets, train=True)
 
     assert all(point.weight == pytest.approx(1.0) for point in dataset.data)
+
+
+def test_bandwidth_changes_the_resulting_weights(skewed_targets):
+    """Different KDE bandwidths produce materially different per-sample weights."""
+    narrow = _inverse_density_weights(skewed_targets, bandwidth=0.2)
+    wide = _inverse_density_weights(skewed_targets, bandwidth=1.0)
+
+    assert not np.allclose(narrow, wide)
+
+
+def test_higher_clip_factor_raises_the_weight_ceiling(skewed_targets):
+    """A larger clip factor lets rare-tail weights climb higher before clipping."""
+    is_tail = skewed_targets[:, 0] > 7.5
+
+    loose = _inverse_density_weights(skewed_targets, weight_clip_median_factor=20.0)
+    tight = _inverse_density_weights(skewed_targets, weight_clip_median_factor=2.0)
+
+    assert loose[is_tail].max() > tight[is_tail].max()
+
+
+def test_featurizer_defaults_match_module_constants(skewed_targets):
+    """The featurizer's default params reproduce the bare module-level weighting."""
+    from openadmet.models.features.chemprop import (
+        KDE_BANDWIDTH,
+        WEIGHT_CLIP_MEDIAN_FACTOR,
+    )
+
+    featurizer = ChemPropFeaturizer(inverse_density_weighting=True, n_jobs=0)
+
+    assert featurizer.kde_bandwidth == KDE_BANDWIDTH
+    assert featurizer.weight_clip_median_factor == WEIGHT_CLIP_MEDIAN_FACTOR
+
+
+def test_featurizer_passes_bandwidth_through_to_weights():
+    """A featurizer bandwidth override reaches the weighting and changes the tail weight."""
+    smiles = ["CCO", "CCN", "CCC", "c1ccccc1", "CCCl", "CCBr"]
+    targets = np.array([5.0, 5.0, 5.0, 8.0, 5.0, 5.0])
+
+    narrow = ChemPropFeaturizer(
+        inverse_density_weighting=True, kde_bandwidth=0.2, n_jobs=0
+    )
+    wide = ChemPropFeaturizer(
+        inverse_density_weighting=True, kde_bandwidth=2.0, n_jobs=0
+    )
+
+    _, _, _, narrow_ds = narrow.featurize(smiles, targets, train=True)
+    _, _, _, wide_ds = wide.featurize(smiles, targets, train=True)
+
+    narrow_tail = next(p.weight for p in narrow_ds.data if p.y[0] == 8.0)
+    wide_tail = next(p.weight for p in wide_ds.data if p.y[0] == 8.0)
+
+    assert narrow_tail != pytest.approx(wide_tail)

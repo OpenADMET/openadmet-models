@@ -10,17 +10,22 @@ import pandas as pd
 
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
-# Fixed KDE bandwidth (raw target units, e.g. log units) for inverse-density weighting. Held
+# Default KDE bandwidth (raw target units, e.g. log units) for inverse-density weighting. Held
 # constant rather than data-derived (e.g. Scott's rule) so weights are reproducible across
-# dataset versions; 0.5 is half the conventional assay noise floor of one log unit.
+# dataset versions; 0.5 is half the conventional assay noise floor of one log unit. Exposed as
+# ChemPropFeaturizer.kde_bandwidth so it can be swept without editing this module.
 KDE_BANDWIDTH = 0.5
 
-# Per-task weights are clipped to this multiple of the median weight so a single very rare
-# target value cannot dominate the gradient.
+# Default ceiling, as a multiple of the median weight, so a single very rare target value cannot
+# dominate the gradient. Exposed as ChemPropFeaturizer.weight_clip_median_factor for sweeping.
 WEIGHT_CLIP_MEDIAN_FACTOR = 5.0
 
 
-def _inverse_density_weights(y: np.ndarray) -> np.ndarray:
+def _inverse_density_weights(
+    y: np.ndarray,
+    bandwidth: float = KDE_BANDWIDTH,
+    weight_clip_median_factor: float = WEIGHT_CLIP_MEDIAN_FACTOR,
+) -> np.ndarray:
     """
     Compute per-sample inverse-density weights from training targets.
 
@@ -37,6 +42,13 @@ def _inverse_density_weights(y: np.ndarray) -> np.ndarray:
     y : np.ndarray
         Target array of shape ``(n_samples, n_tasks)`` in raw units. Missing
         measurements are encoded as NaN.
+    bandwidth : float, default=KDE_BANDWIDTH
+        Gaussian KDE bandwidth in raw target units. Wider bandwidths smooth the
+        density and flatten the weights; narrower bandwidths sharpen the upweight
+        on isolated tail values.
+    weight_clip_median_factor : float, default=WEIGHT_CLIP_MEDIAN_FACTOR
+        Per-task weight ceiling as a multiple of the median weight, bounding how
+        much a single rare target value can dominate the gradient.
 
     Returns
     -------
@@ -56,9 +68,9 @@ def _inverse_density_weights(y: np.ndarray) -> np.ndarray:
         if not present.any():
             continue
         values = column[present].reshape(-1, 1)
-        kde = KernelDensity(kernel="gaussian", bandwidth=KDE_BANDWIDTH).fit(values)
+        kde = KernelDensity(kernel="gaussian", bandwidth=bandwidth).fit(values)
         raw_weights = 1.0 / np.exp(kde.score_samples(values))
-        weight_ceiling = np.median(raw_weights) * WEIGHT_CLIP_MEDIAN_FACTOR
+        weight_ceiling = np.median(raw_weights) * weight_clip_median_factor
         clipped = np.clip(raw_weights, a_min=1.0, a_max=weight_ceiling)
         per_task_weights[present, task] = clipped / clipped.mean()
 
@@ -182,6 +194,14 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         datapoints and flow through chemprop's existing per-sample loss weighting. Weighting is
         applied only to the training loader (``train=True``); validation and inference loaders
         keep unit weights so the monitored loss stays unweighted.
+    kde_bandwidth : float, optional
+        Gaussian KDE bandwidth (raw target units) for inverse-density weighting, by default
+        ``KDE_BANDWIDTH`` (0.5). Only used when ``inverse_density_weighting`` is True. Wider
+        smooths the weights toward uniform; narrower sharpens the tail upweight.
+    weight_clip_median_factor : float, optional
+        Inverse-density weight ceiling as a multiple of the median weight, by default
+        ``WEIGHT_CLIP_MEDIAN_FACTOR`` (5.0). Only used when ``inverse_density_weighting`` is
+        True. Caps how much a single rare target value can dominate the gradient.
 
     """
 
@@ -190,6 +210,8 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
     batch_size: int = 128
     shuffle: bool = False
     inverse_density_weighting: bool = False
+    kde_bandwidth: float = KDE_BANDWIDTH
+    weight_clip_median_factor: float = WEIGHT_CLIP_MEDIAN_FACTOR
 
     def _prepare(self):
         """Prepare the featurizer."""
@@ -237,7 +259,11 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             # density weighting applies only to the training loader; validation and inference
             # keep unit weights so the monitored loss stays unweighted
             if self.inverse_density_weighting and train:
-                weights = _inverse_density_weights(np.asarray(y))
+                weights = _inverse_density_weights(
+                    np.asarray(y),
+                    bandwidth=self.kde_bandwidth,
+                    weight_clip_median_factor=self.weight_clip_median_factor,
+                )
                 datapoints = [
                     MoleculeDatapoint.from_smi(smi, y_, weight=w_)
                     for smi, y_, w_ in zip(smiles, y, weights)
