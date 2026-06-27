@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import pandas as pd
 
-from openadmet.models.split.sklearn import ShuffleSplitter
+from openadmet.models.split.sklearn import ShuffleSplitter, TailFractionSplitter
 from openadmet.models.split.cluster import ClusterSplitter
 from openadmet.models.split.split_base import splitters
 
@@ -287,3 +287,59 @@ def test_cluster_split_invalid_method():
             random_seed=42,
             method="not-a-method",
         )
+
+
+def _tail_curve_frame(n=200, seed=0):
+    """Synthetic SMILES-like frame and a target spanning the hit boundary for tail tests."""
+    rng = np.random.default_rng(seed)
+    X = pd.DataFrame({"smiles": [f"C{i}" for i in range(n)], "f0": rng.random(n)})
+    y = pd.DataFrame({"PXR_pEC50": rng.uniform(3.0, 8.0, size=n)})
+    return X, y
+
+
+def test_tail_fraction_splitter_registered():
+    """TailFractionSplitter is discoverable in the splitter registry."""
+    assert "TailFractionSplitter" in splitters
+
+
+@pytest.mark.parametrize("frac", [0.0, 0.25, 0.5, 0.75, 1.0])
+def test_tail_fraction_fixes_test_and_subsamples_potent(frac):
+    """Val/test match the parent split; only potent train rows are subsampled by fraction."""
+    X, y = _tail_curve_frame()
+    common = dict(train_size=0.7, val_size=0.1, test_size=0.2, random_seed=42)
+    base = ShuffleSplitter(**common)
+    _, b_val, b_test, b_ytr, b_yval, b_ytest, _ = base.split(X, y)
+    tf = TailFractionSplitter(
+        **common, tail_threshold=6.0, tail_fraction=frac, subsample_seed=0
+    )
+    Xtr, Xval, Xtest, ytr, yval, ytest, _ = tf.split(X, y)
+
+    # val and test are untouched regardless of the fraction
+    pd.testing.assert_frame_equal(Xval, b_val)
+    pd.testing.assert_frame_equal(Xtest, b_test)
+    pd.testing.assert_frame_equal(yval, b_yval)
+    pd.testing.assert_frame_equal(ytest, b_ytest)
+
+    # every sub-threshold training row is retained
+    n_base_nonpotent = int((b_ytr["PXR_pEC50"] < 6.0).sum())
+    n_kept_nonpotent = int((ytr["PXR_pEC50"] < 6.0).sum())
+    assert n_kept_nonpotent == n_base_nonpotent
+
+    # potent training rows kept equals round(frac * baseline potent count)
+    n_base_potent = int((b_ytr["PXR_pEC50"] >= 6.0).sum())
+    n_kept_potent = int((ytr["PXR_pEC50"] >= 6.0).sum())
+    assert n_kept_potent == int(round(frac * n_base_potent))
+    # train rows and labels stay aligned
+    assert len(Xtr) == len(ytr) == n_kept_nonpotent + n_kept_potent
+
+
+def test_tail_fraction_one_reproduces_baseline_train():
+    """tail_fraction=1.0 leaves the training set identical to the parent ShuffleSplitter."""
+    X, y = _tail_curve_frame()
+    common = dict(train_size=0.7, val_size=0.1, test_size=0.2, random_seed=42)
+    b_Xtr, _, _, b_ytr, _, _, _ = ShuffleSplitter(**common).split(X, y)
+    Xtr, _, _, ytr, _, _, _ = TailFractionSplitter(
+        **common, tail_threshold=6.0, tail_fraction=1.0
+    ).split(X, y)
+    pd.testing.assert_frame_equal(Xtr, b_Xtr)
+    pd.testing.assert_frame_equal(ytr, b_ytr)
