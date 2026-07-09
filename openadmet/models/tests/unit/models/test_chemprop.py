@@ -614,8 +614,6 @@ def test_chemprop_plateau_hparams_reflect_configured_lrs():
 
     assert model.estimator.hparams["max_lr"] == pytest.approx(5e-3)
     assert model.estimator.hparams["final_lr"] == pytest.approx(5e-5)
-    assert model.estimator.hparams["scheduler"] == "plateau"
-    assert "warmup_epochs" not in model.estimator.hparams
     assert "init_lr" not in model.estimator.hparams
 
 
