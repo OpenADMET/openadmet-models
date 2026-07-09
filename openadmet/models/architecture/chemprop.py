@@ -706,8 +706,6 @@ class ChemPropModel(LightningModelBase):
             mpnn.ffn_weight_decay = self.ffn_weight_decay
             mpnn.mpnn_lr = self.mpnn_lr
             mpnn.ffn_lr = self.ffn_lr
-            mpnn.final_lr = self.final_lr
-            mpnn.max_lr = self.max_lr
             mpnn.reduce_lr_factor = self.reduce_lr_factor
             mpnn.reduce_lr_patience = self.reduce_lr_patience
             mpnn.scheduler = self.scheduler
