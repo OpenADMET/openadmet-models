@@ -673,7 +673,9 @@ class ChemPropModel(LightningModelBase):
             # never appear in hparams regardless of scheduler — no plateau_kwargs needed
             mpnn_kwargs = dict(max_lr=self.max_lr, final_lr=self.final_lr)
             if self.scheduler == "noam":
-                mpnn_kwargs.update(warmup_epochs=self.warmup_epochs, init_lr=self.init_lr)
+                mpnn_kwargs.update(
+                    warmup_epochs=self.warmup_epochs, init_lr=self.init_lr
+                )
 
             # Create the MPNN model
             mpnn = models.MPNN(
