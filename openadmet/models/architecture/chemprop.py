@@ -12,7 +12,7 @@ from chemprop import models, nn
 
 from lightning import pytorch as pl
 from loguru import logger
-from pydantic import PrivateAttr, field_validator, model_validator
+from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
@@ -293,44 +293,51 @@ class ChemPropModel(LightningModelBase):
     type: ClassVar[str] = "ChemPropModel"
 
     # ChemProp parameters
-    n_tasks: int = 1
-    messages: str = "bond"
-    aggregation: str = "mean"
-    depth: int = 3
-    message_hidden_dim: int = 300
-    ffn_hidden_dim: int = 300
-    ffn_num_layers: int = 2
-    normalized_targets: bool = True
-    batch_norm: bool = False
-    dropout: float = 0.0
+    # Structural fields are tagged resolved=True: they determine model graph shape
+    # and checkpoint compatibility, so serialize() always persists them regardless
+    # of whether the user set them explicitly (see _resolved_fields below)
+    n_tasks: int = Field(1, json_schema_extra={"resolved": True})
+    messages: str = Field("bond", json_schema_extra={"resolved": True})
+    aggregation: str = Field("mean", json_schema_extra={"resolved": True})
+    depth: int = Field(3, json_schema_extra={"resolved": True})
+    message_hidden_dim: int = Field(300, json_schema_extra={"resolved": True})
+    ffn_hidden_dim: int = Field(300, json_schema_extra={"resolved": True})
+    ffn_num_layers: int = Field(2, json_schema_extra={"resolved": True})
+    normalized_targets: bool = Field(True, json_schema_extra={"resolved": True})
+    batch_norm: bool = Field(False, json_schema_extra={"resolved": True})
+    dropout: float = Field(0.0, json_schema_extra={"resolved": True})
     from_foundation: str | None = None
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
 
-    # Select scheduler among "noam" or "plateau"
-    scheduler: str = "noam"
+    # Select scheduler among "noam" or "plateau"; structural (resolved=True)
+    scheduler: str = Field("noam", json_schema_extra={"resolved": True})
 
     # Global defaults (master values)
     max_lr: float = 1e-3
     weight_decay: float = 0.0
 
     # Component overrides (optional - inherit from masters if None)
-    mpnn_lr: float | None = None
-    ffn_lr: float | None = None
-    mpnn_weight_decay: float | None = None
-    ffn_weight_decay: float | None = None
+    # Resolved LRs: computed from max_lr/weight_decay at validation time and
+    # needed for exact schedule reproduction on reload, so tagged resolved=True
+    mpnn_lr: float | None = Field(None, json_schema_extra={"resolved": True})
+    ffn_lr: float | None = Field(None, json_schema_extra={"resolved": True})
+    mpnn_weight_decay: float | None = Field(None, json_schema_extra={"resolved": True})
+    ffn_weight_decay: float | None = Field(None, json_schema_extra={"resolved": True})
 
     # Scheduler specifics (optional - inherit from max_lr if None)
-    init_lr: float | None = None
-    final_lr: float | None = None
+    init_lr: float | None = Field(None, json_schema_extra={"resolved": True})
+    final_lr: float | None = Field(None, json_schema_extra={"resolved": True})
 
     # Noam-only parameters (None = 0, no warmup unless explicitly requested)
-    warmup_epochs: int | None = None
+    # None for the inactive scheduler; serialize() drops None entries so only
+    # the active scheduler's fields appear in the artifact
+    warmup_epochs: int | None = Field(None, json_schema_extra={"resolved": True})
 
     # Plateau-only parameters (None = use scheduler defaults)
-    reduce_lr_factor: float | None = None
-    reduce_lr_patience: int | None = None
+    reduce_lr_factor: float | None = Field(None, json_schema_extra={"resolved": True})
+    reduce_lr_patience: int | None = Field(None, json_schema_extra={"resolved": True})
 
     # Direction for plateau scheduler; must match any early-stopping callback on the same metric
     monitor_metric_mode: str = "min"
@@ -768,43 +775,23 @@ class ChemPropModel(LightningModelBase):
             "Training not implemented in model class, use a trainer"
         )
 
-    # Fields always included in the serialized artifact regardless of whether the user
-    # set them explicitly. Covers two categories:
-    #   - Structural fields: determine model graph shape and checkpoint compatibility;
-    #     omitting any of these from the artifact makes reloading fragile when the class
-    #     default ever changes
-    #   - Resolved LR fields: computed from max_lr at init time and needed for exact
-    #     schedule reproduction on reload
-    # Scheduler-specific fields (warmup_epochs, reduce_lr_factor, reduce_lr_patience) are
-    # in this set but are None for the inactive scheduler; serialize() drops None entries
-    # so only the active scheduler's fields appear in the artifact
-    _RESOLVED_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {
-            # Structural
-            "scheduler",
-            "n_tasks",
-            "depth",
-            "message_hidden_dim",
-            "ffn_hidden_dim",
-            "ffn_num_layers",
-            "aggregation",
-            "messages",
-            "batch_norm",
-            "dropout",
-            "normalized_targets",
-            # Resolved LRs
-            "init_lr",
-            "final_lr",
-            "mpnn_lr",
-            "ffn_lr",
-            "mpnn_weight_decay",
-            "ffn_weight_decay",
-            # Scheduler-specific (None for inactive scheduler; excluded below)
-            "warmup_epochs",
-            "reduce_lr_factor",
-            "reduce_lr_patience",
-        }
-    )
+    @classmethod
+    def _resolved_fields(cls) -> frozenset[str]:
+        """
+        Fields always included in the serialized artifact, per-field metadata.
+
+        Returns
+        -------
+        frozenset[str]
+            Names of fields declared with ``Field(..., json_schema_extra={"resolved": True})``.
+            See each field's declaration above for why it is tagged.
+
+        """
+        return frozenset(
+            name
+            for name, info in cls.model_fields.items()
+            if (info.json_schema_extra or {}).get("resolved")
+        )
 
     def serialize(self, param_path="model.json", serial_path="model.pth"):
         """
@@ -820,7 +807,7 @@ class ChemPropModel(LightningModelBase):
         """
         # Exclude None entries so inactive-scheduler fields don't appear in the artifact
         non_none_resolved = {
-            k for k in self._RESOLVED_FIELDS if getattr(self, k, None) is not None
+            k for k in self._resolved_fields() if getattr(self, k, None) is not None
         }
         explicit_params = self.model_dump(
             include=self._explicit_init_fields | non_none_resolved

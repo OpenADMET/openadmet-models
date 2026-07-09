@@ -561,6 +561,34 @@ def test_chemprop_serialize_includes_plateau_resolved_fields(tmp_path):
     assert "warmup_epochs" not in saved
 
 
+def test_chemprop_resolved_fields_matches_tagged_declarations():
+    """_resolved_fields() returns exactly the fields tagged resolved=True."""
+    expected = {
+        "scheduler",
+        "n_tasks",
+        "depth",
+        "message_hidden_dim",
+        "ffn_hidden_dim",
+        "ffn_num_layers",
+        "aggregation",
+        "messages",
+        "batch_norm",
+        "dropout",
+        "normalized_targets",
+        "init_lr",
+        "final_lr",
+        "mpnn_lr",
+        "ffn_lr",
+        "mpnn_weight_decay",
+        "ffn_weight_decay",
+        "warmup_epochs",
+        "reduce_lr_factor",
+        "reduce_lr_patience",
+    }
+
+    assert ChemPropModel._resolved_fields() == expected
+
+
 def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
     """Plateau scheduler warns when no validation dataloader is configured."""
     from loguru import logger
