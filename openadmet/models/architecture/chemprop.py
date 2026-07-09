@@ -644,21 +644,16 @@ class ChemPropModel(LightningModelBase):
                 dropout=self.dropout,
             )
 
-            # warmup_epochs, init_lr, max_lr, and final_lr are MPNN constructor parameters,
-            # so Lightning records them in hparams.yaml automatically. Omit them for plateau
-            # to avoid misleading entries. Plateau-specific params (reduce_lr_factor, etc.)
-            # are not constructor args and are set as plain attributes below, so they never
-            # appear in hparams regardless of scheduler — no plateau_kwargs needed
-            noam_kwargs = (
-                dict(
-                    warmup_epochs=self.warmup_epochs,
-                    init_lr=self.init_lr,
-                    max_lr=self.max_lr,
-                    final_lr=self.final_lr,
-                )
-                if self.scheduler == "noam"
-                else {}
-            )
+            # max_lr and final_lr are MPNN constructor parameters that Lightning records
+            # in hparams.yaml automatically; pass them unconditionally so the recorded
+            # values are always correct, regardless of scheduler. warmup_epochs and init_lr
+            # are noam-only structural fields, included only when noam is active so they
+            # don't appear in hparams for plateau. Plateau-specific params (reduce_lr_factor,
+            # etc.) are not constructor args and are set as plain attributes below, so they
+            # never appear in hparams regardless of scheduler — no plateau_kwargs needed
+            mpnn_kwargs = dict(max_lr=self.max_lr, final_lr=self.final_lr)
+            if self.scheduler == "noam":
+                mpnn_kwargs.update(warmup_epochs=self.warmup_epochs, init_lr=self.init_lr)
 
             # Create the MPNN model
             mpnn = models.MPNN(
@@ -667,16 +662,15 @@ class ChemPropModel(LightningModelBase):
                 predictor=ffn,
                 batch_norm=self.batch_norm,
                 metrics=metric_list,
-                **noam_kwargs,
+                **mpnn_kwargs,
             )
 
-            # Ensure scheduler is always recorded in Lightning hparams. For plateau, also
-            # correct the LR keys that MPNN stored from its constructor defaults (which may
-            # differ from the user's configured values since noam_kwargs is empty for plateau)
-            # and remove Noam-only keys that do not apply
+            # scheduler has no MPNN constructor slot, so it is added to hparams directly.
+            # warmup_epochs and init_lr are popped for plateau because MPNN's own
+            # save_hyperparameters() records its constructor defaults for any arg we
+            # omit, and those two play no role in the plateau schedule
             mpnn.hparams.update({"scheduler": self.scheduler})
             if self.scheduler == "plateau":
-                mpnn.hparams.update({"max_lr": self.max_lr, "final_lr": self.final_lr})
                 mpnn.hparams.pop("warmup_epochs", None)
                 mpnn.hparams.pop("init_lr", None)
 

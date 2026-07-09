@@ -561,6 +561,18 @@ def test_chemprop_serialize_includes_plateau_resolved_fields(tmp_path):
     assert "warmup_epochs" not in saved
 
 
+def test_chemprop_plateau_hparams_reflect_configured_lrs():
+    """mpnn.hparams for plateau reflects the user's max_lr/final_lr, not MPNN's own defaults."""
+    model = ChemPropModel(max_lr=5e-3, final_lr=5e-5, scheduler="plateau")
+    model.build()
+
+    assert model.estimator.hparams["max_lr"] == pytest.approx(5e-3)
+    assert model.estimator.hparams["final_lr"] == pytest.approx(5e-5)
+    assert model.estimator.hparams["scheduler"] == "plateau"
+    assert "warmup_epochs" not in model.estimator.hparams
+    assert "init_lr" not in model.estimator.hparams
+
+
 def test_chemprop_resolved_fields_matches_tagged_declarations():
     """_resolved_fields() returns exactly the fields tagged resolved=True."""
     expected = {
