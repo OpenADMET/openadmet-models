@@ -18,6 +18,44 @@ from openadmet.models.architecture.lightning_model_base import LightningModelBas
 from openadmet.models.architecture.model_base import models as model_registry
 
 
+def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
+    """
+    Resolve the number of batches per epoch for Noam step-based scheduling.
+
+    Raw batch count is the correct unit for interval="step" scheduling;
+    estimated_stepping_batches is in optimizer-step units (divided by grad
+    accumulation) and would shorten warmup when accumulate_grad_batches > 1.
+
+    Parameters
+    ----------
+    trainer : pl.Trainer
+        The Lightning trainer the module is attached to.
+
+    Returns
+    -------
+    int
+        Batches per epoch, or a fallback of 1000 with a warning if the
+        trainer cannot report a usable value.
+
+    """
+    steps_per_epoch = getattr(trainer, "num_training_batches", None)
+    if steps_per_epoch is not None and steps_per_epoch != float("inf"):
+        return steps_per_epoch
+
+    estimated = trainer.estimated_stepping_batches
+    if isinstance(estimated, int) and estimated != float("inf"):
+        # Convert optimizer steps back to batch steps for gradient accumulation
+        grad_accum = getattr(trainer, "accumulate_grad_batches", 1)
+        return (estimated * grad_accum) // max(1, trainer.max_epochs)
+
+    logger.warning(
+        "Could not determine steps_per_epoch from trainer; falling back to 1000. "
+        "Noam schedule timing will be incorrect unless the dataset has exactly "
+        "1000 batches per epoch."
+    )
+    return 1000
+
+
 def configure_optimizers(self) -> dict:
     """
     Configure optimizers and learning rate schedulers.
@@ -77,27 +115,7 @@ def configure_optimizers(self) -> dict:
             "frequency": 1,
         }
     elif self.scheduler == "noam":
-        # Raw batch count per epoch is the correct unit for interval="step" scheduling;
-        # estimated_stepping_batches is in optimizer-step units (divided by grad accumulation)
-        # and would shorten warmup when accumulate_grad_batches > 1
-        steps_per_epoch = getattr(self.trainer, "num_training_batches", None)
-        if steps_per_epoch is None or steps_per_epoch == float("inf"):
-            if isinstance(
-                self.trainer.estimated_stepping_batches, int
-            ) and self.trainer.estimated_stepping_batches != float("inf"):
-                # Convert optimizer steps back to batch steps for gradient accumulation
-                grad_accum = getattr(self.trainer, "accumulate_grad_batches", 1)
-                steps_per_epoch = (
-                    self.trainer.estimated_stepping_batches * grad_accum
-                ) // max(1, self.trainer.max_epochs)
-            else:
-                logger.warning(
-                    "Could not determine steps_per_epoch from trainer; falling back to 1000. "
-                    "Noam schedule timing will be incorrect unless the dataset has exactly "
-                    "1000 batches per epoch."
-                )
-                steps_per_epoch = 1000
-
+        steps_per_epoch = _resolve_noam_steps_per_epoch(self.trainer)
         warmup_steps = self.warmup_epochs * steps_per_epoch
 
         if self.trainer.max_epochs == -1:

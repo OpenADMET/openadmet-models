@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 import torch
 
-from openadmet.models.architecture.chemprop import ChemPropModel
+from openadmet.models.architecture.chemprop import (
+    ChemPropModel,
+    _resolve_noam_steps_per_epoch,
+)
 
 
 @pytest.fixture
@@ -35,6 +38,49 @@ def make_val_trainer():
         return types.SimpleNamespace(num_val_batches=list(num_val_batches))
 
     return _factory
+
+
+def test_resolve_noam_steps_per_epoch_uses_num_training_batches(make_noam_trainer):
+    """num_training_batches is used directly when the trainer reports a finite value."""
+    trainer = make_noam_trainer(num_training_batches=50)
+
+    assert _resolve_noam_steps_per_epoch(trainer) == 50
+
+
+def test_resolve_noam_steps_per_epoch_converts_estimated_stepping_batches(
+    make_noam_trainer,
+):
+    """estimated_stepping_batches is converted back to raw batch units via grad accumulation."""
+    trainer = make_noam_trainer(
+        num_training_batches=float("inf"),
+        max_epochs=10,
+        estimated_stepping_batches=500,
+    )
+    trainer.accumulate_grad_batches = 2
+
+    # (500 estimated * 2 grad_accum) // 10 epochs = 100 raw batches/epoch
+    assert _resolve_noam_steps_per_epoch(trainer) == 100
+
+
+def test_resolve_noam_steps_per_epoch_falls_back_to_1000(make_noam_trainer):
+    """Falls back to 1000 and warns when neither trainer field is usable."""
+    from loguru import logger
+
+    trainer = make_noam_trainer(
+        num_training_batches=float("inf"), estimated_stepping_batches=float("inf")
+    )
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        steps_per_epoch = _resolve_noam_steps_per_epoch(trainer)
+    finally:
+        logger.remove(handler_id)
+
+    assert steps_per_epoch == 1000
+    assert any("falling back to 1000" in w for w in captured)
 
 
 def test_chemprop_hyperparameters_overrides():
