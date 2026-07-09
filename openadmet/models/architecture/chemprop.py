@@ -92,12 +92,14 @@ def configure_optimizers(self) -> dict:
 
     opt = torch.optim.AdamW(param_groups)
 
+    # Ratio of final_lr to max_lr, shared by both schedulers whenever they need a
+    # per-group value proportional to that group's own peak lr, not the global max_lr
+    final_lr_ratio = self.final_lr / self.max_lr
+
     if self.scheduler == "plateau":
         # Compute per-group LR floors proportional to each group's peak,
         # preserving the ratio final_lr / max_lr across param groups
-        min_lrs = [
-            group["lr"] * (self.final_lr / self.max_lr) for group in param_groups
-        ]
+        min_lrs = [group["lr"] * final_lr_ratio for group in param_groups]
 
         # Configure the reduce on plateau scheduler
         lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -149,7 +151,7 @@ def configure_optimizers(self) -> dict:
         # mpnn_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
         # proportionally for each param group around its own peak
         init_factor = self.init_lr / self.max_lr
-        final_factor = self.final_lr / self.max_lr
+        final_factor = final_lr_ratio
 
         # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
         # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
