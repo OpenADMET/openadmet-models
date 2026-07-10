@@ -192,7 +192,10 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
     if num_val_batches is None:
         # Trainer did not expose the attribute; assume val exists
         return
-    if hasattr(num_val_batches, "__iter__"):
+    # Lightning's num_val_batches is an int when there is a single (or no) val
+    # dataloader, and a list[int] with one entry per dataloader when there are
+    # multiple; has_val is true if any configured dataloader reports batches
+    if isinstance(num_val_batches, list):
         has_val = any(n > 0 for n in num_val_batches)
     else:
         # Integer path: 0 correctly means no validation
