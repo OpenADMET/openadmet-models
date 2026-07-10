@@ -153,9 +153,8 @@ def configure_optimizers(self) -> dict:
         # mpnn_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
         # proportionally for each param group around its own peak
         init_factor = self.init_lr / self.max_lr
-        final_factor = final_lr_ratio
 
-        # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_factor
+        # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_lr_ratio
         # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
         # When both phases are zero (no warmup, infinite or unset max_epochs), the schedule
         # is a constant at max_lr rather than silently collapsing to final_lr
@@ -169,9 +168,9 @@ def configure_optimizers(self) -> dict:
             elif cooldown_steps > 0 and step <= warmup_steps + cooldown_steps:
                 # Geometric decay; no division guard needed since we require cooldown_steps > 0
                 decay_frac = (step - warmup_steps) / cooldown_steps
-                return final_factor**decay_frac
+                return final_lr_ratio**decay_frac
             else:
-                return final_factor
+                return final_lr_ratio
 
         lr_sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda)
         lr_sched_config = {"scheduler": lr_sched, "interval": "step"}
