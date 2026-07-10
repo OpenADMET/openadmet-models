@@ -439,7 +439,14 @@ class ChemPropModel(LightningModelBase):
         if self.ffn_weight_decay is None:
             self.ffn_weight_decay = self.weight_decay
 
-        # Fill scheduler-specific defaults only for the active scheduler
+        # Fill scheduler-specific defaults only for the active scheduler. These
+        # can't be plain Field(default=...) values: warmup_epochs, reduce_lr_factor,
+        # and reduce_lr_patience are declared X | None = None so validate_scheduler_params
+        # below can tell "user explicitly set this for the wrong scheduler" (raise) apart
+        # from "user never touched it" (silently fine); a real default would make both
+        # cases look identical once resolved here. The values below are what an unset
+        # field resolves to, not a bypass of Field defaults; users can still override
+        # them directly via the constructor
         if self.scheduler == "noam":
             if self.warmup_epochs is None:
                 self.warmup_epochs = 2
