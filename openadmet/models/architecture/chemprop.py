@@ -2,6 +2,7 @@
 
 import json
 import types
+from functools import partial
 from pathlib import Path
 from typing import ClassVar
 from urllib.request import urlretrieve
@@ -209,6 +210,11 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
         )
 
 
+# Fields tagged resolved=True are always persisted by serialize(), regardless
+# of whether the user set them explicitly; see _resolved_fields below
+ResolvedField = partial(Field, json_schema_extra={"resolved": True})
+
+
 @model_registry.register("ChemPropModel")
 class ChemPropModel(LightningModelBase):
     """
@@ -320,23 +326,23 @@ class ChemPropModel(LightningModelBase):
     # Structural fields are tagged resolved=True: they determine model graph shape
     # and checkpoint compatibility, so serialize() always persists them regardless
     # of whether the user set them explicitly (see _resolved_fields below)
-    n_tasks: int = Field(1, json_schema_extra={"resolved": True})
-    messages: str = Field("bond", json_schema_extra={"resolved": True})
-    aggregation: str = Field("mean", json_schema_extra={"resolved": True})
-    depth: int = Field(3, json_schema_extra={"resolved": True})
-    message_hidden_dim: int = Field(300, json_schema_extra={"resolved": True})
-    ffn_hidden_dim: int = Field(300, json_schema_extra={"resolved": True})
-    ffn_num_layers: int = Field(2, json_schema_extra={"resolved": True})
-    normalized_targets: bool = Field(True, json_schema_extra={"resolved": True})
-    batch_norm: bool = Field(False, json_schema_extra={"resolved": True})
-    dropout: float = Field(0.0, json_schema_extra={"resolved": True})
+    n_tasks: int = ResolvedField(1)
+    messages: str = ResolvedField("bond")
+    aggregation: str = ResolvedField("mean")
+    depth: int = ResolvedField(3)
+    message_hidden_dim: int = ResolvedField(300)
+    ffn_hidden_dim: int = ResolvedField(300)
+    ffn_num_layers: int = ResolvedField(2)
+    normalized_targets: bool = ResolvedField(True)
+    batch_norm: bool = ResolvedField(False)
+    dropout: float = ResolvedField(0.0)
     from_foundation: str | None = None
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
 
     # Select scheduler among "noam" or "plateau"; structural (resolved=True)
-    scheduler: str = Field("noam", json_schema_extra={"resolved": True})
+    scheduler: str = ResolvedField("noam")
 
     # Global defaults (master values)
     max_lr: float = 1e-3
@@ -345,23 +351,23 @@ class ChemPropModel(LightningModelBase):
     # Component overrides (optional - inherit from masters if None)
     # Resolved LRs: computed from max_lr/weight_decay at validation time and
     # needed for exact schedule reproduction on reload, so tagged resolved=True
-    mpnn_lr: float | None = Field(None, json_schema_extra={"resolved": True})
-    ffn_lr: float | None = Field(None, json_schema_extra={"resolved": True})
-    mpnn_weight_decay: float | None = Field(None, json_schema_extra={"resolved": True})
-    ffn_weight_decay: float | None = Field(None, json_schema_extra={"resolved": True})
+    mpnn_lr: float | None = ResolvedField(None)
+    ffn_lr: float | None = ResolvedField(None)
+    mpnn_weight_decay: float | None = ResolvedField(None)
+    ffn_weight_decay: float | None = ResolvedField(None)
 
     # Scheduler specifics (optional - inherit from max_lr if None)
-    init_lr: float | None = Field(None, json_schema_extra={"resolved": True})
-    final_lr: float | None = Field(None, json_schema_extra={"resolved": True})
+    init_lr: float | None = ResolvedField(None)
+    final_lr: float | None = ResolvedField(None)
 
     # Noam-only parameters (None = 0, no warmup unless explicitly requested)
     # None for the inactive scheduler; serialize() drops None entries so only
     # the active scheduler's fields appear in the artifact
-    warmup_epochs: int | None = Field(None, json_schema_extra={"resolved": True})
+    warmup_epochs: int | None = ResolvedField(None)
 
     # Plateau-only parameters (None = use scheduler defaults)
-    reduce_lr_factor: float | None = Field(None, json_schema_extra={"resolved": True})
-    reduce_lr_patience: int | None = Field(None, json_schema_extra={"resolved": True})
+    reduce_lr_factor: float | None = ResolvedField(None)
+    reduce_lr_patience: int | None = ResolvedField(None)
 
     # Direction for plateau scheduler; must match any early-stopping callback on the same metric
     monitor_metric_mode: str = "min"
