@@ -178,7 +178,7 @@ def configure_optimizers(self) -> dict:
     return {"optimizer": opt, "lr_scheduler": lr_sched_config}
 
 
-def _warn_if_no_val_dataloader(self) -> None:
+def _warn_if_plateau_missing_val_dataloader(self) -> None:
     """
     Emit a warning when plateau scheduler has no validation dataloader.
 
@@ -716,7 +716,9 @@ class ChemPropModel(LightningModelBase):
             mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
 
             # Bind the val-split check to on_train_start where num_val_batches is reliable
-            mpnn.on_train_start = types.MethodType(_warn_if_no_val_dataloader, mpnn)
+            mpnn.on_train_start = types.MethodType(
+                _warn_if_plateau_missing_val_dataloader, mpnn
+            )
 
             self.estimator = mpnn
 
