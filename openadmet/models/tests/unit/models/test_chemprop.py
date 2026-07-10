@@ -19,12 +19,16 @@ def make_noam_trainer():
     """
 
     def _factory(
-        num_training_batches=100, max_epochs=10, estimated_stepping_batches=1000
+        num_training_batches=100,
+        max_epochs=10,
+        estimated_stepping_batches=1000,
+        accumulate_grad_batches=1,
     ):
         return types.SimpleNamespace(
             num_training_batches=num_training_batches,
             max_epochs=max_epochs,
             estimated_stepping_batches=estimated_stepping_batches,
+            accumulate_grad_batches=accumulate_grad_batches,
         )
 
     return _factory
@@ -55,8 +59,8 @@ def test_resolve_noam_steps_per_epoch_converts_estimated_stepping_batches(
         num_training_batches=float("inf"),
         max_epochs=10,
         estimated_stepping_batches=500,
+        accumulate_grad_batches=2,
     )
-    trainer.accumulate_grad_batches = 2
 
     # (500 estimated * 2 grad_accum) // 10 epochs = 100 raw batches/epoch
     assert _resolve_noam_steps_per_epoch(trainer) == 100

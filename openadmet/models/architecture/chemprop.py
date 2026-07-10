@@ -38,15 +38,16 @@ def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
         trainer cannot report a usable value.
 
     """
-    steps_per_epoch = getattr(trainer, "num_training_batches", None)
-    if steps_per_epoch is not None and steps_per_epoch != float("inf"):
+    steps_per_epoch = trainer.num_training_batches
+    if steps_per_epoch != float("inf"):
         return steps_per_epoch
 
     estimated = trainer.estimated_stepping_batches
     if isinstance(estimated, int) and estimated != float("inf"):
         # Convert optimizer steps back to batch steps for gradient accumulation
-        grad_accum = getattr(trainer, "accumulate_grad_batches", 1)
-        return (estimated * grad_accum) // max(1, trainer.max_epochs)
+        return (estimated * trainer.accumulate_grad_batches) // max(
+            1, trainer.max_epochs
+        )
 
     logger.warning(
         "Could not determine steps_per_epoch from trainer; falling back to 1000. "
