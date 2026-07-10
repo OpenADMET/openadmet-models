@@ -712,12 +712,14 @@ class ChemPropModel(LightningModelBase):
                 mpnn.hparams.pop("warmup_epochs", None)
                 mpnn.hparams.pop("init_lr", None)
 
-            # Pass monitor metric from "model" to "module"
-            # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
-            # is needed at the "module" level for use in both `configure_optimizers` and `LightningTrainer`
+            # configure_optimizers and on_train_start below are bound directly onto mpnn
+            # (the LightningModule that Trainer actually calls), not left on self (this
+            # ChemPropModel config wrapper). Inside those bound functions, `self` refers
+            # to mpnn, so every value they read (monitor_metric, the LR/weight-decay
+            # groups, scheduler choice, etc.) must be copied onto the mpnn instance here;
+            # leaving them only on the ChemPropModel would make them unreachable once
+            # the functions run
             mpnn.monitor_metric = self.monitor_metric
-
-            # Attach custom optimization parameters to the MPNN instance
             mpnn.mpnn_weight_decay = self.mpnn_weight_decay
             mpnn.ffn_weight_decay = self.ffn_weight_decay
             mpnn.mpnn_lr = self.mpnn_lr
