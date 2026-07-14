@@ -49,7 +49,7 @@ jobs:
         uses: docker/build-push-action@v6.15.0
         with:
           context: .
-          file: devtools/containers/Dockerfile
+          file: devtools/containers/Dockerfile.cpu
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
