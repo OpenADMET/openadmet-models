@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
+from openadmet.models.architecture.losses import QuantileLoss
 from openadmet.models.architecture.model_base import models as model_registry
 
 
@@ -258,6 +259,13 @@ class ChemPropModel(LightningModelBase):
         The metric to monitor during training. Default is "val_loss".
     metric_list : list
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
+    quantile_tau : float or None
+        Target quantile for an asymmetric pinball training criterion (:class:`QuantileLoss`).
+        Default is None, which keeps the standard MSE criterion. When set to a value strictly
+        in (0, 1), the criterion becomes the pinball loss for that quantile; values above 0.5
+        penalize under-prediction more than over-prediction, lifting predictions that the model
+        would otherwise compress toward the training mean. Being a quantile, it is scale-free
+        and needs no scaler conversion.
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
 
@@ -339,6 +347,11 @@ class ChemPropModel(LightningModelBase):
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
+
+    # Target quantile for an asymmetric pinball training criterion. None keeps MSE;
+    # a value in (0, 1) switches to QuantileLoss. > 0.5 penalizes under-prediction
+    # more, lifting compressed potent predictions.
+    quantile_tau: float | None = None
 
     # Select scheduler among "noam" or "plateau"; structural (resolved=True)
     scheduler: str = ResolvedField("noam")
@@ -500,6 +513,14 @@ class ChemPropModel(LightningModelBase):
         self._n_tasks = self.n_tasks
         return self
 
+    @field_validator("quantile_tau")
+    @classmethod
+    def validate_quantile_tau(cls, value: float | None) -> float | None:
+        """Validate that the quantile, when set, lies strictly in (0, 1)."""
+        if value is not None and not 0.0 < value < 1.0:
+            raise ValueError("quantile_tau must be strictly between 0 and 1")
+        return value
+
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
@@ -610,6 +631,25 @@ class ChemPropModel(LightningModelBase):
             output_transform = None
         return output_transform
 
+    def _build_criterion(self):
+        """
+        Build the training criterion for the regression head.
+
+        Returns ``None`` when ``quantile_tau`` is unset so that ``RegressionFFN``
+        falls back to its default MSE criterion (no behavior change). Otherwise
+        returns a :class:`QuantileLoss` for the configured quantile; the pinball
+        criterion is scale-free (tau is a quantile), so it needs no scaler.
+
+        Returns
+        -------
+        QuantileLoss or None
+            The criterion to pass to ``RegressionFFN``, or ``None`` for default.
+
+        """
+        if self.quantile_tau is not None:
+            return QuantileLoss(tau=self.quantile_tau, task_weights=torch.ones(self.n_tasks))
+        return None
+
     def build(self, scaler=None):
         """
         Prepare and build the ChemProp model.
@@ -678,6 +718,7 @@ class ChemPropModel(LightningModelBase):
                 n_layers=self.ffn_num_layers,
                 output_transform=self._get_output_transform(scaler),
                 dropout=self.dropout,
+                criterion=self._build_criterion(),
             )
 
             # max_lr and final_lr are MPNN constructor parameters that Lightning records
