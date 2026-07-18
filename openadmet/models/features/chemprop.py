@@ -111,6 +111,15 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         Batch size for the DataLoader, by default 128
     shuffle : bool, optional
         Whether to shuffle the data in the DataLoader, by default False
+    left_censor_threshold : float or None, optional
+        Lower detection limit (raw target units) below which a measurement is treated as
+        left-censored rather than exact, by default None (no censoring). When set, training
+        targets below the threshold are clamped up to it and flagged with chemprop's
+        ``lt_mask``, so a paired :class:`CensoredRegressionLoss` scores them as "below the
+        bound" instead of as exact regression targets that anchor the fit. Censoring is
+        applied only to the training loader (``train=True``); validation and inference keep
+        exact, unclamped targets so the monitored loss and the held-out evaluation read
+        against true values.
 
     """
 
@@ -118,6 +127,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
     n_jobs: int = 4
     batch_size: int = 128
     shuffle: bool = False
+    left_censor_threshold: float | None = None
 
     def _prepare(self):
         """Prepare the featurizer."""
@@ -162,11 +172,36 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
                 y = y.to_numpy()
             y = y.reshape(-1, 1) if y.ndim == 1 else y
 
-            dataset = MoleculeDataset(
-                [MoleculeDatapoint.from_smi(smi, y_) for smi, y_ in zip(smiles, y)]
-            )
+            # below the detection limit a measurement is only "less than the bound": clamp the
+            # target up to the bound and flag it so a censored loss penalizes only predictions
+            # above it. Censoring applies only to the training loader; validation/inference
+            # keep exact, unclamped targets.
+            lt_masks = None
+            y_used = y
+            if self.left_censor_threshold is not None and train:
+                lt_masks = np.asarray(y) < self.left_censor_threshold
+                y_used = np.where(lt_masks, self.left_censor_threshold, y)
+
+            lt_rows = lt_masks if lt_masks is not None else [None] * len(smiles)
+            datapoints = []
+            for smi, y_, lt_ in zip(smiles, y_used, lt_rows):
+                extra = {"lt_mask": lt_} if lt_ is not None else {}
+                datapoints.append(MoleculeDatapoint.from_smi(smi, y_, **extra))
+            dataset = MoleculeDataset(datapoints)
             if self.normalize_targets:
-                scaler = dataset.normalize_targets()
+                if lt_masks is not None:
+                    # fit the target scaler on the unclamped (true) values, not the clamped
+                    # ones, so normalization is identical to an uncensored run; only the loss
+                    # treats sub-limit rows as censored. Clamping before fitting would pile
+                    # mass at the bound, shift the mean up and shrink the std, and that
+                    # re-normalization alone would lift predictions and confound the censoring
+                    # effect with a trivial target rescaling.
+                    from sklearn.preprocessing import StandardScaler
+
+                    scaler = StandardScaler().fit(np.asarray(y))
+                    dataset.normalize_targets(scaler)
+                else:
+                    scaler = dataset.normalize_targets()
             else:
                 scaler = None
         else:

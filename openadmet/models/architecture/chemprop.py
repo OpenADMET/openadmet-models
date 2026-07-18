@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
+from openadmet.models.architecture.losses import CensoredRegressionLoss
 from openadmet.models.architecture.model_base import models as model_registry
 
 
@@ -258,6 +259,16 @@ class ChemPropModel(LightningModelBase):
         The metric to monitor during training. Default is "val_loss".
     metric_list : list
         List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
+    censored_sigma : float or None
+        Noise scale in raw target units for a Tobit (censored regression) training criterion
+        (:class:`CensoredRegressionLoss`). Default is None, which keeps the standard MSE
+        criterion. When set to a positive value, the criterion becomes the censored loss: rows
+        flagged through ChemProp's ``lt_mask`` / ``gt_mask`` (set by the featurizer for
+        inequality labels, e.g. ``pEC50`` recorded only as below an assay detection limit) are
+        scored against their bound rather than as exact targets, so they stop anchoring the fit
+        at a nominal number. The scale is converted to per-task normalized space using the
+        training-target scaler before it enters the loss, matching the space of the normalized
+        residuals.
     scheduler : str
         Learning rate scheduler ("noam" or "plateau"). Default is "noam".
 
@@ -339,6 +350,11 @@ class ChemPropModel(LightningModelBase):
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
+
+    # Noise scale (raw target units) for a Tobit censored-regression criterion. None keeps the
+    # default MSE; a positive value switches to CensoredRegressionLoss, which scores
+    # lt_mask/gt_mask-flagged rows against their bound instead of as exact targets.
+    censored_sigma: float | None = None
 
     # Select scheduler among "noam" or "plateau"; structural (resolved=True)
     scheduler: str = ResolvedField("noam")
@@ -500,6 +516,14 @@ class ChemPropModel(LightningModelBase):
         self._n_tasks = self.n_tasks
         return self
 
+    @field_validator("censored_sigma")
+    @classmethod
+    def validate_censored_sigma(cls, value: float | None) -> float | None:
+        """Validate that the censored noise scale, when set, is strictly positive."""
+        if value is not None and value <= 0:
+            raise ValueError("censored_sigma must be strictly positive")
+        return value
+
     @field_validator("messages")
     @classmethod
     def validate_messages(cls, value):
@@ -610,6 +634,40 @@ class ChemPropModel(LightningModelBase):
             output_transform = None
         return output_transform
 
+    def _build_criterion(self, scaler):
+        """
+        Build the training criterion for the regression head.
+
+        Returns ``None`` when ``censored_sigma`` is unset so that ``RegressionFFN``
+        falls back to its default MSE criterion (no behavior change). When set,
+        returns a :class:`CensoredRegressionLoss` whose per-task noise scale is the
+        noise floor converted from raw target units to normalized space via the
+        training-target scaler. Training residuals are in normalized space
+        (ChemProp's UnscaleTransform is a no-op in training mode), so an unscaled
+        threshold would not match the loss space.
+
+        Parameters
+        ----------
+        scaler : object, optional
+            StandardScaler fit on the training targets, exposing ``scale_``.
+            When ``None``, the raw threshold is used directly (residuals are in
+            raw units, or unit-scaled).
+
+        Returns
+        -------
+        CensoredRegressionLoss or None
+            The criterion to pass to ``RegressionFFN``, or ``None`` for default.
+
+        """
+        if self.censored_sigma is None:
+            return None
+        if scaler is not None:
+            scale = np.asarray(scaler.scale_, dtype=float).reshape(-1)
+            sigma = self.censored_sigma / scale
+        else:
+            sigma = np.full(self.n_tasks, self.censored_sigma, dtype=float)
+        return CensoredRegressionLoss(sigma=sigma, task_weights=torch.ones(self.n_tasks))
+
     def build(self, scaler=None):
         """
         Prepare and build the ChemProp model.
@@ -678,6 +736,7 @@ class ChemPropModel(LightningModelBase):
                 n_layers=self.ffn_num_layers,
                 output_transform=self._get_output_transform(scaler),
                 dropout=self.dropout,
+                criterion=self._build_criterion(scaler),
             )
 
             # max_lr and final_lr are MPNN constructor parameters that Lightning records
