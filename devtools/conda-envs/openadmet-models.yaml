@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - ase
-  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
@@ -43,6 +42,7 @@ dependencies:
   - xgboost
   - zarr >=3.0.0
   - pip:
+    - boto3
     - email-validator
     - phx-class-registry
     - tabpfn-extensions
