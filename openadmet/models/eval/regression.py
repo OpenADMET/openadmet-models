@@ -11,7 +11,7 @@ from openadmet.models.eval.eval_base import (
     evaluators,
     get_t_true_and_t_pred,
 )
-from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
+from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict, ensure_2d
 
 
 def relative_absolute_error(y_true, y_pred):
@@ -174,10 +174,8 @@ class RegressionMetrics(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure y_pred and y_true are 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
 
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
@@ -462,10 +460,8 @@ class RegressionPlots(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure y_pred and y_true are 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
 
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
