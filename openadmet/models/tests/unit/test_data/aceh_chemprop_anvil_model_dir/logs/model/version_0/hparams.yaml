@@ -1,6 +1,7 @@
-batch_norm: true
-final_lr: 0.0001
-init_lr: 0.0001
+batch_norm: false
+final_lr: 1.0e-05
+init_lr: 1.0e-04
 max_lr: 0.001
 metrics: list
+scheduler: noam
 warmup_epochs: 2

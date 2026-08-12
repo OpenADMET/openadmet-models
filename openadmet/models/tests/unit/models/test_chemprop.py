@@ -1,8 +1,90 @@
+import types
+
 import numpy as np
 import pytest
 import torch
 
-from openadmet.models.architecture.chemprop import ChemPropModel
+from openadmet.models.architecture.chemprop import (
+    ChemPropModel,
+    _resolve_noam_steps_per_epoch,
+)
+
+
+@pytest.fixture
+def make_noam_trainer():
+    """Return a factory for Noam-scheduler trainer stubs.
+
+    Defaults match a typical small run (100 batches/epoch, 10 epochs).
+    Override any attribute to exercise edge-case schedule shapes.
+    """
+
+    def _factory(
+        num_training_batches=100,
+        max_epochs=10,
+        estimated_stepping_batches=1000,
+        accumulate_grad_batches=1,
+    ):
+        return types.SimpleNamespace(
+            num_training_batches=num_training_batches,
+            max_epochs=max_epochs,
+            estimated_stepping_batches=estimated_stepping_batches,
+            accumulate_grad_batches=accumulate_grad_batches,
+        )
+
+    return _factory
+
+
+@pytest.fixture
+def make_val_trainer():
+    """Return a factory for val-dataloader trainer stubs used by the plateau warning check."""
+
+    def _factory(num_val_batches=()):
+        return types.SimpleNamespace(num_val_batches=list(num_val_batches))
+
+    return _factory
+
+
+def test_resolve_noam_steps_per_epoch_uses_num_training_batches(make_noam_trainer):
+    """num_training_batches is used directly when the trainer reports a finite value."""
+    trainer = make_noam_trainer(num_training_batches=50)
+
+    assert _resolve_noam_steps_per_epoch(trainer) == 50
+
+
+def test_resolve_noam_steps_per_epoch_converts_estimated_stepping_batches(
+    make_noam_trainer,
+):
+    """estimated_stepping_batches is converted back to raw batch units via grad accumulation."""
+    trainer = make_noam_trainer(
+        num_training_batches=float("inf"),
+        max_epochs=10,
+        estimated_stepping_batches=500,
+        accumulate_grad_batches=2,
+    )
+
+    # (500 estimated * 2 grad_accum) // 10 epochs = 100 raw batches/epoch
+    assert _resolve_noam_steps_per_epoch(trainer) == 100
+
+
+def test_resolve_noam_steps_per_epoch_falls_back_to_1000(make_noam_trainer):
+    """Falls back to 1000 and warns when neither trainer field is usable."""
+    from loguru import logger
+
+    trainer = make_noam_trainer(
+        num_training_batches=float("inf"), estimated_stepping_batches=float("inf")
+    )
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        steps_per_epoch = _resolve_noam_steps_per_epoch(trainer)
+    finally:
+        logger.remove(handler_id)
+
+    assert steps_per_epoch == 1000
+    assert any("falling back to 1000" in w for w in captured)
 
 
 def test_chemprop_hyperparameters_overrides():
@@ -96,6 +178,19 @@ def test_chemprop_scheduler_mutual_exclusivity():
         ChemPropModel(scheduler="plateau", reduce_lr_factor=1.5)
 
 
+def test_chemprop_scheduler_defaults_are_scheduler_specific():
+    """Test that unset cross-scheduler params stay None and scheduler defaults are filled."""
+    noam = ChemPropModel(scheduler="noam")
+    assert noam.warmup_epochs == 2
+    assert noam.reduce_lr_factor is None
+    assert noam.reduce_lr_patience is None
+
+    plateau = ChemPropModel(scheduler="plateau")
+    assert plateau.warmup_epochs is None
+    assert plateau.reduce_lr_factor == 0.5
+    assert plateau.reduce_lr_patience == 5
+
+
 def test_chemprop_configure_optimizers_plateau():
     """Test configure_optimizers with Plateau scheduler."""
     model = ChemPropModel(
@@ -103,9 +198,6 @@ def test_chemprop_configure_optimizers_plateau():
     )
 
     model.build()
-
-    # Mock trainer not needed for plateau config setup usually, but let's be safe
-    # model.estimator.trainer = ...
 
     optimizer_config = model.estimator.configure_optimizers()
     opt = optimizer_config["optimizer"]
@@ -117,28 +209,28 @@ def test_chemprop_configure_optimizers_plateau():
     assert opt.param_groups[0]["lr"] == 1e-3
 
     # Check scheduler
-    assert isinstance(
-        scheduler_config["scheduler"], torch.optim.lr_scheduler.ReduceLROnPlateau
-    )
+    sched = scheduler_config["scheduler"]
+    assert isinstance(sched, torch.optim.lr_scheduler.ReduceLROnPlateau)
     assert scheduler_config["monitor"] == "val_loss"
     assert scheduler_config["interval"] == "epoch"
-    assert scheduler_config["scheduler"].factor == 0.5
-    assert scheduler_config["scheduler"].patience == 5
+    assert sched.factor == 0.5
+    assert sched.patience == 5
+
+    # min_lrs are per-group floors: group_lr * (final_lr / max_lr)
+    # Both groups have max_lr=1e-3, final_lr=1e-5, so floor = 1e-3 * 0.01 = 1e-5
+    assert sched.min_lrs == pytest.approx([1e-5, 1e-5])
+
+    # scheduler is recorded in hparams; warmup_epochs is absent for plateau runs
+    assert model.estimator.hparams.get("scheduler") == "plateau"
+    assert "warmup_epochs" not in model.estimator.hparams
 
 
-def test_chemprop_configure_optimizers_noam():
+def test_chemprop_configure_optimizers_noam(make_noam_trainer):
     """Test configure_optimizers with Noam scheduler."""
     model = ChemPropModel(max_lr=1e-4, scheduler="noam")
     model.build()
 
-    # Need to mock trainer attributes for Noam scheduler calculation
-    class MockTrainer:
-        train_dataloader = None
-        num_training_batches = 100
-        max_epochs = 10
-        estimated_stepping_batches = 1000
-
-    model.estimator.trainer = MockTrainer()
+    model.estimator._trainer = make_noam_trainer()
 
     optimizer_config = model.estimator.configure_optimizers()
     scheduler_config = optimizer_config["lr_scheduler"]
@@ -146,6 +238,10 @@ def test_chemprop_configure_optimizers_noam():
     # Check scheduler type
     assert isinstance(scheduler_config["scheduler"], torch.optim.lr_scheduler.LambdaLR)
     assert scheduler_config["interval"] == "step"
+
+    # scheduler is recorded in hparams alongside Noam-specific keys
+    assert model.estimator.hparams.get("scheduler") == "noam"
+    assert "warmup_epochs" in model.estimator.hparams
 
 
 def test_chemprop_validation():
@@ -249,7 +345,7 @@ def test_chemprop_load_weights_invalid_path():
     with pytest.raises(
         FileNotFoundError, match="Foundation model not found at doesnt_exist.pt"
     ):
-        model.build("non_existent_file.pt")
+        model.build()
 
 
 def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
@@ -317,9 +413,306 @@ def test_chemprop_load_weights(tmp_path):
     model.build()
 
     # Verify that the weights were loaded correctly
-    loaded_weights = torch.load(str(temp_weights_path))
+    loaded_weights = torch.load(str(temp_weights_path), weights_only=True)
     for key in loaded_weights["state_dict"]:
         assert torch.all(
             model.estimator.state_dict()[f"message_passing.{key}"]
             == loaded_weights["state_dict"][key]
         )
+
+
+def test_chemprop_noam_lambda_boundaries(make_noam_trainer):
+    """Noam lambda reaches exactly max_lr at warmup_steps and final_lr at end of cooldown."""
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=2)
+    model.build()
+
+    model.estimator._trainer = make_noam_trainer()
+
+    opt_config = model.estimator.configure_optimizers()
+    lr_sched = opt_config["lr_scheduler"]["scheduler"]
+
+    warmup_steps = 2 * 100  # warmup_epochs * steps_per_epoch
+    cooldown_steps = (10 - 2) * 100
+
+    # Advance to the step just before the warmup peak; LR must still be below max_lr
+    # Verifies the warmup branch owns the peak step via `warmup_steps > 0 and step <= warmup_steps`
+    for _ in range(warmup_steps - 1):
+        lr_sched.step()
+    assert lr_sched.get_last_lr()[0] < 1e-3
+
+    # At warmup_steps (inclusive), the warmup branch reaches exactly 1.0 * base_lr
+    lr_sched.step()
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+
+    for _ in range(cooldown_steps):
+        lr_sched.step()
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3 * 0.01, rel=1e-3)
+
+
+def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr(make_noam_trainer):
+    """With warmup_epochs=0 and max_epochs=-1, Noam holds at max_lr and warns."""
+    from loguru import logger
+
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=0)
+    model.build()
+
+    model.estimator._trainer = make_noam_trainer(
+        max_epochs=-1, estimated_stepping_batches=float("inf")
+    )
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        opt_config = model.estimator.configure_optimizers()
+    finally:
+        logger.remove(handler_id)
+
+    assert any("cannot calibrate" in w for w in captured)
+
+    # With warmup_steps=0 and cooldown_steps=0, lambda always returns 1.0
+    lr_sched = opt_config["lr_scheduler"]["scheduler"]
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+    lr_sched.step()
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+
+
+def test_chemprop_noam_lambda_no_warmup_starts_at_max_lr(make_noam_trainer):
+    """With warmup_epochs=0, Noam starts at max_lr immediately."""
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=0)
+    model.build()
+
+    model.estimator._trainer = make_noam_trainer()
+
+    opt_config = model.estimator.configure_optimizers()
+    lr_sched = opt_config["lr_scheduler"]["scheduler"]
+
+    # LambdaLR applies the lambda at last_epoch=0 during construction
+    # With warmup_steps=0 and cooldown_steps>0, decay_frac=0 gives 1.0 at step 0
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+
+
+def test_chemprop_noam_warmup_exceeds_max_epochs(make_noam_trainer):
+    """A warning is emitted when warmup_epochs >= max_epochs, and LR drops immediately after warmup."""
+    from loguru import logger
+
+    model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=5)
+    model.build()
+
+    model.estimator._trainer = make_noam_trainer(
+        num_training_batches=50, max_epochs=3, estimated_stepping_batches=150
+    )
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        opt_config = model.estimator.configure_optimizers()
+    finally:
+        logger.remove(handler_id)
+
+    assert any("warmup_epochs" in w and "max_epochs" in w for w in captured)
+
+    # With cooldown_steps=0, the first step after warmup should drop directly to final_lr
+    lr_sched = opt_config["lr_scheduler"]["scheduler"]
+    warmup_steps = 5 * 50  # warmup_epochs * num_training_batches
+    for _ in range(warmup_steps):
+        lr_sched.step()
+    # Still at peak after warmup_steps
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3, rel=1e-5)
+    lr_sched.step()
+    # First post-warmup step drops to final_lr (cooldown_steps=0, no intermediate decay)
+    assert lr_sched.get_last_lr()[0] == pytest.approx(1e-3 * 0.01, rel=1e-3)
+
+
+def test_chemprop_freeze_weights_eval_mode():
+    """freeze_weights sets requires_grad=False and eval mode on the same FFN layer."""
+    model = ChemPropModel(ffn_num_layers=2)
+    model.build()
+
+    model.freeze_weights(message_passing=False, batch_norm=False, ffn_layers=1)
+
+    frozen_layer = model.estimator.predictor.ffn[0]
+    for p in frozen_layer.parameters():
+        assert p.requires_grad is False
+    assert frozen_layer.training is False
+
+
+def test_chemprop_monitor_metric_mode():
+    """Plateau scheduler respects monitor_metric_mode."""
+    model = ChemPropModel(
+        scheduler="plateau",
+        reduce_lr_factor=0.5,
+        reduce_lr_patience=5,
+        monitor_metric_mode="max",
+    )
+    model.build()
+
+    opt_config = model.estimator.configure_optimizers()
+    sched = opt_config["lr_scheduler"]["scheduler"]
+
+    assert isinstance(sched, torch.optim.lr_scheduler.ReduceLROnPlateau)
+    assert sched.mode == "max"
+
+
+def test_chemprop_monitor_metric_mode_invalid():
+    """Invalid monitor_metric_mode raises ValueError."""
+    with pytest.raises(
+        ValueError, match="monitor_metric_mode must be either 'min' or 'max'"
+    ):
+        ChemPropModel(scheduler="plateau", monitor_metric_mode="median")
+
+
+def test_chemprop_serialize_includes_resolved_lr(tmp_path):
+    """serialize() includes resolved LR fields and structural fields even when not explicitly set."""
+    import json
+
+    model = ChemPropModel(max_lr=2e-3, scheduler="noam")
+    model.build()
+
+    param_path = tmp_path / "params.json"
+    serial_path = tmp_path / "model.pth"
+    model.serialize(param_path=str(param_path), serial_path=str(serial_path))
+
+    with open(param_path) as f:
+        saved = json.load(f)
+
+    # Resolved LR fields
+    assert saved["init_lr"] == pytest.approx(2e-4)  # max_lr * 0.1
+    assert saved["final_lr"] == pytest.approx(2e-5)  # max_lr * 0.01
+    assert saved["mpnn_lr"] == pytest.approx(2e-3)
+    assert saved["ffn_lr"] == pytest.approx(2e-3)
+    # Active scheduler fields persisted; inactive plateau fields absent
+    assert saved["warmup_epochs"] == 2
+    assert "reduce_lr_factor" not in saved
+    assert "reduce_lr_patience" not in saved
+    # Structural fields always present for checkpoint compatibility
+    assert saved["n_tasks"] == 1
+    assert saved["depth"] == 3
+    assert saved["ffn_num_layers"] == 2
+    assert saved["aggregation"] == "mean"
+    assert saved["batch_norm"] is False
+
+
+def test_chemprop_serialize_includes_plateau_resolved_fields(tmp_path):
+    """serialize() includes resolved plateau-specific fields and excludes noam-specific fields."""
+    import json
+
+    model = ChemPropModel(max_lr=1e-3, scheduler="plateau")
+    model.build()
+
+    param_path = tmp_path / "params.json"
+    serial_path = tmp_path / "model.pth"
+    model.serialize(param_path=str(param_path), serial_path=str(serial_path))
+
+    with open(param_path) as f:
+        saved = json.load(f)
+
+    assert saved["reduce_lr_factor"] == pytest.approx(0.5)
+    assert saved["reduce_lr_patience"] == 5
+    # warmup_epochs is None for plateau; must not appear in the artifact
+    assert "warmup_epochs" not in saved
+
+
+def test_chemprop_plateau_hparams_reflect_configured_lrs():
+    """mpnn.hparams for plateau reflects the user's max_lr/final_lr, not MPNN's own defaults."""
+    model = ChemPropModel(max_lr=5e-3, final_lr=5e-5, scheduler="plateau")
+    model.build()
+
+    assert model.estimator.hparams["max_lr"] == pytest.approx(5e-3)
+    assert model.estimator.hparams["final_lr"] == pytest.approx(5e-5)
+    assert "init_lr" not in model.estimator.hparams
+
+
+def test_chemprop_resolved_fields_matches_tagged_declarations():
+    """_resolved_fields() returns exactly the fields tagged resolved=True."""
+    expected = {
+        "scheduler",
+        "n_tasks",
+        "depth",
+        "message_hidden_dim",
+        "ffn_hidden_dim",
+        "ffn_num_layers",
+        "aggregation",
+        "messages",
+        "batch_norm",
+        "dropout",
+        "normalized_targets",
+        "init_lr",
+        "final_lr",
+        "mpnn_lr",
+        "ffn_lr",
+        "mpnn_weight_decay",
+        "ffn_weight_decay",
+        "warmup_epochs",
+        "reduce_lr_factor",
+        "reduce_lr_patience",
+    }
+
+    assert ChemPropModel._resolved_fields() == expected
+
+
+def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
+    """Plateau scheduler warns when no validation dataloader is configured."""
+    from loguru import logger
+
+    model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
+    model.build()
+
+    # on_train_start is the correct hook; configure_optimizers fires before
+    # Lightning populates num_val_batches and would always see an empty list
+    model.estimator._trainer = make_val_trainer()
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        model.estimator.on_train_start()
+    finally:
+        logger.remove(handler_id)
+
+    assert any("no validation dataloader" in w for w in captured)
+
+
+def test_chemprop_plateau_no_spurious_warning_with_val(make_val_trainer):
+    """Plateau scheduler emits no warning when a validation dataloader is present."""
+    from loguru import logger
+
+    model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
+    model.build()
+
+    model.estimator._trainer = make_val_trainer(num_val_batches=[100])
+
+    captured = []
+    handler_id = logger.add(
+        lambda msg: captured.append(msg.record["message"]), level="WARNING"
+    )
+    try:
+        model.estimator.on_train_start()
+    finally:
+        logger.remove(handler_id)
+
+    assert not any("no validation dataloader" in w for w in captured)
+
+
+def test_chemprop_plateau_min_lr_per_group():
+    """Per-group min_lr floors respect each group's peak LR, not global max_lr."""
+    model = ChemPropModel(
+        scheduler="plateau",
+        max_lr=1e-3,
+        mpnn_lr=5e-4,
+        reduce_lr_factor=0.5,
+    )
+    model.build()
+
+    opt_config = model.estimator.configure_optimizers()
+    sched = opt_config["lr_scheduler"]["scheduler"]
+
+    # final_lr = max_lr * 0.01 = 1e-5; ratio = final_lr / max_lr = 0.01
+    # MPNN group: mpnn_lr * 0.01 = 5e-4 * 0.01 = 5e-6
+    # FFN group:  ffn_lr * 0.01 = 1e-3 * 0.01 = 1e-5
+    assert sched.min_lrs[0] == pytest.approx(5e-6)
+    assert sched.min_lrs[1] == pytest.approx(1e-5)
