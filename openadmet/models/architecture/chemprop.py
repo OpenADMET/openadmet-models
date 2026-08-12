@@ -412,9 +412,9 @@ class ChemPropModel(LightningModelBase):
         if scaler is not None:
             output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
         elif self.normalized_targets:
-            # Expects the targets to be normalized, likely to be loaded from state dict
+            # Identity placeholder (mean=0, scale=1); real parameters are loaded from checkpoint
             output_transform = nn.UnscaleTransform(
-                [1] * self.n_tasks, [0] * self.n_tasks
+                [0] * self.n_tasks, [1] * self.n_tasks
             )
         else:
             output_transform = None
