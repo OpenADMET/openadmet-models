@@ -1,15 +1,19 @@
 """CheMeleon embedding featurizer."""
 
-
-
 from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
 import torch
 
-from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 from openadmet.models.architecture.chemprop import ChemPropModel
+from openadmet.models.features.feature_base import FeaturizerBase, featurizers
+
+
+def _normalize_accelerator(accelerator: str) -> str:
+    if accelerator == "gpu":
+        return "cuda"
+    return accelerator
 
 
 @featurizers.register("CheMeleonEmbeddingFeaturizer")
@@ -34,6 +38,17 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
     batch_size: int = 256
 
     def __init__(self, accelerator: str = "cpu", batch_size: int = 256):
+        """
+        Initialize the featurizer with device and batching settings.
+
+        Parameters
+        ----------
+        accelerator : str, optional
+            Device to use for inference, cpu or cuda. Default is cpu.
+        batch_size : int, optional
+            Number of molecules per forward pass. Default is 256.
+
+        """
         super().__init__()
         self.accelerator = accelerator
         self.batch_size = batch_size
@@ -43,7 +58,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         if self._model is None:
             model = ChemPropModel(from_foundation="chemeleon")
             model.build()
-            device = torch.device(self.accelerator)
+            device = torch.device(_normalize_accelerator(self.accelerator))
             model.estimator.to(device)
             self._model = model
         return self._model
