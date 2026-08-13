@@ -4,12 +4,15 @@ import json
 import types
 from functools import partial
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, cast
 from urllib.request import urlretrieve
 
 import numpy as np
 import torch
 from chemprop import models, nn
+from chemprop.data import MoleculeDatapoint, MoleculeDataset
+from chemprop.data.dataloader import build_dataloader
+from chemprop.models import MPNN
 
 from lightning import pytorch as pl
 from loguru import logger
@@ -25,12 +28,6 @@ def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
     while effective > 1 and dataset_size % effective == 1:
         effective -= 1
     return effective
-
-from chemprop.data import MoleculeDatapoint, MoleculeDataset
-from chemprop.data.dataloader import build_dataloader
-from typing import cast
-from chemprop.models import MPNN
-
 
 
 def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
@@ -655,6 +652,26 @@ class ChemPropModel(LightningModelBase):
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                     )
+                elif self.from_foundation == "chemeleon-test":
+                    # Build CheMeleon-compatible architecture with random weights,
+                    # for hermetic tests that need no network access
+                    logger.info("Using CheMeleon test architecture with random weights")
+                    foundation_mp = {
+                        "hyper_parameters": {
+                            "d_h": 2048,
+                            "depth": 6,
+                            "dropout": self.dropout,
+                            "bias": False,
+                            "activation": "relu",
+                            "undirected": False,
+                            "d_v": 72,
+                            "d_e": 14,
+                            "d_vd": None,
+                            "V_d_transform": None,
+                            "graph_transform": None,
+                        },
+                        "state_dict": {},
+                    }
                 else:
                     logger.info(f"Loading foundation model from {self.from_foundation}")
                     foundation_mp = self._load_foundation_model(
@@ -662,7 +679,8 @@ class ChemPropModel(LightningModelBase):
                     )
                 aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
-                mp.load_state_dict(foundation_mp["state_dict"])
+                if foundation_mp.get("state_dict"):
+                    mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
                     "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
@@ -889,9 +907,17 @@ class ChemPropModel(LightningModelBase):
         np.ndarray
             Array of shape (N, embedding_dim) aligned with smiles_list.
 
+        Raises
+        ------
+        AttributeError
+            If the model estimator has not been built.
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")
+
+        if not smiles_list:
+            return np.empty((0, 2048), dtype=np.float32)
 
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
         n = len(dataset)
