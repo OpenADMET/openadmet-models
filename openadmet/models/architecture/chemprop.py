@@ -856,6 +856,51 @@ class ChemPropModel(LightningModelBase):
             include=self._explicit_init_fields, exclude={"estimator"}
         )
         return self.__class__(**explict_params)
+    def predict_embedding(
+        self, smiles_list: list[str], batch_size: int = 256
+    ) -> np.ndarray:
+        """Return pooled structural embeddings (pre-predictor) for a list of SMILES.
+
+        Parameters
+        ----------
+        smiles_list : list[str]
+            Must be RDKit-canonical, salt-stripped SMILES.
+        batch_size : int, optional
+            Number of molecules processed per forward pass. Default is 256.
+
+        Returns
+        -------
+        np.ndarray
+            Array of shape (N, embedding_dim) aligned with smiles_list.
+        """
+        if not self.estimator:
+            raise AttributeError("Model not trained")
+
+        from chemprop.data import MoleculeDatapoint, MoleculeDataset
+        from chemprop.data.dataloader import build_dataloader
+        from typing import cast
+        from chemprop.models import MPNN
+
+        dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
+        n = len(dataset)
+        effective_batch = min(batch_size, n)
+        while effective_batch > 1 and n % effective_batch == 1:
+            effective_batch -= 1
+
+        dataloader = build_dataloader(dataset, batch_size=effective_batch, shuffle=False)
+        device = next(self.estimator.parameters()).device
+
+        all_embeddings = []
+        with torch.inference_mode():
+            for batch in dataloader:
+                batch.bmg.to(device)
+                embedding = cast(MPNN, self.estimator).fingerprint(batch.bmg)
+                all_embeddings.append(embedding.cpu().numpy())
+
+        return np.concatenate(all_embeddings, axis=0).astype(np.float32)
+
+
+
 
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs

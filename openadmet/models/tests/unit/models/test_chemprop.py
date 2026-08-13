@@ -716,3 +716,45 @@ def test_chemprop_plateau_min_lr_per_group():
     # FFN group:  ffn_lr * 0.01 = 1e-3 * 0.01 = 1e-5
     assert sched.min_lrs[0] == pytest.approx(5e-6)
     assert sched.min_lrs[1] == pytest.approx(1e-5)
+
+
+def test_predict_embedding_unbuilt_raises():
+    model = ChemPropModel(from_foundation='chemeleon')
+    with pytest.raises(AttributeError, match="Model not trained"):
+        model.predict_embedding(['CCO'])
+
+def test_predict_embedding_shape_and_dtype():
+    from openadmet.models.architecture.chemprop import ChemPropModel
+    model = ChemPropModel(from_foundation='chemeleon')
+    model.build()
+    smiles = ['CCO','CCN','c1ccccc1']
+    emb = model.predict_embedding(smiles, batch_size=2)
+    assert emb.shape == (3, 2048)
+    assert emb.dtype == np.float32
+
+def test_predict_embedding_safe_batch_size_no_drop():
+    from openadmet.models.architecture.chemprop import ChemPropModel
+    model = ChemPropModel(from_foundation='chemeleon')
+    model.build()
+    smiles = ['CCO','CCN','c1ccccc1']
+    emb = model.predict_embedding(smiles, batch_size=3)
+    assert emb.shape[0] == len(smiles)
+
+def test_predict_embedding_device():
+    from openadmet.models.architecture.chemprop import ChemPropModel
+    model = ChemPropModel(from_foundation='chemeleon')
+    model.build()
+    model.estimator.to('cpu')
+    device = next(model.estimator.parameters()).device
+    assert str(device) == 'cpu'
+    emb = model.predict_embedding(['CCO'], batch_size=1)
+    assert emb.shape[0] == 1
+
+def test_predict_embedding_deterministic():
+    from openadmet.models.architecture.chemprop import ChemPropModel
+    model = ChemPropModel(from_foundation='chemeleon')
+    model.build()
+    smiles = ['CCO','CCN']
+    e1 = model.predict_embedding(smiles, batch_size=2)
+    e2 = model.predict_embedding(smiles, batch_size=2)
+    assert np.array_equal(e1, e2)
