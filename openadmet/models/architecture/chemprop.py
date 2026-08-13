@@ -22,7 +22,7 @@ from chemprop.data import MoleculeDatapoint, MoleculeDataset
 from chemprop.data.dataloader import build_dataloader
 from typing import cast
 from chemprop.models import MPNN
-from openadmet.models.utils.batch import safe_inference_batch_size
+from openadmet.models.features.chemeleon_embedding import safe_inference_batch_size
 
 
 def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
