@@ -18,11 +18,19 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
+
+def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
+    """Return batch size that avoids chemprop's silent single-molecule drop."""
+    effective = min(batch_size, dataset_size)
+    while effective > 1 and dataset_size % effective == 1:
+        effective -= 1
+    return effective
+
 from chemprop.data import MoleculeDatapoint, MoleculeDataset
 from chemprop.data.dataloader import build_dataloader
 from typing import cast
 from chemprop.models import MPNN
-from openadmet.models.features.chemeleon_embedding import safe_inference_batch_size
+
 
 
 def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
@@ -887,7 +895,7 @@ class ChemPropModel(LightningModelBase):
 
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
         n = len(dataset)
-        effective_batch = safe_inference_batch_size(n, batch_size)
+        effective_batch = _safe_inference_batch_size(n, batch_size)
 
         dataloader = build_dataloader(
             dataset, batch_size=effective_batch, shuffle=False

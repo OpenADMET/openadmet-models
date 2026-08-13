@@ -1,13 +1,6 @@
 """CheMeleon embedding featurizer."""
 
 
-def safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
-    """Return batch size that avoids chemprop's silent single-molecule drop."""
-    effective = min(batch_size, dataset_size)
-    while effective > 1 and dataset_size % effective == 1:
-        effective -= 1
-    return effective
-
 
 from collections.abc import Iterable
 from typing import Any
