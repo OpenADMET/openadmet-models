@@ -25,7 +25,6 @@ from chemprop.models import MPNN
 from openadmet.models.utils.batch import safe_inference_batch_size
 
 
-
 def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
     """
     Resolve the number of batches per epoch for Noam step-based scheduling.

@@ -1,5 +1,6 @@
 """Batch size utilities."""
 
+
 def safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
     """
     Return a batch size that avoids chemprop's silent single-molecule drop.
