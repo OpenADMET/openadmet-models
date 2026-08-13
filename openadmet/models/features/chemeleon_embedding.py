@@ -19,8 +19,6 @@ from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 from openadmet.models.architecture.chemprop import ChemPropModel
 
 
-
-
 @featurizers.register("CheMeleonEmbeddingFeaturizer")
 class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
     """
