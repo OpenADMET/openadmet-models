@@ -856,10 +856,12 @@ class ChemPropModel(LightningModelBase):
             include=self._explicit_init_fields, exclude={"estimator"}
         )
         return self.__class__(**explict_params)
+
     def predict_embedding(
         self, smiles_list: list[str], batch_size: int = 256
     ) -> np.ndarray:
-        """Return pooled structural embeddings (pre-predictor) for a list of SMILES.
+        """
+        Return pooled structural embeddings (pre-predictor) for a list of SMILES.
 
         Parameters
         ----------
@@ -872,6 +874,7 @@ class ChemPropModel(LightningModelBase):
         -------
         np.ndarray
             Array of shape (N, embedding_dim) aligned with smiles_list.
+
         """
         if not self.estimator:
             raise AttributeError("Model not trained")
@@ -887,7 +890,9 @@ class ChemPropModel(LightningModelBase):
         while effective_batch > 1 and n % effective_batch == 1:
             effective_batch -= 1
 
-        dataloader = build_dataloader(dataset, batch_size=effective_batch, shuffle=False)
+        dataloader = build_dataloader(
+            dataset, batch_size=effective_batch, shuffle=False
+        )
         device = next(self.estimator.parameters()).device
 
         all_embeddings = []
@@ -898,9 +903,6 @@ class ChemPropModel(LightningModelBase):
                 all_embeddings.append(embedding.cpu().numpy())
 
         return np.concatenate(all_embeddings, axis=0).astype(np.float32)
-
-
-
 
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs

@@ -41,10 +41,12 @@ def test_featurizer_compatible_with_concatenator(smiles):
     from openadmet.models.features.combine import FeatureConcatenator
     from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 
-    concat = FeatureConcatenator(featurizers=[
-        CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2),
-        FingerprintFeaturizer(fp_type="ecfp:4", n_jobs=1)
-    ])
+    concat = FeatureConcatenator(
+        featurizers=[
+            CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2),
+            FingerprintFeaturizer(fp_type="ecfp:4", n_jobs=1),
+        ]
+    )
 
     X, idx = concat.featurize(smiles)
     # CheMeleon 2048 + ECFP 2000 = 4048
