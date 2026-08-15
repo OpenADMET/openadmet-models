@@ -1,7 +1,8 @@
 """Base class for transforms, allows for arbitrary transformation of input data."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from typing import ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
@@ -45,7 +46,11 @@ def get_transform_class(trans_type):
 
 
 class TransformBase(BaseModel, ABC):
-    """Base class for featurizers, allows for arbitrary featurization of molecules."""
+    """Base class for transforms, allows for arbitrary transformation of feature data."""
+
+    # whether transform accepts the feature_blocks kwarg at fit time; the workflow
+    # forwards feature_blocks only to transforms that declare this as True
+    accepts_feature_blocks: ClassVar[bool] = False
 
     @abstractmethod
     def transform(self, X: np.ndarray, *args, **kwargs):
@@ -68,3 +73,93 @@ class TransformBase(BaseModel, ABC):
             and optional processing info.
 
         """
+
+
+def to_transform_list(
+    transform: TransformBase | Sequence[TransformBase],
+) -> list[TransformBase]:
+    """
+    Normalize a single transform or a sequence of transforms to a list.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        A fitted or unfitted transform, or an ordered sequence of them.
+
+    Returns
+    -------
+    list
+        The transforms as a list, in application order.
+
+    """
+    if isinstance(transform, TransformBase):
+        return [transform]
+    return list(transform)
+
+
+def fit_transforms(
+    transform: TransformBase | Sequence[TransformBase],
+    X: np.ndarray,
+    feature_blocks: list[tuple[str, int]] | None = None,
+) -> np.ndarray:
+    """
+    Fit a transform sequence on X and return the transformed result.
+
+    Each transform must implement fit; stateless transforms define a no-op.
+    Elements are fit in order, each on the previous element's output, so
+    statistics are computed on the train data only. ``feature_blocks`` is
+    forwarded only to elements that declare ``accepts_feature_blocks``.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        The transform or ordered transform sequence to fit.
+    X : np.ndarray
+        Train feature matrix.
+    feature_blocks : list of tuple, optional
+        Pairs of (block key, block width) in column order, forwarded to
+        transforms that accept it.
+
+    Returns
+    -------
+    np.ndarray
+        The train features after the full sequence.
+
+    """
+    current = np.asarray(X)
+    for step in to_transform_list(transform):
+        if getattr(step, "accepts_feature_blocks", False):
+            step.fit(current, feature_blocks=feature_blocks)
+        else:
+            step.fit(current)
+        current = step.transform(current)
+    return current
+
+
+def transform_features(
+    transform: TransformBase | Sequence[TransformBase],
+    X: np.ndarray,
+) -> np.ndarray:
+    """
+    Apply a fitted transform sequence to X in order.
+
+    Used on the inference path where no fitting happens; every transform must
+    already be fitted or it raises.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        The fitted transform or ordered transform sequence.
+    X : np.ndarray
+        Feature matrix to transform.
+
+    Returns
+    -------
+    np.ndarray
+        The features after the full sequence.
+
+    """
+    current = np.asarray(X)
+    for step in to_transform_list(transform):
+        current = step.transform(current)
+    return current
