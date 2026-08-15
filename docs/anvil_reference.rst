@@ -208,6 +208,8 @@ are configured, and training parameters are set.
 
 - **Featurization**: Defines how molecular data is transformed into numerical representations using various available
   featurizers, specified in the `feat` subsection.
+- **Transform**: Optional post-featurization transforms applied to the featurized matrices, specified in the `transform`
+  subsection.
 - **Model**: Specifies the model to be used, including loading from saved model weights, under the `model` subsection.
 - **Splitting**: Configures how the dataset is divided into training, validation, and test sets using assigned splitter,
   defined in the `split` subsection.
@@ -272,6 +274,71 @@ As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family mo
   feat:
     type: ChemPropFeaturizer
     params: {}
+
+Transform
+~~~~~~~~~
+The optional ``transform`` section applies row-wise transforms to the featurized feature matrices after
+featurization and before training. Transforms are fitted on the train partition only, then applied to the
+validation, test, and inference features, so learned statistics (imputer means, PCA loadings) never see held-out
+data. The fitted transforms are saved next to the model and re-applied automatically at inference time.
+
+A single transform is given as a mapping, and a sequence of transforms is given as a list applied in order.
+Transforms are supported by the scikit-learn workflow (tabular-input models such as LGBM, XGBoost, and TabPFN); the
+depth learning workflow rejects them because its featurizer emits DataLoaders rather than feature matrices.
+
+Available transforms:
+
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
+
+  * - Transform
+    - Description
+  * - :doc:`ImputeTransform </_api/api/transforms/impute>`
+    - Imputes missing values with the fitted imputer mean, median, or most frequent value.
+  * - :doc:`PCATransform </_api/api/transforms/pca>`
+    - Reduces feature dimensionality with principal component analysis, over the whole matrix or per feature block.
+
+Example: reduce a fingerprint featurizer to 256 PCA components before training.
+
+.. code-block:: yaml
+  procedure:
+    feat:
+      type: FingerprintFeaturizer
+      params:
+        fp_type: "ecfp:4"
+    transform:
+      type: PCATransform
+      params:
+        n_components: 256
+        random_seed: 42
+
+Per-block PCA: give ``n_components`` as a mapping from featurizer name to component count. Each featurizer in the
+``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation step ahead of
+them.
+
+.. code-block:: yaml
+  procedure:
+    feat:
+      type: FeatureConcatenator
+      params:
+        featurizers:
+          - type: FingerprintFeaturizer
+            params:
+              fp_type: "ecfp:4"
+          - type: DescriptorFeaturizer
+            params:
+              descr_type: desc2d
+    transform:
+      - type: ImputeTransform
+        params:
+          strategy: median
+      - type: PCATransform
+        params:
+          n_components:
+            FingerprintFeaturizer: 256
+            DescriptorFeaturizer: 32
+          random_seed: 42
 
 Model
 ~~~~~

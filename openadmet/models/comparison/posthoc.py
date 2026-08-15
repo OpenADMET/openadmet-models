@@ -372,27 +372,26 @@ class PostHocComparison(ComparisonBase):
                         if label == "FingerprintFeaturizer":
                             label = anvil["procedure"]["feat"]["params"]["fp_type"]
                         if label == "FeatureConcatenator":
+                            featurizers = anvil["procedure"]["feat"]["params"][
+                                "featurizers"
+                            ]
+                            # Normalize both accepted YAML forms to (type, params) pairs
+                            if isinstance(featurizers, dict):
+                                feat_items = list(featurizers.items())
+                            else:
+                                feat_items = [
+                                    (entry["type"], entry.get("params") or {})
+                                    for entry in featurizers
+                                ]
                             label = ""
-                            for ind, f in enumerate(
-                                anvil["procedure"]["feat"]["params"]["featurizers"]
-                            ):
+                            for ind, (f, fparams) in enumerate(feat_items):
                                 if f == "DescriptorFeaturizer":
-                                    label += anvil["procedure"]["feat"]["params"][
-                                        "featurizers"
-                                    ]["DescriptorFeaturizer"]["descr_type"]
-                                if f == "FingerprintFeaturizer":
-                                    label += anvil["procedure"]["feat"]["params"][
-                                        "featurizers"
-                                    ]["FingerprintFeaturizer"]["fp_type"]
-                                if (
-                                    ind
-                                    < len(
-                                        anvil["procedure"]["feat"]["params"][
-                                            "featurizers"
-                                        ]
-                                    )
-                                    - 1
-                                ):
+                                    label += fparams.get("descr_type", f)
+                                elif f == "FingerprintFeaturizer":
+                                    label += fparams.get("fp_type", f)
+                                else:
+                                    label += f
+                                if ind < len(feat_items) - 1:
                                     label += "+"
                         for r in to_remove:
                             label = label.replace(r, "")

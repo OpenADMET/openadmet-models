@@ -700,7 +700,9 @@ class ProcedureSpec(SpecBase):
     model: ModelSpec
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
-    transform: Optional[TransformSpec] = None  # Optional transform step
+    transform: TransformSpec | list[TransformSpec] | None = (
+        None  # Optional transform step or ordered sequence
+    )
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""
@@ -839,9 +841,13 @@ class AnvilSpecification(BaseModel):
         model = self.procedure.model.to_class()
         split = self.procedure.split.to_class()
         feat = self.procedure.feat.to_class()
-        transform = (
-            self.procedure.transform.to_class() if self.procedure.transform else None
-        )
+        transform_spec = self.procedure.transform
+        if transform_spec is None:
+            transform = None
+        elif isinstance(transform_spec, list):
+            transform = [t.to_class() for t in transform_spec]
+        else:
+            transform = transform_spec.to_class()
         evals = [eval.to_class() for eval in self.report.eval]
 
         global_seed = self.procedure.random_seed
@@ -859,6 +865,13 @@ class AnvilSpecification(BaseModel):
                 component, "random_seed"
             ):
                 component.random_seed = global_seed
+
+        # A transform list has no section-level params, so fill its entries
+        # here; an explicit per-entry seed survives to_class and is kept
+        if isinstance(transform, list):
+            for t in transform:
+                if hasattr(t, "random_seed") and t.random_seed is None:
+                    t.random_seed = global_seed
 
         return driver(
             metadata=self.metadata,

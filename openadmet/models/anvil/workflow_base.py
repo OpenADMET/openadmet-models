@@ -32,8 +32,9 @@ class AnvilWorkflowBase(BaseModel):
         Metadata for the workflow.
     data_spec : DataSpec
         Data specification for the workflow.
-    transform : Optional[TransformBase]
-        Optional transform step.
+    transform : Optional[TransformBase or list of TransformBase]
+        Optional transform step, either a single transform or an ordered
+        sequence applied in list order.
     split : SplitterBase
         Data splitting strategy.
     feat : FeaturizerBase
@@ -60,7 +61,9 @@ class AnvilWorkflowBase(BaseModel):
 
     metadata: Metadata
     data_spec: DataSpec
-    transform: Optional[TransformBase] = None  # Optional transform step
+    transform: Optional[TransformBase | list[TransformBase]] = (
+        None  # Optional transform step, single or sequence
+    )
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase

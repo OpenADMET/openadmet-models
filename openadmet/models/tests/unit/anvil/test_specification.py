@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,6 +21,9 @@ from openadmet.models.anvil.specification import (
     TransformSpec,
 )
 from openadmet.models.anvil.workflow import AnvilDeepLearningWorkflow, AnvilWorkflow
+from openadmet.models.architecture.dummy import DummyRegressorModel
+from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
+from openadmet.models.inference import inference as inference_module
 from openadmet.models.tests.unit import datafiles
 
 # --- DataSpec Tests ---
@@ -637,3 +641,180 @@ def test_modelspec_freeze_weights_raises_when_not_implemented():
             type="NeuralPairwiseRegressorModel",
             freeze_weights={"message_passing": True},
         )
+
+
+# --- Transform section tests ---
+
+
+def test_procedurespec_accepts_single_transform():
+    """A bare transform mapping must stay a TransformSpec (backward compatible)."""
+    spec = ProcedureSpec(
+        split=SplitSpec(type="ShuffleSplitter"),
+        feat=FeatureSpec(type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}),
+        model=ModelSpec(type="LGBMRegressorModel"),
+        train=TrainerSpec(type="SKLearnBasicTrainer"),
+        transform=TransformSpec(type="PCATransform", params={"n_components": 32}),
+    )
+    assert isinstance(spec.transform, TransformSpec)
+    assert spec.transform.to_class().__class__.__name__ == "PCATransform"
+
+
+def test_procedurespec_accepts_transform_sequence():
+    """A list of transform entries must parse in order and build to real classes."""
+    spec = ProcedureSpec(
+        split=SplitSpec(type="ShuffleSplitter"),
+        feat=FeatureSpec(type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}),
+        model=ModelSpec(type="LGBMRegressorModel"),
+        train=TrainerSpec(type="SKLearnBasicTrainer"),
+        transform=[
+            TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+            TransformSpec(
+                type="PCATransform",
+                params={"n_components": {"FingerprintFeaturizer": 32}},
+            ),
+        ],
+    )
+    assert [t.type for t in spec.transform] == ["ImputeTransform", "PCATransform"]
+    names = [t.to_class().__class__.__name__ for t in spec.transform]
+    assert names == ["ImputeTransform", "PCATransform"]
+
+
+def _make_transform_spec(transform, global_seed=99):
+    """Build a minimal AnvilSpecification wrapping the given transform section."""
+    return AnvilSpecification(
+        metadata=Metadata(
+            version="v1",
+            name="t",
+            build_number=0,
+            description="d",
+            tag="t",
+            authors="a",
+            email="a@b.com",
+            biotargets=[],
+            tags=[],
+        ),
+        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        procedure=ProcedureSpec(
+            random_seed=global_seed,
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(
+                type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}
+            ),
+            model=ModelSpec(type="LGBMRegressorModel"),
+            train=TrainerSpec(type="SKLearnBasicTrainer"),
+            transform=transform,
+        ),
+        report=ReportSpec(eval=[]),
+    )
+
+
+def test_to_workflow_transform_sequence_seeded_from_global():
+    """The global seed must fill sequence entries with no seed; explicit per-entry seeds must win."""
+    spec = _make_transform_spec(
+        transform=[
+            TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+            TransformSpec(
+                type="PCATransform",
+                params={"n_components": 32, "random_seed": 7},
+            ),
+        ]
+    )
+    workflow = spec.to_workflow()
+    assert isinstance(workflow.transform, list)
+    imputer, pca = workflow.transform
+    assert imputer.random_seed == 99
+    assert pca.random_seed == 7
+
+
+def test_to_workflow_single_transform_seeded_from_global():
+    """A single transform without a section seed must receive the global seed."""
+    spec = _make_transform_spec(
+        transform=TransformSpec(type="PCATransform", params={"n_components": 32})
+    )
+    workflow = spec.to_workflow()
+    assert workflow.transform.random_seed == 99
+
+
+def test_to_workflow_single_transform_keeps_explicit_seed():
+    """A single transform with its own section seed must keep it."""
+    spec = _make_transform_spec(
+        transform=TransformSpec(
+            type="PCATransform", params={"n_components": 32, "random_seed": 13}
+        )
+    )
+    workflow = spec.to_workflow()
+    assert workflow.transform.random_seed == 13
+
+
+def test_anvilspecification_run_with_transform_fits_on_train_and_saves_artifact(
+    tmp_path,
+):
+    """A run with a transform must save the fitted artifact and train the model in the reduced space."""
+    spec = AnvilSpecification(
+        metadata=Metadata(
+            version="v1",
+            name="t",
+            build_number=0,
+            description="d",
+            tag="pca_run",
+            authors="a",
+            email="a@b.com",
+            biotargets=[],
+            tags=[],
+        ),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
+        procedure=ProcedureSpec(
+            random_seed=42,
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(
+                type="FingerprintFeaturizer", params={"fp_type": "ecfp", "n_jobs": 1}
+            ),
+            model=ModelSpec(type="DummyRegressorModel"),
+            train=TrainerSpec(type="SKLearnBasicTrainer"),
+            transform=TransformSpec(type="PCATransform", params={"n_components": 2}),
+        ),
+        report=ReportSpec(eval=[]),
+    )
+
+    out = tmp_path / "out"
+    spec.run(output_dir=out)
+
+    # the fitted transform artifact is saved alongside the model
+    artifact = out / "transform.pickle"
+    assert artifact.exists()
+    with open(artifact, "rb") as f:
+        payload = joblib.load(f)
+    assert payload["schema"] == "v1"
+    saved_pca = payload["transforms"][0]
+
+    # the model was trained in the reduced space, not on raw fingerprints
+    with open(out / DummyRegressorModel()._model_save_name, "rb") as f:
+        estimator = joblib.load(f)
+    assert estimator.n_features_in_ == 2
+
+    # the saved transform can project new raw fingerprints
+    probe, _ = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1).featurize(["CCO"])
+    projected = saved_pca.transform(np.atleast_2d(probe))
+    assert projected.shape == (1, 2)
+
+    # the saved recipe keeps the transform section so inference requires the artifact
+    with open(out / "recipe_components" / "procedure.yaml") as f:
+        procedure = yaml.safe_load(f)
+    assert procedure["transform"]["type"] == "PCATransform"
+
+    # inference from the run's model dir applies the saved fitted transform
+    sample = pd.DataFrame({"SMILES": ["CCO"]})
+    result = inference_module.predict(
+        input_path=sample,
+        input_col="SMILES",
+        model_dir=[out],
+        accelerator="cpu",
+        log=False,
+    )
+    assert "OADMET_PRED_pca_run_data1" in result.columns
+    assert not result["OADMET_PRED_pca_run_data1"].isna().any()

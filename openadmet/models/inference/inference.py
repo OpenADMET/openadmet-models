@@ -15,6 +15,7 @@ from openadmet.models.features.pairwise import (
     PairwiseAugmentedDataset,
     PairwiseFeaturizer,
 )
+from openadmet.models.transforms.transform_base import transform_features
 
 
 def load_anvil_model_and_metadata(model_dir):
@@ -29,7 +30,9 @@ def load_anvil_model_and_metadata(model_dir):
     Returns
     -------
     tuple
-        A tuple containing the loaded model, feature object, metadata, and data specification.
+        A tuple containing the loaded model, feature object, fitted transform
+        sequence (None when the recipe has no transform), metadata, and data
+        specification.
 
     """
     # Safely cast to Path
@@ -70,6 +73,36 @@ def load_anvil_model_and_metadata(model_dir):
     # are already disabled; pin shuffle off as well in case the featurizer is reused directly
     if hasattr(feat, "shuffle"):
         feat.shuffle = False
+
+    # Load the fitted transform required by the recipe; the workflow saves it
+    # alongside the model because the recipe YAML carries configuration only
+    transform = None
+    if procedure_spec.transform is not None:
+        saved_transform = model_dir / "transform.pickle"
+        if not saved_transform.exists():
+            raise ValueError(
+                f"Model at {model_dir} was trained with a transform, but the fitted "
+                f"transform file {saved_transform} was not found. Retraining the model "
+                "with the current code produces it."
+            )
+        import joblib
+
+        with open(saved_transform, "rb") as f:
+            transform_payload = joblib.load(f)
+        if not isinstance(transform_payload, dict) or (
+            transform_payload.get("schema") != "v1"
+        ):
+            raise ValueError(
+                f"Unsupported transform artifact schema in {saved_transform}: "
+                f"expected a v1 dict payload, got {type(transform_payload).__name__}."
+            )
+        if "transforms" not in transform_payload:
+            raise ValueError(
+                f"Transform artifact {saved_transform} is missing its "
+                "'transforms' entry."
+            )
+        transform = transform_payload["transforms"]
+
     model = procedure_spec.model.to_class()
 
     # Load model ensemble
@@ -93,7 +126,7 @@ def load_anvil_model_and_metadata(model_dir):
             serial_path=model_dir / model._model_save_name,
         )
 
-    return loaded_model, feat, metadata, data
+    return loaded_model, feat, transform, metadata, data
 
 
 def _generate_pairwise_df(
@@ -220,7 +253,7 @@ def predict(
         logger.info(f"Loading model {i} from {model_path}")
 
         # Load the model and metadata
-        model, feat, metadata, data_spec = load_anvil_model_and_metadata(
+        model, feat, transform, metadata, data_spec = load_anvil_model_and_metadata(
             Path(model_path)
         )
 
@@ -246,6 +279,19 @@ def predict(
 
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
+
+        # Apply the train-time transform sequence; transforms are row-preserving
+        # column operations, so the index alignment must survive
+        if transform is not None:
+            # Featurizers return a 1D array for single-row input; transforms expect (n, d)
+            X_feat = np.atleast_2d(X_feat)
+            X_feat = transform_features(transform, X_feat)
+            if X_feat.shape[0] != len(X_indices):
+                raise ValueError(
+                    "Transform changed the row count "
+                    f"({X_feat.shape[0]} rows vs {len(X_indices)} indices); "
+                    "transforms must preserve rows."
+                )
 
         # Make the actual model predictions
 
