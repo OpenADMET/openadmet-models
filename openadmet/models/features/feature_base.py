@@ -81,6 +81,48 @@ class FeaturizerBase(BaseModel, ABC):
         """
         pass
 
+    def feature_blocks(self, probe: Iterable[str]) -> list[tuple[str, int]]:
+        """
+        Return contiguous feature blocks as (key, n_features) pairs in column order.
+
+        The default treats a featurizer as a single block keyed by its registry
+        name and probes the width by featurizing the first probe entry that
+        yields at least one row. Featurizers with known widths may override
+        this to skip the probe.
+
+        Parameters
+        ----------
+        probe : Iterable[str]
+            Input rows (e.g., SMILES) to featurize; tried in order until one
+            yields a non-empty feature matrix.
+
+        Returns
+        -------
+        list of tuple
+            Pairs of (block key, feature width) in the order columns appear.
+
+        Raises
+        ------
+        ValueError
+            If no probe entry yields a non-empty feature matrix.
+
+        """
+        key = getattr(self, "type", type(self).__name__)
+        for candidate in probe:
+            # A candidate that does not featurize (e.g. an unparseable SMILES) must be
+            # skipped, not fatal: the probe is best-effort width discovery.
+            try:
+                feats, _ = self.featurize([candidate])
+            except Exception:
+                continue
+            if feats is None or len(feats) == 0:
+                continue
+            arr = np.atleast_2d(np.asarray(feats))
+            return [(key, arr.shape[1])]
+        raise ValueError(
+            f"Could not determine feature width for {key}: no probe entry featurized successfully."
+        )
+
 
 class DeepLearningFeaturizer(FeaturizerBase):
     """
