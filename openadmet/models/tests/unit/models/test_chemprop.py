@@ -720,7 +720,7 @@ def test_chemprop_plateau_min_lr_per_group():
 
 def test_predict_embedding_unbuilt_raises():
     model = ChemPropModel(from_foundation="chemeleon")
-    with pytest.raises(AttributeError, match="Model not trained"):
+    with pytest.raises(ValueError, match="has not been built"):
         model.predict_embedding(["CCO"])
 
 

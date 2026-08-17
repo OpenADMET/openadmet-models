@@ -909,15 +909,19 @@ class ChemPropModel(LightningModelBase):
 
         Raises
         ------
-        AttributeError
+        ValueError
             If the model estimator has not been built.
 
         """
         if not self.estimator:
-            raise AttributeError("Model not trained")
+            raise ValueError(
+                "Model has not been built. Call build() before predict_embedding."
+            )
 
         if not smiles_list:
-            return np.empty((0, 2048), dtype=np.float32)
+            # width comes from the built model so the zero-row shape stays
+            # correct for non-CheMeleon foundation widths
+            return np.empty((0, self.message_hidden_dim), dtype=np.float32)
 
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
         n = len(dataset)
