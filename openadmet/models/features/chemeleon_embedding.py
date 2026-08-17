@@ -10,6 +10,11 @@ from openadmet.models.architecture.chemprop import ChemPropModel
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
+# Foundation checkpoint name; tests monkeypatch this to the hermetic
+# chemeleon-test architecture so no checkpoint download is needed
+_FOUNDATION_NAME = "chemeleon"
+
+
 def _normalize_accelerator(accelerator: str) -> str:
     if accelerator == "gpu":
         return "cuda"
@@ -58,7 +63,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
 
     def _ensure_model(self) -> ChemPropModel:
         if self._model is None:
-            model = ChemPropModel(from_foundation="chemeleon")
+            model = ChemPropModel(from_foundation=_FOUNDATION_NAME)
             model.build()
             device = torch.device(_normalize_accelerator(self.accelerator))
             model.estimator.to(device)

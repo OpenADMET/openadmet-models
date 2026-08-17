@@ -3,7 +3,14 @@
 import numpy as np
 import pytest
 
+from openadmet.models.features import chemeleon_embedding
 from openadmet.models.features.chemeleon_embedding import CheMeleonEmbeddingFeaturizer
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_foundation(monkeypatch):
+    """Run against the random-weight chemeleon-test architecture so no checkpoint is downloaded."""
+    monkeypatch.setattr(chemeleon_embedding, "_FOUNDATION_NAME", "chemeleon-test")
 
 
 @pytest.fixture
@@ -20,12 +27,18 @@ def test_featurize_shape_dtype_indices(smiles):
     assert np.array_equal(indices, np.arange(3))
 
 
-def test_featurize_batch_size_forwarding(smiles):
-    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
-    embeddings, indices = featurizer.featurize(smiles)
+def test_featurize_batch_invariance(smiles):
+    """Embeddings and indices must not depend on the chosen forward batch size."""
+    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=1)
+    emb_small, idx_small = featurizer.featurize(smiles)
 
-    assert embeddings.shape[0] == len(smiles)
-    assert len(indices) == len(smiles)
+    # one model, two forward batch sizes: only the batching may differ
+    featurizer.batch_size = 256
+    emb_large, idx_large = featurizer.featurize(smiles)
+
+    # float32 reduction order varies with batch shape, so allow last-ulp drift
+    np.testing.assert_allclose(emb_small, emb_large, rtol=1e-5, atol=1e-6)
+    np.testing.assert_array_equal(idx_small, idx_large)
 
 
 def test_featurizer_respects_accelerator():
