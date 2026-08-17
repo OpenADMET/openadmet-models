@@ -50,6 +50,24 @@ def test_featurizer_respects_accelerator():
     assert str(device) == "cpu"
 
 
+def test_featurize_skips_invalid_smiles():
+    """Unparseable SMILES must be skipped and indices must identify the valid rows."""
+    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
+    embeddings, indices = featurizer.featurize(["CCO", "not_a_smile", "CCN"])
+
+    assert embeddings.shape == (2, 2048)
+    np.testing.assert_array_equal(indices, [0, 2])
+
+
+def test_featurize_all_invalid_returns_empty():
+    """An all-invalid input must return an empty matrix and indices without raising."""
+    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
+    embeddings, indices = featurizer.featurize(["not_a_smile"])
+
+    assert embeddings.shape == (0, 2048)
+    np.testing.assert_array_equal(indices, np.empty(0, dtype=int))
+
+
 def test_featurizer_compatible_with_concatenator(smiles):
     from openadmet.models.features.combine import FeatureConcatenator
     from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
