@@ -162,7 +162,9 @@ class TabICLModelBase(PickleableModelBase):
         X : np.ndarray
             Input features.
         kwargs : dict
-            Additional arguments for prediction. Must be empty; unknown kwargs raise TypeError.
+            Additional keyword arguments accepted for interface
+            compatibility with the anvil pipeline (e.g. accelerator) and
+            ignored; device placement is fixed at build time.
 
         Returns
         -------
@@ -173,14 +175,10 @@ class TabICLModelBase(PickleableModelBase):
         ------
         ValueError
             If the model is not trained.
-        TypeError
-            If unknown prediction kwargs are supplied.
 
         """
         if not self.estimator:
             raise ValueError("Model not trained")
-        if kwargs:
-            raise TypeError("TabICL predict does not accept extra kwargs")
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
 

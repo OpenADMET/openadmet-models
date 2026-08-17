@@ -97,16 +97,20 @@ def test_predict_raises_if_not_trained():
         model.predict(np.zeros((1, 2)))
 
 
-def test_predict_rejects_kwargs():
-    """Predict should reject unknown kwargs."""
-    from unittest.mock import MagicMock
+def test_predict_accepts_pipeline_kwargs():
+    """predict must accept extra kwargs such as accelerator and ignore them, since the anvil inference path passes them."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = rng.normal(size=20)
 
-    mock_est = MagicMock()
-    mock_est.predict.return_value = np.array([0.1])
-    model = TabICLRegressorModel()
-    model.estimator = mock_est
-    with pytest.raises(TypeError):
-        model.predict(np.zeros((1, 2)), unknown=1)
+    model = TabICLRegressorModel(n_estimators=1, accelerator="cpu")
+    model.train(X, y)
+
+    out_plain = model.predict(X)
+    out_pipelined = model.predict(X, accelerator="cpu")
+
+    assert out_plain.shape == (20, 1)
+    np.testing.assert_allclose(out_plain, out_pipelined, rtol=1e-12)
 
 
 @patch("tabicl.TabICLClassifier")
