@@ -646,39 +646,6 @@ def test_modelspec_freeze_weights_raises_when_not_implemented():
 # --- Transform section tests ---
 
 
-def test_procedurespec_accepts_single_transform():
-    """A bare transform mapping must stay a TransformSpec (backward compatible)."""
-    spec = ProcedureSpec(
-        split=SplitSpec(type="ShuffleSplitter"),
-        feat=FeatureSpec(type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}),
-        model=ModelSpec(type="LGBMRegressorModel"),
-        train=TrainerSpec(type="SKLearnBasicTrainer"),
-        transform=TransformSpec(type="PCATransform", params={"n_components": 32}),
-    )
-    assert isinstance(spec.transform, TransformSpec)
-    assert spec.transform.to_class().__class__.__name__ == "PCATransform"
-
-
-def test_procedurespec_accepts_transform_sequence():
-    """A list of transform entries must parse in order and build to real classes."""
-    spec = ProcedureSpec(
-        split=SplitSpec(type="ShuffleSplitter"),
-        feat=FeatureSpec(type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}),
-        model=ModelSpec(type="LGBMRegressorModel"),
-        train=TrainerSpec(type="SKLearnBasicTrainer"),
-        transform=[
-            TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
-            TransformSpec(
-                type="PCATransform",
-                params={"n_components": {"FingerprintFeaturizer": 32}},
-            ),
-        ],
-    )
-    assert [t.type for t in spec.transform] == ["ImputeTransform", "PCATransform"]
-    names = [t.to_class().__class__.__name__ for t in spec.transform]
-    assert names == ["ImputeTransform", "PCATransform"]
-
-
 def _make_transform_spec(transform, global_seed=99):
     """Build a minimal AnvilSpecification wrapping the given transform section."""
     return AnvilSpecification(
@@ -708,42 +675,78 @@ def _make_transform_spec(transform, global_seed=99):
     )
 
 
-def test_to_workflow_transform_sequence_seeded_from_global():
-    """The global seed must fill sequence entries with no seed; explicit per-entry seeds must win."""
-    spec = _make_transform_spec(
-        transform=[
-            TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+@pytest.mark.parametrize(
+    "section, expected_names",
+    [
+        pytest.param(
+            TransformSpec(type="PCATransform", params={"n_components": 32}),
+            ["PCATransform"],
+            id="single",
+        ),
+        pytest.param(
+            [
+                TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+                TransformSpec(
+                    type="PCATransform",
+                    params={"n_components": {"FingerprintFeaturizer": 32}},
+                ),
+            ],
+            ["ImputeTransform", "PCATransform"],
+            id="sequence",
+        ),
+    ],
+)
+def test_procedurespec_transform_section_parses(section, expected_names):
+    """The transform section accepts a single spec or an ordered sequence of them."""
+    spec = _make_transform_spec(transform=section).procedure
+    if isinstance(section, list):
+        assert isinstance(spec.transform, list)
+        entries = spec.transform
+    else:
+        assert isinstance(spec.transform, TransformSpec)
+        entries = [spec.transform]
+    names = [t.to_class().__class__.__name__ for t in entries]
+    assert names == expected_names
+
+
+@pytest.mark.parametrize(
+    "section, expected_seeds",
+    [
+        pytest.param(
+            TransformSpec(type="PCATransform", params={"n_components": 32}),
+            [99],
+            id="single_fills_global",
+        ),
+        pytest.param(
             TransformSpec(
-                type="PCATransform",
-                params={"n_components": 32, "random_seed": 7},
+                type="PCATransform", params={"n_components": 32, "random_seed": 13}
             ),
-        ]
-    )
-    workflow = spec.to_workflow()
-    assert isinstance(workflow.transform, list)
-    imputer, pca = workflow.transform
-    assert imputer.random_seed == 99
-    assert pca.random_seed == 7
-
-
-def test_to_workflow_single_transform_seeded_from_global():
-    """A single transform without a section seed must receive the global seed."""
-    spec = _make_transform_spec(
-        transform=TransformSpec(type="PCATransform", params={"n_components": 32})
-    )
-    workflow = spec.to_workflow()
-    assert workflow.transform.random_seed == 99
-
-
-def test_to_workflow_single_transform_keeps_explicit_seed():
-    """A single transform with its own section seed must keep it."""
-    spec = _make_transform_spec(
-        transform=TransformSpec(
-            type="PCATransform", params={"n_components": 32, "random_seed": 13}
-        )
-    )
-    workflow = spec.to_workflow()
-    assert workflow.transform.random_seed == 13
+            [13],
+            id="single_explicit_wins",
+        ),
+        pytest.param(
+            [
+                TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+                TransformSpec(
+                    type="PCATransform",
+                    params={"n_components": 32, "random_seed": 7},
+                ),
+            ],
+            [99, 7],
+            id="sequence_mixed",
+        ),
+    ],
+)
+def test_to_workflow_transform_seeding(section, expected_seeds):
+    """The global seed must fill transform entries that set none, with explicit seeds winning."""
+    workflow = _make_transform_spec(transform=section).to_workflow()
+    if isinstance(section, list):
+        assert isinstance(workflow.transform, list)
+        transforms = workflow.transform
+    else:
+        assert not isinstance(workflow.transform, list)
+        transforms = [workflow.transform]
+    assert [t.random_seed for t in transforms] == expected_seeds
 
 
 def test_anvilspecification_run_with_transform_fits_on_train_and_saves_artifact(

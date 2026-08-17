@@ -17,17 +17,26 @@ def smiles():
     return ["CCO", "CCN", "CCO", "CC(=O)OC", "c1ccccc1"]
 
 
-def test_concatenator_list_accepts_mixed_entry_forms():
-    """List forms must accept {type, params} wrappers, single-type entries, and plain instances."""
-    concat = FeatureConcatenator(
-        featurizers=[
+@pytest.mark.parametrize(
+    "entry, expected_name",
+    [
+        pytest.param(
             {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp"}},
+            "FingerprintFeaturizer",
+            id="wrapper",
+        ),
+        pytest.param(
             {"DescriptorFeaturizer": {"descr_type": "desc2d"}},
-            NullFeaturizer(n_jobs=1),
-        ]
-    )
-    names = [type(f).__name__ for f in concat.featurizers]
-    assert names == ["DescriptorFeaturizer", "FingerprintFeaturizer", "NullFeaturizer"]
+            "DescriptorFeaturizer",
+            id="single_key",
+        ),
+        pytest.param(NullFeaturizer(n_jobs=1), "NullFeaturizer", id="instance"),
+    ],
+)
+def test_concatenator_list_entry_forms(entry, expected_name):
+    """List forms must accept {type, params} wrappers, single-type entries, and instances."""
+    concat = FeatureConcatenator(featurizers=[entry])
+    assert [type(f).__name__ for f in concat.featurizers] == [expected_name]
 
 
 def test_concatenator_rejects_duplicate_classes():

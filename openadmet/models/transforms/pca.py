@@ -70,10 +70,6 @@ class PCATransform(TransformBase):
     @classmethod
     def validate_n_components(cls, value):
         """Validate that component counts are positive ints, globally or per block."""
-        if isinstance(value, bool) or (
-            isinstance(value, dict) and any(isinstance(v, bool) for v in value.values())
-        ):
-            raise TypeError("n_components values must be ints, not booleans.")
         if isinstance(value, int):
             if value < 1:
                 raise ValueError(f"n_components must be >= 1, got {value}.")
@@ -185,6 +181,10 @@ class PCATransform(TransformBase):
         feature_blocks : list of tuple, optional
             Pairs of (block key, block width) in column order, required when
             ``n_components`` is a dict. Ignored by the int form.
+        *args
+            Additional positional arguments (not used).
+        **kwargs
+            Additional keyword arguments (not used).
 
         Returns
         -------
@@ -232,6 +232,10 @@ class PCATransform(TransformBase):
         ----------
         X : np.ndarray
             Feature matrix of shape (n_samples, n_features).
+        *args
+            Additional positional arguments (not used).
+        **kwargs
+            Additional keyword arguments (not used).
 
         Returns
         -------

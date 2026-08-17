@@ -124,18 +124,18 @@ def test_pca_transform_before_fit_raises(train_features):
         transform.transform(train_features)
 
 
-def test_pca_int_rejects_non_positive():
-    """n_components below 1 must be rejected at construction."""
-    with pytest.raises(ValidationError, match="n_components must be >= 1"):
-        PCATransform(n_components=0)
-
-
-def test_pca_dict_rejects_empty_and_non_positive_entries():
-    """Per-block n_components must have positive int entries for every block."""
-    with pytest.raises(ValidationError, match="at least one entry"):
-        PCATransform(n_components={})
-    with pytest.raises(ValidationError, match="int >= 1"):
-        PCATransform(n_components={"A": 0})
+@pytest.mark.parametrize(
+    "value, match",
+    [
+        pytest.param(0, "n_components must be >= 1", id="zero"),
+        pytest.param({}, "at least one entry", id="empty_dict"),
+        pytest.param({"A": 0}, "int >= 1", id="non_positive_entry"),
+    ],
+)
+def test_pca_rejects_invalid_n_components(value, match):
+    """Construction must reject non-positive, empty, and boolean component counts."""
+    with pytest.raises(ValidationError, match=match):
+        PCATransform(n_components=value)
 
 
 def test_pca_dict_without_blocks_raises(train_features):
@@ -163,7 +163,7 @@ def test_pca_duplicate_block_keys_raise(train_features):
         transform.fit(train_features, feature_blocks=[("A", 10), ("A", 10)])
 
 
-def test_pca_width_mismatch_raises(train_features):
+def test_pca_fit_width_mismatch_raises(train_features):
     """Blocks that do not cover the input width (e.g. behind a width-changing transform) must be rejected."""
     transform = PCATransform(n_components={"A": 2, "B": 2})
     with pytest.raises(ValueError, match="widths sum to 40 but the input has 20"):
