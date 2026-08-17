@@ -1,7 +1,7 @@
 """CheMeleon embedding featurizer."""
 
 from collections.abc import Iterable
-from typing import Any
+from typing import ClassVar
 
 import numpy as np
 import torch
@@ -33,6 +33,8 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         Number of molecules per forward pass.
 
     """
+
+    type: ClassVar[str] = "CheMeleonEmbeddingFeaturizer"
 
     accelerator: str = "cpu"
     batch_size: int = 256
