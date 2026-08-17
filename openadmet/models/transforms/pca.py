@@ -95,9 +95,7 @@ class PCATransform(TransformBase):
         """Build the (optional imputer plus) PCA pipeline for one block."""
         steps = []
         if self.impute_strategy != "none":
-            steps.append(
-                ("impute", SimpleImputer(strategy=self.impute_strategy))
-            )
+            steps.append(("impute", SimpleImputer(strategy=self.impute_strategy)))
         steps.append(("pca", PCA(n_components=dims, random_state=self.random_seed)))
         return Pipeline(steps)
 
@@ -176,7 +174,7 @@ class PCATransform(TransformBase):
         feature_blocks: list[tuple[str, int]] | None = None,
         *args,
         **kwargs,
-    ) -> "PCATransform":
+    ) -> PCATransform:
         """
         Fit the PCA pipeline(s) on X.
 

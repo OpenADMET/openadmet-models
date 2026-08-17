@@ -69,8 +69,14 @@ def test_concatenator_feature_blocks_align_with_matrix(smiles):
     """feature_blocks must cover the concatenated matrix exactly, in the same order the columns are emitted."""
     concat = FeatureConcatenator(
         featurizers=[
-            {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp", "n_jobs": 1}},
-            {"type": "DescriptorFeaturizer", "params": {"descr_type": "desc2d", "n_jobs": 1}},
+            {
+                "type": "FingerprintFeaturizer",
+                "params": {"fp_type": "ecfp", "n_jobs": 1},
+            },
+            {
+                "type": "DescriptorFeaturizer",
+                "params": {"descr_type": "desc2d", "n_jobs": 1},
+            },
         ]
     )
     blocks = concat.feature_blocks(smiles)
@@ -98,7 +104,10 @@ def test_concatenator_nested_feature_blocks_flatten(smiles):
     """Nested FeatureConcatenator blocks must flatten into the outer block list in matrix order."""
     inner = [
         {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp", "n_jobs": 1}},
-        {"type": "DescriptorFeaturizer", "params": {"descr_type": "desc2d", "n_jobs": 1}},
+        {
+            "type": "DescriptorFeaturizer",
+            "params": {"descr_type": "desc2d", "n_jobs": 1},
+        },
     ]
     outer = FeatureConcatenator(
         featurizers=[

@@ -36,12 +36,8 @@ def test_pca_int_transform_matches_reference(train_features):
 def test_pca_dict_transform_matches_reference(train_features):
     """Per-block PCAs must match independently built one-block-at-a-time PCAs in block order."""
     blocks = [("A", 8), ("B", 12)]
-    transform = PCATransform(
-        n_components={"A": 3, "B": 4}, random_seed=42
-    )
-    out = transform.fit(train_features, feature_blocks=blocks).transform(
-        train_features
-    )
+    transform = PCATransform(n_components={"A": 3, "B": 4}, random_seed=42)
+    out = transform.fit(train_features, feature_blocks=blocks).transform(train_features)
 
     reference = np.concatenate(
         [
@@ -170,9 +166,7 @@ def test_pca_duplicate_block_keys_raise(train_features):
 def test_pca_width_mismatch_raises(train_features):
     """Blocks that do not cover the input width (e.g. behind a width-changing transform) must be rejected."""
     transform = PCATransform(n_components={"A": 2, "B": 2})
-    with pytest.raises(
-        ValueError, match="widths sum to 40 but the input has 20"
-    ):
+    with pytest.raises(ValueError, match="widths sum to 40 but the input has 20"):
         transform.fit(train_features, feature_blocks=[("A", 20), ("B", 20)])
 
 
@@ -209,6 +203,4 @@ def test_pca_joblib_roundtrip_preserves_fitted_state(train_features, tmp_path):
     with open(path, "rb") as f:
         loaded = joblib.load(f)["transforms"][0]
 
-    np.testing.assert_allclose(
-        loaded.transform(train_features), expected, rtol=1e-12
-    )
+    np.testing.assert_allclose(loaded.transform(train_features), expected, rtol=1e-12)

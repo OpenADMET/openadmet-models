@@ -50,9 +50,7 @@ def test_fit_transforms_forwards_blocks_only_to_declaring_elements():
 
     imputer = ImputeTransform(strategy="mean")
     pca = PCATransform(n_components={"A": 3, "B": 2}, random_seed=42)
-    out = fit_transforms(
-        [imputer, pca], X, feature_blocks=[("A", 10), ("B", 10)]
-    )
+    out = fit_transforms([imputer, pca], X, feature_blocks=[("A", 10), ("B", 10)])
 
     imputed = imputer.transform(X)
     reference = np.concatenate(
