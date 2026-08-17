@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 
 from openadmet.models.architecture.tabicl import (
     TabICLClassifierModel,
@@ -58,36 +57,22 @@ def test_build_kwargs_mapping():
     assert "extra_param" not in kwargs2
 
 
-@patch("tabicl.TabICLRegressor")
-def test_regressor_build_and_train(mock_est_cls):
-    """Test build and train flow with mocked estimator."""
-    mock_est = MagicMock()
-    mock_est.fit.return_value = mock_est
-    mock_est_cls.return_value = mock_est
+def test_regressor_build_train_predict():
+    """build must construct the TabICL estimator, and train plus predict must produce 2D predictions."""
+    from tabicl import TabICLRegressor
 
-    model = TabICLRegressorModel(random_seed=1, accelerator="cpu")
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = rng.normal(size=20)
+
+    model = TabICLRegressorModel(n_estimators=1, accelerator="cpu")
     model.build()
-    assert model.estimator is mock_est
+    assert isinstance(model.estimator, TabICLRegressor)
 
-    X = np.zeros((5, 3))
-    y = np.zeros(5)
     model.train(X, y)
-    mock_est.fit.assert_called_once_with(X, y)
-
-
-@patch("tabicl.TabICLRegressor")
-def test_regressor_predict_shape(mock_est_cls):
-    """Test predict returns correct shape."""
-    mock_est = MagicMock()
-    mock_est.predict.return_value = np.array([0.1, 0.2, 0.3])
-    mock_est_cls.return_value = mock_est
-
-    model = TabICLRegressorModel()
-    model.build()
-    X = np.zeros((3, 2))
     preds = model.predict(X)
-    assert preds.shape == (3, 1)
-    np.testing.assert_array_equal(preds.ravel(), [0.1, 0.2, 0.3])
+    assert preds.shape == (20, 1)
+    assert np.isfinite(preds).all()
 
 
 def test_predict_raises_if_not_trained():
@@ -113,18 +98,19 @@ def test_predict_accepts_pipeline_kwargs():
     np.testing.assert_allclose(out_plain, out_pipelined, rtol=1e-12)
 
 
-@patch("tabicl.TabICLClassifier")
-def test_classifier_predict_proba(mock_est_cls):
-    """Test classifier predict_proba delegation."""
-    mock_est = MagicMock()
-    mock_est.predict_proba.return_value = np.array([[0.2, 0.8]])
-    mock_est_cls.return_value = mock_est
+def test_classifier_predict_proba():
+    """Classifier proba must return one row of class probabilities per sample."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = np.array([0, 1] * 10)
 
-    model = TabICLClassifierModel()
-    model.build()
-    X = np.zeros((1, 2))
+    model = TabICLClassifierModel(n_estimators=1, accelerator="cpu")
+    model.train(X, y)
     proba = model.predict_proba(X)
-    np.testing.assert_array_equal(proba, [[0.2, 0.8]])
+
+    assert proba.shape == (20, 2)
+    assert np.isfinite(proba).all()
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0, rtol=1e-5)
 
 
 def test_registry_names():
