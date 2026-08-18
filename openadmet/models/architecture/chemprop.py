@@ -13,8 +13,8 @@ from chemprop import models, nn
 from chemprop.data import MoleculeDatapoint, MoleculeDataset
 from chemprop.data.dataloader import build_dataloader
 from chemprop.models import MPNN
-
 from lightning import pytorch as pl
+from lightning.fabric.utilities.device_parser import _select_auto_accelerator
 from loguru import logger
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
@@ -223,6 +223,13 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
 # Fields tagged resolved=True are always persisted by serialize(), regardless
 # of whether the user set them explicitly; see _resolved_fields below
 ResolvedField = partial(Field, json_schema_extra={"resolved": True})
+
+# Aliases from trainer/Lightning accelerator spelling to torch device name;
+# any value not in this dict is used verbatim as a torch device name
+_ACCELERATOR_ALIASES = {
+    "gpu": "cuda",
+    "tpu": "xla",
+}
 
 
 @model_registry.register("ChemPropModel")
@@ -902,7 +909,7 @@ class ChemPropModel(LightningModelBase):
         self,
         smiles_list: list[str],
         batch_size: int = 256,
-        accelerator: str | None = None,
+        accelerator: str = "auto",
     ) -> np.ndarray:
         """
         Return pooled structural embeddings (pre-predictor) for a list of SMILES.
@@ -914,10 +921,10 @@ class ChemPropModel(LightningModelBase):
         batch_size : int, optional
             Number of molecules processed per forward pass. Default is 256.
         accelerator : str, optional
-            Device to run inference on, such as "cpu" or "cuda" ("gpu" is
-            accepted and mapped to "cuda"). Default is None, which uses the
-            device the model parameters currently occupy, so a pre-placed
-            model keeps working.
+            Device to run inference on. "auto" (the default) resolves like
+            Lightning's auto accelerator: TPU, MPS, or CUDA when available,
+            otherwise CPU. "gpu" maps to CUDA, and other values are used
+            as torch device names.
 
         Returns
         -------
@@ -947,17 +954,20 @@ class ChemPropModel(LightningModelBase):
         dataloader = build_dataloader(
             dataset, batch_size=effective_batch, shuffle=False
         )
-        if accelerator is None:
-            # No explicit device requested, so inherit where the params
-            # already live; callers may pre-place the model beforehand
-            device = next(self.estimator.parameters()).device
-        else:
-            # The "gpu" spelling mirrors predict's accelerator; torch names
-            # it "cuda"
-            device = torch.device("cuda" if accelerator == "gpu" else accelerator)
+
+        # "auto" resolves via Lightning's own selection so the default
+        # matches what the repo's Trainer picks on this machine
+        if accelerator == "auto":
+            accelerator = _select_auto_accelerator()
+
+        # Map trainer aliases to torch names; other values pass through
+        # verbatim
+        device = torch.device(_ACCELERATOR_ALIASES.get(accelerator, accelerator))
+
         # Place the model explicitly so the device comes from the argument, not
         # from whatever the params happened to occupy
         self.estimator.to(device)
+
         # Fingerprint runs through batch norm, so use running stats like predict does
         self.estimator.eval()
 

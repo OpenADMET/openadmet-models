@@ -763,7 +763,8 @@ def test_predict_embedding_shape_and_dtype():
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
-    emb = model.predict_embedding(smiles, batch_size=2)
+    # Fix the device so the comparison below is hardware-independent
+    emb = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
     assert emb.shape == (3, 2048)
     assert emb.dtype == np.float32
 
@@ -774,7 +775,7 @@ def test_predict_embedding_safe_batch_size_no_drop():
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
-    emb = model.predict_embedding(smiles, batch_size=3)
+    emb = model.predict_embedding(smiles, batch_size=3, accelerator="cpu")
     assert emb.shape[0] == len(smiles)
 
 
@@ -784,6 +785,6 @@ def test_predict_embedding_deterministic():
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN"]
-    e1 = model.predict_embedding(smiles, batch_size=2)
-    e2 = model.predict_embedding(smiles, batch_size=2)
+    e1 = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
+    e2 = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
     assert np.array_equal(e1, e2)

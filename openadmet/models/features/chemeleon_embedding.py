@@ -102,6 +102,10 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
                 np.empty(0, dtype=int),
             )
         model = self._ensure_model()
-        embeddings = model.predict_embedding(smiles_list, batch_size=self.batch_size)
+        # The featurizer decides the device, so hand it to predict_embedding
+        # rather than letting it default
+        embeddings = model.predict_embedding(
+            smiles_list, batch_size=self.batch_size, accelerator=self.accelerator
+        )
         # Every input row is featurized, so rows map 1:1 to input positions
         return embeddings, np.arange(len(smiles_list), dtype=int)
