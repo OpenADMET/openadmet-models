@@ -890,7 +890,10 @@ class ChemPropModel(LightningModelBase):
         return self.__class__(**explict_params)
 
     def predict_embedding(
-        self, smiles_list: list[str], batch_size: int = 256
+        self,
+        smiles_list: list[str],
+        batch_size: int = 256,
+        accelerator: str | None = None,
     ) -> np.ndarray:
         """
         Return pooled structural embeddings (pre-predictor) for a list of SMILES.
@@ -901,6 +904,11 @@ class ChemPropModel(LightningModelBase):
             Must be RDKit-canonical, salt-stripped SMILES.
         batch_size : int, optional
             Number of molecules processed per forward pass. Default is 256.
+        accelerator : str, optional
+            Device to run inference on, such as "cpu" or "cuda" ("gpu" is
+            accepted and mapped to "cuda"). Default is None, which uses the
+            device the model parameters currently occupy, so a pre-placed
+            model keeps working.
 
         Returns
         -------
@@ -930,7 +938,19 @@ class ChemPropModel(LightningModelBase):
         dataloader = build_dataloader(
             dataset, batch_size=effective_batch, shuffle=False
         )
-        device = next(self.estimator.parameters()).device
+        if accelerator is None:
+            # no explicit device requested, so inherit where the params
+            # already live; callers may pre-place the model beforehand
+            device = next(self.estimator.parameters()).device
+        else:
+            # "gpu" mirrors the accelerator spelling predict accepts; torch
+            # names it "cuda"
+            device = torch.device("cuda" if accelerator == "gpu" else accelerator)
+        # place the model explicitly so the device comes from the argument, not
+        # from whatever the params happened to occupy
+        self.estimator.to(device)
+        # fingerprint runs through batch norm, so use running stats like predict does
+        self.estimator.eval()
 
         all_embeddings = []
         with torch.inference_mode():
