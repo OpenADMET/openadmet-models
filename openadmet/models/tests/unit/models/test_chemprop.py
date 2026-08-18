@@ -348,6 +348,39 @@ def test_chemprop_load_weights_invalid_path():
         model.build()
 
 
+# Minimal valid BondMessagePassing hyperparameters for foundation-file tests
+_FOUNDATION_HPARAMS = {
+    "d_h": 8,
+    "depth": 1,
+    "dropout": 0.0,
+    "bias": False,
+    "activation": "relu",
+    "undirected": False,
+    "d_v": 72,
+    "d_e": 14,
+    "d_vd": None,
+    "V_d_transform": None,
+    "graph_transform": None,
+}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"hyper_parameters": _FOUNDATION_HPARAMS},
+        {"hyper_parameters": _FOUNDATION_HPARAMS, "state_dict": {}},
+    ],
+    ids=["missing_state_dict", "empty_state_dict"],
+)
+def test_chemprop_foundation_file_without_weights_raises(tmp_path, payload):
+    """Test that build raises RuntimeError when a foundation file carries no weights."""
+    path = tmp_path / "foundation.pt"
+    torch.save(payload, str(path))
+    model = ChemPropModel(from_foundation=str(path))
+    with pytest.raises(RuntimeError, match="state_dict"):
+        model.build()
+
+
 def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
     """Test that from_chemeleon and from_foundation are mutually exclusive."""
     with pytest.raises(

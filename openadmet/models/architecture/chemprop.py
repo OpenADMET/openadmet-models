@@ -679,7 +679,16 @@ class ChemPropModel(LightningModelBase):
                     )
                 aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
-                if foundation_mp.get("state_dict"):
+                # Only the inline chemeleon-test payload is intentionally
+                # stateless; any other foundation without weights would
+                # silently build a randomly initialized model
+                if self.from_foundation != "chemeleon-test":
+                    if not foundation_mp.get("state_dict"):
+                        raise RuntimeError(
+                            f"Foundation model at {self.from_foundation} has a "
+                            "missing or empty state_dict; refusing to build a "
+                            "randomly initialized model"
+                        )
                     mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
