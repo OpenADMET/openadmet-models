@@ -95,7 +95,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         """
         smiles_list = list(smiles)
         if not smiles_list:
-            # width comes from the checkpoint constant so an empty input
+            # Width comes from the checkpoint constant so an empty input
             # returns a correctly shaped array without triggering a download
             return (
                 np.empty((0, _FOUNDATION_EMBEDDING_DIM), dtype=np.float32),
@@ -103,5 +103,5 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
             )
         model = self._ensure_model()
         embeddings = model.predict_embedding(smiles_list, batch_size=self.batch_size)
-        # every input row is featurized, so rows map 1:1 to input positions
+        # Every input row is featurized, so rows map 1:1 to input positions
         return embeddings, np.arange(len(smiles_list), dtype=int)

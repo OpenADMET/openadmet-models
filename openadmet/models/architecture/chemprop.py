@@ -939,17 +939,17 @@ class ChemPropModel(LightningModelBase):
             dataset, batch_size=effective_batch, shuffle=False
         )
         if accelerator is None:
-            # no explicit device requested, so inherit where the params
+            # No explicit device requested, so inherit where the params
             # already live; callers may pre-place the model beforehand
             device = next(self.estimator.parameters()).device
         else:
-            # "gpu" mirrors the accelerator spelling predict accepts; torch
-            # names it "cuda"
+            # The "gpu" spelling mirrors predict's accelerator; torch names
+            # it "cuda"
             device = torch.device("cuda" if accelerator == "gpu" else accelerator)
-        # place the model explicitly so the device comes from the argument, not
+        # Place the model explicitly so the device comes from the argument, not
         # from whatever the params happened to occupy
         self.estimator.to(device)
-        # fingerprint runs through batch norm, so use running stats like predict does
+        # Fingerprint runs through batch norm, so use running stats like predict does
         self.estimator.eval()
 
         all_embeddings = []
