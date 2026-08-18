@@ -3,7 +3,6 @@
 from collections.abc import Iterable
 from typing import ClassVar
 
-import datamol as dm
 import numpy as np
 import torch
 
@@ -82,29 +81,27 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         Parameters
         ----------
         smiles : Iterable[str]
-            List or iterable of SMILES strings to featurize. Unparseable
-            SMILES are skipped, so embeddings may be fewer rows than inputs.
+            List or iterable of SMILES strings to featurize. Inputs must be
+            valid, parsable SMILES; unparsable entries raise an error from
+            the underlying toolkit.
 
         Returns
         -------
         tuple
             Tuple of (features, indices). Features is a 2D numpy array of shape
-            (n_samples, embedding_dim) and indices is a 1D numpy array of the
-            indices of the successfully featurized molecules.
+            (n_samples, embedding_dim) and indices is a 1D numpy array giving
+            the input position of each feature row.
 
         """
         smiles_list = list(smiles)
-        # Downstream splits and alignment work on the returned indices, so every
-        # returned row must correspond to a parseable input; unparseable
-        # entries are skipped, not fatal
-        with dm.without_rdkit_log():
-            valid = [i for i, s in enumerate(smiles_list) if dm.to_mol(s) is not None]
-        if not valid:
+        if not smiles_list:
+            # width comes from the checkpoint constant so an empty input
+            # returns a correctly shaped array without triggering a download
             return (
                 np.empty((0, _FOUNDATION_EMBEDDING_DIM), dtype=np.float32),
                 np.empty(0, dtype=int),
             )
         model = self._ensure_model()
-        selected = [smiles_list[i] for i in valid]
-        embeddings = model.predict_embedding(selected, batch_size=self.batch_size)
-        return embeddings, np.asarray(valid, dtype=int)
+        embeddings = model.predict_embedding(smiles_list, batch_size=self.batch_size)
+        # every input row is featurized, so rows map 1:1 to input positions
+        return embeddings, np.arange(len(smiles_list), dtype=int)
