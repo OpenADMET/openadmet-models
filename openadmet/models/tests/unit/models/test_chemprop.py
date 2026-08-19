@@ -764,6 +764,7 @@ def test_predict_embedding_shape_and_dtype():
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
+
     # Fix the device so the comparison below is hardware-independent
     emb = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
     assert emb.shape == (3, 2048)

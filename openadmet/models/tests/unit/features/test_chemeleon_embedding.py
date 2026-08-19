@@ -79,6 +79,7 @@ def test_featurizer_compatible_with_concatenator(smiles):
     )
 
     X, idx = concat.featurize(smiles)
+
     # CheMeleon 2048 + ECFP 2000 = 4048
     assert X.shape == (3, 4048)
     assert np.array_equal(idx, np.arange(3))

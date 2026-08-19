@@ -699,6 +699,7 @@ class ChemPropModel(LightningModelBase):
                     )
                 aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
+
                 # Only the inline chemeleon-test payload is intentionally
                 # stateless; any other foundation without weights would
                 # silently build a randomly initialized model
