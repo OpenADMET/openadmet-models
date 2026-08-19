@@ -32,7 +32,8 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
     Parameters
     ----------
     accelerator : str
-        Device to use for inference, cpu or cuda.
+        Device to use for inference. "auto" resolves like Lightning's auto
+        accelerator: TPU, MPS, or CUDA when available, otherwise CPU.
     batch_size : int
         Number of molecules per forward pass.
 
@@ -40,17 +41,18 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
 
     type: ClassVar[str] = "CheMeleonEmbeddingFeaturizer"
 
-    accelerator: str = "cpu"
+    accelerator: str = "auto"
     batch_size: int = 256
 
-    def __init__(self, accelerator: str = "cpu", batch_size: int = 256):
+    def __init__(self, accelerator: str = "auto", batch_size: int = 256):
         """
         Initialize the featurizer with device and batching settings.
 
         Parameters
         ----------
         accelerator : str, optional
-            Device to use for inference, cpu or cuda. Default is cpu.
+            Device to use for inference. Default is "auto", which resolves
+            like Lightning's auto accelerator.
         batch_size : int, optional
             Number of molecules per forward pass. Default is 256.
 
