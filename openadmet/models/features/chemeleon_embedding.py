@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import torch
 
-from openadmet.models.architecture.chemprop import ChemPropModel
+from openadmet.models.architecture.chemprop import ChemPropModel, _resolve_device_name
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
@@ -17,12 +17,6 @@ _FOUNDATION_NAME = "chemeleon"
 # CheMeleon foundation checkpoint width; used only for the zero-row
 # return shape so an empty input never triggers a checkpoint download
 _FOUNDATION_EMBEDDING_DIM = 2048
-
-
-def _normalize_accelerator(accelerator: str) -> str:
-    if accelerator == "gpu":
-        return "cuda"
-    return accelerator
 
 
 @featurizers.register("CheMeleonEmbeddingFeaturizer")
@@ -69,7 +63,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         if self._model is None:
             model = ChemPropModel(from_foundation=_FOUNDATION_NAME)
             model.build()
-            device = torch.device(_normalize_accelerator(self.accelerator))
+            device = torch.device(_resolve_device_name(self.accelerator))
             model.estimator.to(device)
             self._model = model
         return self._model
