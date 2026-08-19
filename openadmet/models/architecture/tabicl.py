@@ -3,8 +3,9 @@
 from typing import ClassVar
 
 import numpy as np
+import torch
 from loguru import logger
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 from openadmet.models.architecture.model_base import (
     PickleableModelBase,
@@ -84,6 +85,35 @@ class TabICLModelBase(PickleableModelBase):
     offload_mode: str = Field(
         default="auto", description="Offload mode for large data."
     )
+
+    @field_validator("accelerator")
+    @classmethod
+    def validate_accelerator(cls, value: str) -> str:
+        """
+        Validate that the accelerator resolves to a torch-recognized device.
+
+        TabICL only checks its own ``device`` kwarg at ``fit()`` time, several
+        calls removed from where a bad accelerator was actually supplied, so
+        this reproduces the same ``torch.device()`` check eagerly here.
+
+        Parameters
+        ----------
+        value : str
+            Accelerator value to validate.
+
+        Returns
+        -------
+        str
+            The validated accelerator value.
+
+        """
+        resolved = _resolve_device(value)
+        if resolved is not None:
+            try:
+                torch.device(resolved)
+            except RuntimeError as e:
+                raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
+        return value
 
     @classmethod
     def _get_estimator_class(cls) -> type:

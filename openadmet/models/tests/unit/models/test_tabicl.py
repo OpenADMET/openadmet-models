@@ -24,6 +24,18 @@ def test_tabicl_model_base_fields():
     assert model.offload_mode == "auto"
 
 
+def test_accelerator_validator_rejects_bad_value():
+    """An accelerator torch.device() cannot parse must fail at construction time."""
+    with pytest.raises(ValueError, match="Invalid accelerator"):
+        TabICLModelBase(accelerator="not_a_real_device")
+
+
+def test_accelerator_validator_accepts_known_values():
+    """cpu, gpu, auto, and unaliased torch device spellings must all construct cleanly."""
+    for accelerator in ["cpu", "gpu", "auto", "mps", "cuda:0"]:
+        TabICLModelBase(accelerator=accelerator)
+
+
 def test_build_kwargs_mapping():
     """Ensure public names map to estimator names."""
     model = TabICLRegressorModel(
