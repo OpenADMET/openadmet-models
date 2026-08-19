@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import numpy as np
 import torch
+from pydantic import field_validator
 
 from openadmet.models.architecture.chemprop import ChemPropModel, _resolve_device
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
@@ -54,10 +55,34 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
             Number of molecules per forward pass. Default is 256.
 
         """
-        super().__init__()
-        self.accelerator = accelerator
-        self.batch_size = batch_size
+        super().__init__(accelerator=accelerator, batch_size=batch_size)
         self._model: ChemPropModel | None = None
+
+    @field_validator("accelerator")
+    @classmethod
+    def validate_accelerator(cls, value: str) -> str:
+        """
+        Validate that the accelerator resolves to a torch-recognized device.
+
+        Reproduces the torch.device() check eagerly here so a bad accelerator
+        fails at construction time rather than inside predict_embedding.
+
+        Parameters
+        ----------
+        value : str
+            Accelerator value to validate.
+
+        Returns
+        -------
+        str
+            The validated accelerator value.
+
+        """
+        try:
+            torch.device(_resolve_device(value))
+        except RuntimeError as e:
+            raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
+        return value
 
     def _ensure_model(self) -> ChemPropModel:
         if self._model is None:

@@ -20,6 +20,18 @@ def smiles():
     return ["CCO", "CCN", "c1ccccc1"]
 
 
+def test_accelerator_validator_rejects_bad_value():
+    """An accelerator torch.device() cannot parse must fail at construction time."""
+    with pytest.raises(ValueError, match="Invalid accelerator"):
+        CheMeleonEmbeddingFeaturizer(accelerator="not_a_real_device")
+
+
+def test_accelerator_validator_accepts_known_values():
+    """cpu, gpu, and unaliased torch device spellings must all construct cleanly."""
+    for accelerator in ["cpu", "gpu", "mps", "cuda:0"]:
+        CheMeleonEmbeddingFeaturizer(accelerator=accelerator)
+
+
 def test_featurize_shape_dtype_indices(smiles):
     featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
     embeddings, indices = featurizer.featurize(smiles)
