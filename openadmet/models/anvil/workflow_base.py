@@ -3,9 +3,9 @@
 from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
@@ -32,9 +32,8 @@ class AnvilWorkflowBase(BaseModel):
         Metadata for the workflow.
     data_spec : DataSpec
         Data specification for the workflow.
-    transform : Optional[TransformBase or list of TransformBase]
-        Optional transform step, either a single transform or an ordered
-        sequence applied in list order.
+    transform : Optional[list of TransformBase]
+        Optional ordered transform sequence applied in list order.
     split : SplitterBase
         Data splitting strategy.
     feat : FeaturizerBase
@@ -61,9 +60,16 @@ class AnvilWorkflowBase(BaseModel):
 
     metadata: Metadata
     data_spec: DataSpec
-    transform: Optional[TransformBase | list[TransformBase]] = (
-        None  # Optional transform step, single or sequence
-    )
+    transform: list[TransformBase] | None = None  # Optional transform sequence
+
+    @field_validator("transform", mode="before")
+    @classmethod
+    def _wrap_single_transform(cls, value):
+        """Wrap a bare single transform instance into a one-element list."""
+        if value is None or isinstance(value, list):
+            return value
+        return [value]
+
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase

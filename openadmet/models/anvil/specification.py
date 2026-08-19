@@ -700,9 +700,15 @@ class ProcedureSpec(SpecBase):
     model: ModelSpec
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
-    transform: TransformSpec | list[TransformSpec] | None = (
-        None  # Optional transform step or ordered sequence
-    )
+    transform: list[TransformSpec] | None = None  # Optional transform sequence
+
+    @field_validator("transform", mode="before")
+    @classmethod
+    def _wrap_single_transform(cls, value):
+        """Wrap a bare single-transform mapping or spec into a one-element list."""
+        if value is None or isinstance(value, list):
+            return value
+        return [value]
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""
@@ -842,23 +848,14 @@ class AnvilSpecification(BaseModel):
         split = self.procedure.split.to_class()
         feat = self.procedure.feat.to_class()
         transform_spec = self.procedure.transform
-        if transform_spec is None:
-            transform = None
-        elif isinstance(transform_spec, list):
-            transform = [t.to_class() for t in transform_spec]
-        else:
-            transform = transform_spec.to_class()
+        transform = (
+            [t.to_class() for t in transform_spec] if transform_spec else None
+        )
         evals = [eval.to_class() for eval in self.report.eval]
 
         global_seed = self.procedure.random_seed
-        # Normalize transform spec/component to lists so a single transform and a
-        # transform sequence share the same per-item seed-fill logic below.
-        transform_specs = (
-            transform_spec if isinstance(transform_spec, list) else [transform_spec]
-        ) if transform_spec is not None else []
-        transform_components = (
-            transform if isinstance(transform, list) else [transform]
-        ) if transform is not None else []
+        transform_specs = transform_spec or []
+        transform_components = transform or []
         seeded_sections = [
             (self.procedure.split, split),
             (self.procedure.feat, feat),

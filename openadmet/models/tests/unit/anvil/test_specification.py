@@ -699,13 +699,8 @@ def _make_transform_spec(transform, global_seed=99):
 def test_procedurespec_transform_section_parses(section, expected_names):
     """The transform section accepts a single spec or an ordered sequence of them."""
     spec = _make_transform_spec(transform=section).procedure
-    if isinstance(section, list):
-        assert isinstance(spec.transform, list)
-        entries = spec.transform
-    else:
-        assert isinstance(spec.transform, TransformSpec)
-        entries = [spec.transform]
-    names = [t.to_class().__class__.__name__ for t in entries]
+    assert isinstance(spec.transform, list)
+    names = [t.to_class().__class__.__name__ for t in spec.transform]
     assert names == expected_names
 
 
@@ -740,13 +735,8 @@ def test_procedurespec_transform_section_parses(section, expected_names):
 def test_to_workflow_transform_seeding(section, expected_seeds):
     """The global seed must fill transform entries that set none, with explicit seeds winning."""
     workflow = _make_transform_spec(transform=section).to_workflow()
-    if isinstance(section, list):
-        assert isinstance(workflow.transform, list)
-        transforms = workflow.transform
-    else:
-        assert not isinstance(workflow.transform, list)
-        transforms = [workflow.transform]
-    assert [t.random_seed for t in transforms] == expected_seeds
+    assert isinstance(workflow.transform, list)
+    assert [t.random_seed for t in workflow.transform] == expected_seeds
 
 
 def test_anvilspecification_run_with_transform_fits_on_train_and_saves_artifact(
@@ -808,7 +798,7 @@ def test_anvilspecification_run_with_transform_fits_on_train_and_saves_artifact(
     # the saved recipe keeps the transform section so inference requires the artifact
     with open(out / "recipe_components" / "procedure.yaml") as f:
         procedure = yaml.safe_load(f)
-    assert procedure["transform"]["type"] == "PCATransform"
+    assert procedure["transform"][0]["type"] == "PCATransform"
 
     # inference from the run's model dir applies the saved fitted transform
     sample = pd.DataFrame({"SMILES": ["CCO"]})
