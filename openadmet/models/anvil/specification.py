@@ -839,9 +839,7 @@ class AnvilSpecification(BaseModel):
         split = self.procedure.split.to_class()
         feat = self.procedure.feat.to_class()
         transform_spec = self.procedure.transform
-        transform = (
-            [t.to_class() for t in transform_spec] if transform_spec else None
-        )
+        transform = [t.to_class() for t in transform_spec] if transform_spec else None
         evals = [eval.to_class() for eval in self.report.eval]
 
         global_seed = self.procedure.random_seed
