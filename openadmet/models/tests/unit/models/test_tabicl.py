@@ -24,12 +24,6 @@ def test_tabicl_model_base_fields():
     assert model.offload_mode == "auto"
 
 
-def test_accelerator_validator():
-    """Validate accelerator values."""
-    with pytest.raises(ValueError):
-        TabICLModelBase(accelerator="invalid")
-
-
 def test_build_kwargs_mapping():
     """Ensure public names map to estimator names."""
     model = TabICLRegressorModel(
@@ -52,10 +46,33 @@ def test_build_kwargs_mapping():
     assert kwargs["offload_mode"] == "disk"
     assert kwargs["norm_methods"] == ["standard"]
 
-    # Unknown extra fields should be ignored
-    model2 = TabICLRegressorModel(extra_param="keep me")
-    kwargs2 = model2._build_kwargs()
-    assert "extra_param" not in kwargs2
+
+def test_build_kwargs_maps_auto_accelerator_to_none_device():
+    """The "auto" accelerator must resolve to None so TabICL runs its own device detection."""
+    model = TabICLRegressorModel(accelerator="auto")
+    kwargs = model._build_kwargs()
+    assert kwargs["device"] is None
+
+
+def test_build_kwargs_maps_tpu_accelerator_to_xla_device():
+    """The "tpu" accelerator must resolve to the torch device spelling "xla"."""
+    model = TabICLRegressorModel(accelerator="tpu")
+    kwargs = model._build_kwargs()
+    assert kwargs["device"] == "xla"
+
+
+def test_build_kwargs_passes_through_unmapped_accelerator():
+    """Accelerator spellings with no alias, e.g. "mps", pass through unchanged."""
+    model = TabICLRegressorModel(accelerator="mps")
+    kwargs = model._build_kwargs()
+    assert kwargs["device"] == "mps"
+
+
+def test_build_raises_on_unsupported_kwarg():
+    """Unsupported extra fields must fail loudly at build time, not be dropped."""
+    model = TabICLRegressorModel(not_a_real_param="keep me")
+    with pytest.raises(TypeError):
+        model.build()
 
 
 def test_regressor_build_train_predict():

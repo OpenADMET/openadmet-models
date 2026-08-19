@@ -1,12 +1,44 @@
 """TabICL model implementations."""
 
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
+
+# TabICL's device kwarg accepts anything torch.device() parses (cpu, cuda,
+# cuda:0, mps, xla, ...); these are the two spellings that differ from ours
+_ACCELERATOR_ALIASES = {"gpu": "cuda", "tpu": "xla"}
+
+
+def _resolve_device(accelerator: str) -> str | None:
+    """
+    Resolve an accelerator spelling to a value TabICL's ``device`` kwarg accepts.
+
+    "auto" maps to ``None`` so TabICL runs its own cuda-availability check;
+    trainer aliases map to torch device names, and every other value passes
+    through verbatim.
+
+    Parameters
+    ----------
+    accelerator : str
+        The accelerator spelling to resolve.
+
+    Returns
+    -------
+    str or None
+        A value accepted by TabICL's ``device`` parameter.
+
+    """
+    if accelerator == "auto":
+        return None
+    return _ACCELERATOR_ALIASES.get(accelerator, accelerator)
 
 
 class TabICLModelBase(PickleableModelBase):
@@ -17,7 +49,7 @@ class TabICLModelBase(PickleableModelBase):
     ----------
     type : ClassVar[str]
         Model type identifier.
-    accelerator : Literal["cpu", "gpu", "auto"]
+    accelerator : str
         Device to use for training and prediction. Mapped to ``device`` for TabICL.
     random_seed : int
         Random seed for reproducibility. Mapped to ``random_state`` for TabICL.
@@ -37,7 +69,7 @@ class TabICLModelBase(PickleableModelBase):
     model_config = ConfigDict(extra="allow")
     type: ClassVar[str]
 
-    accelerator: Literal["cpu", "gpu", "auto"] = Field(
+    accelerator: str = Field(
         default="auto", description="The device to use for training and prediction."
     )
     random_seed: int = Field(default=42, description="Random seed for reproducibility.")
@@ -53,27 +85,6 @@ class TabICLModelBase(PickleableModelBase):
         default="auto", description="Offload mode for large data."
     )
 
-    @field_validator("accelerator")
-    @classmethod
-    def validate_accelerator(cls, value: str) -> str:
-        """
-        Validate the accelerator parameter.
-
-        Parameters
-        ----------
-        value : str
-            Accelerator value to validate.
-
-        Returns
-        -------
-        str
-            Validated accelerator value.
-
-        """
-        if value not in ["cpu", "gpu", "auto"]:
-            raise ValueError("Accelerator must be 'cpu', 'gpu' or 'auto'")
-        return value
-
     @classmethod
     def _get_estimator_class(cls) -> type:
         """Return the TabICL estimator class."""
@@ -81,54 +92,8 @@ class TabICLModelBase(PickleableModelBase):
 
     def _build_kwargs(self) -> dict:
         """Collect kwargs for the underlying estimator."""
-        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
-        data = self.model_dump()
-
-        # Map public names to TabICL names
-        kwargs = {
-            "n_estimators": data.get("n_estimators", 8),
-            "batch_size": data.get("batch_size", 1),
-            "device": accelerator,
-            "random_state": data.get("random_seed", 42),
-            "use_amp": data.get("use_amp", "auto"),
-            "use_fa3": data.get("use_fa3", "auto"),
-            "offload_mode": data.get("offload_mode", "auto"),
-        }
-
-        # Allow extra fields but whitelist known TabICL params
-        allowed_extra = {
-            "norm_methods",
-            "feat_shuffle_method",
-            "class_shuffle_method",
-            "outlier_threshold",
-            "softmax_temperature",
-            "average_logits",
-            "support_many_classes",
-            "kv_cache",
-            "model_path",
-            "allow_auto_download",
-            "checkpoint_version",
-            "disk_offload_dir",
-            "n_jobs",
-            "verbose",
-            "inference_config",
-        }
-        for k, v in data.items():
-            if k in {
-                "accelerator",
-                "random_seed",
-                "n_estimators",
-                "batch_size",
-                "use_amp",
-                "use_fa3",
-                "offload_mode",
-            }:
-                continue
-            if k in allowed_extra:
-                kwargs[k] = v
-            else:
-                # Unknown extra field, ignore to avoid passing invalid args to TabICL
-                pass
+        kwargs = seed_to_sklearn_kwargs(self.model_dump())
+        kwargs["device"] = _resolve_device(kwargs.pop("accelerator"))
         return kwargs
 
     def build(self) -> None:
