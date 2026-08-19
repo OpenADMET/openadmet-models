@@ -232,6 +232,19 @@ _ACCELERATOR_ALIASES = {
 }
 
 
+def _resolve_device_name(accelerator: str) -> str:
+    """
+    Resolve an accelerator spelling to a torch device name.
+
+    "auto" delegates to Lightning's selection so it matches what the repo's
+    Trainer picks on this machine; trainer aliases map to torch names, and
+    every other value passes through verbatim.
+    """
+    if accelerator == "auto":
+        accelerator = _select_auto_accelerator()
+    return _ACCELERATOR_ALIASES.get(accelerator, accelerator)
+
+
 @model_registry.register("ChemPropModel")
 class ChemPropModel(LightningModelBase):
     """
@@ -955,17 +968,9 @@ class ChemPropModel(LightningModelBase):
             dataset, batch_size=effective_batch, shuffle=False
         )
 
-        # "auto" resolves via Lightning's own selection so the default
-        # matches what the repo's Trainer picks on this machine
-        if accelerator == "auto":
-            accelerator = _select_auto_accelerator()
-
-        # Map trainer aliases to torch names; other values pass through
-        # verbatim
-        device = torch.device(_ACCELERATOR_ALIASES.get(accelerator, accelerator))
-
         # Place the model explicitly so the device comes from the argument, not
         # from whatever the params happened to occupy
+        device = torch.device(_resolve_device_name(accelerator))
         self.estimator.to(device)
 
         # Fingerprint runs through batch norm, so use running stats like predict does
