@@ -759,8 +759,6 @@ def test_predict_embedding_unbuilt_raises():
 
 
 def test_predict_embedding_shape_and_dtype():
-    from openadmet.models.architecture.chemprop import ChemPropModel
-
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
@@ -772,8 +770,6 @@ def test_predict_embedding_shape_and_dtype():
 
 
 def test_predict_embedding_safe_batch_size_no_drop():
-    from openadmet.models.architecture.chemprop import ChemPropModel
-
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
@@ -782,8 +778,6 @@ def test_predict_embedding_safe_batch_size_no_drop():
 
 
 def test_predict_embedding_deterministic():
-    from openadmet.models.architecture.chemprop import ChemPropModel
-
     model = ChemPropModel(from_foundation="chemeleon-test")
     model.build()
     smiles = ["CCO", "CCN"]
