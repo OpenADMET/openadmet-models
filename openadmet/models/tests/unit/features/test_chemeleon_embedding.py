@@ -5,6 +5,8 @@ import pytest
 
 from openadmet.models.features import chemeleon_embedding
 from openadmet.models.features.chemeleon_embedding import CheMeleonEmbeddingFeaturizer
+from openadmet.models.features.combine import FeatureConcatenator
+from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 
 
 @pytest.fixture(autouse=True)
@@ -68,9 +70,6 @@ def test_featurize_empty_input_returns_empty():
 
 
 def test_featurizer_compatible_with_concatenator(smiles):
-    from openadmet.models.features.combine import FeatureConcatenator
-    from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
-
     concat = FeatureConcatenator(
         featurizers=[
             CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2),
