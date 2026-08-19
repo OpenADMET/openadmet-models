@@ -851,11 +851,19 @@ class AnvilSpecification(BaseModel):
         evals = [eval.to_class() for eval in self.report.eval]
 
         global_seed = self.procedure.random_seed
+        # Normalize transform spec/component to lists so a single transform and a
+        # transform sequence share the same per-item seed-fill logic below.
+        transform_specs = (
+            transform_spec if isinstance(transform_spec, list) else [transform_spec]
+        ) if transform_spec is not None else []
+        transform_components = (
+            transform if isinstance(transform, list) else [transform]
+        ) if transform is not None else []
         seeded_sections = [
             (self.procedure.split, split),
             (self.procedure.feat, feat),
             (self.procedure.model, model),
-            *([(self.procedure.transform, transform)] if transform else []),
+            *zip(transform_specs, transform_components),
             *zip(self.report.eval, evals),
         ]
         # Fill any section that did not set its own seed with the global; an
@@ -865,13 +873,6 @@ class AnvilSpecification(BaseModel):
                 component, "random_seed"
             ):
                 component.random_seed = global_seed
-
-        # A transform list has no section-level params, so fill its entries
-        # here; an explicit per-entry seed survives to_class and is kept
-        if isinstance(transform, list):
-            for t in transform:
-                if hasattr(t, "random_seed") and t.random_seed is None:
-                    t.random_seed = global_seed
 
         return driver(
             metadata=self.metadata,
