@@ -51,6 +51,7 @@ def test_build_kwargs_mapping():
     assert kwargs["use_fa3"] == "yes"
     assert kwargs["offload_mode"] == "disk"
     assert kwargs["norm_methods"] == ["standard"]
+
     # Unknown extra fields should be ignored
     model2 = TabICLRegressorModel(extra_param="keep me")
     kwargs2 = model2._build_kwargs()

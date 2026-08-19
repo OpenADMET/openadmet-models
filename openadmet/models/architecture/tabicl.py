@@ -83,6 +83,7 @@ class TabICLModelBase(PickleableModelBase):
         """Collect kwargs for the underlying estimator."""
         accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
         data = self.model_dump()
+
         # Map public names to TabICL names
         kwargs = {
             "n_estimators": data.get("n_estimators", 8),
@@ -93,6 +94,7 @@ class TabICLModelBase(PickleableModelBase):
             "use_fa3": data.get("use_fa3", "auto"),
             "offload_mode": data.get("offload_mode", "auto"),
         }
+
         # Allow extra fields but whitelist known TabICL params
         allowed_extra = {
             "norm_methods",
@@ -125,7 +127,7 @@ class TabICLModelBase(PickleableModelBase):
             if k in allowed_extra:
                 kwargs[k] = v
             else:
-                # Unknown extra field – ignore to avoid passing invalid args to TabICL
+                # Unknown extra field, ignore to avoid passing invalid args to TabICL
                 pass
         return kwargs
 
