@@ -232,7 +232,7 @@ _ACCELERATOR_ALIASES = {
 }
 
 
-def _resolve_device_name(accelerator: str) -> str:
+def _resolve_device(accelerator: str) -> str:
     """
     Resolve an accelerator spelling to a torch device name.
 
@@ -971,7 +971,7 @@ class ChemPropModel(LightningModelBase):
 
         # Place the model explicitly so the device comes from the argument, not
         # from whatever the params happened to occupy
-        device = torch.device(_resolve_device_name(accelerator))
+        device = torch.device(_resolve_device(accelerator))
         self.estimator.to(device)
 
         # Fingerprint runs through batch norm, so use running stats like predict does

@@ -6,7 +6,7 @@ import torch
 
 from openadmet.models.architecture.chemprop import (
     ChemPropModel,
-    _resolve_device_name,
+    _resolve_device,
     _resolve_noam_steps_per_epoch,
 )
 
@@ -796,15 +796,15 @@ def test_predict_embedding_deterministic():
         ("mps", "mps"),
     ],
 )
-def test_resolve_device_name_aliases(accelerator, expected):
+def test_resolve_device_aliases(accelerator, expected):
     """Test trainer-alias and verbatim passthrough resolution without any GPU."""
-    assert _resolve_device_name(accelerator) == expected
+    assert _resolve_device(accelerator) == expected
 
 
-def test_resolve_device_name_auto_delegates_to_lightning(monkeypatch):
+def test_resolve_device_auto_delegates_to_lightning(monkeypatch):
     """Test that auto delegates the choice to Lightning's own resolution."""
     monkeypatch.setattr(
         "openadmet.models.architecture.chemprop._select_auto_accelerator",
         lambda: "mps",
     )
-    assert _resolve_device_name("auto") == "mps"
+    assert _resolve_device("auto") == "mps"
