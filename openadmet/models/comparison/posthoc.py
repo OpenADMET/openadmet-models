@@ -375,7 +375,8 @@ class PostHocComparison(ComparisonBase):
                             featurizers = anvil["procedure"]["feat"]["params"][
                                 "featurizers"
                             ]
-                            # Normalize both accepted YAML forms to (type, params) pairs
+
+                            # featurizers is a dict (legacy) or ordered list; normalize both to (type, params) pairs
                             if isinstance(featurizers, dict):
                                 feat_items = list(featurizers.items())
                             else:
