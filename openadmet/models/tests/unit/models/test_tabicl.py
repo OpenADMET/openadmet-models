@@ -12,6 +12,24 @@ from openadmet.models.architecture.tabicl import (
 )
 
 
+@pytest.fixture
+def regression_data():
+    """20-sample, 4-feature regression data for train/predict tests."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = rng.normal(size=20)
+    return X, y
+
+
+@pytest.fixture
+def classification_data():
+    """20-sample, 4-feature, 2-class classification data for train/predict tests."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = np.array([0, 1] * 10)
+    return X, y
+
+
 def test_tabicl_model_base_fields():
     """Verify default fields and mapping."""
     model = TabICLModelBase()
@@ -30,17 +48,17 @@ def test_accelerator_validator_rejects_bad_value():
         TabICLModelBase(accelerator="not_a_real_device")
 
 
-def test_accelerator_validator_accepts_known_values():
+@pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
+def test_accelerator_validator_accepts_known_values(accelerator):
     """cpu, gpu, auto, and unaliased torch device spellings must all construct cleanly."""
-    for accelerator in ["cpu", "gpu", "auto", "mps", "cuda:0"]:
-        TabICLModelBase(accelerator=accelerator)
+    TabICLModelBase(accelerator=accelerator)
 
 
 def test_build_kwargs_mapping():
     """Ensure public names map to estimator names."""
     model = TabICLRegressorModel(
         random_seed=123,
-        accelerator="gpu",
+        accelerator="cpu",
         n_estimators=4,
         batch_size=2,
         use_amp="no",
@@ -50,7 +68,6 @@ def test_build_kwargs_mapping():
     )
     kwargs = model._build_kwargs()
     assert kwargs["random_state"] == 123
-    assert kwargs["device"] == "cuda"
     assert kwargs["n_estimators"] == 4
     assert kwargs["batch_size"] == 2
     assert kwargs["use_amp"] == "no"
@@ -59,25 +76,22 @@ def test_build_kwargs_mapping():
     assert kwargs["norm_methods"] == ["standard"]
 
 
-def test_build_kwargs_maps_auto_accelerator_to_none_device():
-    """The "auto" accelerator must resolve to None so TabICL runs its own device detection."""
-    model = TabICLRegressorModel(accelerator="auto")
+@pytest.mark.parametrize(
+    "accelerator,expected_device",
+    [
+        ("gpu", "cuda"),
+        ("auto", None),
+        ("tpu", "xla"),
+        ("mps", "mps"),
+        ("cuda:0", "cuda:0"),
+    ],
+)
+def test_build_kwargs_maps_accelerator_to_device(accelerator, expected_device):
+    """Accelerator aliases resolve to torch device names; "auto" maps to None so
+    TabICL runs its own device detection, and unaliased spellings pass through."""
+    model = TabICLRegressorModel(accelerator=accelerator)
     kwargs = model._build_kwargs()
-    assert kwargs["device"] is None
-
-
-def test_build_kwargs_maps_tpu_accelerator_to_xla_device():
-    """The "tpu" accelerator must resolve to the torch device spelling "xla"."""
-    model = TabICLRegressorModel(accelerator="tpu")
-    kwargs = model._build_kwargs()
-    assert kwargs["device"] == "xla"
-
-
-def test_build_kwargs_passes_through_unmapped_accelerator():
-    """Accelerator spellings with no alias, e.g. "mps", pass through unchanged."""
-    model = TabICLRegressorModel(accelerator="mps")
-    kwargs = model._build_kwargs()
-    assert kwargs["device"] == "mps"
+    assert kwargs["device"] == expected_device
 
 
 def test_build_raises_on_unsupported_kwarg():
@@ -87,14 +101,11 @@ def test_build_raises_on_unsupported_kwarg():
         model.build()
 
 
-def test_regressor_build_train_predict():
+def test_regressor_build_train_predict(regression_data):
     """build must construct the TabICL estimator, and train plus predict must produce 2D predictions."""
     from tabicl import TabICLRegressor
 
-    rng = np.random.default_rng(0)
-    X = rng.normal(size=(20, 4))
-    y = rng.normal(size=20)
-
+    X, y = regression_data
     model = TabICLRegressorModel(n_estimators=1, accelerator="cpu")
     model.build()
     assert isinstance(model.estimator, TabICLRegressor)
@@ -105,19 +116,17 @@ def test_regressor_build_train_predict():
     assert np.isfinite(preds).all()
 
 
-def test_predict_raises_if_not_trained():
+@pytest.mark.parametrize("model_cls", [TabICLRegressorModel, TabICLClassifierModel])
+def test_predict_raises_if_not_trained(model_cls):
     """Predict should raise when model is not built."""
-    model = TabICLRegressorModel()
+    model = model_cls()
     with pytest.raises(ValueError):
         model.predict(np.zeros((1, 2)))
 
 
-def test_predict_accepts_pipeline_kwargs():
+def test_predict_accepts_pipeline_kwargs(regression_data):
     """predict must accept extra kwargs such as accelerator and ignore them, since the anvil inference path passes them."""
-    rng = np.random.default_rng(0)
-    X = rng.normal(size=(20, 4))
-    y = rng.normal(size=20)
-
+    X, y = regression_data
     model = TabICLRegressorModel(n_estimators=1, accelerator="cpu")
     model.train(X, y)
 
@@ -128,12 +137,9 @@ def test_predict_accepts_pipeline_kwargs():
     np.testing.assert_allclose(out_plain, out_pipelined, rtol=1e-12)
 
 
-def test_classifier_predict_proba():
+def test_classifier_predict_proba(classification_data):
     """Classifier proba must return one row of class probabilities per sample."""
-    rng = np.random.default_rng(0)
-    X = rng.normal(size=(20, 4))
-    y = np.array([0, 1] * 10)
-
+    X, y = classification_data
     model = TabICLClassifierModel(n_estimators=1, accelerator="cpu")
     model.train(X, y)
     proba = model.predict_proba(X)
