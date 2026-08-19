@@ -32,7 +32,7 @@ def test_featurize_batch_invariance(smiles):
     featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=1)
     emb_small, idx_small = featurizer.featurize(smiles)
 
-    # one model, two forward batch sizes: only the batching may differ
+    # One model, two forward batch sizes: only the batching may differ
     featurizer.batch_size = 256
     emb_large, idx_large = featurizer.featurize(smiles)
 

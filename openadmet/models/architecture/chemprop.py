@@ -957,7 +957,7 @@ class ChemPropModel(LightningModelBase):
             )
 
         if not smiles_list:
-            # width comes from the built model so the zero-row shape stays
+            # Width comes from the built model so the zero-row shape stays
             # correct for non-CheMeleon foundation widths
             return np.empty((0, self.message_hidden_dim), dtype=np.float32)
 
