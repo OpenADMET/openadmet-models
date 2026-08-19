@@ -88,8 +88,6 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         if self._model is None:
             model = ChemPropModel(from_foundation=_FOUNDATION_NAME)
             model.build()
-            device = torch.device(_resolve_device(self.accelerator))
-            model.estimator.to(device)
             self._model = model
         return self._model
 
