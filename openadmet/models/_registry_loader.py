@@ -27,6 +27,7 @@ _EVALUATORS = [
 ]
 
 _FEATURIZERS = [
+    "openadmet.models.features.chemeleon_embedding",
     "openadmet.models.features.chemprop",
     "openadmet.models.features.combine",
     "openadmet.models.features.molfeat_fingerprint",

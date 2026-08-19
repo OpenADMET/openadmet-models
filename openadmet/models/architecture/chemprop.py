@@ -4,19 +4,30 @@ import json
 import types
 from functools import partial
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, cast
 from urllib.request import urlretrieve
 
 import numpy as np
 import torch
 from chemprop import models, nn
-
+from chemprop.data import MoleculeDatapoint, MoleculeDataset
+from chemprop.data.dataloader import build_dataloader
+from chemprop.models import MPNN
 from lightning import pytorch as pl
+from lightning.fabric.utilities.device_parser import _select_auto_accelerator
 from loguru import logger
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
+
+
+def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
+    """Return batch size that avoids chemprop's silent single-molecule drop."""
+    effective = min(batch_size, dataset_size)
+    while effective > 1 and dataset_size % effective == 1:
+        effective -= 1
+    return effective
 
 
 def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
@@ -212,6 +223,26 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
 # Fields tagged resolved=True are always persisted by serialize(), regardless
 # of whether the user set them explicitly; see _resolved_fields below
 ResolvedField = partial(Field, json_schema_extra={"resolved": True})
+
+# Aliases from trainer/Lightning accelerator spelling to torch device name;
+# any value not in this dict is used verbatim as a torch device name
+_ACCELERATOR_ALIASES = {
+    "gpu": "cuda",
+    "tpu": "xla",
+}
+
+
+def _resolve_device(accelerator: str) -> str:
+    """
+    Resolve an accelerator spelling to a torch device name.
+
+    "auto" delegates to Lightning's selection so it matches what the repo's
+    Trainer picks on this machine; trainer aliases map to torch names, and
+    every other value passes through verbatim.
+    """
+    if accelerator == "auto":
+        accelerator = _select_auto_accelerator()
+    return _ACCELERATOR_ALIASES.get(accelerator, accelerator)
 
 
 @model_registry.register("ChemPropModel")
@@ -641,6 +672,26 @@ class ChemPropModel(LightningModelBase):
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                     )
+                elif self.from_foundation == "chemeleon-test":
+                    # Build CheMeleon-compatible architecture with random weights,
+                    # for hermetic tests that need no network access
+                    logger.info("Using CheMeleon test architecture with random weights")
+                    foundation_mp = {
+                        "hyper_parameters": {
+                            "d_h": 2048,
+                            "depth": 6,
+                            "dropout": self.dropout,
+                            "bias": False,
+                            "activation": "relu",
+                            "undirected": False,
+                            "d_v": 72,
+                            "d_e": 14,
+                            "d_vd": None,
+                            "V_d_transform": None,
+                            "graph_transform": None,
+                        },
+                        "state_dict": {},
+                    }
                 else:
                     logger.info(f"Loading foundation model from {self.from_foundation}")
                     foundation_mp = self._load_foundation_model(
@@ -648,7 +699,18 @@ class ChemPropModel(LightningModelBase):
                     )
                 aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
-                mp.load_state_dict(foundation_mp["state_dict"])
+
+                # Only the inline chemeleon-test payload is intentionally
+                # stateless; any other foundation without weights would
+                # silently build a randomly initialized model
+                if self.from_foundation != "chemeleon-test":
+                    if not foundation_mp.get("state_dict"):
+                        raise RuntimeError(
+                            f"Foundation model at {self.from_foundation} has a "
+                            "missing or empty state_dict; refusing to build a "
+                            "randomly initialized model"
+                        )
+                    mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
                     "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
@@ -856,6 +918,73 @@ class ChemPropModel(LightningModelBase):
             include=self._explicit_init_fields, exclude={"estimator"}
         )
         return self.__class__(**explict_params)
+
+    def predict_embedding(
+        self,
+        smiles_list: list[str],
+        batch_size: int = 256,
+        accelerator: str = "auto",
+    ) -> np.ndarray:
+        """
+        Return pooled structural embeddings (pre-predictor) for a list of SMILES.
+
+        Parameters
+        ----------
+        smiles_list : list[str]
+            Must be RDKit-canonical, salt-stripped SMILES.
+        batch_size : int, optional
+            Number of molecules processed per forward pass. Default is 256.
+        accelerator : str, optional
+            Device to run inference on. "auto" (the default) resolves like
+            Lightning's auto accelerator: TPU, MPS, or CUDA when available,
+            otherwise CPU. "gpu" maps to CUDA, and other values are used
+            as torch device names.
+
+        Returns
+        -------
+        np.ndarray
+            Array of shape (N, embedding_dim) aligned with smiles_list.
+
+        Raises
+        ------
+        ValueError
+            If the model estimator has not been built.
+
+        """
+        if not self.estimator:
+            raise ValueError(
+                "Model has not been built. Call build() before predict_embedding."
+            )
+
+        if not smiles_list:
+            # Width comes from the built model so the zero-row shape stays
+            # correct for non-CheMeleon foundation widths
+            return np.empty((0, self.message_hidden_dim), dtype=np.float32)
+
+        dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
+        n = len(dataset)
+        effective_batch = _safe_inference_batch_size(n, batch_size)
+
+        dataloader = build_dataloader(
+            dataset, batch_size=effective_batch, shuffle=False
+        )
+
+        # Place the model explicitly so the device comes from the argument, not
+        # from whatever the params happened to occupy
+        device = torch.device(_resolve_device(accelerator))
+        self.estimator.to(device)
+
+        # Fingerprint runs through batch norm, so use running stats like predict does
+        self.estimator.eval()
+
+        all_embeddings = []
+        with torch.inference_mode():
+            for batch in dataloader:
+                batch.bmg.to(device)
+                embedding = cast(MPNN, self.estimator).fingerprint(batch.bmg)
+                all_embeddings.append(embedding.cpu().numpy())
+
+        return np.concatenate(all_embeddings, axis=0).astype(np.float32)
 
     def predict(
         self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
