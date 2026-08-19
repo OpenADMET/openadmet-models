@@ -2,7 +2,7 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import ClassVar, Literal, Optional, Union
+from typing import ClassVar, Literal, Optional
 
 import fsspec
 import intake
@@ -62,8 +62,9 @@ class DataSpec(BaseModel):
         The path or URL to the data resource.
     cat_entry : Optional[str]
         The catalog entry name if the resource is a YAML catalog.
-    target_cols : Union[str, list[str]]
-        The target column(s) in the dataset.
+    target_cols : list[str]
+        The target column(s) in the dataset. A bare string is accepted and
+        wrapped into a one-element list.
     input_col : str
         The input column in the dataset.
     anvil_dir : Optional[str]
@@ -87,7 +88,7 @@ class DataSpec(BaseModel):
     resource: Optional[str] = None
 
     cat_entry: Optional[str] = None
-    target_cols: Union[str, list[str]]
+    target_cols: list[str]
     input_col: str
     anvil_dir: Optional[str] = None
     dropna: Optional[bool] = False
@@ -210,12 +211,7 @@ class DataSpec(BaseModel):
             [read_split(resource, split) for resource, split in splits_to_read]
         )
 
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = combined[[self.input_col] + target_cols + ["_split"]]
+        combined = combined[[self.input_col] + self.target_cols + ["_split"]]
 
         # Handle NaN values
         n_before = len(combined)
@@ -263,12 +259,7 @@ class DataSpec(BaseModel):
             data = self._read_csv_or_parquet(self.resource)
 
         # Select and clean columns
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = data[[self.input_col] + target_cols]
+        combined = data[[self.input_col] + self.target_cols]
 
         n_before = len(combined)
         if self.dropna:
