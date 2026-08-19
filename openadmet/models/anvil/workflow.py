@@ -67,7 +67,16 @@ class AnvilWorkflow(AnvilWorkflowBase):
     @model_validator(mode="after")
     def check_featurizer_tabular(self):
         """
-        Check that the featurizer produces a numpy feature array.
+        Reject featurizers whose output the sklearn driver cannot consume.
+
+        This workflow's trainer, transforms, and model all expect
+        ``feat.featurize()`` to return a numpy feature array (e.g. fingerprints,
+        descriptors). ``DeepLearningFeaturizer`` subclasses (e.g. ChemProp's
+        graph featurizer) return a DataLoader/Dataset pair instead, meant for
+        the lightning workflow. Pairing one with an sklearn-family model (e.g.
+        XGBoost, LightGBM, random forest) previously failed late and
+        cryptically inside the trainer; this catches it at spec-construction
+        time with an actionable message.
 
         Raises
         ------
