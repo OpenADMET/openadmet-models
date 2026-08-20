@@ -14,6 +14,9 @@ from openadmet.models.features.feature_base import (
 )
 
 
+# See #595: this function only exists to normalize the single-key-dict shape
+# to the {type, params} wrapper; if that shape is ever dropped, this collapses
+# to `return item["type"], item.get("params") or {}` inline at the call site
 def _parse_featurizer_entry(item: dict) -> tuple[str, dict]:
     """
     Normalize a list-form featurizer entry to (type, params).
@@ -82,6 +85,8 @@ class FeatureConcatenator(FeaturizerBase):
         processed_featurizers = []
         if isinstance(value, dict):
             # dict form: keys are registry types, values are parameter dicts
+            # see #595: this whole branch goes away once the dict form is
+            # deprecated in favor of the {type, params} list form used elsewhere
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
                 processed_featurizers.append(feat_class(**feat_params))
