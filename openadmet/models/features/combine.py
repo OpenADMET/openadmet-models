@@ -52,7 +52,7 @@ class FeaturizerEntry(BaseModel):
                     "Featurizer list entries must be {type: ..., params: ...} "
                     f"wrappers or single-type entries, got keys: {list(data.keys())}."
                 )
-            (feat_type, params), = data.items()
+            ((feat_type, params),) = data.items()
             return {"type": feat_type, "params": params or {}}
         return data
 

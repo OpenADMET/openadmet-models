@@ -137,7 +137,10 @@ def test_concatenator_feature_blocks_before_featurize_raises():
     """feature_blocks must fail loudly rather than guess when featurize has not run yet."""
     concat = FeatureConcatenator(
         featurizers=[
-            {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp", "n_jobs": 1}},
+            {
+                "type": "FingerprintFeaturizer",
+                "params": {"fp_type": "ecfp", "n_jobs": 1},
+            },
         ]
     )
     with pytest.raises(RuntimeError, match="featurize"):
