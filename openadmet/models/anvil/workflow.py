@@ -7,8 +7,10 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 import torch
 import zarr
 from lightning import pytorch as pl
@@ -375,9 +377,6 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Persist the fitted transforms next to the model so decoupled
             # inference can apply the exact train-time preprocessing; the recipe
             # YAML carries configuration only
-            import joblib
-            import sklearn
-
             transform_payload = {
                 "schema": "v1",
                 "transforms": to_transform_list(self.transform),
