@@ -59,38 +59,48 @@ class FeatureConcatenator(FeaturizerBase):
             Sorted list of featurizer instances.
 
         """
-        # Imported here rather than at module scope because resolving a
-        # featurizer type imports this module, so the spec machinery must not
-        # be a module-level dependency of it
-        from openadmet.models.anvil.specification import FeatureSpec
-
+        # Container for live featurizers
         processed_featurizers = []
+
+        # Deprecated dict path, still read because saved recipe YAMLs use it  (see #595)
         if isinstance(value, dict):
-            # Deprecated dict form: keys are registry types, values are param
-            # dicts. Still read because saved recipe YAMLs use it (see #595)
+            # Deprecation warning
             warnings.warn(
                 "The whole-field dict form for `featurizers` is deprecated; use a "
                 "list of {type: ..., params: ...} entries instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
+
+            # Instantiate each featurizer from the dict
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
                 processed_featurizers.append(feat_class(**feat_params))
+
+        # List path
         elif isinstance(value, list):
             for item in value:
+                # Already live featurizer instance, just append it
                 if isinstance(item, FeaturizerBase):
                     processed_featurizers.append(item)
+
+                # From YAML dict entry
+                # Instantiate the featurizer from the type/params dict
                 elif isinstance(item, dict):
-                    # FeatureSpec ignores unknown keys, so an entry missing
-                    # `type` would silently resolve to None; reject it here
+                    # Without `type` there is no registry key to resolve against
                     if "type" not in item:
                         raise ValueError(
                             "Featurizer list entries must be {type: ..., params: ...} "
                             f"wrappers, got keys: {list(item.keys())}."
                         )
+
+                    # Resolve directly rather than through FeatureSpec.to_class(),
+                    # which unwraps to this same call plus the deprecated
+                    # `random_state` alias. Entries carrying that alias lose the
+                    # seed until #596 moves the alias onto the classes themselves
+                    feat_class = get_featurizer_class(item["type"])
                     processed_featurizers.append(
-                        FeatureSpec.model_validate(item).to_class()
+                        feat_class(**(item.get("params") or {}))
                     )
                 else:
                     raise TypeError(
