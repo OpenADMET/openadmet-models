@@ -1,5 +1,6 @@
 """Combine features from multiple featurizers into a single feature array."""
 
+import warnings
 from functools import reduce
 from typing import ClassVar
 
@@ -12,29 +13,6 @@ from openadmet.models.features.feature_base import (
     featurizers,
     get_featurizer_class,
 )
-
-
-# See #595: this function only exists to normalize the single-key-dict shape
-# to the {type, params} wrapper; if that shape is ever dropped, this collapses
-# to `return item["type"], item.get("params") or {}` inline at the call site
-def _parse_featurizer_entry(item: dict) -> tuple[str, dict]:
-    """
-    Normalize a list-form featurizer entry to (type, params).
-
-    Accepts either the AnvilSection-style wrapper (``{"type": ..., "params":
-    {...}}``) or a single entry mapping the registry type directly to its
-    params (the shape used by each entry in the dict form).
-
-    """
-    if "type" in item:
-        return item["type"], item.get("params") or {}
-    if len(item) != 1:
-        raise ValueError(
-            "Featurizer list entries must be {type: ..., params: ...} "
-            f"wrappers or single-type entries, got keys: {list(item.keys())}."
-        )
-    ((feat_type, params),) = item.items()
-    return feat_type, params or {}
 
 
 @featurizers.register("FeatureConcatenator")
@@ -64,17 +42,16 @@ class FeatureConcatenator(FeaturizerBase):
         """
         Validate and construct the list of featurizers.
 
-        Accepts a dict of {type: params} entries, a list of featurizer
-        instances, or a list mixing instances with dicts. Dict entries in a
-        list are either {type: ..., params: ...} wrappers (the AnvilSection
-        style, params optional) or single entries mapping the registry type
-        to its params, as in the dict form.
+        Accepts a list of featurizer instances, ``{type: ..., params: ...}``
+        entries (the AnvilSection wrapper form, params optional), or a mix of
+        the two. A whole-field dict mapping registry types to their params is
+        also accepted but deprecated.
 
         Parameters
         ----------
         value : dict or list
-            Dictionary of featurizer types and parameters, or a list of
-            featurizer instances and type/parameter entries.
+            List of featurizer instances and type/parameter entries, or the
+            deprecated dictionary of featurizer types and parameters.
 
         Returns
         -------
@@ -82,11 +59,21 @@ class FeatureConcatenator(FeaturizerBase):
             Sorted list of featurizer instances.
 
         """
+        # Imported here rather than at module scope because resolving a
+        # featurizer type imports this module, so the spec machinery must not
+        # be a module-level dependency of it
+        from openadmet.models.anvil.specification import FeatureSpec
+
         processed_featurizers = []
         if isinstance(value, dict):
-            # dict form: keys are registry types, values are parameter dicts
-            # See #595: this whole branch goes away once the dict form is
-            # deprecated in favor of the {type, params} list form used elsewhere
+            # Deprecated dict form: keys are registry types, values are param
+            # dicts. Still read because saved recipe YAMLs use it (see #595)
+            warnings.warn(
+                "The whole-field dict form for `featurizers` is deprecated; use a "
+                "list of {type: ..., params: ...} entries instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
                 processed_featurizers.append(feat_class(**feat_params))
@@ -95,9 +82,16 @@ class FeatureConcatenator(FeaturizerBase):
                 if isinstance(item, FeaturizerBase):
                     processed_featurizers.append(item)
                 elif isinstance(item, dict):
-                    feat_type, feat_params = _parse_featurizer_entry(item)
-                    feat_class = get_featurizer_class(feat_type)
-                    processed_featurizers.append(feat_class(**feat_params))
+                    # FeatureSpec ignores unknown keys, so an entry missing
+                    # `type` would silently resolve to None; reject it here
+                    if "type" not in item:
+                        raise ValueError(
+                            "Featurizer list entries must be {type: ..., params: ...} "
+                            f"wrappers, got keys: {list(item.keys())}."
+                        )
+                    processed_featurizers.append(
+                        FeatureSpec.model_validate(item).to_class()
+                    )
                 else:
                     raise TypeError(
                         "Featurizer list entries must be featurizer instances or "

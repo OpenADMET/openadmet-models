@@ -26,15 +26,15 @@ def smiles():
             id="wrapper",
         ),
         pytest.param(
-            {"DescriptorFeaturizer": {"descr_type": "desc2d"}},
-            "DescriptorFeaturizer",
-            id="single_key",
+            {"type": "NullFeaturizer"},
+            "NullFeaturizer",
+            id="wrapper_params_omitted",
         ),
         pytest.param(NullFeaturizer(n_jobs=1), "NullFeaturizer", id="instance"),
     ],
 )
 def test_concatenator_list_entry_forms(entry, expected_name):
-    """List forms must accept {type, params} wrappers, single-type entries, and instances."""
+    """List forms must accept {type, params} wrappers and live featurizer instances."""
     concat = FeatureConcatenator(featurizers=[entry])
     assert [type(f).__name__ for f in concat.featurizers] == [expected_name]
 
@@ -52,26 +52,50 @@ def test_concatenator_rejects_duplicate_classes():
         )
 
 
-def test_concatenator_rejects_ambiguous_list_entry():
-    """A multi-key dict that is not a {type, params} wrapper must be rejected."""
+@pytest.mark.parametrize(
+    "entry",
+    [
+        pytest.param({"FingerprintFeaturizer": {"fp_type": "ecfp"}}, id="single_key"),
+        pytest.param(
+            {"FingerprintFeaturizer": {"fp_type": "ecfp"}, "extra": 1}, id="multi_key"
+        ),
+    ],
+)
+def test_concatenator_rejects_entry_without_type(entry):
+    """Entries lacking `type` must be rejected, not silently resolved to a null type."""
     with pytest.raises(ValidationError, match="must be"):
-        FeatureConcatenator(
-            featurizers=[
-                {"FingerprintFeaturizer": {"fp_type": "ecfp"}, "extra": 1},
-            ]
-        )
+        FeatureConcatenator(featurizers=[entry])
 
 
 def test_concatenator_dict_form_still_constructs():
-    """The original dict form must keep working unchanged."""
-    concat = FeatureConcatenator(
-        featurizers={
-            "FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1},
-            "DescriptorFeaturizer": {"descr_type": "desc2d", "n_jobs": 1},
-        }
-    )
+    """The deprecated dict form must keep working so saved recipe YAMLs stay loadable."""
+    with pytest.warns(DeprecationWarning, match="deprecated"):
+        concat = FeatureConcatenator(
+            featurizers={
+                "FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1},
+                "DescriptorFeaturizer": {"descr_type": "desc2d", "n_jobs": 1},
+            }
+        )
     names = [type(f).__name__ for f in concat.featurizers]
     assert names == ["DescriptorFeaturizer", "FingerprintFeaturizer"]
+
+
+def test_concatenator_list_form_does_not_warn(recwarn):
+    """The wrapper list form is the supported shape and must not emit a deprecation."""
+    FeatureConcatenator(
+        featurizers=[{"type": "NullFeaturizer", "params": {"n_jobs": 1}}]
+    )
+    assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
+
+
+def test_concatenator_entry_warns_on_deprecated_random_state():
+    """Nested entries route through FeatureSpec, so they inherit its random_state deprecation."""
+    with pytest.warns(DeprecationWarning, match="random_state"):
+        FeatureConcatenator(
+            featurizers=[
+                {"type": "NullFeaturizer", "params": {"random_state": 7}},
+            ]
+        )
 
 
 def test_concatenator_feature_blocks_align_with_matrix(smiles):
