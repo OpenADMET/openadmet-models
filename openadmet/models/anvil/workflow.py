@@ -349,7 +349,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Fit transforms on the train partition only, so learned statistics
             # (imputer means, PCA loadings) never see validation or test data
             logger.info("Fitting transforms on train features")
-            feature_blocks = self.feat.feature_blocks(X_train)
+            feature_blocks = (
+                self.feat.feature_blocks()
+                if hasattr(self.feat, "feature_blocks")
+                else None
+            )
             X_train_feat = fit_transforms(
                 self.transform, X_train_feat, feature_blocks=feature_blocks
             )

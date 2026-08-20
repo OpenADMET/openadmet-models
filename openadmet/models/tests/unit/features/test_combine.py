@@ -88,8 +88,8 @@ def test_concatenator_feature_blocks_align_with_matrix(smiles):
             },
         ]
     )
-    blocks = concat.feature_blocks(smiles)
     feats, idx = concat.featurize(smiles)
+    blocks = concat.feature_blocks()
 
     # every probe SMILES is valid here, so all rows survive
     assert_array_equal(idx, np.arange(len(smiles)))
@@ -124,8 +124,8 @@ def test_concatenator_nested_feature_blocks_flatten(smiles):
             {"type": "NullFeaturizer", "params": {}},
         ]
     )
-    blocks = outer.feature_blocks(smiles)
     feats, _ = outer.featurize(smiles)
+    blocks = outer.feature_blocks()
 
     keys = [key for key, _ in blocks]
     assert keys == ["DescriptorFeaturizer", "FingerprintFeaturizer", "NullFeaturizer"]
@@ -133,29 +133,12 @@ def test_concatenator_nested_feature_blocks_flatten(smiles):
     assert blocks[2] == ("NullFeaturizer", 1)
 
 
-def test_feature_blocks_default_single_block_key(smiles):
-    """A plain featurizer must report one block keyed by its registry name."""
-    fp = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1)
-    blocks = fp.feature_blocks(smiles)
-    feats, _ = fp.featurize(smiles)
-
-    assert len(blocks) == 1
-    assert blocks[0][0] == "FingerprintFeaturizer"
-    assert blocks[0][1] == feats.shape[1]
-
-
-def test_feature_blocks_probe_skips_invalid_entries():
-    """The probe must try entries in order until one featurizes successfully."""
-    fp = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1)
-    feats, _ = fp.featurize(["CCO"])
-    width = feats.shape[1] if feats.ndim > 1 else np.atleast_2d(feats).shape[1]
-
-    blocks = fp.feature_blocks(["invalid_smiles", "CCO"])
-    assert blocks == [("FingerprintFeaturizer", width)]
-
-
-def test_feature_blocks_probe_all_invalid_raises():
-    """An all-invalid probe must raise a clear error."""
-    fp = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1)
-    with pytest.raises(ValueError, match="no probe entry featurized successfully"):
-        fp.feature_blocks(["invalid_smiles"])
+def test_concatenator_feature_blocks_before_featurize_raises():
+    """feature_blocks must fail loudly rather than guess when featurize has not run yet."""
+    concat = FeatureConcatenator(
+        featurizers=[
+            {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp", "n_jobs": 1}},
+        ]
+    )
+    with pytest.raises(RuntimeError, match="featurize"):
+        concat.feature_blocks()

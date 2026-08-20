@@ -1,11 +1,17 @@
 """Combine features from multiple featurizers into a single feature array."""
 
-from collections.abc import Iterable
 from functools import reduce
 
 import numpy as np
 from numpy.typing import ArrayLike
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 
 from openadmet.models.features.feature_base import (
     FeaturizerBase,
@@ -68,6 +74,7 @@ class FeatureConcatenator(FeaturizerBase):
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"
     )
+    _cached_feature_blocks: list[tuple[str, int]] | None = PrivateAttr(default=None)
 
     @field_validator("featurizers", mode="before")
     @classmethod
@@ -130,14 +137,9 @@ class FeatureConcatenator(FeaturizerBase):
         # Sort the featurizers by class name so the block order is deterministic
         return sorted(processed_featurizers, key=lambda f: f.__class__.__name__)
 
-    def feature_blocks(self, probe: Iterable[str]) -> list[tuple[str, int]]:
+    def feature_blocks(self) -> list[tuple[str, int]]:
         """
-        Flatten the feature blocks of all child featurizers in concatenation order.
-
-        Parameters
-        ----------
-        probe : Iterable[str]
-            Input rows (e.g., SMILES) passed through to each child's probe.
+        Return the feature blocks recorded by the most recent ``featurize`` call.
 
         Returns
         -------
@@ -145,11 +147,17 @@ class FeatureConcatenator(FeaturizerBase):
             Pairs of (block key, feature width) covering the concatenated
             matrix in column order; nested concatenators are flattened.
 
+        Raises
+        ------
+        RuntimeError
+            If ``featurize`` has not been called yet.
+
         """
-        blocks: list[tuple[str, int]] = []
-        for feat in self.featurizers:
-            blocks.extend(feat.feature_blocks(probe))
-        return blocks
+        if self._cached_feature_blocks is None:
+            raise RuntimeError(
+                "feature_blocks() requires featurize() to have been called first."
+            )
+        return self._cached_feature_blocks
 
     def featurize(self, smiles: list[str]) -> np.ndarray:
         """
@@ -168,10 +176,20 @@ class FeatureConcatenator(FeaturizerBase):
         """
         features = []
         indices = []
+        blocks: list[tuple[str, int]] = []
         for feat in self.featurizers:
             feat_res, idx = feat.featurize(smiles)
             features.append(feat_res)
             indices.append(idx)
+
+            # A nested concatenator already flattened its own children's blocks;
+            # reuse them instead of collapsing them into one block for this key
+            if isinstance(feat, FeatureConcatenator):
+                blocks.extend(feat.feature_blocks())
+            else:
+                key = getattr(feat, "type", type(feat).__name__)
+                blocks.append((key, feat_res.shape[1]))
+        self._cached_feature_blocks = blocks
 
         return self.concatenate(features, indices)
 
