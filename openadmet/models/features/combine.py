@@ -72,19 +72,20 @@ class FeatureConcatenator(FeaturizerBase):
                 stacklevel=2,
             )
 
-            # Instantiate each featurizer from the dict
+            # Instantiate each featurizer from the dict; a bare `TypeName:` with
+            # no params parses as None, so treat it as an empty mapping
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
-                processed_featurizers.append(feat_class(**feat_params))
+                processed_featurizers.append(feat_class(**(feat_params or {})))
 
         # List path
         elif isinstance(value, list):
             for item in value:
-                # Already live featurizer instance, just append it
+                # Code path: featurizer instance, just append it
                 if isinstance(item, FeaturizerBase):
                     processed_featurizers.append(item)
 
-                # From YAML dict entry
+                # YAML path: dict entry
                 # Instantiate the featurizer from the type/params dict
                 elif isinstance(item, dict):
                     # Without `type` there is no registry key to resolve against
@@ -94,10 +95,6 @@ class FeatureConcatenator(FeaturizerBase):
                             f"wrappers, got keys: {list(item.keys())}."
                         )
 
-                    # Resolve directly rather than through FeatureSpec.to_class(),
-                    # which unwraps to this same call plus the deprecated
-                    # `random_state` alias. Entries carrying that alias lose the
-                    # seed until #596 moves the alias onto the classes themselves
                     feat_class = get_featurizer_class(item["type"])
                     processed_featurizers.append(
                         feat_class(**(item.get("params") or {}))
