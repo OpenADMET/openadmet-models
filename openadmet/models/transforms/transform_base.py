@@ -48,7 +48,7 @@ def get_transform_class(trans_type):
 class TransformBase(BaseModel, ABC):
     """Base class for transforms, allows for arbitrary transformation of feature data."""
 
-    # whether transform accepts the feature_blocks kwarg at fit time; the workflow
+    # Whether transform accepts the feature_blocks kwarg at fit time; the workflow
     # forwards feature_blocks only to transforms that declare this as True
     accepts_feature_blocks: ClassVar[bool] = False
 
