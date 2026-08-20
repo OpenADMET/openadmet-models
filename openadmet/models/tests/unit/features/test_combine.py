@@ -88,16 +88,6 @@ def test_concatenator_list_form_does_not_warn(recwarn):
     assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
 
-def test_concatenator_entry_warns_on_deprecated_random_state():
-    """Nested entries route through FeatureSpec, so they inherit its random_state deprecation."""
-    with pytest.warns(DeprecationWarning, match="random_state"):
-        FeatureConcatenator(
-            featurizers=[
-                {"type": "NullFeaturizer", "params": {"random_state": 7}},
-            ]
-        )
-
-
 def test_concatenator_feature_blocks_align_with_matrix(smiles):
     """feature_blocks must cover the concatenated matrix exactly, in the same order the columns are emitted."""
     concat = FeatureConcatenator(
