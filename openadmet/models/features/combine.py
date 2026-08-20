@@ -1,6 +1,7 @@
 """Combine features from multiple featurizers into a single feature array."""
 
 from functools import reduce
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -46,6 +47,8 @@ class FeatureConcatenator(FeaturizerBase):
         and cannot disambiguate same-class blocks.
 
     """
+
+    provides_feature_blocks: ClassVar[bool] = True
 
     featurizers: list[FeaturizerBase] = Field(
         ..., description="List of featurizers to concatenate"

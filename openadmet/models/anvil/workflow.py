@@ -351,7 +351,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             logger.info("Fitting transforms on train features")
             feature_blocks = (
                 self.feat.feature_blocks()
-                if hasattr(self.feat, "feature_blocks")
+                if getattr(self.feat, "provides_feature_blocks", False)
                 else None
             )
             X_train_feat = fit_transforms(
