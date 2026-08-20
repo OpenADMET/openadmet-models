@@ -4,14 +4,7 @@ from functools import reduce
 
 import numpy as np
 from numpy.typing import ArrayLike
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    PrivateAttr,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, PrivateAttr, field_validator
 
 from openadmet.models.features.feature_base import (
     FeaturizerBase,
@@ -20,41 +13,24 @@ from openadmet.models.features.feature_base import (
 )
 
 
-class FeaturizerEntry(BaseModel):
+def _parse_featurizer_entry(item: dict) -> tuple[str, dict]:
     """
-    A single featurizer entry from a list-form ``featurizers`` value.
+    Normalize a list-form featurizer entry to (type, params).
 
     Accepts either the AnvilSection-style wrapper (``{"type": ..., "params":
     {...}}``) or a single entry mapping the registry type directly to its
-    params (the shape used by each entry in the dict form), normalizing both
-    to the same ``type``/``params`` fields.
-
-    Attributes
-    ----------
-    type : str
-        Registry type of the featurizer to construct.
-    params : dict
-        Constructor parameters for the featurizer.
+    params (the shape used by each entry in the dict form).
 
     """
-
-    type: str
-    params: dict = Field(default_factory=dict)
-    model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce_single_key_form(cls, data):
-        """Rewrite a single-key {registry_type: params} mapping to type/params fields."""
-        if isinstance(data, dict) and "type" not in data:
-            if len(data) != 1:
-                raise ValueError(
-                    "Featurizer list entries must be {type: ..., params: ...} "
-                    f"wrappers or single-type entries, got keys: {list(data.keys())}."
-                )
-            ((feat_type, params),) = data.items()
-            return {"type": feat_type, "params": params or {}}
-        return data
+    if "type" in item:
+        return item["type"], item.get("params") or {}
+    if len(item) != 1:
+        raise ValueError(
+            "Featurizer list entries must be {type: ..., params: ...} "
+            f"wrappers or single-type entries, got keys: {list(item.keys())}."
+        )
+    ((feat_type, params),) = item.items()
+    return feat_type, params or {}
 
 
 @featurizers.register("FeatureConcatenator")
@@ -111,9 +87,9 @@ class FeatureConcatenator(FeaturizerBase):
                 if isinstance(item, FeaturizerBase):
                     processed_featurizers.append(item)
                 elif isinstance(item, dict):
-                    entry = FeaturizerEntry.model_validate(item)
-                    feat_class = get_featurizer_class(entry.type)
-                    processed_featurizers.append(feat_class(**entry.params))
+                    feat_type, feat_params = _parse_featurizer_entry(item)
+                    feat_class = get_featurizer_class(feat_type)
+                    processed_featurizers.append(feat_class(**feat_params))
                 else:
                     raise TypeError(
                         "Featurizer list entries must be featurizer instances or "
