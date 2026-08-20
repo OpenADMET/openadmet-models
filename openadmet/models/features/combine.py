@@ -59,6 +59,15 @@ class FeatureConcatenator(FeaturizerBase):
             List of featurizer instances, in the order given.
 
         """
+        # Reject a bare featurizer before anything else: pydantic models define
+        # __iter__, so one passed instead of a list would otherwise be coerced
+        # to an empty list and accepted as a concatenator over nothing
+        if isinstance(value, FeaturizerBase):
+            raise TypeError(
+                "`featurizers` takes a list of featurizers, not a single "
+                f"featurizer; wrap it as [{type(value).__name__}(...)]."
+            )
+
         # Container for live featurizers
         processed_featurizers = []
 
