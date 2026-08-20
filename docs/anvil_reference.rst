@@ -50,6 +50,7 @@ Many of these fields are purely descriptive and do not affect the workflow's exe
      version: v1
 
 **Parameters**
+
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -158,6 +159,7 @@ An example of using train, validation, and test resources:
      dropna: false
 
 **Parameters**
+
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -168,19 +170,19 @@ An example of using train, validation, and test resources:
    * - resource
      - str
      - Path to dataset file. Allowed filetypes: YAML, CSV, parquet.
-        Can also be a URL to a remote file.
-    * - train_resource
-      - Optional[str]
-      - Path to training dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
-    * - val_resource
-      - Optional[str]
-      - Path to validation dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
-    * - test_resource
-      - Optional[str]
-      - Path to test dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
+       Can also be a URL to a remote file.
+   * - train_resource
+     - Optional[str]
+     - Path to training dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
+   * - val_resource
+     - Optional[str]
+     - Path to validation dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
+   * - test_resource
+     - Optional[str]
+     - Path to test dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
    * - type
      - str, default: ``intake``
      - Loader type. Must be ``intake``. Uses the `Intake`_ data catalog
@@ -590,7 +592,7 @@ Note that cross-validation can be computationally expensive, especially for deep
     - Generates uncertainty plots.
 
 Example
-"""""""
+~~~~~~~
 .. code-block:: yaml
 
   report:
