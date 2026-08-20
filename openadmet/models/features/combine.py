@@ -40,7 +40,7 @@ class FeatureConcatenator(FeaturizerBase):
     @classmethod
     def validate_featurizers(cls, value):
         """
-        Validate and construct the list of featurizers.
+        Construct featurizer instances from the accepted input shapes.
 
         Accepts a list of featurizer instances, ``{type: ..., params: ...}``
         entries (the AnvilSection wrapper form, params optional), or a mix of
@@ -56,7 +56,7 @@ class FeatureConcatenator(FeaturizerBase):
         Returns
         -------
         list
-            Sorted list of featurizer instances.
+            List of featurizer instances, in the order given.
 
         """
         # Container for live featurizers
@@ -73,7 +73,7 @@ class FeatureConcatenator(FeaturizerBase):
             )
 
             # Instantiate each featurizer from the dict; a bare `TypeName:` with
-            # no params parses as None, so treat it as an empty mapping
+            # no params parses as None, so treat it as an empty mapping (`or {}`)
             for feat_type, feat_params in value.items():
                 feat_class = get_featurizer_class(feat_type)
                 processed_featurizers.append(feat_class(**(feat_params or {})))
@@ -95,23 +95,56 @@ class FeatureConcatenator(FeaturizerBase):
                             f"wrappers, got keys: {list(item.keys())}."
                         )
 
+                    # Get the class from the registry
                     feat_class = get_featurizer_class(item["type"])
+
+                    # Instantiate and append, same bare `TypeName:` with no params
+                    # applies, so treat it as an empty mapping (`or {}`)
                     processed_featurizers.append(
                         feat_class(**(item.get("params") or {}))
                     )
+
+                # Invalid type path
                 else:
                     raise TypeError(
                         "Featurizer list entries must be featurizer instances or "
                         f"dicts of type/params, got {type(item)}."
                     )
         else:
-            # Or raise an error if the type is unexpected
+            # Not a shape this validator builds from; hand it back for pydantic
+            # to check against the declared list[FeaturizerBase]
             return value
 
-        # Reject same-class duplicates up front: per-key transforms (e.g.
-        # per-block PCA) key blocks by featurizer name and cannot tell
-        # same-class blocks apart
-        names = [feat.__class__.__name__ for feat in processed_featurizers]
+        return processed_featurizers
+
+    @field_validator("featurizers", mode="after")
+    @classmethod
+    def reject_duplicates_and_sort(cls, value):
+        """
+        Reject same-class featurizers and fix the block order.
+
+        Runs on the validated list, so it holds for every input shape,
+        including sequences pydantic coerced to a list on its own.
+
+        Parameters
+        ----------
+        value : list of FeaturizerBase
+            The constructed featurizers, in the order given.
+
+        Returns
+        -------
+        list
+            The featurizers sorted by class name.
+
+        Raises
+        ------
+        ValueError
+            If two featurizers share a class.
+
+        """
+        # Per-key transforms (e.g. per-block PCA) key blocks by featurizer name
+        # and cannot tell same-class blocks apart
+        names = [feat.__class__.__name__ for feat in value]
         duplicates = sorted({name for name in names if names.count(name) > 1})
         if duplicates:
             raise ValueError(
@@ -119,8 +152,8 @@ class FeatureConcatenator(FeaturizerBase):
                 f"class: {duplicates}. Per-key transforms cannot disambiguate same-class blocks."
             )
 
-        # Sort the featurizers by class name so the block order is deterministic
-        return sorted(processed_featurizers, key=lambda f: f.__class__.__name__)
+        # Sort by class name so the block order is deterministic
+        return sorted(value, key=lambda f: f.__class__.__name__)
 
     def feature_blocks(self) -> list[tuple[str, int]]:
         """
