@@ -377,6 +377,7 @@ class PostHocComparison(ComparisonBase):
                             ]
 
                             # featurizers is a dict (legacy) or ordered list; normalize both to (type, params) pairs
+                            # See #595: this whole if/else collapses to just the list comprehension once the dict form is deprecated
                             if isinstance(featurizers, dict):
                                 feat_items = list(featurizers.items())
                             else:
