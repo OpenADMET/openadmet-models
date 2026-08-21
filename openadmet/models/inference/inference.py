@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Union
 
+import joblib
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -85,7 +86,6 @@ def load_anvil_model_and_metadata(model_dir):
                 f"transform file {saved_transform} was not found. Retraining the model "
                 "with the current code produces it."
             )
-        import joblib
 
         with open(saved_transform, "rb") as f:
             transform_payload = joblib.load(f)

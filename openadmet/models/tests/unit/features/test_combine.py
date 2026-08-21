@@ -74,6 +74,25 @@ def test_concatenator_rejects_entry_without_type(entry):
         FeatureConcatenator(featurizers=[entry])
 
 
+@pytest.mark.parametrize(
+    "featurizers, match",
+    [
+        pytest.param(
+            NullFeaturizer(n_jobs=1), "not a single featurizer", id="bare_instance"
+        ),
+        pytest.param([NullFeaturizer(n_jobs=1), 42], "got .*int", id="bad_entry_type"),
+    ],
+)
+def test_concatenator_rejects_malformed_input_as_validation_error(featurizers, match):
+    """Malformed input must surface as ValidationError, not an unwrapped TypeError.
+
+    A bare featurizer is the case worth naming: pydantic models are iterable, so
+    without the guard one would coerce to an empty list rather than fail.
+    """
+    with pytest.raises(ValidationError, match=match):
+        FeatureConcatenator(featurizers=featurizers)
+
+
 # The dict case only cares about the length check here; its deprecation warning
 # is asserted by test_concatenator_dict_form_still_constructs
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")

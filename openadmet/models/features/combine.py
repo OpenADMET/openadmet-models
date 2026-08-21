@@ -84,7 +84,7 @@ class FeatureConcatenator(FeaturizerBase):
         # __iter__, so one passed instead of a list would otherwise be coerced
         # to an empty list and accepted as a concatenator over nothing
         if isinstance(value, FeaturizerBase):
-            raise TypeError(
+            raise ValueError(
                 "`featurizers` takes a list of featurizers, not a single "
                 f"featurizer; wrap it as [{type(value).__name__}(...)]."
             )
@@ -136,7 +136,7 @@ class FeatureConcatenator(FeaturizerBase):
 
                 # Invalid type path
                 else:
-                    raise TypeError(
+                    raise ValueError(
                         "Featurizer list entries must be featurizer instances or "
                         f"dicts of type/params, got {type(item)}."
                     )
