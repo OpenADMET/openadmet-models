@@ -67,6 +67,13 @@ def test_pca_fit_sees_train_rows_only(train_features):
     )
     assert pca_a.n_features_in_ == stop_a - start_a
 
+    # Applying the transform to held-out rows must not refit it; the loadings
+    # stay exactly those learned on train
+    fitted_mean = pca_a.mean_.copy()
+    held_out = np.random.default_rng(99).normal(size=(15, 20)) + 100.0
+    transform.transform(held_out)
+    np.testing.assert_array_equal(pca_a.mean_, fitted_mean)
+
 
 def test_pca_impute_strategy_matches_reference(train_features):
     """NaN handling must match a hand-built (SimpleImputer, PCA) pipeline at the same strategy and seed."""
@@ -138,47 +145,51 @@ def test_pca_rejects_invalid_n_components(value, match):
         PCATransform(n_components=value)
 
 
-def test_pca_dict_without_blocks_raises(train_features):
-    """Per-block PCA without feature_blocks must fail loudly instead of guessing."""
-    transform = PCATransform(n_components={"A": 2})
-    with pytest.raises(ValueError, match="requires feature_blocks"):
-        transform.fit(train_features)
-
-
-def test_pca_dict_key_mismatch_raises(train_features):
-    """n_components keys must match the block keys exactly in both directions."""
-    transform = PCATransform(n_components={"A": 2, "C": 3})
-    with pytest.raises(ValueError, match="keys must exactly match"):
-        transform.fit(train_features, feature_blocks=[("A", 10), ("B", 10)])
-
-    transform_missing = PCATransform(n_components={"A": 2})
-    with pytest.raises(ValueError, match="keys must exactly match"):
-        transform_missing.fit(train_features, feature_blocks=[("A", 10), ("B", 10)])
-
-
-def test_pca_duplicate_block_keys_raise(train_features):
-    """Duplicate block keys are ambiguous and must be rejected."""
-    transform = PCATransform(n_components={"A": 2, "B": 2})
-    with pytest.raises(ValueError, match="Duplicate feature block keys"):
-        transform.fit(train_features, feature_blocks=[("A", 10), ("A", 10)])
-
-
-def test_pca_fit_width_mismatch_raises(train_features):
-    """Blocks that do not cover the input width (e.g. behind a width-changing transform) must be rejected."""
-    transform = PCATransform(n_components={"A": 2, "B": 2})
-    with pytest.raises(ValueError, match="widths sum to 40 but the input has 20"):
-        transform.fit(train_features, feature_blocks=[("A", 20), ("B", 20)])
-
-
-def test_pca_dims_at_or_above_block_rank_raises(train_features):
-    """Component counts must stay below min(train rows, block width)."""
-    transform = PCATransform(n_components={"A": 10, "B": 2})
-    with pytest.raises(ValueError, match="must be smaller than min"):
-        transform.fit(train_features, feature_blocks=[("A", 10), ("B", 10)])
-
-    transform_int = PCATransform(n_components=20)
-    with pytest.raises(ValueError, match="must be smaller than min"):
-        transform_int.fit(train_features)
+# train_features is (60, 20), so a valid two-block layout is 10 + 10 columns
+@pytest.mark.parametrize(
+    "n_components, blocks, match",
+    [
+        pytest.param({"A": 2}, None, "requires feature_blocks", id="blocks_absent"),
+        pytest.param(
+            {"A": 2, "C": 3},
+            [("A", 10), ("B", 10)],
+            "keys must exactly match",
+            id="key_typo",
+        ),
+        pytest.param(
+            {"A": 2},
+            [("A", 10), ("B", 10)],
+            "keys must exactly match",
+            id="key_omitted",
+        ),
+        pytest.param(
+            {"A": 2, "B": 2},
+            [("A", 10), ("A", 10)],
+            "Duplicate feature block keys",
+            id="duplicate_keys",
+        ),
+        pytest.param(
+            {"A": 2, "B": 2},
+            [("A", 20), ("B", 20)],
+            "widths sum to 40 but the input has 20",
+            id="widths_overshoot",
+        ),
+        pytest.param(
+            {"A": 10, "B": 2},
+            [("A", 10), ("B", 10)],
+            "must be smaller than min",
+            id="dims_at_block_rank",
+        ),
+        pytest.param(20, None, "must be smaller than min", id="dims_at_matrix_rank"),
+    ],
+)
+def test_pca_fit_rejects_invalid_block_layout(
+    train_features, n_components, blocks, match
+):
+    """Fit must reject every way the block layout can disagree with n_components or the matrix."""
+    transform = PCATransform(n_components=n_components)
+    with pytest.raises(ValueError, match=match):
+        transform.fit(train_features, feature_blocks=blocks)
 
 
 def test_pca_transform_rejects_1d_input(train_features):

@@ -109,8 +109,10 @@ def to_transform_list(
         The transforms as a list, in application order.
 
     """
+    # A bare transform is itself the whole sequence
     if isinstance(transform, TransformBase):
         return [transform]
+
     return list(transform)
 
 
@@ -144,12 +146,19 @@ def fit_transforms(
 
     """
     current = np.asarray(X)
+
     for step in to_transform_list(transform):
+        # Only block-aware transforms take the layout; passing it to the rest
+        # would break their fit signature
         if getattr(step, "accepts_feature_blocks", False):
             step.fit(current, feature_blocks=feature_blocks)
         else:
             step.fit(current)
+
+        # Feed this element's output to the next one, so each fits on what it
+        # will actually see rather than on the raw features
         current = step.transform(current)
+
     return current
 
 

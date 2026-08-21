@@ -70,19 +70,26 @@ class PCATransform(TransformBase):
     @classmethod
     def validate_n_components(cls, value):
         """Validate that component counts are positive ints, globally or per block."""
+        # Int form: one PCA over the whole matrix
         if isinstance(value, int):
             if value < 1:
                 raise ValueError(f"n_components must be >= 1, got {value}.")
+
             return value
+
+        # Dict form: one PCA per block, so every entry needs its own count
         if isinstance(value, dict):
             if not value:
                 raise ValueError("n_components dict must have at least one entry.")
+
             for key, dims in value.items():
                 if not isinstance(dims, int) or dims < 1:
                     raise ValueError(
                         f"n_components for block '{key}' must be an int >= 1, got {dims}."
                     )
+
             return value
+
         raise TypeError(
             f"n_components must be an int or a dict of block keys to ints, got {type(value)}."
         )
@@ -106,9 +113,14 @@ class PCATransform(TransformBase):
     def _build_pipeline(self, dims: int) -> Pipeline:
         """Build the (optional imputer plus) PCA pipeline for one block."""
         steps = []
+
+        # Imputation runs inside the pipeline so it is fitted on train rows only,
+        # the same as the PCA that follows it
         if self.impute_strategy != "none":
             steps.append(("impute", SimpleImputer(strategy=self.impute_strategy)))
+
         steps.append(("pca", PCA(n_components=dims, random_state=self.random_seed)))
+
         return Pipeline(steps)
 
     def _check_2d(self, X: np.ndarray) -> None:
@@ -146,6 +158,8 @@ class PCATransform(TransformBase):
             the n_components keys.
 
         """
+        # Without a layout there is no way to know where one block ends and the
+        # next begins, and guessing would silently misalign the columns
         if feature_blocks is None:
             raise ValueError(
                 "Per-block n_components requires feature_blocks describing the "
@@ -153,6 +167,8 @@ class PCATransform(TransformBase):
                 "PCATransform first among width-changing transforms, or use an "
                 "int n_components for a single PCA over the whole matrix."
             )
+
+        # Blocks are addressed by key, so a repeated key is ambiguous
         keys = [key for key, _ in feature_blocks]
         duplicates = sorted({key for key in keys if keys.count(key) > 1})
         if duplicates:
@@ -160,6 +176,9 @@ class PCATransform(TransformBase):
                 f"Duplicate feature block keys: {duplicates}. Featurizer blocks "
                 "must be uniquely keyed for per-block PCA."
             )
+
+        # The blocks must tile the matrix exactly; a short or long sum means the
+        # layout describes a different matrix than the one being fitted
         total = sum(width for _, width in feature_blocks)
         if total != n_features:
             raise ValueError(
@@ -168,10 +187,15 @@ class PCATransform(TransformBase):
                 "layout, so a width-changing transform earlier in the sequence "
                 "requires an int n_components here."
             )
+
+        # Every block needs a component count and every count needs a block; the
+        # workflow runs this same comparison up front, this is the backstop for
+        # transforms fitted outside a workflow
         requested = self.required_block_keys()
         available = set(keys)
         missing = sorted(requested - available)
         unexpected = sorted(available - requested)
+
         if missing or unexpected:
             raise ValueError(
                 "n_components keys must exactly match the feature block keys. "
@@ -212,11 +236,14 @@ class PCATransform(TransformBase):
         self._check_2d(X)
         n_samples, n_features = X.shape
 
+        # Per-block form: walk the blocks in column order, fitting one PCA each
         if isinstance(self.n_components, dict):
             blocks = self._validate_blocks(feature_blocks, n_features)
             fitted_blocks = []
             cursor = 0
+
             for key, width in blocks:
+                # A block cannot yield more components than its own rank
                 dims = self.n_components[key]
                 if dims >= min(n_samples, width):
                     raise ValueError(
@@ -224,9 +251,14 @@ class PCATransform(TransformBase):
                         f"smaller than min(train rows, block width) = "
                         f"min({n_samples}, {width})."
                     )
+
+                # Record the column span alongside the pipeline so transform can
+                # slice the same way without recomputing the layout
                 pipeline = self._build_pipeline(dims).fit(X[:, cursor : cursor + width])
                 fitted_blocks.append((key, cursor, cursor + width, pipeline))
                 cursor += width
+
+        # Int form: a single PCA spanning every column, recorded as one block
         else:
             dims = self.n_components
             if dims >= min(n_samples, n_features):
@@ -237,7 +269,9 @@ class PCATransform(TransformBase):
             pipeline = self._build_pipeline(dims).fit(X)
             fitted_blocks = [(None, 0, n_features, pipeline)]
 
+        # A None key marks the whole-matrix case, which no block key can address
         self._pca_blocks = fitted_blocks
+
         return self
 
     def transform(self, X: np.ndarray, *args, **kwargs) -> np.ndarray:
@@ -271,8 +305,10 @@ class PCATransform(TransformBase):
             )
         X = np.asarray(X)
         self._check_2d(X)
+
         # Fit-time and transform-time matrices must share the exact column
-        # layout; a mismatch means silently truncated or misaligned blocks
+        # layout; a mismatch means silently truncated or misaligned blocks.
+        # The last block's stop column is the full fitted width
         expected_width = self._pca_blocks[-1][2]
         if X.shape[1] != expected_width:
             raise ValueError(
@@ -280,8 +316,11 @@ class PCATransform(TransformBase):
                 f"expects {expected_width}. The transform assumes the same "
                 "column layout at transform time as at fit time."
             )
+        # Project each block through its own fitted pipeline, then lay the
+        # results back out side by side in the original block order
         outputs = [
             pipeline.transform(X[:, start:stop])
             for (_, start, stop, pipeline) in self._pca_blocks
         ]
+
         return np.concatenate(outputs, axis=1)

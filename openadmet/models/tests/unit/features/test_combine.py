@@ -74,27 +74,22 @@ def test_concatenator_rejects_entry_without_type(entry):
         FeatureConcatenator(featurizers=[entry])
 
 
+# The dict case only cares about the length check here; its deprecation warning
+# is asserted by test_concatenator_dict_form_still_constructs
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 @pytest.mark.parametrize(
     "featurizers",
     [
         pytest.param([], id="empty_list"),
         pytest.param([{"type": "NullFeaturizer"}], id="single_entry"),
         pytest.param([NullFeaturizer(n_jobs=1)], id="single_instance"),
+        pytest.param({"NullFeaturizer": {}}, id="single_dict_key"),
     ],
 )
 def test_concatenator_requires_two_featurizers(featurizers):
-    """Concatenating fewer than two featurizers is a no-op and must be rejected."""
+    """Concatenating fewer than two featurizers is a no-op and must be rejected, whatever the input shape."""
     with pytest.raises(ValidationError, match="at least 2 items"):
         FeatureConcatenator(featurizers=featurizers)
-
-
-def test_concatenator_dict_form_requires_two_featurizers():
-    """The two-featurizer minimum must hold for the deprecated dict form too."""
-    with (
-        pytest.warns(DeprecationWarning),
-        pytest.raises(ValidationError, match="at least 2 items"),
-    ):
-        FeatureConcatenator(featurizers={"NullFeaturizer": {}})
 
 
 def test_concatenator_dict_form_still_constructs():
@@ -177,10 +172,17 @@ def test_concatenator_nested_feature_blocks_flatten(smiles):
     feats, _ = outer.featurize(smiles)
     blocks = outer.feature_blocks()
 
+    # Two featurizers, but three blocks: the nested concatenator contributes its
+    # children rather than one block for itself
+    assert len(outer.featurizers) == 2
     keys = [key for key, _ in blocks]
     assert keys == ["DescriptorFeaturizer", "FingerprintFeaturizer", "NullFeaturizer"]
     assert sum(width for _, width in blocks) == feats.shape[1]
     assert blocks[2] == ("NullFeaturizer", 1)
+
+    # The static accessor must agree with what featurize actually emitted, since
+    # the workflow checks per-block transform keys against it before featurizing
+    assert outer.feature_block_keys() == keys
 
 
 def test_concatenator_feature_blocks_before_featurize_raises():

@@ -22,7 +22,6 @@ from openadmet.models.drivers import DriverType
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
-from openadmet.models.features.null_featurizer import NullFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
 from openadmet.models.split.sklearn import ShuffleSplitter
 from openadmet.models.trainer.lightning import LightningTrainer
@@ -601,13 +600,20 @@ def concat_feat():
     )
 
 
-def test_workflow_accepts_matching_block_keys(metadata, data_spec, concat_feat):
-    """Per-block keys matching the concatenator's blocks must construct."""
-    transform = [
-        PCATransform(
-            n_components={"FingerprintFeaturizer": 8, "DescriptorFeaturizer": 4}
-        )
-    ]
+@pytest.mark.parametrize(
+    "n_components",
+    [
+        pytest.param(
+            {"FingerprintFeaturizer": 8, "DescriptorFeaturizer": 4}, id="per_block"
+        ),
+        pytest.param(2, id="whole_matrix"),
+    ],
+)
+def test_workflow_accepts_valid_block_config(
+    metadata, data_spec, concat_feat, n_components
+):
+    """Keys matching the concatenator's blocks must construct, as must an int that imposes no layout."""
+    transform = [PCATransform(n_components=n_components)]
     wf = _make_anvil_workflow(metadata, data_spec, concat_feat, transform=transform)
     assert wf.transform == transform
 
@@ -628,7 +634,7 @@ def test_workflow_accepts_matching_block_keys(metadata, data_spec, concat_feat):
 def test_workflow_rejects_block_key_mismatch(
     metadata, data_spec, concat_feat, n_components
 ):
-    """A mistyped or omitted block key must fail at construction, before any featurization."""
+    """A mistyped, omitted, or extra block key must fail at construction, before any featurization."""
     with pytest.raises(ValueError, match="must exactly match the featurizer's blocks"):
         _make_anvil_workflow(
             metadata,
@@ -649,34 +655,3 @@ def test_workflow_rejects_per_block_transform_without_blocks(
             sklearn_feat,
             transform=[PCATransform(n_components={"FingerprintFeaturizer": 8})],
         )
-
-
-def test_workflow_accepts_whole_matrix_pca_with_concatenator(
-    metadata, data_spec, concat_feat
-):
-    """An int n_components imposes no block layout, so it must pass the block check."""
-    wf = _make_anvil_workflow(
-        metadata, data_spec, concat_feat, transform=[PCATransform(n_components=2)]
-    )
-    assert wf.transform[0].required_block_keys() is None
-
-
-def test_nested_concatenator_block_keys_flatten():
-    """A nested concatenator contributes its children's keys, so N featurizers can yield more than N blocks."""
-    outer = FeatureConcatenator(
-        featurizers=[
-            FeatureConcatenator(
-                featurizers=[
-                    FingerprintFeaturizer(fp_type="ecfp:4"),
-                    DescriptorFeaturizer(descr_type="desc2d"),
-                ]
-            ),
-            NullFeaturizer(n_jobs=1),
-        ]
-    )
-    assert len(outer.featurizers) == 2
-    assert outer.feature_block_keys() == [
-        "DescriptorFeaturizer",
-        "FingerprintFeaturizer",
-        "NullFeaturizer",
-    ]
