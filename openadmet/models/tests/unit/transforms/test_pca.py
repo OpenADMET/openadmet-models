@@ -54,6 +54,24 @@ def test_pca_dict_transform_matches_reference(train_features):
     assert out.shape == (60, 7)
 
 
+@pytest.mark.parametrize(
+    "n_components, blocks",
+    [
+        pytest.param(20, None, id="whole_matrix_at_rank"),
+        pytest.param({"A": 10, "B": 10}, [("A", 10), ("B", 10)], id="blocks_at_rank"),
+    ],
+)
+def test_pca_accepts_component_counts_at_full_rank(
+    train_features, n_components, blocks
+):
+    """A count equal to the rank must be accepted, matching sklearn's own upper bound."""
+    transform = PCATransform(n_components=n_components, random_seed=42)
+
+    out = transform.fit(train_features, feature_blocks=blocks).transform(train_features)
+
+    assert out.shape == (60, 20)
+
+
 def test_pca_fit_sees_train_rows_only(train_features):
     """Fitted statistics must come from the train matrix only, not from rows seen at transform time."""
     blocks = [("A", 10), ("B", 10)]
@@ -175,12 +193,12 @@ def test_pca_rejects_invalid_n_components(value, match):
             id="widths_overshoot",
         ),
         pytest.param(
-            {"A": 10, "B": 2},
+            {"A": 11, "B": 2},
             [("A", 10), ("B", 10)],
-            "must be smaller than min",
-            id="dims_at_block_rank",
+            "must be at most min",
+            id="dims_above_block_rank",
         ),
-        pytest.param(20, None, "must be smaller than min", id="dims_at_matrix_rank"),
+        pytest.param(21, None, "must be at most min", id="dims_above_matrix_rank"),
     ],
 )
 def test_pca_fit_rejects_invalid_block_layout(
