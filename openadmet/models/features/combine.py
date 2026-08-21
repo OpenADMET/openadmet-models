@@ -15,6 +15,24 @@ from openadmet.models.features.feature_base import (
 )
 
 
+def _block_key(feat: FeaturizerBase) -> str:
+    """
+    Return the feature block key for a single featurizer.
+
+    Parameters
+    ----------
+    feat : FeaturizerBase
+        The featurizer whose block key is wanted.
+
+    Returns
+    -------
+    str
+        The featurizer's registry type, falling back to its class name.
+
+    """
+    return getattr(feat, "type", type(feat).__name__)
+
+
 @featurizers.register("FeatureConcatenator")
 class FeatureConcatenator(FeaturizerBase):
     """
@@ -167,6 +185,32 @@ class FeatureConcatenator(FeaturizerBase):
         # Sort by class name so the block order is deterministic
         return sorted(value, key=lambda f: f.__class__.__name__)
 
+    def feature_block_keys(self) -> list[str]:
+        """
+        Return the feature block keys without featurizing.
+
+        Block widths are only knowable once ``featurize`` has run, but the keys
+        come from the featurizer types alone, so they are available at
+        construction time and can be checked against a transform's per-block
+        configuration before any data is loaded.
+
+        Returns
+        -------
+        list of str
+            Block keys in the order ``feature_blocks`` will report them;
+            nested concatenators are flattened the same way.
+
+        """
+        keys: list[str] = []
+        for feat in self.featurizers:
+            # A nested concatenator contributes its children's keys, not one key
+            # for itself, matching how featurize flattens the block list
+            if isinstance(feat, FeatureConcatenator):
+                keys.extend(feat.feature_block_keys())
+            else:
+                keys.append(_block_key(feat))
+        return keys
+
     def feature_blocks(self) -> list[tuple[str, int]]:
         """
         Return the feature blocks recorded by the most recent ``featurize`` call.
@@ -217,8 +261,7 @@ class FeatureConcatenator(FeaturizerBase):
             if isinstance(feat, FeatureConcatenator):
                 blocks.extend(feat.feature_blocks())
             else:
-                key = getattr(feat, "type", type(feat).__name__)
-                blocks.append((key, feat_res.shape[1]))
+                blocks.append((_block_key(feat), feat_res.shape[1]))
         self._cached_feature_blocks = blocks
 
         return self.concatenate(features, indices)

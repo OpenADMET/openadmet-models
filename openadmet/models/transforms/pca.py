@@ -87,6 +87,22 @@ class PCATransform(TransformBase):
             f"n_components must be an int or a dict of block keys to ints, got {type(value)}."
         )
 
+    def required_block_keys(self) -> set[str] | None:
+        """
+        Return the block keys the per-block form is configured against.
+
+        Returns
+        -------
+        set of str or None
+            The ``n_components`` keys for the dict form, or None for the int
+            form, which fits one PCA over the whole matrix and so needs no
+            particular block layout.
+
+        """
+        if isinstance(self.n_components, dict):
+            return set(self.n_components)
+        return None
+
     def _build_pipeline(self, dims: int) -> Pipeline:
         """Build the (optional imputer plus) PCA pipeline for one block."""
         steps = []
@@ -152,7 +168,7 @@ class PCATransform(TransformBase):
                 "layout, so a width-changing transform earlier in the sequence "
                 "requires an int n_components here."
             )
-        requested = set(self.n_components)
+        requested = self.required_block_keys()
         available = set(keys)
         missing = sorted(requested - available)
         unexpected = sorted(available - requested)

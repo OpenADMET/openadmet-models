@@ -82,6 +82,57 @@ class AnvilWorkflowBase(BaseModel):
     debug: bool = False
     resolved_output_dir: Path | None = None
 
+    @model_validator(mode="after")
+    def check_transform_block_keys(self):
+        """
+        Check per-block transforms against the featurizer's block layout.
+
+        A transform configured per block (e.g. PCATransform with a dict
+        ``n_components``) is keyed by featurizer block name. Those keys come
+        from the featurizer types alone, so a mismatch is knowable here rather
+        than at fit time, which is after the whole featurization pass has run.
+
+        Raises
+        ------
+        ValueError
+            If a per-block transform is paired with a featurizer that emits no
+            blocks, or if its keys do not match the featurizer's block keys.
+
+        """
+        if self.transform is None:
+            return self
+
+        # Only a block-providing featurizer can name its blocks up front; for
+        # anything else the fit-time check remains the only backstop
+        provides = getattr(self.feat, "provides_feature_blocks", False)
+        available = set(self.feat.feature_block_keys()) if provides else set()
+
+        for step in self.transform:
+            # Layout-agnostic transforms impose no constraint on the blocks
+            required = step.required_block_keys()
+            if required is None:
+                continue
+
+            name = type(step).__name__
+            if not provides:
+                raise ValueError(
+                    f"{name} is configured per feature block, but "
+                    f"{type(self.feat).__name__} does not emit feature blocks. Use a "
+                    "FeatureConcatenator, or configure the transform over the whole "
+                    "feature matrix instead."
+                )
+
+            missing = sorted(required - available)
+            unexpected = sorted(available - required)
+            if missing or unexpected:
+                raise ValueError(
+                    f"{name} block keys must exactly match the featurizer's blocks. "
+                    f"blocks: {sorted(available)}; configured: {sorted(required)}; "
+                    f"missing: {missing}; unexpected: {unexpected}."
+                )
+
+        return self
+
     @abstractmethod
     def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any:
         """

@@ -52,6 +52,23 @@ class TransformBase(BaseModel, ABC):
     # forwards feature_blocks only to transforms that declare this as True
     accepts_feature_blocks: ClassVar[bool] = False
 
+    def required_block_keys(self) -> set[str] | None:
+        """
+        Return the block keys this transform is configured against.
+
+        Lets the workflow check a per-block configuration against the
+        featurizer's block layout before any data is featurized. The default
+        is None, meaning the transform is not configured per block and imposes
+        no constraint on the layout.
+
+        Returns
+        -------
+        set of str or None
+            The required block keys, or None if the transform is layout-agnostic.
+
+        """
+        return None
+
     @abstractmethod
     def transform(self, X: np.ndarray, *args, **kwargs):
         """
