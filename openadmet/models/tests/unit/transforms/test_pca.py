@@ -192,6 +192,21 @@ def test_pca_fit_rejects_invalid_block_layout(
         transform.fit(train_features, feature_blocks=blocks)
 
 
+def test_pca_default_seed_is_reproducible_under_randomized_solver():
+    """Two default-constructed transforms must agree where sklearn picks the randomized solver.
+
+    train_features is small enough that sklearn uses the deterministic full
+    solver, which hides an unseeded solver entirely. A wide matrix with a large
+    reduction, as in per-block fingerprint PCA, is where the seed matters.
+    """
+    X = np.random.default_rng(0).normal(size=(600, 100))
+    assert PCATransform.model_fields["random_seed"].default == 42
+
+    first = PCATransform(n_components=50).fit(X).transform(X)
+    second = PCATransform(n_components=50).fit(X).transform(X)
+    np.testing.assert_array_equal(first, second)
+
+
 def test_pca_transform_rejects_1d_input(train_features):
     """A 1D input must be rejected with a clear shape error."""
     transform = PCATransform(n_components=2)
