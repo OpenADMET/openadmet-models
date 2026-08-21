@@ -11,6 +11,7 @@ import yaml
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
+from openadmet.models.transforms.transform_base import transform_features
 
 
 @featurizers.register("TrainedModelFeaturizer")
@@ -63,8 +64,8 @@ class TrainedModelFeaturizer(FeaturizerBase):
     )
     accelerator: str = "cpu"
 
-    # Loaded on first featurize and reused; holds (model, featurizer, metadata,
-    # data spec) so repeated partitions do not deserialize the model again
+    # Loaded on first featurize and reused; holds (model, featurizer, transform,
+    # metadata, data spec) so repeated partitions do not deserialize the model again
     _loaded: tuple | None = PrivateAttr(default=None)
 
     @field_validator("model_dir")
@@ -178,7 +179,8 @@ class TrainedModelFeaturizer(FeaturizerBase):
         Returns
         -------
         tuple
-            The loaded (model, featurizer, metadata, data spec).
+            The loaded (model, featurizer, fitted transform, metadata, data
+            spec). The transform is None when the model was trained without one.
 
         """
         if self._loaded is None:
@@ -188,7 +190,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
                 load_anvil_model_and_metadata,
             )
 
-            model, feat, metadata, data_spec = load_anvil_model_and_metadata(
+            model, feat, transform, metadata, data_spec = load_anvil_model_and_metadata(
                 self.model_dir
             )
 
@@ -198,7 +200,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
             if hasattr(feat, "shuffle"):
                 feat.shuffle = False
 
-            self._loaded = (model, feat, metadata, data_spec)
+            self._loaded = (model, feat, transform, metadata, data_spec)
 
         return self._loaded
 
@@ -219,12 +221,17 @@ class TrainedModelFeaturizer(FeaturizerBase):
             in the input that the pretrained model's featurizer kept.
 
         """
-        model, feat, _, _ = self._load()
+        model, feat, transform, _, _ = self._load()
 
         # The pretrained model owns its featurization, so it consumes SMILES and
         # reports which of them it managed to featurize
         feat_data = feat.featurize(smiles)
         X_feat, indices = feat_data[0], feat_data[1]
+
+        # The model was fitted on transformed features, so reproduce the
+        # train-time transform sequence before asking it to predict
+        if transform is not None:
+            X_feat = transform_features(transform, X_feat)
 
         # A model reports its spread only on request, and only an ensemble has
         # one; the validator has already established that pairing is possible
