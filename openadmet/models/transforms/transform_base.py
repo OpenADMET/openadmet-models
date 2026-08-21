@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
@@ -83,10 +82,6 @@ def check_block_keys(required: set[str], available: set[str], subject: str) -> N
 class TransformBase(BaseModel, ABC):
     """Base class for transforms, allows for arbitrary transformation of feature data."""
 
-    # Whether transform accepts the feature_blocks kwarg at fit time; the workflow
-    # forwards feature_blocks only to transforms that declare this as True
-    accepts_feature_blocks: ClassVar[bool] = False
-
     def required_block_keys(self) -> set[str] | None:
         """
         Return the block keys this transform is configured against, or None if layout-agnostic.
@@ -159,10 +154,10 @@ def fit_transforms(
     """
     Fit a transform sequence on X and return the transformed result.
 
-    Each transform must implement fit; stateless transforms define a no-op.
-    Elements are fit in order, each on the previous element's output, so
-    statistics are computed on the train data only. ``feature_blocks`` is
-    forwarded only to elements that declare ``accepts_feature_blocks``.
+    Each transform must implement fit, accepting ``feature_blocks`` as a
+    keyword argument even if it ignores the layout; stateless transforms define
+    a no-op. Elements are fit in order, each on the previous element's output,
+    so statistics are computed on the train data only.
 
     Parameters
     ----------
@@ -171,8 +166,8 @@ def fit_transforms(
     X : np.ndarray
         Train feature matrix.
     feature_blocks : list of tuple, optional
-        Pairs of (block key, block width) in column order, forwarded to
-        transforms that accept it.
+        Pairs of (block key, block width) in column order, forwarded to every
+        transform in the sequence.
 
     Returns
     -------
@@ -183,12 +178,9 @@ def fit_transforms(
     current = np.asarray(X)
 
     for step in to_transform_list(transform):
-        # Only block-aware transforms take the layout; passing it to the rest
-        # would break their fit signature
-        if getattr(step, "accepts_feature_blocks", False):
-            step.fit(current, feature_blocks=feature_blocks)
-        else:
-            step.fit(current)
+        # Every transform takes the layout; those that do not use it ignore the
+        # kwarg, so a transform that needs it can never be silently starved of it
+        step.fit(current, feature_blocks=feature_blocks)
 
         # Feed this element's output to the next one, so each fits on what it
         # will actually see rather than on the raw features

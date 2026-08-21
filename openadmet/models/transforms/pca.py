@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal
+from typing import Literal
 
 import numpy as np
 from pydantic import Field, PrivateAttr, field_validator
@@ -66,8 +66,6 @@ class PCATransform(TransformBase):
         "none"  # PCA cannot see NaN, so imputation runs ahead of it per block
     )
     random_seed: int | None = 42
-    # The workflow forwards feature_blocks only to transforms that declare this
-    accepts_feature_blocks: ClassVar[bool] = True
 
     # Fitted state: list of (block key, start col, end col, fitted pipeline) in
     # column order; the key is None for the single-PCA case over the whole matrix
