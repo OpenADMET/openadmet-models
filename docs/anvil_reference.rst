@@ -262,7 +262,8 @@ For example, featurization for a traditional machine learning model using finger
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
 2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
-``feat`` section itself.
+``feat`` section itself. At least two are required, and no two may be of the same type: blocks are addressed by
+featurizer name, so same-type entries could not be told apart.
 
 .. code-block:: yaml
 
@@ -329,7 +330,9 @@ Example: reduce a fingerprint featurizer to 256 PCA components before training.
 
 Per-block PCA: give ``n_components`` as a mapping from featurizer name to component count. Each featurizer in the
 ``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation step ahead of
-them.
+them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is reported when
+the workflow is built, before any featurization runs. Note that a nested ``FeatureConcatenator`` contributes its
+children's blocks rather than one block of its own, so give a key per leaf featurizer.
 
 .. code-block:: yaml
 
