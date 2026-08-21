@@ -15,6 +15,7 @@ _MODELS = [
     "openadmet.models.architecture.nepare",
     "openadmet.models.architecture.rf",
     "openadmet.models.architecture.svm",
+    "openadmet.models.architecture.tabicl",
     "openadmet.models.architecture.tabpfn",
     "openadmet.models.architecture.xgboost",
 ]

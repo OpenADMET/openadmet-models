@@ -45,6 +45,7 @@ dependencies:
     - boto3
     - email-validator
     - phx-class-registry
+    - tabicl
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
     - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
