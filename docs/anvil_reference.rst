@@ -358,6 +358,35 @@ children's blocks rather than one block of its own, so give a key per leaf featu
             DescriptorFeaturizer: 32
           random_seed: 42
 
+Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
+reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would
+rotate them into linear combinations and a full-rank entry would do so without reducing the width at all. Passthrough is
+stated rather than obtained by omitting the key, so the exact-match check still catches a mistyped block name.
+
+.. code-block:: yaml
+
+  procedure:
+    feat:
+      type: FeatureConcatenator
+      params:
+        featurizers:
+          - type: FingerprintFeaturizer
+            params:
+              fp_type: "ecfp:4"
+          - type: DescriptorFeaturizer
+            params:
+              descr_type: desc2d
+    transform:
+      - type: ImputeTransform
+        params:
+          strategy: median
+      - type: PCATransform
+        params:
+          n_components:
+            FingerprintFeaturizer: 256
+            DescriptorFeaturizer: null
+          random_seed: 42
+
 Model
 ~~~~~
 The ``model`` section specifies the model to be used in the workflow.
