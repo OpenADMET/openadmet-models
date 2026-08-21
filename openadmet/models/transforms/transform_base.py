@@ -89,12 +89,12 @@ class TransformBase(BaseModel, ABC):
 
     def required_block_keys(self) -> set[str] | None:
         """
-        Return the block keys this transform is configured against.
+        Return the block keys this transform is configured against, or None if layout-agnostic.
 
         Lets the workflow check a per-block configuration against the
-        featurizer's block layout before any data is featurized. The default
-        is None, meaning the transform is not configured per block and imposes
-        no constraint on the layout.
+        featurizer's block layout before any data is featurized. Transforms
+        that are not configured per block inherit the default and so impose no
+        constraint on the layout.
 
         Returns
         -------
