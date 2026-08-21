@@ -10,4 +10,5 @@ Featurizers for input data for anvil models.
    feature_combiner
    fingerprints
    descriptors
+   trained_model
    feature_base
