@@ -54,6 +54,33 @@ def test_pca_dict_transform_matches_reference(train_features):
     assert out.shape == (60, 7)
 
 
+def test_pca_passes_a_null_block_through_unchanged(train_features):
+    """A block given a null component count must reach the output as its original columns."""
+    blocks = [("A", 10), ("B", 10)]
+    transform = PCATransform(n_components={"A": 3, "B": None}, random_seed=42)
+
+    out = transform.fit(train_features, feature_blocks=blocks).transform(train_features)
+
+    reduced = (
+        PCA(n_components=3, random_state=42)
+        .fit(train_features[:, :10])
+        .transform(train_features[:, :10])
+    )
+    assert out.shape == (60, 13)
+    np.testing.assert_allclose(out[:, :3], reduced, rtol=1e-12)
+    np.testing.assert_array_equal(out[:, 3:], train_features[:, 10:])
+
+
+def test_pca_null_everywhere_is_an_identity(train_features):
+    """Nulling every block must leave the matrix exactly as it arrived."""
+    blocks = [("A", 10), ("B", 10)]
+    transform = PCATransform(n_components={"A": None, "B": None})
+
+    out = transform.fit(train_features, feature_blocks=blocks).transform(train_features)
+
+    np.testing.assert_array_equal(out, train_features)
+
+
 @pytest.mark.parametrize(
     "n_components, blocks",
     [

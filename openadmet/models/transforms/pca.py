@@ -26,7 +26,11 @@ class PCATransform(TransformBase):
     feature matrix. With a dict mapping block keys to component counts, one
     PCA is fitted per block and the projected blocks are concatenated in the
     block order from ``feature_blocks``, typically one block per featurizer in
-    a FeatureConcatenator output.
+    a FeatureConcatenator output. A block whose count is None passes through
+    untouched, which suits blocks that are already narrow and carry meaning
+    column by column, such as the predictions of a pretrained model. Every
+    block still needs an entry, so passthrough is stated rather than obtained
+    by leaving a key out, and a mistyped key still fails loudly.
 
     The transform is fitted on the train features only and applied to
     validation, test, and inference features, so PCA loadings never see
@@ -46,7 +50,8 @@ class PCATransform(TransformBase):
     n_components : int or dict
         Number of PCA components. An int applies one PCA over the whole
         matrix; a dict maps featurizer block keys to per-block component
-        counts and requires ``feature_blocks`` at fit time.
+        counts and requires ``feature_blocks`` at fit time. A per-block value
+        of None leaves that block unreduced.
     impute_strategy : str
         Optional imputation applied to each block before its PCA. Options are
         'none' (default), 'mean', or 'median'.
@@ -59,8 +64,12 @@ class PCATransform(TransformBase):
 
     """
 
-    n_components: int | dict[str, int] = Field(
-        ..., description="Number of PCA components, globally or per feature block"
+    n_components: int | dict[str, int | None] = Field(
+        ...,
+        description=(
+            "Number of PCA components, globally or per feature block; a "
+            "per-block None passes that block through unreduced"
+        ),
     )
     impute_strategy: Literal["none", "mean", "median"] = (
         "none"  # PCA cannot see NaN, so imputation runs ahead of it per block
@@ -68,13 +77,14 @@ class PCATransform(TransformBase):
     random_seed: int | None = 42
 
     # Fitted state: list of (block key, start col, end col, fitted pipeline) in
-    # column order; the key is None for the single-PCA case over the whole matrix
+    # column order; the key is None for the single-PCA case over the whole
+    # matrix, and the pipeline is None for a block that passes through
     _pca_blocks: list | None = PrivateAttr(default=None)
 
     @field_validator("n_components")
     @classmethod
     def validate_n_components(cls, value):
-        """Validate that component counts are positive ints, globally or per block."""
+        """Validate that component counts are positive ints or per-block nulls."""
         # Int form: one PCA over the whole matrix
         if isinstance(value, int):
             if value < 1:
@@ -88,9 +98,14 @@ class PCATransform(TransformBase):
                 raise ValueError("n_components dict must have at least one entry.")
 
             for key, dims in value.items():
+                # None is the passthrough marker, so it skips the count check
+                if dims is None:
+                    continue
+
                 if not isinstance(dims, int) or dims < 1:
                     raise ValueError(
-                        f"n_components for block '{key}' must be an int >= 1, got {dims}."
+                        f"n_components for block '{key}' must be an int >= 1 "
+                        f"or null to pass the block through, got {dims}."
                     )
 
             return value
@@ -237,8 +252,17 @@ class PCATransform(TransformBase):
             cursor = 0
 
             for key, width in blocks:
-                # A block cannot yield more components than its own rank
                 dims = self.n_components[key]
+
+                # A passthrough block is recorded with no pipeline, so it keeps
+                # its span in the layout and its columns reach the model as they
+                # were featurized
+                if dims is None:
+                    fitted_blocks.append((key, cursor, cursor + width, None))
+                    cursor += width
+                    continue
+
+                # A block cannot yield more components than its own rank
                 if dims > min(n_samples, width):
                     raise ValueError(
                         f"n_components for block '{key}' is {dims}; it must be "
@@ -310,10 +334,13 @@ class PCATransform(TransformBase):
                 f"expects {expected_width}. The transform assumes the same "
                 "column layout at transform time as at fit time."
             )
-        # Project each block through its own fitted pipeline, then lay the
-        # results back out side by side in the original block order
+        # Project each block through its own fitted pipeline, passing through
+        # the blocks fitted without one, then lay the results back out side by
+        # side in the original block order
         outputs = [
-            pipeline.transform(X[:, start:stop])
+            X[:, start:stop]
+            if pipeline is None
+            else pipeline.transform(X[:, start:stop])
             for (_, start, stop, pipeline) in self._pca_blocks
         ]
 
