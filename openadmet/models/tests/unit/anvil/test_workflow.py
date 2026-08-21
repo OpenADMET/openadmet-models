@@ -635,7 +635,7 @@ def test_workflow_rejects_block_key_mismatch(
     metadata, data_spec, concat_feat, n_components
 ):
     """A mistyped, omitted, or extra block key must fail at construction, before any featurization."""
-    with pytest.raises(ValueError, match="must exactly match the featurizer's blocks"):
+    with pytest.raises(ValueError, match="PCATransform block keys must exactly match"):
         _make_anvil_workflow(
             metadata,
             data_spec,

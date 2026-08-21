@@ -45,6 +45,41 @@ def get_transform_class(trans_type):
     return transf_class
 
 
+def check_block_keys(required: set[str], available: set[str], subject: str) -> None:
+    """
+    Check a per-block configuration against the block keys actually present.
+
+    The same comparison runs twice: at workflow construction, against the keys
+    the featurizer will emit, and again inside a block-aware transform's fit,
+    which is the backstop for transforms fitted outside a workflow.
+
+    Parameters
+    ----------
+    required : set of str
+        Block keys the transform is configured against.
+    available : set of str
+        Block keys the feature layout actually provides.
+    subject : str
+        What is misconfigured, named in the error (e.g. 'n_components' or the
+        transform's class name).
+
+    Raises
+    ------
+    ValueError
+        If the two key sets differ in either direction.
+
+    """
+    missing = sorted(required - available)
+    unexpected = sorted(available - required)
+
+    if missing or unexpected:
+        raise ValueError(
+            f"{subject} block keys must exactly match the feature block keys. "
+            f"blocks: {sorted(available)}; configured: {sorted(required)}; "
+            f"missing: {missing}; unexpected: {unexpected}."
+        )
+
+
 class TransformBase(BaseModel, ABC):
     """Base class for transforms, allows for arbitrary transformation of feature data."""
 

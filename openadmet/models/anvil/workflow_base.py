@@ -19,6 +19,7 @@ from openadmet.models.split.split_base import SplitterBase
 from openadmet.models.trainer.trainer_base import TrainerBase
 from openadmet.models.transforms.transform_base import (
     TransformBase,
+    check_block_keys,
 )
 
 
@@ -122,14 +123,7 @@ class AnvilWorkflowBase(BaseModel):
                     "feature matrix instead."
                 )
 
-            missing = sorted(required - available)
-            unexpected = sorted(available - required)
-            if missing or unexpected:
-                raise ValueError(
-                    f"{name} block keys must exactly match the featurizer's blocks. "
-                    f"blocks: {sorted(available)}; configured: {sorted(required)}; "
-                    f"missing: {missing}; unexpected: {unexpected}."
-                )
+            check_block_keys(required, available, name)
 
         return self
 

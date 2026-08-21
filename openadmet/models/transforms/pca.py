@@ -10,7 +10,11 @@ from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 
-from openadmet.models.transforms.transform_base import TransformBase, transforms
+from openadmet.models.transforms.transform_base import (
+    TransformBase,
+    check_block_keys,
+    transforms,
+)
 
 
 @transforms.register("PCATransform")
@@ -191,20 +195,9 @@ class PCATransform(TransformBase):
                 "requires an int n_components here."
             )
 
-        # Every block needs a component count and every count needs a block; the
-        # workflow runs this same comparison up front, this is the backstop for
-        # transforms fitted outside a workflow
-        requested = self.required_block_keys()
-        available = set(keys)
-        missing = sorted(requested - available)
-        unexpected = sorted(available - requested)
+        # Every block needs a component count and every count needs a block
+        check_block_keys(self.required_block_keys(), set(keys), "n_components")
 
-        if missing or unexpected:
-            raise ValueError(
-                "n_components keys must exactly match the feature block keys. "
-                f"blocks: {sorted(available)}; n_components: {sorted(requested)}; "
-                f"missing: {missing}; unexpected: {unexpected}."
-            )
         return list(feature_blocks)
 
     def fit(
