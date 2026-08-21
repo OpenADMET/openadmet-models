@@ -14,6 +14,8 @@ from openadmet.models.tests.integration.datafiles import (
     dummy_fp,
     lgbm_fp_cv,
     lgbm_fp_ensemble,
+    pca_fp_lgbm,
+    pca_concat_lgbm,
     lgbm_fp_prop_cv,
     lgbm_mordred_cv_impute,
     lgbm_prop_cv,
@@ -36,6 +38,8 @@ class TestCPUAnvilConfigs:
         "recipe_file",
         [
             lgbm_fp_cv,
+            pca_fp_lgbm,
+            pca_concat_lgbm,
             lgbm_fp_prop_cv,
             lgbm_prop_cv,
             lgbm_fp_ensemble,

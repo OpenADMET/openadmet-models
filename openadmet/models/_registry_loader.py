@@ -49,6 +49,7 @@ _TRAINERS = [
 
 _TRANSFORMS = [
     "openadmet.models.transforms.impute",
+    "openadmet.models.transforms.pca",
     "openadmet.models.transforms.transform_base",
 ]
 

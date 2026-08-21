@@ -2,7 +2,7 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import ClassVar, Literal, Optional, Union
+from typing import ClassVar, Literal, Optional
 
 import fsspec
 import intake
@@ -62,8 +62,9 @@ class DataSpec(BaseModel):
         The path or URL to the data resource.
     cat_entry : Optional[str]
         The catalog entry name if the resource is a YAML catalog.
-    target_cols : Union[str, list[str]]
-        The target column(s) in the dataset.
+    target_cols : list[str]
+        The target column(s) in the dataset. A bare string is accepted and
+        wrapped into a one-element list.
     input_col : str
         The input column in the dataset.
     anvil_dir : Optional[str]
@@ -87,7 +88,7 @@ class DataSpec(BaseModel):
     resource: Optional[str] = None
 
     cat_entry: Optional[str] = None
-    target_cols: Union[str, list[str]]
+    target_cols: list[str]
     input_col: str
     anvil_dir: Optional[str] = None
     dropna: Optional[bool] = False
@@ -210,12 +211,7 @@ class DataSpec(BaseModel):
             [read_split(resource, split) for resource, split in splits_to_read]
         )
 
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = combined[[self.input_col] + target_cols + ["_split"]]
+        combined = combined[[self.input_col] + self.target_cols + ["_split"]]
 
         # Handle NaN values
         n_before = len(combined)
@@ -263,12 +259,7 @@ class DataSpec(BaseModel):
             data = self._read_csv_or_parquet(self.resource)
 
         # Select and clean columns
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = data[[self.input_col] + target_cols]
+        combined = data[[self.input_col] + self.target_cols]
 
         n_before = len(combined)
         if self.dropna:
@@ -700,7 +691,15 @@ class ProcedureSpec(SpecBase):
     model: ModelSpec
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
-    transform: Optional[TransformSpec] = None  # Optional transform step
+    transform: list[TransformSpec] | None = None  # Optional transform sequence
+
+    @field_validator("transform", mode="before")
+    @classmethod
+    def _wrap_single_transform(cls, value):
+        """Wrap a bare single-transform mapping or spec into a one-element list."""
+        if value is None or isinstance(value, list):
+            return value
+        return [value]
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""
@@ -839,17 +838,18 @@ class AnvilSpecification(BaseModel):
         model = self.procedure.model.to_class()
         split = self.procedure.split.to_class()
         feat = self.procedure.feat.to_class()
-        transform = (
-            self.procedure.transform.to_class() if self.procedure.transform else None
-        )
+        transform_spec = self.procedure.transform
+        transform = [t.to_class() for t in transform_spec] if transform_spec else None
         evals = [eval.to_class() for eval in self.report.eval]
 
         global_seed = self.procedure.random_seed
+        transform_specs = transform_spec or []
+        transform_components = transform or []
         seeded_sections = [
             (self.procedure.split, split),
             (self.procedure.feat, feat),
             (self.procedure.model, model),
-            *([(self.procedure.transform, transform)] if transform else []),
+            *zip(transform_specs, transform_components),
             *zip(self.report.eval, evals),
         ]
         # Fill any section that did not set its own seed with the global; an

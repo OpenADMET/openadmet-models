@@ -21,6 +21,12 @@ lgbm_prop_cv = (_data_ref / "lgbm_prop_scaffold_cv.yaml").as_posix()
 # LGBM model ensemble
 lgbm_fp_ensemble = (_data_ref / "lgbm_fp_ensemble.yaml").as_posix()
 
+# PCA dimensionality reduction, single PCA over fingerprints
+pca_fp_lgbm = (_data_ref / "pca_fp_lgbm.yaml").as_posix()
+
+# PCA dimensionality reduction, per-block PCA over concatenated fingerprints and Mordred descriptors
+pca_concat_lgbm = (_data_ref / "pca_concat_lgbm.yaml").as_posix()
+
 # Single epoch ChemProp with multitask
 chemprop_MT_cpu_single = (_data_ref / "chemprop_MT_cpu_single.yaml").as_posix()
 
