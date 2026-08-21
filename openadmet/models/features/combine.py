@@ -23,16 +23,19 @@ class FeatureConcatenator(FeaturizerBase):
     Attributes
     ----------
     featurizers : list of FeaturizerBase
-        List of featurizer instances to concatenate. Same-class featurizers
-        are rejected because per-key transforms key blocks by featurizer name
-        and cannot disambiguate same-class blocks.
+        At least two featurizer instances to concatenate; concatenating fewer
+        is a no-op, so use the featurizer directly instead. Same-class
+        featurizers are rejected because per-key transforms key blocks by
+        featurizer name and cannot disambiguate same-class blocks.
 
     """
 
     provides_feature_blocks: ClassVar[bool] = True
 
     featurizers: list[FeaturizerBase] = Field(
-        ..., description="List of featurizers to concatenate"
+        ...,
+        min_length=2,
+        description="List of at least two featurizers to concatenate",
     )
     _cached_feature_blocks: list[tuple[str, int]] | None = PrivateAttr(default=None)
 

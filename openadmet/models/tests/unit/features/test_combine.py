@@ -35,8 +35,15 @@ def smiles():
 )
 def test_concatenator_list_entry_forms(entry, expected_name):
     """List forms must accept {type, params} wrappers and live featurizer instances."""
-    concat = FeatureConcatenator(featurizers=[entry])
-    assert [type(f).__name__ for f in concat.featurizers] == [expected_name]
+    # A concatenator needs 2+ featurizers, so pair the entry under test with a
+    # filler of a class none of the parametrized entries use
+    concat = FeatureConcatenator(
+        featurizers=[
+            entry,
+            {"type": "DescriptorFeaturizer", "params": {"descr_type": "desc2d"}},
+        ]
+    )
+    assert expected_name in [type(f).__name__ for f in concat.featurizers]
 
 
 def test_concatenator_rejects_duplicate_classes():
@@ -67,6 +74,29 @@ def test_concatenator_rejects_entry_without_type(entry):
         FeatureConcatenator(featurizers=[entry])
 
 
+@pytest.mark.parametrize(
+    "featurizers",
+    [
+        pytest.param([], id="empty_list"),
+        pytest.param([{"type": "NullFeaturizer"}], id="single_entry"),
+        pytest.param([NullFeaturizer(n_jobs=1)], id="single_instance"),
+    ],
+)
+def test_concatenator_requires_two_featurizers(featurizers):
+    """Concatenating fewer than two featurizers is a no-op and must be rejected."""
+    with pytest.raises(ValidationError, match="at least 2 items"):
+        FeatureConcatenator(featurizers=featurizers)
+
+
+def test_concatenator_dict_form_requires_two_featurizers():
+    """The two-featurizer minimum must hold for the deprecated dict form too."""
+    with (
+        pytest.warns(DeprecationWarning),
+        pytest.raises(ValidationError, match="at least 2 items"),
+    ):
+        FeatureConcatenator(featurizers={"NullFeaturizer": {}})
+
+
 def test_concatenator_dict_form_still_constructs():
     """The deprecated dict form must keep working so saved recipe YAMLs stay loadable."""
     with pytest.warns(DeprecationWarning, match="deprecated"):
@@ -83,7 +113,13 @@ def test_concatenator_dict_form_still_constructs():
 def test_concatenator_list_form_does_not_warn(recwarn):
     """The wrapper list form is the supported shape and must not emit a deprecation."""
     FeatureConcatenator(
-        featurizers=[{"type": "NullFeaturizer", "params": {"n_jobs": 1}}]
+        featurizers=[
+            {"type": "NullFeaturizer", "params": {"n_jobs": 1}},
+            {
+                "type": "FingerprintFeaturizer",
+                "params": {"fp_type": "ecfp", "n_jobs": 1},
+            },
+        ]
     )
     assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
@@ -155,6 +191,7 @@ def test_concatenator_feature_blocks_before_featurize_raises():
                 "type": "FingerprintFeaturizer",
                 "params": {"fp_type": "ecfp", "n_jobs": 1},
             },
+            {"type": "NullFeaturizer", "params": {"n_jobs": 1}},
         ]
     )
     with pytest.raises(RuntimeError, match="featurize"):
