@@ -202,10 +202,6 @@ def test_pca_default_seed_is_reproducible_under_randomized_solver():
     X = np.random.default_rng(0).normal(size=(600, 100))
     assert PCATransform.model_fields["random_seed"].default == 42
 
-    # An unseeded solver is not reachable, so a fit is always reproducible
-    with pytest.raises(ValidationError):
-        PCATransform(n_components=50, random_seed=None)
-
     first = PCATransform(n_components=50).fit(X).transform(X)
     second = PCATransform(n_components=50).fit(X).transform(X)
     np.testing.assert_array_equal(first, second)

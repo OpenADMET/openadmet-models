@@ -46,12 +46,12 @@ class PCATransform(TransformBase):
     impute_strategy : str
         Optional imputation applied to each block before its PCA. Options are
         'none' (default), 'mean', or 'median'.
-    random_seed : int
+    random_seed : int or None
         Random seed for the PCA solvers, by default 42, matching the
         procedure-level default a workflow would otherwise fill in. Threaded to
         ``random_state``, which matters because sklearn picks the randomized
         solver for wide matrices with a large reduction, exactly the per-block
-        fingerprint case. Required, so a fit is always reproducible.
+        fingerprint case. Set to None only to opt into an unseeded solver.
 
     """
 
@@ -61,7 +61,7 @@ class PCATransform(TransformBase):
     impute_strategy: Literal["none", "mean", "median"] = (
         "none"  # PCA cannot see NaN, so imputation runs ahead of it per block
     )
-    random_seed: int = 42
+    random_seed: int | None = 42
     # The workflow forwards feature_blocks only to transforms that declare this
     accepts_feature_blocks: ClassVar[bool] = True
 
