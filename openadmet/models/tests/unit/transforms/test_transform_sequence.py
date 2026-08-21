@@ -43,8 +43,8 @@ def test_fit_transforms_threads_outputs_between_elements():
     assert out.shape == (40, 3)
 
 
-def test_fit_transforms_forwards_blocks_only_to_declaring_elements():
-    """feature_blocks must reach the per-block PCA but leave earlier imputers untouched."""
+def test_fit_transforms_forwards_blocks_through_the_sequence():
+    """feature_blocks must reach a per-block PCA sitting behind a layout-agnostic element."""
     rng = np.random.default_rng(2)
     X = rng.normal(size=(40, 20))
 
