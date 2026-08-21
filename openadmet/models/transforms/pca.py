@@ -239,10 +239,10 @@ class PCATransform(TransformBase):
             for key, width in blocks:
                 # A block cannot yield more components than its own rank
                 dims = self.n_components[key]
-                if dims >= min(n_samples, width):
+                if dims > min(n_samples, width):
                     raise ValueError(
                         f"n_components for block '{key}' is {dims}; it must be "
-                        f"smaller than min(train rows, block width) = "
+                        f"at most min(train rows, block width) = "
                         f"min({n_samples}, {width})."
                     )
 
@@ -255,9 +255,9 @@ class PCATransform(TransformBase):
         # Int form: a single PCA spanning every column, recorded as one block
         else:
             dims = self.n_components
-            if dims >= min(n_samples, n_features):
+            if dims > min(n_samples, n_features):
                 raise ValueError(
-                    f"n_components is {dims}; it must be smaller than "
+                    f"n_components is {dims}; it must be at most "
                     f"min(train rows, feature width) = min({n_samples}, {n_features})."
                 )
             pipeline = self._build_pipeline(dims).fit(X)
