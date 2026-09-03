@@ -304,6 +304,10 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - scikit-learn `Random Forest classifier <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html>`_ .
   * - :doc:`RFRegressorModel </_api/api/model_architectures/random_forest>`
     - scikit-learn `Random Forest regressor <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html>`_ .
+  * - :doc:`TabICLClassifierModel </_api/api/model_architectures/tabicl>`
+    - TabICL v2 classification model using the `tabicl <https://pypi.org/project/tabicl/>`_ package.
+  * - :doc:`TabICLRegressorModel </_api/api/model_architectures/tabicl>`
+    - TabICL v2 regression model using the `tabicl <https://pypi.org/project/tabicl/>`_ package.
   * - :doc:`TabPFNClassifierModel </_api/api/model_architectures/tabpfn>`
     - TabPFN classification model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
   * - :doc:`TabPFNRegressorModel </_api/api/model_architectures/tabpfn>`

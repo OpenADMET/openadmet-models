@@ -37,6 +37,7 @@ dependencies:
   - pip:
     - email-validator
     - phx-class-registry
+    - tabicl
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main

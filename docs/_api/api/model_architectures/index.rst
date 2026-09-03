@@ -13,5 +13,6 @@ Anvil implemenations of various architectures.
    model_base
    random_forest
    svm
+   tabicl
    tabpfn
    xgboost
