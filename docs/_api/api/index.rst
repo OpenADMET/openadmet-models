@@ -9,6 +9,7 @@ OpenADMET Models API Reference
     active_learning/index
     anvil/index
     featurization/index
+    transforms/index
     splitting/index
     model_architectures/index
     training/index

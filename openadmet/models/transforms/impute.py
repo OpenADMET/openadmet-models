@@ -76,6 +76,7 @@ class ImputeTransform(TransformBase):
             raise ValueError("Invalid imputer type specified.")
 
         self.imputer_instance.fit(X)
+        return self
 
     def transform(self, X: np.ndarray, *args, **kwargs):
         """

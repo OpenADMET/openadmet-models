@@ -7,8 +7,10 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 import torch
 import zarr
 from lightning import pytorch as pl
@@ -17,7 +19,13 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
+from openadmet.models.features.feature_base import DeepLearningFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
+from openadmet.models.transforms.transform_base import (
+    fit_transforms,
+    to_transform_list,
+    transform_features,
+)
 
 
 def _safe_to_numpy(X):
@@ -56,6 +64,37 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 "Validation set requested, but not used in this workflow configuration."
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def check_featurizer_tabular(self):
+        """
+        Reject featurizers whose output the sklearn driver cannot consume.
+
+        This workflow's trainer, transforms, and model all expect
+        ``feat.featurize()`` to return a numpy feature array (e.g. fingerprints,
+        descriptors). ``DeepLearningFeaturizer`` subclasses (e.g. ChemProp's
+        graph featurizer) return a DataLoader/Dataset pair instead, meant for
+        the lightning workflow. Pairing one with an sklearn-family model (e.g.
+        XGBoost, LightGBM, random forest) previously failed late and
+        cryptically inside the trainer; this catches it at spec-construction
+        time with an actionable message.
+
+        Raises
+        ------
+        ValueError
+            If a deep learning featurizer (DataLoader output) is paired with
+            the sklearn driver.
+
+        """
+        # The sklearn trainer consumes numpy arrays; DataLoader-emitting featurizers
+        # belong to the lightning workflow
+        if isinstance(self.feat, DeepLearningFeaturizer):
+            raise ValueError(
+                "The sklearn workflow requires a featurizer that produces a numpy "
+                "feature array. Deep learning featurizers produce DataLoaders and "
+                "require the lightning workflow."
+            )
         return self
 
     @model_validator(mode="after")
@@ -309,24 +348,42 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Transform data
         if self.transform:
-            # Train
-            logger.info("Transforming data")
-            self.transform.fit(X_train_feat)
-            X_train_feat = self.transform.transform(X_train_feat)
+            # Fit transforms on the train partition only, so learned statistics
+            # (imputer means, PCA loadings) never see validation or test data
+            logger.info("Fitting transforms on train features")
+            feature_blocks = (
+                self.feat.feature_blocks()
+                if getattr(self.feat, "provides_feature_blocks", False)
+                else None
+            )
+            X_train_feat = fit_transforms(
+                self.transform, X_train_feat, feature_blocks=feature_blocks
+            )
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
 
             # Val
             if X_val is not None:
-                X_val_feat = self.transform.transform(X_val_feat)
+                X_val_feat = transform_features(self.transform, X_val_feat)
                 zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
 
             # Test
             if X_test is not None:
-                X_test_feat = self.transform.transform(X_test_feat)
+                X_test_feat = transform_features(self.transform, X_test_feat)
                 zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
 
             # Whole dataset
-            X_feat = self.transform.transform(X_feat)
+            X_feat = transform_features(self.transform, X_feat)
+
+            # Persist the fitted transforms next to the model so decoupled
+            # inference can apply the exact train-time preprocessing; the recipe
+            # YAML carries configuration only
+            transform_payload = {
+                "schema": "v1",
+                "transforms": to_transform_list(self.transform),
+                "sklearn_version": sklearn.__version__,
+            }
+            with open(output_dir / "transform.pickle", "wb") as f:
+                joblib.dump(transform_payload, f)
 
             logger.info("Data transformed")
         else:
