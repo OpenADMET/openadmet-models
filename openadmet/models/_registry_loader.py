@@ -33,6 +33,7 @@ _FEATURIZERS = [
     "openadmet.models.features.molfeat_fingerprint",
     "openadmet.models.features.molfeat_properties",
     "openadmet.models.features.null_featurizer",
+    "openadmet.models.features.trained_model",
 ]
 
 _SPLITTERS = [
