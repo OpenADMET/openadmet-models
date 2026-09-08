@@ -284,10 +284,11 @@ The pretrained model brings its own featurizer, so the ``TrainedModelFeaturizer`
 Molecules that the pretrained featurizer cannot parse are reported through the returned index array, the same as any
 other featurizer.
 
-``outputs`` selects which per-task quantities become columns, in column order. ``mean`` is the model's prediction and
-is the default. ``std`` is the spread across ensemble members, so it requires the referenced model to be an ensemble;
-requesting it from a single model raises when the recipe is parsed. The emitted width is ``len(outputs)`` columns per
-target column of the pretrained model, laid out output-major and task-minor.
+``outputs`` selects which per-task quantities become columns, in column order. It defaults to ``[mean]``, the
+model's prediction, which is all most recipes need. Ensembles can additionally request ``std``, the spread across
+members. That option is available only for ensembles, and requesting it from a single model raises when the recipe
+is parsed. The emitted width is ``len(outputs)`` columns per target column of the pretrained model, laid out
+output-major and task-minor.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
