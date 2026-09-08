@@ -5,6 +5,7 @@ import pytest
 import torch
 
 from openadmet.models.architecture.chemprop import (
+    _CHEMELEON_MP_HPARAMS,
     ChemPropModel,
     _resolve_device,
     _resolve_noam_steps_per_epoch,
@@ -349,20 +350,8 @@ def test_chemprop_load_weights_invalid_path():
         model.build()
 
 
-# Minimal valid BondMessagePassing hyperparameters for foundation-file tests
-_FOUNDATION_HPARAMS = {
-    "d_h": 8,
-    "depth": 1,
-    "dropout": 0.0,
-    "bias": False,
-    "activation": "relu",
-    "undirected": False,
-    "d_v": 72,
-    "d_e": 14,
-    "d_vd": None,
-    "V_d_transform": None,
-    "graph_transform": None,
-}
+# CheMeleon layout shrunk to keep the saved foundation fixture small
+_FOUNDATION_HPARAMS = {**_CHEMELEON_MP_HPARAMS, "d_h": 8, "depth": 1}
 
 
 @pytest.mark.parametrize(

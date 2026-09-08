@@ -4,7 +4,7 @@ import json
 import types
 from functools import partial
 from pathlib import Path
-from typing import ClassVar, cast
+from typing import Any, ClassVar, cast
 from urllib.request import urlretrieve
 
 import numpy as np
@@ -20,6 +20,23 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
+
+
+# BondMessagePassing arguments matching the CheMeleon checkpoint layout
+# d_v and d_e are fixed by chemprop's default atom and bond featurizers
+_CHEMELEON_MP_HPARAMS: dict[str, Any] = {
+    "d_h": 2048,
+    "depth": 6,
+    "dropout": 0.0,
+    "bias": False,
+    "activation": "relu",
+    "undirected": False,
+    "d_v": 72,
+    "d_e": 14,
+    "d_vd": None,
+    "V_d_transform": None,
+    "graph_transform": None,
+}
 
 
 def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
@@ -678,17 +695,8 @@ class ChemPropModel(LightningModelBase):
                     logger.info("Using CheMeleon test architecture with random weights")
                     foundation_mp = {
                         "hyper_parameters": {
-                            "d_h": 2048,
-                            "depth": 6,
+                            **_CHEMELEON_MP_HPARAMS,
                             "dropout": self.dropout,
-                            "bias": False,
-                            "activation": "relu",
-                            "undirected": False,
-                            "d_v": 72,
-                            "d_e": 14,
-                            "d_vd": None,
-                            "V_d_transform": None,
-                            "graph_transform": None,
                         },
                         "state_dict": {},
                     }

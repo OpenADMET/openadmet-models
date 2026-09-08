@@ -7,7 +7,11 @@ import numpy as np
 import torch
 from pydantic import field_validator
 
-from openadmet.models.architecture.chemprop import ChemPropModel, _resolve_device
+from openadmet.models.architecture.chemprop import (
+    _CHEMELEON_MP_HPARAMS,
+    ChemPropModel,
+    _resolve_device,
+)
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
@@ -15,9 +19,8 @@ from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 # chemeleon-test architecture so no checkpoint download is needed
 _FOUNDATION_NAME = "chemeleon"
 
-# CheMeleon foundation checkpoint width; used only for the zero-row
-# return shape so an empty input never triggers a checkpoint download
-_FOUNDATION_EMBEDDING_DIM = 2048
+# Zero-row width, so an empty input skips the checkpoint download
+_FOUNDATION_EMBEDDING_DIM: int = _CHEMELEON_MP_HPARAMS["d_h"]
 
 
 @featurizers.register("CheMeleonEmbeddingFeaturizer")
