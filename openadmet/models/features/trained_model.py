@@ -189,12 +189,6 @@ class TrainedModelFeaturizer(FeaturizerBase):
                 self.model_dir
             )
 
-            # Inference never shuffles, but pin it off in case the pretrained
-            # model's featurizer would otherwise reorder rows out of step with
-            # the indices it reports
-            if hasattr(feat, "shuffle"):
-                feat.shuffle = False
-
             self._loaded = (model, feat, metadata, data_spec)
 
         return self._loaded
