@@ -92,13 +92,13 @@ class AnvilWorkflowBase(BaseModel):
         from the featurizer types alone, so a mismatch is knowable here rather
         than at fit time, which is after the whole featurization pass has run.
 
-        For example, a PCATransform keyed
-        ``{"FingerprintFeaturizer": 256}`` paired with a FeatureConcatenator
-        over DescriptorFeaturizer and FingerprintFeaturizer is rejected here:
-        the concatenator emits both blocks, and the transform names only one,
-        which would leave the descriptor columns unaccounted for. Adding
-        ``"DescriptorFeaturizer": 32`` accepts, and so does
-        ``"DescriptorFeaturizer": None`` to pass that block through unreduced.
+        For example, a FeatureConcatenator holding a DescriptorFeaturizer and a
+        FingerprintFeaturizer emits two blocks, keyed by those class names. A
+        PCATransform with ``n_components={"FingerprintFeaturizer": 256}`` names
+        only one of them and is rejected here. Both
+        ``{"FingerprintFeaturizer": 256, "DescriptorFeaturizer": 32}`` and
+        ``{"FingerprintFeaturizer": 256, "DescriptorFeaturizer": None}`` are
+        accepted, the second passing the descriptor block through unreduced.
 
         Raises
         ------

@@ -346,7 +346,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # featurize whole dataset also for CV if needed
         X_feat, _ = self.feat.featurize(X)
 
-        # Fit on train only, so imputer means and PCA loadings never see held-out rows
+        # Fit on train only
         if self.transform:
             logger.info("Fitting transforms on train features")
             feature_blocks = (
@@ -372,7 +372,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Whole dataset
             X_feat = transform_features(self.transform, X_feat)
 
-            # Inference needs the fitted state, which the recipe YAML does not carry
+            # Inference needs the fitted state, which the recipe YAML does not have implicitly
             transform_payload = {
                 "schema": "v1",
                 "transforms": to_transform_list(self.transform),

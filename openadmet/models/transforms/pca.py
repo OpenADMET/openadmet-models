@@ -22,15 +22,10 @@ class PCATransform(TransformBase):
     """
     Apply principal component analysis to one or more feature blocks.
 
-    A concatenated feature matrix holds blocks from different featurizers, and
-    those blocks differ by an order of magnitude in width and in variance
-    scale: a 2048-bit fingerprint next to a couple of hundred physicochemical
-    descriptors. One PCA over that whole matrix spends its components on
-    whichever block carries the most raw variance, so the wide block crowds
-    the narrow one out of the retained dimensions. Fitting one PCA per block
-    gives each featurizer its own component budget, set from what that
-    representation is worth rather than from how many columns it happens to
-    occupy.
+    One PCA over a concatenated matrix spends its components on whichever
+    block carries the most raw variance, so a wide fingerprint block crowds a
+    narrow descriptor block out of the retained dimensions. Fitting one PCA
+    per block gives each featurizer its own component budget.
 
     With an int ``n_components``, a single PCA is fitted over the entire
     feature matrix. With a dict mapping block keys to component counts, one
@@ -86,8 +81,7 @@ class PCATransform(TransformBase):
     )
     random_seed: int | None = 42
 
-    # (block key, start col, end col, pipeline) in column order; key is None for
-    # the whole-matrix case and pipeline is None for a passthrough block
+    # Store PCA blocks: (block key, start col, end col, pipeline)
     _pca_blocks: list | None = PrivateAttr(default=None)
 
     @field_validator("n_components")
@@ -269,7 +263,7 @@ class PCATransform(TransformBase):
             for key, width in blocks:
                 dims = self.n_components[key]
 
-                # A passthrough block keeps its span but gets no pipeline
+                # Block passes through without transformation
                 if dims is None:
                     fitted_blocks.append((key, cursor, cursor + width, None))
                     cursor += width
@@ -337,7 +331,7 @@ class PCATransform(TransformBase):
         X = np.asarray(X)
         self._check_2d(X)
 
-        # A width mismatch would misalign every block boundary
+        # Ensure widths and block boundaries align
         expected_width = self._pca_blocks[-1][2]
         if X.shape[1] != expected_width:
             raise ValueError(
@@ -345,7 +339,7 @@ class PCATransform(TransformBase):
                 f"expects {expected_width}. The transform assumes the same "
                 "column layout at transform time as at fit time."
             )
-        # Project each block through its own pipeline, in the fitted block order
+        # Transform each block in order
         outputs = [
             X[:, start:stop]
             if pipeline is None

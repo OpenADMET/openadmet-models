@@ -280,7 +280,7 @@ def predict(
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
 
-        # Transforms are column operations, so the row indices must survive intact
+        # Transforms are column operations, so the row indices must persist
         if transform is not None:
             # Single-row featurizer output arrives 1D
             X_feat = np.atleast_2d(X_feat)
