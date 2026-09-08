@@ -150,8 +150,18 @@ class FeatureConcatenator(FeaturizerBase):
         """
         Reject same-class featurizers and fix the block order.
 
-        Runs on the validated list, so it holds for every input shape,
-        including sequences pydantic coerced to a list on its own.
+        Sorting by class name predates per-block transforms and is kept for the
+        same reason it was introduced: the emitted column order is part of the
+        featurizer's contract, and a model trained on one ordering cannot be
+        served against another. Deriving it from the featurizer set rather than
+        from the order the recipe happens to list them in means two recipes
+        naming the same featurizers produce the same columns.
+
+        Per-block transforms raise the stakes, since a transform addresses
+        blocks by featurizer name and applies its fitted pipelines in emit
+        order. This check runs on the validated list rather than inside the
+        before-validator, so both the ordering and the duplicate rejection hold
+        for every input shape, including sequences pydantic coerced on its own.
 
         Parameters
         ----------
@@ -179,7 +189,7 @@ class FeatureConcatenator(FeaturizerBase):
                 f"class: {duplicates}. Per-key transforms cannot disambiguate same-class blocks."
             )
 
-        # Sort by class name so the block order is deterministic
+        # Class name, not recipe order, so the same set always emits the same columns
         return sorted(value, key=lambda f: f.__class__.__name__)
 
     def feature_block_keys(self) -> list[str]:
