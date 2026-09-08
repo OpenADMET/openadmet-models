@@ -76,9 +76,8 @@ class PCATransform(TransformBase):
     )
     random_seed: int | None = 42
 
-    # Fitted state: list of (block key, start col, end col, fitted pipeline) in
-    # column order; the key is None for the single-PCA case over the whole
-    # matrix, and the pipeline is None for a block that passes through
+    # (block key, start col, end col, pipeline) in column order; key is None for
+    # the whole-matrix case and pipeline is None for a passthrough block
     _pca_blocks: list | None = PrivateAttr(default=None)
 
     @field_validator("n_components")
@@ -254,9 +253,7 @@ class PCATransform(TransformBase):
             for key, width in blocks:
                 dims = self.n_components[key]
 
-                # A passthrough block is recorded with no pipeline, so it keeps
-                # its span in the layout and its columns reach the model as they
-                # were featurized
+                # A passthrough block keeps its span but gets no pipeline
                 if dims is None:
                     fitted_blocks.append((key, cursor, cursor + width, None))
                     cursor += width
@@ -324,9 +321,7 @@ class PCATransform(TransformBase):
         X = np.asarray(X)
         self._check_2d(X)
 
-        # Fit-time and transform-time matrices must share the exact column
-        # layout; a mismatch means silently truncated or misaligned blocks.
-        # The last block's stop column is the full fitted width
+        # A width mismatch would misalign every block boundary
         expected_width = self._pca_blocks[-1][2]
         if X.shape[1] != expected_width:
             raise ValueError(
@@ -334,9 +329,7 @@ class PCATransform(TransformBase):
                 f"expects {expected_width}. The transform assumes the same "
                 "column layout at transform time as at fit time."
             )
-        # Project each block through its own fitted pipeline, passing through
-        # the blocks fitted without one, then lay the results back out side by
-        # side in the original block order
+        # Project each block through its own pipeline, in the fitted block order
         outputs = [
             X[:, start:stop]
             if pipeline is None

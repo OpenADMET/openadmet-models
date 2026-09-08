@@ -374,9 +374,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             # Whole dataset
             X_feat = transform_features(self.transform, X_feat)
 
-            # Persist the fitted transforms next to the model so decoupled
-            # inference can apply the exact train-time preprocessing; the recipe
-            # YAML carries configuration only
+            # Inference needs the fitted state, which the recipe YAML does not carry
             transform_payload = {
                 "schema": "v1",
                 "transforms": to_transform_list(self.transform),
