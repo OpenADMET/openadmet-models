@@ -15,6 +15,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
+from openadmet.models.anvil.utils import ensure_list
 from openadmet.models.architecture.model_base import get_mod_class
 from openadmet.models.drivers import DriverType
 from openadmet.models.eval.eval_base import get_eval_class
@@ -697,9 +698,7 @@ class ProcedureSpec(SpecBase):
     @classmethod
     def _wrap_single_transform(cls, value):
         """Wrap a bare single-transform mapping or spec into a one-element list."""
-        if value is None or isinstance(value, list):
-            return value
-        return [value]
+        return ensure_list(value)
 
     def template_anvil_dir(self, anvil_dir: Path):
         """Template ANVIL_DIR in model and ensemble path fields."""

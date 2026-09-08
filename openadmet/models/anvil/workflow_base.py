@@ -11,6 +11,7 @@ from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
 )
 from openadmet.models.anvil.specification import DataSpec, Metadata
+from openadmet.models.anvil.utils import ensure_list
 from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.eval.eval_base import EvalBase
 from openadmet.models.features.feature_base import FeaturizerBase
@@ -67,9 +68,7 @@ class AnvilWorkflowBase(BaseModel):
     @classmethod
     def _wrap_single_transform(cls, value):
         """Wrap a bare single transform instance into a one-element list."""
-        if value is None or isinstance(value, list):
-            return value
-        return [value]
+        return ensure_list(value)
 
     split: SplitterBase
     feat: FeaturizerBase
