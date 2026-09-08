@@ -280,10 +280,9 @@ def predict(
         # Indices of the original input that were featurized
         X_indices = feat_data[1]
 
-        # Apply the train-time transform sequence; transforms are row-preserving
-        # column operations, so the index alignment must survive
+        # Transforms are column operations, so the row indices must survive intact
         if transform is not None:
-            # Featurizers return a 1D array for single-row input; transforms expect (n, d)
+            # Single-row featurizer output arrives 1D
             X_feat = np.atleast_2d(X_feat)
             X_feat = transform_features(transform, X_feat)
             if X_feat.shape[0] != len(X_indices):

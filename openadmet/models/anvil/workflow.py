@@ -346,10 +346,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # featurize whole dataset also for CV if needed
         X_feat, _ = self.feat.featurize(X)
 
-        # Transform data
+        # Fit on train only, so imputer means and PCA loadings never see held-out rows
         if self.transform:
-            # Fit transforms on the train partition only, so learned statistics
-            # (imputer means, PCA loadings) never see validation or test data
             logger.info("Fitting transforms on train features")
             feature_blocks = (
                 self.feat.feature_blocks()

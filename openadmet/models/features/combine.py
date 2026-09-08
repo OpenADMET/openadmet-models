@@ -93,7 +93,6 @@ class FeatureConcatenator(FeaturizerBase):
 
         # Deprecated dict path, still read because saved recipe YAMLs use it  (see #595)
         if isinstance(value, dict):
-            # Deprecation warning
             warnings.warn(
                 "The whole-field dict form for `featurizers` is deprecated; use a "
                 "list of {type: ..., params: ...} entries instead.",
@@ -139,9 +138,8 @@ class FeatureConcatenator(FeaturizerBase):
                         "Featurizer list entries must be featurizer instances or "
                         f"dicts of type/params, got {type(item)}."
                     )
+        # Not a shape this validator builds from; let pydantic check it
         else:
-            # Not a shape this validator builds from; hand it back for pydantic
-            # to check against the declared list[FeaturizerBase]
             return value
 
         return processed_featurizers
