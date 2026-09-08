@@ -146,6 +146,15 @@ def test_rejects_a_directory_that_is_not_a_model(tmp_path):
         TrainedModelFeaturizer(model_dir=tmp_path)
 
 
+def test_rejects_a_recipe_without_a_procedure(tmp_path):
+    """A recipe missing procedure.yaml must fail at construction whatever the outputs."""
+    (tmp_path / "recipe_components").mkdir()
+
+    # outputs defaults to [mean], so this fails without any 'std' involvement
+    with pytest.raises(ValidationError, match="no recipe_components/procedure.yaml"):
+        TrainedModelFeaturizer(model_dir=tmp_path)
+
+
 def test_registered_under_its_type(null_single_model_dir):
     """The featurizer must be reachable through the registry, as a recipe would reach it."""
     feat_class = get_featurizer_class("TrainedModelFeaturizer")

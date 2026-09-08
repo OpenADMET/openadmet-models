@@ -91,8 +91,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         """
         value = Path(value)
 
-        # Catch a bad path when the recipe is parsed rather than part-way
-        # through a featurization pass; both checks are a stat, not a load
+        # Fail when the recipe is parsed, not part-way through featurization
         if not value.is_dir():
             raise ValueError(f"Model directory {value} does not exist.")
 
@@ -100,6 +99,12 @@ class TrainedModelFeaturizer(FeaturizerBase):
             raise ValueError(
                 f"Model directory {value} has no recipe_components directory, so it "
                 "is not a trained Anvil model."
+            )
+
+        if not (value / "recipe_components" / "procedure.yaml").is_file():
+            raise ValueError(
+                f"Model directory {value} has no recipe_components/procedure.yaml, "
+                "so it is not a trained Anvil model."
             )
 
         return value
@@ -150,15 +155,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         if "std" not in self.outputs:
             return self
 
-        # Reading the recipe is a few kilobytes of YAML; deserializing the model
-        # to ask the same question would cost orders of magnitude more
         procedure_path = self.model_dir / "recipe_components" / "procedure.yaml"
-        if not procedure_path.is_file():
-            raise ValueError(
-                f"Model directory {self.model_dir} has no recipe_components/"
-                "procedure.yaml, so it is not a trained Anvil model."
-            )
-
         with open(procedure_path) as f:
             procedure = yaml.safe_load(f) or {}
 
