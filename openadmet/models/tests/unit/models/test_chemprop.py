@@ -746,8 +746,8 @@ def test_predict_embedding_unbuilt_raises():
         model.predict_embedding(["CCO"])
 
 
-def test_predict_embedding_shape_and_dtype():
-    model = ChemPropModel(from_foundation="chemeleon-test")
+def test_predict_embedding_shape_and_dtype(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
 
@@ -757,16 +757,16 @@ def test_predict_embedding_shape_and_dtype():
     assert emb.dtype == np.float32
 
 
-def test_predict_embedding_safe_batch_size_no_drop():
-    model = ChemPropModel(from_foundation="chemeleon-test")
+def test_predict_embedding_safe_batch_size_no_drop(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
     model.build()
     smiles = ["CCO", "CCN", "c1ccccc1"]
     emb = model.predict_embedding(smiles, batch_size=3, accelerator="cpu")
     assert emb.shape[0] == len(smiles)
 
 
-def test_predict_embedding_deterministic():
-    model = ChemPropModel(from_foundation="chemeleon-test")
+def test_predict_embedding_deterministic(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
     model.build()
     smiles = ["CCO", "CCN"]
     e1 = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")

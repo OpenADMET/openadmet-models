@@ -3,16 +3,28 @@
 import numpy as np
 import pytest
 
-from openadmet.models.features import chemeleon_embedding
+from openadmet.models.architecture.chemprop import ChemPropModel
 from openadmet.models.features.chemeleon_embedding import CheMeleonEmbeddingFeaturizer
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 
 
-@pytest.fixture(autouse=True)
-def _hermetic_foundation(mocker):
-    """Run against the random-weight chemeleon-test architecture so no checkpoint is downloaded."""
-    mocker.patch.object(chemeleon_embedding, "_FOUNDATION_NAME", "chemeleon-test")
+@pytest.fixture
+def make_featurizer(chemeleon_foundation_checkpoint):
+    """Build featurizers whose encoder comes from the local foundation checkpoint."""
+
+    def _make(**kwargs):
+        featurizer = CheMeleonEmbeddingFeaturizer(**kwargs)
+
+        # Seed the lazy encoder so featurize() never reaches for the published
+        # checkpoint, which would otherwise download on first access
+        model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
+        model.build()
+        featurizer._model = model
+
+        return featurizer
+
+    return _make
 
 
 @pytest.fixture
@@ -32,8 +44,8 @@ def test_accelerator_validator_accepts_known_values():
         CheMeleonEmbeddingFeaturizer(accelerator=accelerator)
 
 
-def test_featurize_shape_dtype_indices(smiles):
-    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
+def test_featurize_shape_dtype_indices(smiles, make_featurizer):
+    featurizer = make_featurizer(accelerator="cpu", batch_size=2)
     embeddings, indices = featurizer.featurize(smiles)
 
     assert embeddings.shape == (3, 2048)
@@ -41,9 +53,9 @@ def test_featurize_shape_dtype_indices(smiles):
     assert np.array_equal(indices, np.arange(3))
 
 
-def test_featurize_batch_invariance(smiles):
+def test_featurize_batch_invariance(smiles, make_featurizer):
     """Embeddings and indices must not depend on the chosen forward batch size."""
-    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=1)
+    featurizer = make_featurizer(accelerator="cpu", batch_size=1)
     emb_small, idx_small = featurizer.featurize(smiles)
 
     # One model, two forward batch sizes: only the batching may differ
@@ -55,8 +67,8 @@ def test_featurize_batch_invariance(smiles):
     np.testing.assert_array_equal(idx_small, idx_large)
 
 
-def test_featurizer_respects_accelerator():
-    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=256)
+def test_featurizer_respects_accelerator(make_featurizer):
+    featurizer = make_featurizer(accelerator="cpu", batch_size=256)
     embeddings, _ = featurizer.featurize(["CCO", "CCN"])
 
     model = featurizer.model.estimator
@@ -64,9 +76,9 @@ def test_featurizer_respects_accelerator():
     assert str(device) == "cpu"
 
 
-def test_featurize_invalid_smiles_raises():
+def test_featurize_invalid_smiles_raises(make_featurizer):
     """Unparseable SMILES propagate the toolkit error instead of being skipped."""
-    featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2)
+    featurizer = make_featurizer(accelerator="cpu", batch_size=2)
     with pytest.raises(RuntimeError, match="not_a_smile"):
         featurizer.featurize(["CCO", "not_a_smile", "CCN"])
 
@@ -81,10 +93,10 @@ def test_featurize_empty_input_returns_empty():
     assert featurizer._model is None
 
 
-def test_featurizer_compatible_with_concatenator(smiles):
+def test_featurizer_compatible_with_concatenator(smiles, make_featurizer):
     concat = FeatureConcatenator(
         featurizers=[
-            CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=2),
+            make_featurizer(accelerator="cpu", batch_size=2),
             FingerprintFeaturizer(fp_type="ecfp:4", n_jobs=1),
         ]
     )

@@ -99,3 +99,33 @@ def null_ensemble_model_dir(tmp_path_factory):
         model.serialize(member_dir / "model.json", member_dir / "model.pkl")
 
     return model_dir
+
+
+@pytest.fixture(scope="session")
+def chemeleon_foundation_checkpoint(tmp_path_factory):
+    """
+    Session-scoped foundation checkpoint with the CheMeleon layout and random weights.
+
+    Lets tests take the real from_foundation path without downloading the published
+    CheMeleon checkpoint. Weights are random, so only shapes and determinism are
+    meaningful, never the embedding values themselves.
+    """
+    # Imported here so the whole unit suite does not pay for torch and chemprop
+    import torch
+    from chemprop import nn
+
+    from openadmet.models.architecture.chemprop import _CHEMELEON_MP_HPARAMS
+
+    message_passing = nn.BondMessagePassing(**_CHEMELEON_MP_HPARAMS)
+    checkpoint_path = (
+        tmp_path_factory.mktemp("chemeleon_foundation") / "chemeleon_mp.pt"
+    )
+    torch.save(
+        {
+            "hyper_parameters": dict(_CHEMELEON_MP_HPARAMS),
+            "state_dict": message_passing.state_dict(),
+        },
+        checkpoint_path,
+    )
+
+    return checkpoint_path
