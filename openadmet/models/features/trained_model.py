@@ -43,9 +43,9 @@ class TrainedModelFeaturizer(FeaturizerBase):
         Directory of the trained model, in the layout ``anvil`` writes: a
         ``recipe_components`` directory plus the serialized model files.
     outputs : list of str
-        Per-task quantities to emit, in column order. 'mean' is the model's
-        prediction; 'std' is the ensemble spread and requires the pretrained
-        model to be an ensemble. Defaults to ['mean'].
+        Per-task quantities to emit, in column order. Defaults to ['mean'],
+        the model's prediction. Ensembles can additionally request 'std', the
+        spread across members, which is rejected for a single model.
     accelerator : str
         Accelerator passed to the pretrained model's predict, by default
         'cpu', since this runs inside another model's training loop.
@@ -86,7 +86,8 @@ class TrainedModelFeaturizer(FeaturizerBase):
         Raises
         ------
         ValueError
-            If the directory or its recipe components are missing.
+            If the directory, its recipe_components directory, or the
+            procedure.yaml inside it is missing.
 
         """
         value = Path(value)

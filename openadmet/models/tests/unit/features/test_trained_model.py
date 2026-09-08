@@ -174,8 +174,7 @@ def test_composes_inside_a_concatenator(null_single_model_dir, smiles):
     )
     features, indices = concat.featurize(smiles)
 
-    # Class-name order puts the null block first, so its zero column precedes
-    # the trained model's 1.0 column
+    # Class-name order puts the null block first
     assert features.shape == (len(smiles), 2)
     np.testing.assert_array_equal(indices, np.arange(len(smiles)))
     np.testing.assert_array_equal(features[:, 0], np.zeros(len(smiles)))
