@@ -43,14 +43,6 @@ class PCATransform(TransformBase):
     held-out data. Missing values are handled by an optional imputation step
     ahead of the PCA within each block, since PCA itself cannot see NaN.
 
-    Per-block PCA slices matrices by train-time block boundaries, so every
-    matrix it applies to must carry the same column layout. Featurizers that
-    emit a batch-dependent column set (e.g. Mordred, whose columns are the
-    union of descriptors that compute on the given rows) can violate this
-    across partitions; prefer featurizers with fixed-width output such as
-    fingerprints. The fit-time width check fails loudly when a mismatch
-    occurs instead of silently misaligning columns.
-
     Attributes
     ----------
     n_components : int or dict
