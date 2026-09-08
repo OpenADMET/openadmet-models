@@ -241,8 +241,8 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
 # of whether the user set them explicitly; see _resolved_fields below
 ResolvedField = partial(Field, json_schema_extra={"resolved": True})
 
-# Aliases from trainer/Lightning accelerator spelling to torch device name;
-# any value not in this dict is used verbatim as a torch device name
+# Lightning Trainer and torch disagree on two device names, so translate those
+# two and pass everything else through verbatim
 _ACCELERATOR_ALIASES = {
     "gpu": "cuda",
     "tpu": "xla",
@@ -253,9 +253,8 @@ def _resolve_device(accelerator: str) -> str:
     """
     Resolve an accelerator spelling to a torch device name.
 
-    "auto" delegates to Lightning's selection so it matches what the repo's
-    Trainer picks on this machine; trainer aliases map to torch names, and
-    every other value passes through verbatim.
+    "auto" delegates to Lightning so the choice matches what a Trainer would
+    pick on this machine. Everything else is aliased or passed through.
     """
     if accelerator == "auto":
         accelerator = _select_auto_accelerator()
