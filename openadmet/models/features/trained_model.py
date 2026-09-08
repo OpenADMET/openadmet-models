@@ -10,6 +10,7 @@ import numpy as np
 import yaml
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
+from openadmet.models.eval.utils import ensure_2d
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
@@ -222,21 +223,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
             mean = model.predict(X_feat, accelerator=self.accelerator)
             std = None
 
-        # Lay the requested quantities out in the configured order, each
-        # contributing one column per task
-        blocks = {"mean": mean, "std": std}
-        columns = [self._as_columns(blocks[name]) for name in self.outputs]
+        # One block of columns per requested output, in the order listed
+        blocks = []
+        for name in self.outputs:
+            values = mean if name == "mean" else std
+            blocks.append(ensure_2d(np.asarray(values)))
 
-        return np.concatenate(columns, axis=1).astype(np.float64), np.asarray(indices)
-
-    @staticmethod
-    def _as_columns(values: np.ndarray) -> np.ndarray:
-        """Return predictions as a 2D (n_rows, n_tasks) block."""
-        values = np.asarray(values)
-
-        # A single-task model reports a flat array; make it one column so tasks
-        # concatenate the same way whatever their number
-        if values.ndim == 1:
-            return values.reshape(-1, 1)
-
-        return values
+        return np.concatenate(blocks, axis=1).astype(np.float64), np.asarray(indices)
