@@ -208,13 +208,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
         """
         model, feat = self._load_pretrained_model()
 
-        # The pretrained model owns its featurization, so it consumes SMILES and
-        # reports which of them it managed to featurize
-        feat_data = feat.featurize(smiles)
-        X_feat, indices = feat_data[0], feat_data[1]
+        # Featurize using pretrained model's featurizer
+        X_feat, indices = feat.featurize(smiles)[:2]
 
-        # A model reports its spread only on request, and only an ensemble has
-        # one; the validator has already established that pairing is possible
+        # Report std if requested
         if "std" in self.outputs:
             mean, std = model.predict(
                 X_feat, accelerator=self.accelerator, return_std=True
