@@ -40,6 +40,12 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
     batch_size : int
         Number of molecules per forward pass.
 
+    Attributes
+    ----------
+    model : ChemPropModel
+        Encoder built on first access and reused across calls, so repeated
+        featurization does not reload the checkpoint.
+
     """
 
     type: ClassVar[str] = "CheMeleonEmbeddingFeaturizer"
@@ -47,21 +53,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
     accelerator: str = "auto"
     batch_size: int = 256
 
-    def __init__(self, accelerator: str = "auto", batch_size: int = 256):
-        """
-        Initialize the featurizer with device and batching settings.
-
-        Parameters
-        ----------
-        accelerator : str, optional
-            Device to use for inference. Default is "auto", which resolves
-            like Lightning's auto accelerator.
-        batch_size : int, optional
-            Number of molecules per forward pass. Default is 256.
-
-        """
-        super().__init__(accelerator=accelerator, batch_size=batch_size)
-        self._model: ChemPropModel | None = None
+    _model: ChemPropModel | None = None
 
     @field_validator("accelerator")
     @classmethod
@@ -89,8 +81,11 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
             raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
         return value
 
-    def _ensure_model(self) -> ChemPropModel:
+    @property
+    def model(self) -> ChemPropModel:
+        """Return the CheMeleon encoder, building it on first access."""
         if self._model is None:
+            # Cache only after build() succeeds, so a failure is not memoized
             model = ChemPropModel(from_foundation=_FOUNDATION_NAME)
             model.build()
             self._model = model
@@ -123,11 +118,10 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
                 np.empty((0, _FOUNDATION_EMBEDDING_DIM), dtype=np.float32),
                 np.empty(0, dtype=int),
             )
-        model = self._ensure_model()
 
         # The featurizer decides the device, so hand it to predict_embedding
         # rather than letting it default
-        embeddings = model.predict_embedding(
+        embeddings = self.model.predict_embedding(
             smiles_list, batch_size=self.batch_size, accelerator=self.accelerator
         )
 

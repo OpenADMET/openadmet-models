@@ -59,7 +59,7 @@ def test_featurizer_respects_accelerator():
     featurizer = CheMeleonEmbeddingFeaturizer(accelerator="cpu", batch_size=256)
     embeddings, _ = featurizer.featurize(["CCO", "CCN"])
 
-    model = featurizer._ensure_model().estimator
+    model = featurizer.model.estimator
     device = next(model.parameters()).device
     assert str(device) == "cpu"
 
