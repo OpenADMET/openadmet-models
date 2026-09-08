@@ -48,7 +48,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         spread across members, which is rejected for a single model.
     accelerator : str
         Accelerator passed to the pretrained model's predict, by default
-        'cpu', since this runs inside another model's training loop.
+        'auto', which uses a GPU where one is available and falls back to CPU.
 
     """
 
@@ -62,7 +62,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         min_length=1,
         description="Per-task quantities to emit as feature columns, in column order",
     )
-    accelerator: str = "cpu"
+    accelerator: str = "auto"
 
     # Cached (model, featurizer) so featurizing several partitions loads once
     _loaded: tuple | None = PrivateAttr(default=None)
