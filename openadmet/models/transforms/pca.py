@@ -22,6 +22,16 @@ class PCATransform(TransformBase):
     """
     Apply principal component analysis to one or more feature blocks.
 
+    A concatenated feature matrix holds blocks from different featurizers, and
+    those blocks differ by an order of magnitude in width and in variance
+    scale: a 2048-bit fingerprint next to a couple of hundred physicochemical
+    descriptors. One PCA over that whole matrix spends its components on
+    whichever block carries the most raw variance, so the wide block crowds
+    the narrow one out of the retained dimensions. Fitting one PCA per block
+    gives each featurizer its own component budget, set from what that
+    representation is worth rather than from how many columns it happens to
+    occupy.
+
     With an int ``n_components``, a single PCA is fitted over the entire
     feature matrix. With a dict mapping block keys to component counts, one
     PCA is fitted per block and the projected blocks are concatenated in the
@@ -143,7 +153,13 @@ class PCATransform(TransformBase):
         return Pipeline(steps)
 
     def _check_2d(self, X: np.ndarray) -> None:
-        """Raise if X is not a 2D feature matrix."""
+        """
+        Raise if X is not a 2D feature matrix.
+
+        Featurizers return a 1D array for single-row input, and block slicing
+        (``X[:, start:stop]``) raises a bare IndexError on one. Checking up
+        front names the offending shape instead.
+        """
         if X.ndim != 2:
             raise ValueError(f"Expected a 2D feature matrix, got shape {X.shape}.")
 
