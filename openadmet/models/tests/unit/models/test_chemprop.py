@@ -790,10 +790,10 @@ def test_resolve_device_aliases(accelerator, expected):
     assert _resolve_device(accelerator) == expected
 
 
-def test_resolve_device_auto_delegates_to_lightning(monkeypatch):
+def test_resolve_device_auto_delegates_to_lightning(mocker):
     """Test that auto delegates the choice to Lightning's own resolution."""
-    monkeypatch.setattr(
+    mocker.patch(
         "openadmet.models.architecture.chemprop._select_auto_accelerator",
-        lambda: "mps",
+        return_value="mps",
     )
     assert _resolve_device("auto") == "mps"

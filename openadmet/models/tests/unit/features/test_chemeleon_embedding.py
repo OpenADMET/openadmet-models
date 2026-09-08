@@ -10,9 +10,9 @@ from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 
 
 @pytest.fixture(autouse=True)
-def _hermetic_foundation(monkeypatch):
+def _hermetic_foundation(mocker):
     """Run against the random-weight chemeleon-test architecture so no checkpoint is downloaded."""
-    monkeypatch.setattr(chemeleon_embedding, "_FOUNDATION_NAME", "chemeleon-test")
+    mocker.patch.object(chemeleon_embedding, "_FOUNDATION_NAME", "chemeleon-test")
 
 
 @pytest.fixture
