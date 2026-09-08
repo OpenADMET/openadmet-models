@@ -674,17 +674,6 @@ class ChemPropModel(LightningModelBase):
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                     )
-                # Testing only: CheMeleon-shaped architecture with random
-                # weights, so tests need no network access
-                elif self.from_foundation == "chemeleon-test":
-                    logger.info("Using CheMeleon test architecture with random weights")
-                    foundation_mp = {
-                        "hyper_parameters": {
-                            **_CHEMELEON_MP_HPARAMS,
-                            "dropout": self.dropout,
-                        },
-                        "state_dict": {},
-                    }
                 else:
                     logger.info(f"Loading foundation model from {self.from_foundation}")
                     foundation_mp = self._load_foundation_model(
@@ -693,15 +682,14 @@ class ChemPropModel(LightningModelBase):
                 aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
 
-                # Check for foundation weights, skip only for test case
-                if self.from_foundation != "chemeleon-test":
-                    if not foundation_mp.get("state_dict"):
-                        raise RuntimeError(
-                            f"Foundation model at {self.from_foundation} has a "
-                            "missing or empty state_dict; refusing to build a "
-                            "randomly initialized model"
-                        )
-                    mp.load_state_dict(foundation_mp["state_dict"])
+                # Check for foundation weights
+                if not foundation_mp.get("state_dict"):
+                    raise RuntimeError(
+                        f"Foundation model at {self.from_foundation} has a "
+                        "missing or empty state_dict; refusing to build a "
+                        "randomly initialized model"
+                    )
+                mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
                     "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"

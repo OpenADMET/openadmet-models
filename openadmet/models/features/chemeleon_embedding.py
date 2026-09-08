@@ -15,9 +15,6 @@ from openadmet.models.architecture.chemprop import (
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
-# Foundation checkpoint, patched by tests to the weightless architecture
-_FOUNDATION_NAME = "chemeleon"
-
 # Zero-row width, so an empty input skips the checkpoint download
 _FOUNDATION_EMBEDDING_DIM: int = _CHEMELEON_MP_HPARAMS["d_h"]
 
@@ -85,7 +82,7 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
         """Return the CheMeleon encoder, building it on first access."""
         if self._model is None:
             # Cache only after build() succeeds, so a failure is not memoized
-            model = ChemPropModel(from_foundation=_FOUNDATION_NAME)
+            model = ChemPropModel(from_foundation="chemeleon")
             model.build()
             self._model = model
         return self._model
