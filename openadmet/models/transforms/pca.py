@@ -27,15 +27,16 @@ class PCATransform(TransformBase):
     narrow descriptor block out of the retained dimensions. Fitting one PCA
     per block gives each featurizer its own component budget.
 
-    With an int ``n_components``, a single PCA is fitted over the entire
-    feature matrix. With a dict mapping block keys to component counts, one
-    PCA is fitted per block and the projected blocks are concatenated in the
-    block order from ``feature_blocks``, typically one block per featurizer in
-    a FeatureConcatenator output. A block whose count is None passes through
-    untouched, which suits blocks that are already narrow and carry meaning
-    column by column, such as the predictions of a pretrained model. Every
-    block still needs an entry, so passthrough is stated rather than obtained
-    by leaving a key out, and a mistyped key still fails loudly.
+    ``n_components`` selects the mode:
+
+    - Global: an int fits a single PCA over the entire feature matrix.
+    - Per-block: a dict maps block keys to component counts and fits one PCA
+      per block, concatenating the projected blocks in ``feature_blocks``
+      order, typically one block per featurizer in a FeatureConcatenator
+      output.
+    - Passthrough: within the dict form, a count of None leaves that block
+      unreduced, which suits blocks that are already narrow and carry meaning
+      column by column, such as the predictions of a pretrained model.
 
     The transform is fitted on the train features only and applied to
     validation, test, and inference features, so PCA loadings never see

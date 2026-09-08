@@ -87,18 +87,15 @@ class AnvilWorkflowBase(BaseModel):
         """
         Check per-block transforms against the featurizer's block layout.
 
-        A transform configured per block (e.g. PCATransform with a dict
-        ``n_components``) is keyed by featurizer block name. Those keys come
-        from the featurizer types alone, so a mismatch is knowable here rather
-        than at fit time, which is after the whole featurization pass has run.
+        A transform is configured in one of two ways:
 
-        For example, a FeatureConcatenator holding a DescriptorFeaturizer and a
-        FingerprintFeaturizer emits two blocks, keyed by those class names. A
-        PCATransform with ``n_components={"FingerprintFeaturizer": 256}`` names
-        only one of them and is rejected here. Both
-        ``{"FingerprintFeaturizer": 256, "DescriptorFeaturizer": 32}`` and
-        ``{"FingerprintFeaturizer": 256, "DescriptorFeaturizer": None}`` are
-        accepted, the second passing the descriptor block through unreduced.
+        - Globally, over the whole feature matrix, which constrains nothing
+          about the featurizer.
+        - Per block, keyed by featurizer block name, which requires the
+          featurizer to emit blocks.
+
+        The per-block contract is one to one: the configured keys and the
+        emitted block keys must match.
 
         Raises
         ------
