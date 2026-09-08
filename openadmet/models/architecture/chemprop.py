@@ -936,6 +936,10 @@ class ChemPropModel(LightningModelBase):
         """
         Return pooled structural embeddings (pre-predictor) for a list of SMILES.
 
+        A built ChemPropModel acts as a featurizer through this method. It returns
+        encoder output without running the predictor head, so no trained predictor
+        is required.
+
         Parameters
         ----------
         smiles_list : list[str]
@@ -957,6 +961,10 @@ class ChemPropModel(LightningModelBase):
         ------
         ValueError
             If the model estimator has not been built.
+
+        See Also
+        --------
+        openadmet.models.features.chemeleon_embedding.CheMeleonEmbeddingFeaturizer
 
         """
         if not self.estimator:
