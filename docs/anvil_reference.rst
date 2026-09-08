@@ -291,7 +291,7 @@ As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family mo
 
 Transform
 ~~~~~~~~~
-The optional ``transform`` section transforms the featurized feature matrices after
+The optional ``transform`` section applies column operations to the feature matrices, after
 featurization and before training. Transforms are fitted on the train partition only, then applied to the
 validation, test, and inference features, so learned statistics (imputer means, PCA loadings) never see held-out
 data. The fitted transforms are saved next to the model and re-applied automatically at inference time.
@@ -357,6 +357,15 @@ children's blocks rather than one block of its own, so give a key per leaf featu
             FingerprintFeaturizer: 256
             DescriptorFeaturizer: 32
           random_seed: 42
+
+Concretely, on three molecules that recipe featurizes to 2223 columns: 223 from ``DescriptorFeaturizer`` and 2000
+from ``FingerprintFeaturizer`` at its default bit count. The median imputer fills missing descriptor values, then each
+block is reduced on its own, and the model sees 32 + 256 = 288 columns.
+
+Note the column order. Blocks are emitted in featurizer class-name order, not in the order the recipe lists them, so
+the descriptor block comes first here even though ``FingerprintFeaturizer`` is written first above. The order is fixed
+by the set of featurizers rather than by how the recipe spells them, which keeps a model trained on one recipe usable
+against another naming the same featurizers. The ``n_components`` mapping is keyed by name, so it is unaffected.
 
 Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
 reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would
