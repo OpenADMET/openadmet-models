@@ -425,7 +425,6 @@ def test_chemprop_load_weights(tmp_path):
     # Extract the message passing weights
     mp_state_dict = source_model.estimator.message_passing.state_dict()
     for key in mp_state_dict:
-        # Map from full state dict keys to foundation format keys
         if key.endswith(".weight") or key.endswith(".bias"):
             foundation_data["state_dict"][key] = mp_state_dict[key]
 

@@ -72,8 +72,9 @@ def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
         return steps_per_epoch
 
     estimated = trainer.estimated_stepping_batches
+
+    # Convert optimizer steps back to batch steps for gradient accumulation
     if isinstance(estimated, int) and estimated != float("inf"):
-        # Convert optimizer steps back to batch steps for gradient accumulation
         return (estimated * trainer.accumulate_grad_batches) // max(
             1, trainer.max_epochs
         )
@@ -122,13 +123,11 @@ def configure_optimizers(self) -> dict:
 
     opt = torch.optim.AdamW(param_groups)
 
-    # Ratio of final_lr to max_lr, shared by both schedulers whenever they need a
-    # per-group value proportional to that group's own peak lr, not the global max_lr
+    # Scales each group against its own peak lr rather than the global max_lr
     final_lr_ratio = self.final_lr / self.max_lr
 
+    # Plateau needs per-group LR floors
     if self.scheduler == "plateau":
-        # Compute per-group LR floors proportional to each group's peak,
-        # preserving the ratio final_lr / max_lr across param groups
         min_lrs = [group["lr"] * final_lr_ratio for group in param_groups]
 
         # Configure the reduce on plateau scheduler
@@ -151,8 +150,8 @@ def configure_optimizers(self) -> dict:
         warmup_steps = self.warmup_epochs * steps_per_epoch
 
         if self.trainer.max_epochs == -1:
+            # Nothing to calibrate decay against, so hold at max_lr
             if warmup_steps == 0:
-                # No warmup and no epoch budget means no way to calibrate decay; hold at max_lr
                 logger.warning(
                     "noam scheduler with max_epochs=-1 and warmup_epochs=0 cannot calibrate "
                     "decay; LR will be constant at max_lr for the entire run. "
@@ -176,27 +175,24 @@ def configure_optimizers(self) -> dict:
             else:
                 cooldown_steps = cooldown_epochs * steps_per_epoch
 
-        # Convert absolute learning rates into scaling factors relative to max_lr
-        # When mpnn_lr != max_lr, the MPNN group's absolute starting LR is
-        # mpnn_lr * (init_lr / max_lr), not init_lr; the schedule shape is preserved
-        # proportionally for each param group around its own peak
+        # Multiplier, so each group's start is proportional to its own peak lr
         init_factor = self.init_lr / self.max_lr
 
-        # Lambda reaches exactly 1.0 at step == warmup_steps and exactly final_lr_ratio
-        # at step == warmup_steps + cooldown_steps, with no discontinuity at either boundary
-        # When both phases are zero (no warmup, infinite or unset max_epochs), the schedule
-        # is a constant at max_lr rather than silently collapsing to final_lr
+        # Hits exactly 1.0 at warmup_steps and final_lr_ratio at the cooldown end
         def lr_lambda(step: int) -> float:
+            # No schedule configured, so hold at max_lr
             if warmup_steps == 0 and cooldown_steps == 0:
-                # No schedule configured; hold at max_lr for the entire run
                 return 1.0
+
+            # Linear ramp from init_lr to max_lr, owning the peak step
             if warmup_steps > 0 and step <= warmup_steps:
-                # Linear ramp from init_lr to max_lr; owns the peak step
                 return init_factor + (step / warmup_steps) * (1.0 - init_factor)
+
+            # Geometric decay, guarded against zero division by cooldown_steps > 0
             elif cooldown_steps > 0 and step <= warmup_steps + cooldown_steps:
-                # Geometric decay; no division guard needed since we require cooldown_steps > 0
                 decay_frac = (step - warmup_steps) / cooldown_steps
                 return final_lr_ratio**decay_frac
+
             else:
                 return final_lr_ratio
 
@@ -217,17 +213,19 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
     if self.scheduler != "plateau":
         return
     num_val_batches = getattr(self.trainer, "num_val_batches", None)
+
+    # Attribute missing entirely, so assume val exists rather than warn wrongly
     if num_val_batches is None:
-        # Trainer did not expose the attribute; assume val exists
         return
-    # Lightning's num_val_batches is an int when there is a single (or no) val
-    # dataloader, and a list[int] with one entry per dataloader when there are
-    # multiple; has_val is true if any configured dataloader reports batches
+
+    # Lightning reports one entry per dataloader when several are configured
     if isinstance(num_val_batches, list):
         has_val = any(n > 0 for n in num_val_batches)
+
+    # Single or no val dataloader, where 0 correctly means no validation
     else:
-        # Integer path: 0 correctly means no validation
         has_val = num_val_batches > 0
+
     if not has_val:
         logger.warning(
             f"scheduler='plateau' monitors '{self.monitor_metric}' but no validation "
@@ -237,8 +235,7 @@ def _warn_if_plateau_missing_val_dataloader(self) -> None:
         )
 
 
-# Fields tagged resolved=True are always persisted by serialize(), regardless
-# of whether the user set them explicitly; see _resolved_fields below
+# Tagged fields are always persisted by serialize(), set explicitly or not
 ResolvedField = partial(Field, json_schema_extra={"resolved": True})
 
 # Lightning Trainer and torch disagree on two device names, so translate those
@@ -368,10 +365,7 @@ class ChemPropModel(LightningModelBase):
     # Meta parameters for this class
     type: ClassVar[str] = "ChemPropModel"
 
-    # ChemProp parameters
-    # Structural fields are tagged resolved=True: they determine model graph shape
-    # and checkpoint compatibility, so serialize() always persists them regardless
-    # of whether the user set them explicitly (see _resolved_fields below)
+    # ChemProp parameters, resolved because they fix the graph shape
     n_tasks: int = ResolvedField(1)
     messages: str = ResolvedField("bond")
     aggregation: str = ResolvedField("mean")
@@ -394,9 +388,7 @@ class ChemPropModel(LightningModelBase):
     max_lr: float = 1e-3
     weight_decay: float = 0.0
 
-    # Component overrides (optional - inherit from masters if None)
-    # Resolved LRs: computed from max_lr/weight_decay at validation time and
-    # needed for exact schedule reproduction on reload, so tagged resolved=True
+    # Component overrides (inherit from max_lr / weight_decay if None), resolved for reload
     mpnn_lr: float | None = ResolvedField(None)
     ffn_lr: float | None = ResolvedField(None)
     mpnn_weight_decay: float | None = ResolvedField(None)
@@ -406,9 +398,7 @@ class ChemPropModel(LightningModelBase):
     init_lr: float | None = ResolvedField(None)
     final_lr: float | None = ResolvedField(None)
 
-    # Noam-only parameters (None = 0, no warmup unless explicitly requested)
-    # None for the inactive scheduler; serialize() drops None entries so only
-    # the active scheduler's fields appear in the artifact
+    # Noam-only (None = no warmup), left None under plateau so serialize() drops it
     warmup_epochs: int | None = ResolvedField(None)
 
     # Plateau-only parameters (None = use scheduler defaults)
@@ -486,14 +476,8 @@ class ChemPropModel(LightningModelBase):
         if self.ffn_weight_decay is None:
             self.ffn_weight_decay = self.weight_decay
 
-        # Fill scheduler-specific defaults only for the active scheduler. These
-        # can't be plain Field(default=...) values: warmup_epochs, reduce_lr_factor,
-        # and reduce_lr_patience are declared X | None = None so validate_scheduler_params
-        # below can tell "user explicitly set this for the wrong scheduler" (raise) apart
-        # from "user never touched it" (silently fine); a real default would make both
-        # cases look identical once resolved here. The values below are what an unset
-        # field resolves to, not a bypass of Field defaults; users can still override
-        # them directly via the constructor
+        # Defaults land here rather than on Field so validate_scheduler_params
+        # can still see None and tell an unset field from a wrong-scheduler one
         if self.scheduler == "noam":
             if self.warmup_epochs is None:
                 self.warmup_epochs = 2
@@ -648,11 +632,13 @@ class ChemPropModel(LightningModelBase):
         """
         if scaler is not None:
             output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
+
+        # Identity placeholder, since the real parameters arrive from the checkpoint
         elif self.normalized_targets:
-            # Identity placeholder (mean=0, scale=1); real parameters are loaded from checkpoint
             output_transform = nn.UnscaleTransform(
                 [0] * self.n_tasks, [1] * self.n_tasks
             )
+
         else:
             output_transform = None
         return output_transform
@@ -688,9 +674,9 @@ class ChemPropModel(LightningModelBase):
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                     )
+                # Testing only: CheMeleon-shaped architecture with random
+                # weights, so tests need no network access
                 elif self.from_foundation == "chemeleon-test":
-                    # Build CheMeleon-compatible architecture with random weights,
-                    # for hermetic tests that need no network access
                     logger.info("Using CheMeleon test architecture with random weights")
                     foundation_mp = {
                         "hyper_parameters": {
@@ -747,13 +733,7 @@ class ChemPropModel(LightningModelBase):
                 dropout=self.dropout,
             )
 
-            # max_lr and final_lr are MPNN constructor parameters that Lightning records
-            # in hparams.yaml automatically; pass them unconditionally so the recorded
-            # values are always correct, regardless of scheduler. warmup_epochs and init_lr
-            # are noam-only structural fields, included only when noam is active so they
-            # don't appear in hparams for plateau. Plateau-specific params (reduce_lr_factor,
-            # etc.) are not constructor args and are set as plain attributes below, so they
-            # never appear in hparams regardless of scheduler — no plateau_kwargs needed
+            # Constructor args land in hparams.yaml, so pass only what the scheduler uses
             mpnn_kwargs = dict(max_lr=self.max_lr, final_lr=self.final_lr)
             if self.scheduler == "noam":
                 mpnn_kwargs.update(
@@ -770,22 +750,16 @@ class ChemPropModel(LightningModelBase):
                 **mpnn_kwargs,
             )
 
-            # scheduler has no MPNN constructor slot, so it is added to hparams directly.
-            # warmup_epochs and init_lr are popped for plateau because MPNN's own
-            # save_hyperparameters() records its constructor defaults for any arg we
-            # omit, and those two play no role in the plateau schedule
+            # MPNN has no scheduler constructor arg, so record it on hparams directly
             mpnn.hparams.update({"scheduler": self.scheduler})
+
+            # MPNN records its own defaults for omitted args, so drop the noam-only ones
             if self.scheduler == "plateau":
                 mpnn.hparams.pop("warmup_epochs", None)
                 mpnn.hparams.pop("init_lr", None)
 
-            # configure_optimizers and on_train_start below are bound directly onto mpnn
-            # (the LightningModule that Trainer actually calls), not left on self (this
-            # ChemPropModel config wrapper). Inside those bound functions, `self` refers
-            # to mpnn, so every value they read (monitor_metric, the LR/weight-decay
-            # groups, scheduler choice, etc.) must be copied onto the mpnn instance here;
-            # leaving them only on the ChemPropModel would make them unreachable once
-            # the functions run
+            # The functions bound below see mpnn as self, not this wrapper, so
+            # everything they read has to be copied across first
             mpnn.monitor_metric = self.monitor_metric
             mpnn.mpnn_weight_decay = self.mpnn_weight_decay
             mpnn.ffn_weight_decay = self.ffn_weight_decay
@@ -969,9 +943,8 @@ class ChemPropModel(LightningModelBase):
                 "Model has not been built. Call build() before predict_embedding."
             )
 
+        # Width off the built model, so non-CheMeleon foundations stay correct
         if not smiles_list:
-            # Width comes from the built model so the zero-row shape stays
-            # correct for non-CheMeleon foundation widths
             return np.empty((0, self.message_hidden_dim), dtype=np.float32)
 
         dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
@@ -982,8 +955,8 @@ class ChemPropModel(LightningModelBase):
             dataset, batch_size=effective_batch, shuffle=False
         )
 
-        # Place the model explicitly so the device comes from the argument, not
-        # from whatever the params happened to occupy
+        # Place explicitly so the device comes from the argument, not from
+        # wherever the params happen to sit
         device = torch.device(_resolve_device(accelerator))
         self.estimator.to(device)
 
@@ -1066,36 +1039,26 @@ class ChemPropModel(LightningModelBase):
                 f"but only {self.ffn_num_layers} available."
             )
 
-        # Freeze message passing
+        # Freeze message passing, dropping gradients and pinning eval mode
         if message_passing:
-            # No gradient updates
             self.estimator.message_passing.apply(
                 lambda module: module.requires_grad_(False)
             )
-            # Set to evaluation mode
             self.estimator.message_passing.eval()
-
-            # Log for message passing
             logger.info(f"Model weights for message passing frozen.")
 
-        # Freeze batch norm
+        # Freeze batch norm, so running stats stop updating too
         if batch_norm:
-            # No gradient updates
             self.estimator.bn.apply(lambda module: module.requires_grad_(False))
-            # Evaluation mode
             self.estimator.bn.eval()
-            # Log for batch normalization
             logger.info(f"Model weights for batch normalization frozen.")
 
-        # Freeze feedforward network
+        # Freeze the first ffn_layers of the predictor, counting from the input
         if ffn_layers > 0:
             for idx in range(ffn_layers):
-                # No gradient updates
                 self.estimator.predictor.ffn[idx].requires_grad_(False)
-                # Evaluation mode (same layer as the gradient freeze)
                 self.estimator.predictor.ffn[idx].eval()
 
-            # Log for feedforward network
             logger.info(
                 f"Model weights for {ffn_layers} feedforward network layer(s) frozen."
             )

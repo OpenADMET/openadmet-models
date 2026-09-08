@@ -15,8 +15,7 @@ from openadmet.models.architecture.chemprop import (
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
 
-# Foundation checkpoint name; tests monkeypatch this to the hermetic
-# chemeleon-test architecture so no checkpoint download is needed
+# Foundation checkpoint, patched by tests to the weightless architecture
 _FOUNDATION_NAME = "chemeleon"
 
 # Zero-row width, so an empty input skips the checkpoint download
@@ -111,16 +110,15 @@ class CheMeleonEmbeddingFeaturizer(FeaturizerBase):
 
         """
         smiles_list = list(smiles)
+
+        # Shaped from the constant, so an empty input never builds the model
         if not smiles_list:
-            # Width comes from the checkpoint constant so an empty input
-            # returns a correctly shaped array without triggering a download
             return (
                 np.empty((0, _FOUNDATION_EMBEDDING_DIM), dtype=np.float32),
                 np.empty(0, dtype=int),
             )
 
-        # The featurizer decides the device, so hand it to predict_embedding
-        # rather than letting it default
+        # The featurizer owns the device choice, so pass it rather than default
         embeddings = self.model.predict_embedding(
             smiles_list, batch_size=self.batch_size, accelerator=self.accelerator
         )
