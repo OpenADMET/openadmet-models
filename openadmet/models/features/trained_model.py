@@ -63,8 +63,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
     )
     accelerator: str = "cpu"
 
-    # Loaded on first featurize and reused; holds (model, featurizer, metadata,
-    # data spec) so repeated partitions do not deserialize the model again
+    # Cached (model, featurizer) so featurizing several partitions loads once
     _loaded: tuple | None = PrivateAttr(default=None)
 
     @field_validator("model_dir")
@@ -168,28 +167,24 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
         return self
 
-    def _load(self) -> tuple:
+    def _load_pretrained_model(self) -> tuple:
         """
-        Load the trained model and its components, caching the result.
+        Load the pretrained model and its featurizer, caching the result.
 
         Returns
         -------
         tuple
-            The loaded (model, featurizer, metadata, data spec).
+            The loaded (model, featurizer).
 
         """
         if self._loaded is None:
-            # Imported here so the featurizer registry does not pull in the
-            # inference module, and its dependencies, at import time
+            # Defer import
             from openadmet.models.inference.inference import (
                 load_anvil_model_and_metadata,
             )
 
-            model, feat, metadata, data_spec = load_anvil_model_and_metadata(
-                self.model_dir
-            )
-
-            self._loaded = (model, feat, metadata, data_spec)
+            model, feat, _, _ = load_anvil_model_and_metadata(self.model_dir)
+            self._loaded = (model, feat)
 
         return self._loaded
 
@@ -210,7 +205,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
             in the input that the pretrained model's featurizer kept.
 
         """
-        model, feat, _, _ = self._load()
+        model, feat = self._load_pretrained_model()
 
         # The pretrained model owns its featurization, so it consumes SMILES and
         # reports which of them it managed to featurize
