@@ -210,7 +210,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
         model, feat = self._load_pretrained_model()
 
         # Featurize using pretrained model's featurizer
-        X_feat, indices = feat.featurize(smiles)[:2]
+        feat_data = feat.featurize(smiles)
+
+        # Featurizers return (features, indices) or (dataloader, indices, scaler, dataset)
+        X_feat, indices = feat_data[0], feat_data[1]
 
         # Report std if requested
         if "std" in self.outputs:
