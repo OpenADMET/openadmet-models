@@ -143,9 +143,11 @@ class TrainedModelFeaturizer(FeaturizerBase):
         """
         Check the pretrained model can produce a spread when 'std' is requested.
 
-        Only an ensemble has a spread; a single model reports NaN, which would
-        silently fill a feature column with missing values. The recipe names
-        the ensemble, so this is answerable from YAML alone.
+        Only an ensemble honours ``return_std``. A single model discards it
+        through ``**kwargs`` and returns predictions alone, so unpacking the
+        result into (mean, std) either splits that array in two or raises,
+        depending on the row count. The recipe names the ensemble, so this is
+        answerable from YAML alone.
 
         Raises
         ------
