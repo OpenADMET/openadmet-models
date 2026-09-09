@@ -1,7 +1,7 @@
 """Base class for transforms, allows for arbitrary transformation of input data."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
@@ -44,8 +44,60 @@ def get_transform_class(trans_type):
     return transf_class
 
 
+def check_block_keys(required: set[str], available: set[str], subject: str) -> None:
+    """
+    Check a per-block configuration against the block keys actually present.
+
+    The same comparison runs twice: at workflow construction, against the keys
+    the featurizer will emit, and again inside a block-aware transform's fit,
+    which is the backstop for transforms fitted outside a workflow.
+
+    Parameters
+    ----------
+    required : set of str
+        Block keys the transform is configured against.
+    available : set of str
+        Block keys the feature layout actually provides.
+    subject : str
+        What is misconfigured, named in the error (e.g. 'n_components' or the
+        transform's class name).
+
+    Raises
+    ------
+    ValueError
+        If the two key sets differ in either direction.
+
+    """
+    missing = sorted(required - available)
+    unexpected = sorted(available - required)
+
+    if missing or unexpected:
+        raise ValueError(
+            f"{subject} block keys must exactly match the feature block keys. "
+            f"blocks: {sorted(available)}; configured: {sorted(required)}; "
+            f"missing: {missing}; unexpected: {unexpected}."
+        )
+
+
 class TransformBase(BaseModel, ABC):
-    """Base class for featurizers, allows for arbitrary featurization of molecules."""
+    """Base class for transforms, allows for arbitrary transformation of feature data."""
+
+    def required_block_keys(self) -> set[str] | None:
+        """
+        Return the block keys this transform is configured against, or None if layout-agnostic.
+
+        Lets the workflow check a per-block configuration against the
+        featurizer's block layout before any data is featurized. Transforms
+        that are not configured per block inherit the default and so impose no
+        constraint on the layout.
+
+        Returns
+        -------
+        set of str or None
+            The required block keys, or None if the transform is layout-agnostic.
+
+        """
+        return None
 
     @abstractmethod
     def transform(self, X: np.ndarray, *args, **kwargs):
@@ -68,3 +120,99 @@ class TransformBase(BaseModel, ABC):
             and optional processing info.
 
         """
+
+
+def to_transform_list(
+    transform: TransformBase | Sequence[TransformBase],
+) -> list[TransformBase]:
+    """
+    Normalize a single transform or a sequence of transforms to a list.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        A fitted or unfitted transform, or an ordered sequence of them.
+
+    Returns
+    -------
+    list
+        The transforms as a list, in application order.
+
+    """
+    # A bare transform is itself the whole sequence
+    if isinstance(transform, TransformBase):
+        return [transform]
+
+    return list(transform)
+
+
+def fit_transforms(
+    transform: TransformBase | Sequence[TransformBase],
+    X: np.ndarray,
+    feature_blocks: list[tuple[str, int]] | None = None,
+) -> np.ndarray:
+    """
+    Fit a transform sequence on X and return the transformed result.
+
+    Each transform must implement fit, accepting ``feature_blocks`` as a
+    keyword argument even if it ignores the layout; stateless transforms define
+    a no-op. Elements are fit in order, each on the previous element's output,
+    so statistics are computed on the train data only.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        The transform or ordered transform sequence to fit.
+    X : np.ndarray
+        Train feature matrix.
+    feature_blocks : list of tuple, optional
+        Pairs of (block key, block width) in column order, forwarded to every
+        transform in the sequence.
+
+    Returns
+    -------
+    np.ndarray
+        The train features after the full sequence.
+
+    """
+    current = np.asarray(X)
+
+    for step in to_transform_list(transform):
+        # Every transform takes the layout; those that do not use it ignore the
+        # kwarg, so a transform that needs it can never be silently starved of it
+        step.fit(current, feature_blocks=feature_blocks)
+
+        # Feed this element's output to the next one, so each fits on what it
+        # will actually see rather than on the raw features
+        current = step.transform(current)
+
+    return current
+
+
+def transform_features(
+    transform: TransformBase | Sequence[TransformBase],
+    X: np.ndarray,
+) -> np.ndarray:
+    """
+    Apply a fitted transform sequence to X in order.
+
+    Used on the inference path where no fitting happens; every transform must
+    already be fitted or it raises.
+
+    Parameters
+    ----------
+    transform : TransformBase or sequence of TransformBase
+        The fitted transform or ordered transform sequence.
+    X : np.ndarray
+        Feature matrix to transform.
+
+    Returns
+    -------
+    np.ndarray
+        The features after the full sequence.
+
+    """
+    current = np.asarray(X)
+    for step in to_transform_list(transform):
+        current = step.transform(current)
+    return current
