@@ -7,16 +7,23 @@ import pytest
 from openadmet.models.architecture.dummy import DummyRegressorModel
 
 
-def _write_recipe_components(recipe_dir, tag, ensemble=False):
-    """Write the three required YAML files into a recipe_components directory."""
+def _write_recipe_components(
+    recipe_dir, tag, ensemble=False, name="unit-test", feat=None
+):
+    """
+    Write the three required YAML files into a recipe_components directory.
+
+    Defaults to a NullFeaturizer, which keeps every input row. Pass `feat` to
+    use a featurizer that drops rows, which is what exercises index propagation.
+    """
     recipe_dir.mkdir(parents=True, exist_ok=True)
 
     metadata = {
         "version": "v1",
         "driver": "sklearn",
-        "name": "unit-test",
+        "name": name,
         "build_number": 0,
-        "description": "Unit test model",
+        "description": f"Unit test model ({tag})",
         "tag": tag,
         "authors": "Test Author",
         "email": "test@test.com",
@@ -35,7 +42,7 @@ def _write_recipe_components(recipe_dir, tag, ensemble=False):
         yaml.safe_dump(data_spec, f)
 
     procedure = {
-        "feat": {"type": "NullFeaturizer", "params": {}},
+        "feat": feat or {"type": "NullFeaturizer", "params": {}},
         "model": {"type": "DummyRegressorModel", "params": {}},
         "split": {
             "type": "ShuffleSplitter",
@@ -97,5 +104,31 @@ def null_ensemble_model_dir(tmp_path_factory):
         member_dir.mkdir()
         model = _make_trained_dummy(constant_value)
         model.serialize(member_dir / "model.json", member_dir / "model.pkl")
+
+    return model_dir
+
+
+@pytest.fixture(scope="session")
+def fingerprint_model_dir(tmp_path_factory):
+    """
+    Session-scoped on-disk model directory whose featurizer drops bad SMILES.
+
+    The NullFeaturizer used by the other fixtures keeps every row, so it cannot
+    exercise index propagation. This model always predicts 5.0 regardless of
+    input features (tag=FP, target=task_0).
+    """
+    model_dir = tmp_path_factory.mktemp("fingerprint_model")
+    _write_recipe_components(
+        model_dir / "recipe_components",
+        tag="FP",
+        name="unit-test-fp",
+        feat={
+            "type": "FingerprintFeaturizer",
+            "params": {"fp_type": "ecfp", "n_jobs": 1},
+        },
+    )
+
+    model = _make_trained_dummy(5.0)
+    model.serialize(model_dir / "model.json", model_dir / "model.pkl")
 
     return model_dir

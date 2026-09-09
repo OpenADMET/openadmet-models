@@ -2,10 +2,8 @@
 
 import numpy as np
 import pytest
-import yaml
 from pydantic import ValidationError
 
-from openadmet.models.architecture.dummy import DummyRegressorModel
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.feature_base import get_featurizer_class
 from openadmet.models.features.trained_model import TrainedModelFeaturizer
@@ -15,63 +13,6 @@ from openadmet.models.features.trained_model import TrainedModelFeaturizer
 def smiles():
     """Provide valid SMILES strings for featurization."""
     return ["CCO", "CCN", "c1ccccc1"]
-
-
-@pytest.fixture(scope="module")
-def fingerprint_model_dir(tmp_path_factory):
-    """
-    Provide a model directory whose featurizer drops unparseable SMILES.
-
-    The NullFeaturizer used by the shared fixtures keeps every row, so it cannot
-    exercise index propagation. This model predicts 5.0 for any input
-    (tag=FP, target=task_0).
-    """
-    model_dir = tmp_path_factory.mktemp("fingerprint_model")
-    recipe_dir = model_dir / "recipe_components"
-    recipe_dir.mkdir(parents=True)
-
-    with open(recipe_dir / "metadata.yaml", "w") as f:
-        yaml.safe_dump(
-            {
-                "version": "v1",
-                "driver": "sklearn",
-                "name": "unit-test-fp",
-                "build_number": 0,
-                "description": "Unit test fingerprint model",
-                "tag": "FP",
-                "authors": "Test Author",
-                "email": "test@test.com",
-                "biotargets": ["test"],
-                "tags": ["test"],
-            },
-            f,
-        )
-    with open(recipe_dir / "data.yaml", "w") as f:
-        yaml.safe_dump(
-            {"type": "csv", "input_col": "MY_SMILES", "target_cols": ["task_0"]}, f
-        )
-    with open(recipe_dir / "procedure.yaml", "w") as f:
-        yaml.safe_dump(
-            {
-                "feat": {
-                    "type": "FingerprintFeaturizer",
-                    "params": {"fp_type": "ecfp", "n_jobs": 1},
-                },
-                "model": {"type": "DummyRegressorModel", "params": {}},
-                "split": {
-                    "type": "ShuffleSplitter",
-                    "params": {"train_size": 0.8, "test_size": 0.2, "random_seed": 42},
-                },
-                "train": {"type": "SKLearnBasicTrainer", "params": {}},
-            },
-            f,
-        )
-
-    model = DummyRegressorModel()
-    model.train(np.zeros((3, 1)), np.full(3, 5.0))
-    model.serialize(model_dir / "model.json", model_dir / "model.pkl")
-
-    return model_dir
 
 
 def test_featurize_emits_the_models_predictions(null_single_model_dir, smiles):
