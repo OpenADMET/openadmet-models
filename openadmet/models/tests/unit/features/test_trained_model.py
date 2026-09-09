@@ -34,14 +34,14 @@ def test_featurize_emits_the_ensemble_mean(null_ensemble_model_dir, smiles):
     np.testing.assert_array_equal(features, np.full((len(smiles), 1), 2.0))
 
 
-def test_featurize_emits_outputs_in_configured_order(null_ensemble_model_dir, smiles):
-    """Requesting mean and std must widen the block, in the order the outputs are listed."""
-    feat = TrainedModelFeaturizer(
-        model_dir=null_ensemble_model_dir, outputs=["mean", "std"]
-    )
+def test_include_std_appends_the_stdev_after_the_prediction(
+    null_ensemble_model_dir, smiles
+):
+    """include_std must widen the block, with the stdev columns after the predictions."""
+    feat = TrainedModelFeaturizer(model_dir=null_ensemble_model_dir, include_std=True)
     features, _ = feat.featurize(smiles)
 
-    # Members 1.0 and 3.0 give a mean of 2.0 and a spread of 1.0
+    # Members 1.0 and 3.0 give a mean of 2.0 and a standard deviation of 1.0
     assert features.shape == (len(smiles), 2)
     np.testing.assert_array_equal(features[:, 0], np.full(len(smiles), 2.0))
     np.testing.assert_array_equal(features[:, 1], np.full(len(smiles), 1.0))
@@ -59,23 +59,9 @@ def test_featurize_reports_the_rows_its_featurizer_kept(fingerprint_model_dir):
 
 
 def test_std_from_a_non_ensemble_model_raises_at_construction(null_single_model_dir):
-    """Requesting a spread from a model that has none must fail before any featurization."""
+    """Requesting a stdev from a model that has none must fail before any featurization."""
     with pytest.raises(ValidationError, match="is not an ensemble"):
-        TrainedModelFeaturizer(model_dir=null_single_model_dir, outputs=["mean", "std"])
-
-
-@pytest.mark.parametrize(
-    "outputs, match",
-    [
-        pytest.param([], "at least 1 item", id="empty"),
-        pytest.param(["mean", "mean"], "Duplicate outputs", id="repeated"),
-        pytest.param(["variance"], "Input should be", id="unknown"),
-    ],
-)
-def test_rejects_invalid_outputs(null_single_model_dir, outputs, match):
-    """Outputs must be a non-empty list of distinct known quantities."""
-    with pytest.raises(ValidationError, match=match):
-        TrainedModelFeaturizer(model_dir=null_single_model_dir, outputs=outputs)
+        TrainedModelFeaturizer(model_dir=null_single_model_dir, include_std=True)
 
 
 def test_rejects_a_directory_that_is_not_a_model(tmp_path):
@@ -88,10 +74,10 @@ def test_rejects_a_directory_that_is_not_a_model(tmp_path):
 
 
 def test_rejects_a_recipe_without_a_procedure(tmp_path):
-    """A recipe missing procedure.yaml must fail at construction whatever the outputs."""
+    """A recipe missing procedure.yaml must fail at construction either way."""
     (tmp_path / "recipe_components").mkdir()
 
-    # outputs defaults to [mean], so this fails without any 'std' involvement
+    # include_std defaults to False, so this fails without any stdev involvement
     with pytest.raises(ValidationError, match="no recipe_components/procedure.yaml"):
         TrainedModelFeaturizer(model_dir=tmp_path)
 

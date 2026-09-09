@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import numpy as np
 import yaml
@@ -30,10 +30,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
     reported through the returned index array, the same as any other
     featurizer, so a FeatureConcatenator can intersect them.
 
-    Output width is ``len(outputs) * n_tasks``, where the tasks are the
-    pretrained model's target columns. Columns are laid out output-major and
-    task-minor, so ``outputs=[mean, std]`` over two tasks emits
-    ``mean_task0, mean_task1, std_task0, std_task1``.
+    One column per task is emitted, where the tasks are the pretrained model's
+    target columns. Setting ``include_std`` doubles that, appending the standard
+    deviation block after the prediction block, so two tasks emit
+    ``pred_task0, pred_task1, std_task0, std_task1``.
 
     Attributes
     ----------
@@ -42,10 +42,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
     model_dir : Path
         Directory of the trained model, in the layout ``anvil`` writes: a
         ``recipe_components`` directory plus the serialized model files.
-    outputs : list of str
-        Per-task quantities to emit, in column order. Defaults to ['mean'],
-        the model's prediction. Ensembles can additionally request 'std', the
-        spread across members, which is rejected for a single model.
+    include_std : bool
+        Whether to append the standard deviation across ensemble members as a
+        second block of columns, by default False. Only an ensemble has a
+        standard deviation, so this is rejected for a single model.
     accelerator : str
         Accelerator passed to the pretrained model's predict, by default
         'auto', which uses a GPU where one is available and falls back to CPU.
@@ -57,10 +57,9 @@ class TrainedModelFeaturizer(FeaturizerBase):
     model_dir: Path = Field(
         ..., description="Directory of the trained model to featurize with"
     )
-    outputs: list[Literal["mean", "std"]] = Field(
-        default=["mean"],
-        min_length=1,
-        description="Per-task quantities to emit as feature columns, in column order",
+    include_std: bool = Field(
+        default=False,
+        description="Whether to append the ensemble standard deviation as extra feature columns",
     )
     accelerator: str = "auto"
 
@@ -110,52 +109,25 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
         return value
 
-    @field_validator("outputs")
-    @classmethod
-    def reject_duplicate_outputs(cls, value: list[str]) -> list[str]:
-        """
-        Reject a repeated output, which would emit the same columns twice.
-
-        Parameters
-        ----------
-        value : list of str
-            The configured outputs, in column order.
-
-        Returns
-        -------
-        list of str
-            The validated outputs.
-
-        Raises
-        ------
-        ValueError
-            If an output is listed more than once.
-
-        """
-        duplicates = sorted({name for name in value if value.count(name) > 1})
-        if duplicates:
-            raise ValueError(f"Duplicate outputs: {duplicates}.")
-
-        return value
-
     @model_validator(mode="after")
     def check_std_is_available(self):
         """
-        Check the pretrained model can produce a spread when 'std' is requested.
+        Check the pretrained model can produce a standard deviation when requested.
 
         Only an ensemble honours ``return_std``. A single model discards it
         through ``**kwargs`` and returns predictions alone, so unpacking the
-        result into (mean, std) either splits that array in two or raises,
+        result into (prediction, std) either splits that array in two or raises,
         depending on the row count. The recipe names the ensemble, so this is
         answerable from YAML alone.
 
         Raises
         ------
         ValueError
-            If 'std' is requested from a model whose recipe has no ensemble.
+            If a standard deviation is requested from a model whose recipe has
+            no ensemble.
 
         """
-        if "std" not in self.outputs:
+        if not self.include_std:
             return self
 
         procedure_path = self.model_dir / "recipe_components" / "procedure.yaml"
@@ -164,9 +136,9 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
         if procedure.get("ensemble") is None:
             raise ValueError(
-                f"outputs includes 'std', but the model at {self.model_dir} is not an "
-                "ensemble and has no spread to report. Use outputs: [mean], or point "
-                "at an ensemble model."
+                f"include_std is set, but the model at {self.model_dir} is not an "
+                "ensemble and has no standard deviation to report. Leave include_std "
+                "unset, or point at an ensemble model."
             )
 
         return self
@@ -205,8 +177,9 @@ class TrainedModelFeaturizer(FeaturizerBase):
         -------
         tuple
             Tuple of (features, indices). Features has shape
-            (n_featurized, len(outputs) * n_tasks); indices are the positions
-            in the input that the pretrained model's featurizer kept.
+            (n_featurized, n_tasks), doubled when ``include_std`` is set;
+            indices are the positions in the input that the pretrained model's
+            featurizer kept.
 
         """
         model, feat = self._load_pretrained_model()
@@ -218,18 +191,16 @@ class TrainedModelFeaturizer(FeaturizerBase):
         X_feat, indices = feat_data[0], feat_data[1]
 
         # Report std if requested
-        if "std" in self.outputs:
-            mean, std = model.predict(
+        if self.include_std:
+            prediction, std = model.predict(
                 X_feat, accelerator=self.accelerator, return_std=True
             )
         else:
-            mean = model.predict(X_feat, accelerator=self.accelerator)
-            std = None
+            prediction = model.predict(X_feat, accelerator=self.accelerator)
 
-        # One block of columns per requested output, in the order listed
-        blocks = []
-        for name in self.outputs:
-            values = mean if name == "mean" else std
-            blocks.append(ensure_2d(np.asarray(values)))
+        # Standard deviation columns follow the prediction columns
+        blocks = [ensure_2d(np.asarray(prediction))]
+        if self.include_std:
+            blocks.append(ensure_2d(np.asarray(std)))
 
         return np.concatenate(blocks, axis=1).astype(np.float64), np.asarray(indices)

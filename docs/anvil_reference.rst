@@ -278,17 +278,15 @@ fold change, inform a model trained on a scarce high-fidelity one, such as dose-
      type: TrainedModelFeaturizer
      params:
        model_dir: /path/to/pxr_log2fc_model
-       outputs: [mean]
 
 The pretrained model brings its own featurizer, so the ``TrainedModelFeaturizer`` takes SMILES rather than features.
 Molecules that the pretrained featurizer cannot parse are reported through the returned index array, the same as any
 other featurizer.
 
-``outputs`` selects which per-task quantities become columns, in column order. It defaults to ``[mean]``, the
-model's prediction, which is all most recipes need. Ensembles can additionally request ``std``, the spread across
-members. That option is available only for ensembles, and requesting it from a single model raises when the recipe
-is parsed. The emitted width is ``len(outputs)`` columns per target column of the pretrained model, laid out
-output-major and task-minor.
+The featurizer emits one column per target column of the pretrained model. Setting ``include_std`` appends a second
+block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
+deviation, so setting it
+against a single model raises when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
