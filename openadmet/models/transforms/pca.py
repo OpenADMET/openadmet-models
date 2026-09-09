@@ -54,11 +54,8 @@ class PCATransform(TransformBase):
         Optional imputation applied to each block before its PCA. Options are
         'none' (default), 'mean', or 'median'.
     random_seed : int or None
-        Random seed for the PCA solvers, by default 42, matching the
-        procedure-level default a workflow would otherwise fill in. Threaded to
-        ``random_state``, which matters because sklearn picks the randomized
-        solver for wide matrices with a large reduction, exactly the per-block
-        fingerprint case. Set to None only to opt into an unseeded solver.
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
 
     """
 
