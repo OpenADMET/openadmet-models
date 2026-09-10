@@ -116,7 +116,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         """
         Check the pretrained model can produce a standard deviation when requested.
 
-        Only an ensemble honours ``return_std`` on predict. A single model
+        Only an ensemble honors ``return_std`` on predict. A single model
         discards it through ``**kwargs`` and returns predictions alone, so
         unpacking the result into (prediction, std) either splits that array in
         two or raises, depending on the row count. The recipe names the
