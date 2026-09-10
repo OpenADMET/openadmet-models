@@ -8,6 +8,7 @@ Featurizers for input data for anvil models.
 
    chemprop
    chemeleon_embedding
+   monroe
    feature_combiner
    fingerprints
    descriptors
