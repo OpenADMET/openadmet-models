@@ -7,6 +7,8 @@ from pydantic import ValidationError
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.feature_base import get_featurizer_class
 from openadmet.models.features.trained_model import TrainedModelFeaturizer
+from openadmet.models.inference.inference import load_anvil_model_and_metadata
+from openadmet.models.transforms.transform_base import transform_features
 
 
 @pytest.fixture(scope="module")
@@ -58,6 +60,22 @@ def test_featurize_reports_the_rows_its_featurizer_kept(fingerprint_model_dir):
     np.testing.assert_array_equal(features, np.full((2, 1), 5.0))
 
 
+def test_featurize_applies_the_pretrained_transform(transform_model_dir):
+    """A pretrained model fitted in transform space must be predicted on in that space."""
+    smiles = ["CCO", "CCN"]
+    feat = TrainedModelFeaturizer(model_dir=transform_model_dir)
+    features, _ = feat.featurize(smiles)
+
+    # Reach the same predictions by transforming before predicting, as inference does
+    model, pretrained_feat, transform, _, _ = load_anvil_model_and_metadata(
+        transform_model_dir
+    )
+    X, _ = pretrained_feat.featurize(smiles)
+    expected = model.predict(transform_features(transform, X), accelerator="cpu")
+
+    np.testing.assert_allclose(features.ravel(), expected.ravel(), rtol=1e-12)
+
+
 def test_std_from_a_non_ensemble_model_raises_at_construction(null_single_model_dir):
     """Requesting a stdev from a model that has none must fail before any featurization."""
     with pytest.raises(ValidationError, match="is not an ensemble"):
@@ -94,14 +112,17 @@ def test_registered_under_its_type(null_single_model_dir):
 def test_composes_inside_a_concatenator(null_single_model_dir, smiles):
     """Predictions must concatenate alongside ordinary features as one more block of columns."""
     concat = FeatureConcatenator(
-        featurizers={
-            "NullFeaturizer": {},
-            "TrainedModelFeaturizer": {"model_dir": str(null_single_model_dir)},
-        }
+        featurizers=[
+            {"type": "NullFeaturizer"},
+            {
+                "type": "TrainedModelFeaturizer",
+                "params": {"model_dir": str(null_single_model_dir)},
+            },
+        ]
     )
     features, indices = concat.featurize(smiles)
 
-    # Class-name order puts the null block first
+    # Blocks land in the configured order, so the null block is first
     assert features.shape == (len(smiles), 2)
     np.testing.assert_array_equal(indices, np.arange(len(smiles)))
     np.testing.assert_array_equal(features[:, 0], np.zeros(len(smiles)))

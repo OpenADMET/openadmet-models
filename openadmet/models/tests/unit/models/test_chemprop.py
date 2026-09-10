@@ -5,7 +5,9 @@ import pytest
 import torch
 
 from openadmet.models.architecture.chemprop import (
+    _CHEMELEON_MP_HPARAMS,
     ChemPropModel,
+    _resolve_device,
     _resolve_noam_steps_per_epoch,
 )
 
@@ -348,6 +350,27 @@ def test_chemprop_load_weights_invalid_path():
         model.build()
 
 
+# CheMeleon layout shrunk to keep the saved foundation fixture small
+_FOUNDATION_HPARAMS = {**_CHEMELEON_MP_HPARAMS, "d_h": 8, "depth": 1}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"hyper_parameters": _FOUNDATION_HPARAMS},
+        {"hyper_parameters": _FOUNDATION_HPARAMS, "state_dict": {}},
+    ],
+    ids=["missing_state_dict", "empty_state_dict"],
+)
+def test_chemprop_foundation_file_without_weights_raises(tmp_path, payload):
+    """Test that build raises RuntimeError when a foundation file carries no weights."""
+    path = tmp_path / "foundation.pt"
+    torch.save(payload, str(path))
+    model = ChemPropModel(from_foundation=str(path))
+    with pytest.raises(RuntimeError, match="state_dict"):
+        model.build()
+
+
 def test_chemprop_chemeleon_and_foundation_mutual_exclusivity():
     """Test that from_chemeleon and from_foundation are mutually exclusive."""
     with pytest.raises(
@@ -402,7 +425,6 @@ def test_chemprop_load_weights(tmp_path):
     # Extract the message passing weights
     mp_state_dict = source_model.estimator.message_passing.state_dict()
     for key in mp_state_dict:
-        # Map from full state dict keys to foundation format keys
         if key.endswith(".weight") or key.endswith(".bias"):
             foundation_data["state_dict"][key] = mp_state_dict[key]
 
@@ -716,3 +738,61 @@ def test_chemprop_plateau_min_lr_per_group():
     # FFN group:  ffn_lr * 0.01 = 1e-3 * 0.01 = 1e-5
     assert sched.min_lrs[0] == pytest.approx(5e-6)
     assert sched.min_lrs[1] == pytest.approx(1e-5)
+
+
+def test_predict_embedding_unbuilt_raises():
+    model = ChemPropModel(from_foundation="chemeleon")
+    with pytest.raises(ValueError, match="has not been built"):
+        model.predict_embedding(["CCO"])
+
+
+def test_predict_embedding_shape_and_dtype(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
+    model.build()
+    smiles = ["CCO", "CCN", "c1ccccc1"]
+
+    # Fix the device so the comparison below is hardware-independent
+    emb = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
+    assert emb.shape == (3, 2048)
+    assert emb.dtype == np.float32
+
+
+def test_predict_embedding_safe_batch_size_no_drop(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
+    model.build()
+    smiles = ["CCO", "CCN", "c1ccccc1"]
+    emb = model.predict_embedding(smiles, batch_size=3, accelerator="cpu")
+    assert emb.shape[0] == len(smiles)
+
+
+def test_predict_embedding_deterministic(chemeleon_foundation_checkpoint):
+    model = ChemPropModel(from_foundation=str(chemeleon_foundation_checkpoint))
+    model.build()
+    smiles = ["CCO", "CCN"]
+    e1 = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
+    e2 = model.predict_embedding(smiles, batch_size=2, accelerator="cpu")
+    assert np.array_equal(e1, e2)
+
+
+@pytest.mark.parametrize(
+    ("accelerator", "expected"),
+    [
+        ("gpu", "cuda"),
+        ("tpu", "xla"),
+        ("cpu", "cpu"),
+        ("cuda", "cuda"),
+        ("mps", "mps"),
+    ],
+)
+def test_resolve_device_aliases(accelerator, expected):
+    """Test trainer-alias and verbatim passthrough resolution without any GPU."""
+    assert _resolve_device(accelerator) == expected
+
+
+def test_resolve_device_auto_delegates_to_lightning(mocker):
+    """Test that auto delegates the choice to Lightning's own resolution."""
+    mocker.patch(
+        "openadmet.models.architecture.chemprop._select_auto_accelerator",
+        return_value="mps",
+    )
+    assert _resolve_device("auto") == "mps"

@@ -12,6 +12,7 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from openadmet.models.eval.utils import ensure_2d
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
+from openadmet.models.transforms.transform_base import transform_features
 
 
 @featurizers.register("TrainedModelFeaturizer")
@@ -25,9 +26,10 @@ class TrainedModelFeaturizer(FeaturizerBase):
     endpoint (e.g. primary-screen log2 fold change) can inform a model trained
     on a scarce high-fidelity one (e.g. dose-response pEC50).
 
-    The pretrained model brings its own featurizer, so this featurizer takes
-    SMILES rather than features. Molecules that its featurizer drops are
-    reported through the returned index array, the same as any other
+    The pretrained model brings its own featurizer and its own fitted transform,
+    so this featurizer takes SMILES rather than features and reproduces the
+    pretrained model's inference path in full. Molecules that its featurizer
+    drops are reported through the returned index array, the same as any other
     featurizer, so a FeatureConcatenator can intersect them.
 
     One column per task is emitted, where the tasks are the pretrained model's
@@ -63,7 +65,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
     )
     accelerator: str = "auto"
 
-    # Cached (model, featurizer) so featurizing several partitions loads once
+    # Cached (model, featurizer, transform) so featurizing several partitions loads once
     _loaded: tuple | None = PrivateAttr(default=None)
 
     @field_validator("model_dir")
@@ -145,12 +147,13 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
     def _load_pretrained_model(self) -> tuple:
         """
-        Load the pretrained model and its featurizer, caching the result.
+        Load the pretrained model, its featurizer, and its transform, caching the result.
 
         Returns
         -------
         tuple
-            The loaded (model, featurizer).
+            The loaded (model, featurizer, transform), where the transform is
+            None when the pretrained recipe has none.
 
         """
         if self._loaded is None:
@@ -159,8 +162,8 @@ class TrainedModelFeaturizer(FeaturizerBase):
                 load_anvil_model_and_metadata,
             )
 
-            model, feat, _, _ = load_anvil_model_and_metadata(self.model_dir)
-            self._loaded = (model, feat)
+            model, feat, transform, _, _ = load_anvil_model_and_metadata(self.model_dir)
+            self._loaded = (model, feat, transform)
 
         return self._loaded
 
@@ -182,13 +185,24 @@ class TrainedModelFeaturizer(FeaturizerBase):
             featurizer kept.
 
         """
-        model, feat = self._load_pretrained_model()
+        model, feat, transform = self._load_pretrained_model()
 
         # Featurize using pretrained model's featurizer
         feat_data = feat.featurize(smiles)
 
         # Featurizers return (features, indices) or (dataloader, indices, scaler, dataset)
         X_feat, indices = feat_data[0], feat_data[1]
+
+        # The model was fitted on transformed features, so predict on them too
+        if transform is not None:
+            # Single-row featurizer output arrives 1D
+            X_feat = transform_features(transform, np.atleast_2d(X_feat))
+            if X_feat.shape[0] != len(indices):
+                raise ValueError(
+                    "Transform changed the row count "
+                    f"({X_feat.shape[0]} rows vs {len(indices)} indices); "
+                    "transforms must preserve rows."
+                )
 
         # Report std if requested
         if self.include_std:

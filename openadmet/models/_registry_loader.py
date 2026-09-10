@@ -15,6 +15,7 @@ _MODELS = [
     "openadmet.models.architecture.nepare",
     "openadmet.models.architecture.rf",
     "openadmet.models.architecture.svm",
+    "openadmet.models.architecture.tabicl",
     "openadmet.models.architecture.tabpfn",
     "openadmet.models.architecture.xgboost",
 ]
@@ -27,6 +28,7 @@ _EVALUATORS = [
 ]
 
 _FEATURIZERS = [
+    "openadmet.models.features.chemeleon_embedding",
     "openadmet.models.features.chemprop",
     "openadmet.models.features.combine",
     "openadmet.models.features.molfeat_fingerprint",
@@ -48,6 +50,7 @@ _TRAINERS = [
 
 _TRANSFORMS = [
     "openadmet.models.transforms.impute",
+    "openadmet.models.transforms.pca",
     "openadmet.models.transforms.transform_base",
 ]
 

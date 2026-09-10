@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
@@ -57,6 +57,10 @@ class FeaturizerBase(BaseModel, ABC):
     for machine learning models.
 
     """
+
+    # Whether this featurizer can report per-block column layout via
+    # feature_blocks(); the workflow only calls feature_blocks() when this is True
+    provides_feature_blocks: ClassVar[bool] = False
 
     @abstractmethod
     def featurize(self, smiles: Iterable[str], *args, **kwargs):

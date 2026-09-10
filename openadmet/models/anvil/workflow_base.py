@@ -3,14 +3,15 @@
 from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from openadmet.models.active_learning.ensemble_base import (
     EnsembleBase,
 )
 from openadmet.models.anvil.specification import DataSpec, Metadata
+from openadmet.models.anvil.utils import ensure_list
 from openadmet.models.architecture.model_base import ModelBase
 from openadmet.models.eval.eval_base import EvalBase
 from openadmet.models.features.feature_base import FeaturizerBase
@@ -19,6 +20,7 @@ from openadmet.models.split.split_base import SplitterBase
 from openadmet.models.trainer.trainer_base import TrainerBase
 from openadmet.models.transforms.transform_base import (
     TransformBase,
+    check_block_keys,
 )
 
 
@@ -32,8 +34,8 @@ class AnvilWorkflowBase(BaseModel):
         Metadata for the workflow.
     data_spec : DataSpec
         Data specification for the workflow.
-    transform : Optional[TransformBase]
-        Optional transform step.
+    transform : Optional[list of TransformBase]
+        Optional ordered transform sequence applied in list order.
     split : SplitterBase
         Data splitting strategy.
     feat : FeaturizerBase
@@ -60,7 +62,14 @@ class AnvilWorkflowBase(BaseModel):
 
     metadata: Metadata
     data_spec: DataSpec
-    transform: Optional[TransformBase] = None  # Optional transform step
+    transform: list[TransformBase] | None = None  # Optional transform sequence
+
+    @field_validator("transform", mode="before")
+    @classmethod
+    def _wrap_single_transform(cls, value):
+        """Wrap a bare single transform instance into a one-element list."""
+        return ensure_list(value)
+
     split: SplitterBase
     feat: FeaturizerBase
     model: ModelBase
@@ -72,6 +81,55 @@ class AnvilWorkflowBase(BaseModel):
     ensemble_kwargs: dict = Field(default_factory=dict)
     debug: bool = False
     resolved_output_dir: Path | None = None
+
+    @model_validator(mode="after")
+    def check_transform_block_keys(self):
+        """
+        Check per-block transforms against the featurizer's block layout.
+
+        A transform is configured in one of two ways:
+
+        - Globally, over the whole feature matrix, which constrains nothing
+          about the featurizer.
+        - Per block, keyed by featurizer block name, which requires the
+          featurizer to emit blocks.
+
+        The per-block contract is one to one: the configured keys and the
+        emitted block keys must match.
+
+        Raises
+        ------
+        ValueError
+            If a per-block transform is paired with a featurizer that emits no
+            blocks, or if its keys do not match the featurizer's block keys.
+
+        """
+        if self.transform is None:
+            return self
+
+        # Only a block-providing featurizer can name its blocks up front; for
+        # anything else the fit-time check remains the only backstop
+        provides = getattr(self.feat, "provides_feature_blocks", False)
+        available = set(self.feat.feature_block_keys()) if provides else set()
+
+        for step in self.transform:
+            # Layout-agnostic transforms impose no constraint on the blocks
+            required = step.required_block_keys()
+            if required is None:
+                continue
+
+            name = type(step).__name__
+            if not provides:
+                raise ValueError(
+                    f"{name} is configured per feature block, but "
+                    f"{type(self.feat).__name__} does not emit feature blocks. Use a "
+                    "FeatureConcatenator, or configure the transform over the whole "
+                    "feature matrix instead."
+                )
+
+            check_block_keys(required, available, name)
+
+        return self
 
     @abstractmethod
     def run(self, output_dir: PathLike = "anvil_training", debug: bool = False) -> Any:

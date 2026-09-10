@@ -1,0 +1,96 @@
+# This specification specifies the input data
+data:
+  # Specify the dataset file
+  resource: "{{ANVIL_DIR}}/cyp_multitask.csv"
+  type: intake
+  # Specify input column containing SMILES
+  input_col: OPENADMET_SMILES
+  # Specify the target column that you're trying to predict
+  target_cols:
+  - cyp3a4_pchembl_value_mean
+  dropna: true
+
+# Additional metadata
+metadata:
+  authors: Sean
+  biotargets:
+  - CYP3A4
+  build_number: 0
+  description: per-block PCA over concatenated fingerprints and 2D descriptors with a LightGBM model
+  driver: sklearn
+  email: sean@example.com
+  name: pca_concat_lgbm
+  tag: openadmet-test-PCA-CONCAT
+  tags:
+  - openadmet
+  - test
+  - pca
+  version: v1
+
+# Section specifying training procedure
+procedure:
+# Featurization specification
+  feat:
+    type: FeatureConcatenator
+    params:
+      featurizers:
+        - type: FingerprintFeaturizer
+          params:
+            fp_type: "ecfp:4"
+        - type: DescriptorFeaturizer
+          params:
+            descr_type: "desc2d"
+
+  # Impute the descriptor NaNs before PCA; fit both steps on the train partition only
+  transform:
+    - type: ImputeTransform
+      params:
+        strategy: median
+    - type: PCATransform
+      params:
+        n_components:
+          FingerprintFeaturizer: 256
+          DescriptorFeaturizer: 32
+        random_seed: 42
+
+  # Model specification
+  model:
+    type: LGBMRegressorModel
+    params:
+      alpha: 0.005
+      learning_rate: 0.05
+
+  # Specify data splits
+  split:
+    type: ShuffleSplitter
+    params:
+      random_seed: 42
+      train_size: 0.7
+      val_size: 0.0
+      test_size: 0.3
+
+  train:
+    type: SKLearnGridSearchTrainer
+    params:
+      param_grid:
+        n_estimators: [200]
+        alpha: [0.005]
+        learning_rate: [0.05]
+
+# Section specifying report generation
+report:
+  eval:
+  - type: RegressionMetrics
+    params: {}
+
+  - type: SKLearnRepeatedKFoldCrossValidation
+    params:
+      axes_labels:
+      - True pChEMBL
+      - Predicted pChEMBL
+      max_val: 10
+      min_val: 3
+      pXC50: true
+      n_splits: 3
+      n_repeats: 2
+      title: True vs Predicted pChEMBL on per-block PCA test set

@@ -71,7 +71,7 @@ class ClusterSplitter(SplitterBase):
         if self.method == "butina":
             from useful_rdkit_utils import get_butina_clusters
 
-            clusters = get_butina_clusters(X, cutoff=self.butina_cutoff)
+            clusters = get_butina_clusters(X, dist_cutoff=self.butina_cutoff)
         elif self.method == "bemis-murcko":
             from useful_rdkit_utils import get_bemis_murcko_clusters
 
