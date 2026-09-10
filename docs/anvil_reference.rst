@@ -302,8 +302,7 @@ other featurizer.
 
 The featurizer emits one column per target column of the pretrained model. Setting ``include_std`` appends a second
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
-deviation, so setting it
-against a single model raises when the recipe is parsed.
+deviation, so setting it against a single model raises when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
