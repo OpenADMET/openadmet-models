@@ -19,9 +19,16 @@ def _resolve_device(accelerator: str) -> str:
     """
     Resolve an accelerator spelling to a value TabPFN's ``device`` kwarg accepts.
 
-    "auto" passes through verbatim since TabPFN accepts it natively;
+    ``"auto"`` passes through verbatim since TabPFN accepts it natively;
     trainer aliases map to torch device names, and every other value passes
     through verbatim.
+
+    .. note::
+
+        Unlike ``tabicl`` where ``"auto"`` maps to ``None`` (so TabICL runs its
+        own device detection), TabPFN's ``DevicesSpecification`` resolves
+        ``"auto"`` natively.  The two helpers share the same name and shape but
+        have different semantics — take care when porting between them.
 
     Parameters
     ----------
@@ -99,26 +106,16 @@ class TabPFNExtensionModelBase(PickleableModelBase):
         Validate the accelerator parameter.
 
         TabPFN's ``device`` kwarg uses ``DevicesSpecification`` which accepts
-        any torch device name or "auto".  This validator reuses the same
+        any torch device name or ``"auto"``.  This validator reuses the same
         resolution path so a bad accelerator is caught eagerly at construction
         time rather than many calls later at ``fit()``.
-
-        Parameters
-        ----------
-        value : str
-            The accelerator value to validate.
-
-        Returns
-        -------
-        str
-            The validated accelerator value.
-
         """
         resolved = _resolve_device(value)
-        try:
-            torch.device(resolved)
-        except RuntimeError as e:
-            raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
+        if resolved != "auto":
+            try:
+                torch.device(resolved)
+            except RuntimeError as e:
+                raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
         return value
 
     def build(self):
@@ -254,6 +251,22 @@ class TabPFNModelBase(PickleableModelBase):
     accelerator: str = Field(default="auto")
     random_seed: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
+
+    @field_validator("accelerator")
+    @classmethod
+    def validate_accelerator(cls, value: str) -> str:
+        """Reject accelerator spellings ``torch.device()`` cannot parse.
+
+        Mirrors ``TabPFNExtensionModelBase.validate_accelerator`` so both the
+        basic and extension model families fail eagerly on a bad accelerator.
+        """
+        resolved = _resolve_device(value)
+        if resolved != "auto":
+            try:
+                torch.device(resolved)
+            except RuntimeError as e:
+                raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
+        return value
 
     def build(self):
         """Prepare and build the model instance."""
