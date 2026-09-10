@@ -300,7 +300,7 @@ The pretrained model brings its own featurizer, so the ``TrainedModelFeaturizer`
 Molecules that the pretrained featurizer cannot parse are reported through the returned index array, the same as any
 other featurizer.
 
-The featurizer emits one column per target column of the pretrained model. Setting ``include_std`` appends a second
+The featurizer emits one column per target column of the pretrained model. Setting ``return_std`` appends a second
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
 deviation, so setting it against a single model raises when the recipe is parsed.
 

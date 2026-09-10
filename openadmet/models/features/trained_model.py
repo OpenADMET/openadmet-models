@@ -33,7 +33,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
     featurizer, so a FeatureConcatenator can intersect them.
 
     One column per task is emitted, where the tasks are the pretrained model's
-    target columns. Setting ``include_std`` doubles that, appending the standard
+    target columns. Setting ``return_std`` doubles that, appending the standard
     deviation block after the prediction block, so two tasks emit
     ``pred_task0, pred_task1, std_task0, std_task1``.
 
@@ -44,7 +44,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
     model_dir : Path
         Directory of the trained model, in the layout ``anvil`` writes: a
         ``recipe_components`` directory plus the serialized model files.
-    include_std : bool
+    return_std : bool
         Whether to append the standard deviation across ensemble members as a
         second block of columns, by default False. Only an ensemble has a
         standard deviation, so this is rejected for a single model.
@@ -59,7 +59,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
     model_dir: Path = Field(
         ..., description="Directory of the trained model to featurize with"
     )
-    include_std: bool = Field(
+    return_std: bool = Field(
         default=False,
         description="Whether to append the ensemble standard deviation as extra feature columns",
     )
@@ -116,11 +116,11 @@ class TrainedModelFeaturizer(FeaturizerBase):
         """
         Check the pretrained model can produce a standard deviation when requested.
 
-        Only an ensemble honours ``return_std``. A single model discards it
-        through ``**kwargs`` and returns predictions alone, so unpacking the
-        result into (prediction, std) either splits that array in two or raises,
-        depending on the row count. The recipe names the ensemble, so this is
-        answerable from YAML alone.
+        Only an ensemble honours ``return_std`` on predict. A single model
+        discards it through ``**kwargs`` and returns predictions alone, so
+        unpacking the result into (prediction, std) either splits that array in
+        two or raises, depending on the row count. The recipe names the
+        ensemble, so this is answerable from YAML alone.
 
         Raises
         ------
@@ -129,7 +129,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
             no ensemble.
 
         """
-        if not self.include_std:
+        if not self.return_std:
             return self
 
         procedure_path = self.model_dir / "recipe_components" / "procedure.yaml"
@@ -138,8 +138,8 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
         if procedure.get("ensemble") is None:
             raise ValueError(
-                f"include_std is set, but the model at {self.model_dir} is not an "
-                "ensemble and has no standard deviation to report. Leave include_std "
+                f"return_std is set, but the model at {self.model_dir} is not an "
+                "ensemble and has no standard deviation to report. Leave return_std "
                 "unset, or point at an ensemble model."
             )
 
@@ -180,7 +180,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
         -------
         tuple
             Tuple of (features, indices). Features has shape
-            (n_featurized, n_tasks), doubled when ``include_std`` is set;
+            (n_featurized, n_tasks), doubled when ``return_std`` is set;
             indices are the positions in the input that the pretrained model's
             featurizer kept.
 
@@ -205,7 +205,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
                 )
 
         # Report std if requested
-        if self.include_std:
+        if self.return_std:
             prediction, std = model.predict(
                 X_feat, accelerator=self.accelerator, return_std=True
             )
@@ -214,7 +214,7 @@ class TrainedModelFeaturizer(FeaturizerBase):
 
         # Standard deviation columns follow the prediction columns
         blocks = [ensure_2d(np.asarray(prediction))]
-        if self.include_std:
+        if self.return_std:
             blocks.append(ensure_2d(np.asarray(std)))
 
         return np.concatenate(blocks, axis=1).astype(np.float64), np.asarray(indices)

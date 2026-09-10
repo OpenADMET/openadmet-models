@@ -36,11 +36,11 @@ def test_featurize_emits_the_ensemble_mean(null_ensemble_model_dir, smiles):
     np.testing.assert_array_equal(features, np.full((len(smiles), 1), 2.0))
 
 
-def test_include_std_appends_the_stdev_after_the_prediction(
+def test_return_std_appends_the_stdev_after_the_prediction(
     null_ensemble_model_dir, smiles
 ):
-    """include_std must widen the block, with the stdev columns after the predictions."""
-    feat = TrainedModelFeaturizer(model_dir=null_ensemble_model_dir, include_std=True)
+    """return_std must widen the block, with the stdev columns after the predictions."""
+    feat = TrainedModelFeaturizer(model_dir=null_ensemble_model_dir, return_std=True)
     features, _ = feat.featurize(smiles)
 
     # Members 1.0 and 3.0 give a mean of 2.0 and a standard deviation of 1.0
@@ -79,7 +79,7 @@ def test_featurize_applies_the_pretrained_transform(transform_model_dir):
 def test_std_from_a_non_ensemble_model_raises_at_construction(null_single_model_dir):
     """Requesting a stdev from a model that has none must fail before any featurization."""
     with pytest.raises(ValidationError, match="is not an ensemble"):
-        TrainedModelFeaturizer(model_dir=null_single_model_dir, include_std=True)
+        TrainedModelFeaturizer(model_dir=null_single_model_dir, return_std=True)
 
 
 def test_rejects_a_directory_that_is_not_a_model(tmp_path):
@@ -95,7 +95,7 @@ def test_rejects_a_recipe_without_a_procedure(tmp_path):
     """A recipe missing procedure.yaml must fail at construction either way."""
     (tmp_path / "recipe_components").mkdir()
 
-    # include_std defaults to False, so this fails without any stdev involvement
+    # return_std defaults to False, so this fails without any stdev involvement
     with pytest.raises(ValidationError, match="no recipe_components/procedure.yaml"):
         TrainedModelFeaturizer(model_dir=tmp_path)
 
