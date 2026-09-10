@@ -251,6 +251,8 @@ while traditional machine learning models return a a 2D ``NumPy`` array or ``pan
     - Uses the `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular fingerprints.
   * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
     - Combines multiple featurizers into a single feature array.
+  * - :doc:`TrainedModelFeaturizer </_api/api/featurization/trained_model>`
+    - Emits the predictions of an already-trained Anvil model as features.
 
 For example, featurization for a traditional machine learning model using fingerprints is easily done by specifying the ``FingerprintFeaturizer``.
 
@@ -281,6 +283,26 @@ featurizer name, so same-type entries could not be told apart.
              fp_type: ecfp:4
              radius: 2
              n_bits: 2048
+
+An already-trained model can itself be a featurizer, via the ``TrainedModelFeaturizer``. The referenced model is
+frozen: it is loaded from disk, run in inference mode, and never refitted, so its predictions become feature columns
+for a downstream model. This lets a model trained on an abundant low-fidelity endpoint, such as primary-screen log2
+fold change, inform a model trained on a scarce high-fidelity one, such as dose-response pEC50.
+
+.. code-block:: yaml
+
+   feat:
+     type: TrainedModelFeaturizer
+     params:
+       model_dir: /path/to/pxr_log2fc_model
+
+The pretrained model brings its own featurizer, so the ``TrainedModelFeaturizer`` takes SMILES rather than features.
+Molecules that the pretrained featurizer cannot parse are reported through the returned index array, the same as any
+other featurizer.
+
+The featurizer emits one column per target column of the pretrained model. Setting ``return_std`` appends a second
+block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
+deviation, so setting it against a single model raises when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.

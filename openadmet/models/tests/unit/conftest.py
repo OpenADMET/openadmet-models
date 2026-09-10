@@ -1,5 +1,6 @@
 """Session-scoped fixtures providing lightweight on-disk model directories for unit tests."""
 
+import joblib
 import yaml
 import numpy as np
 import pytest
@@ -7,16 +8,31 @@ import pytest
 from openadmet.models.architecture.dummy import DummyRegressorModel
 
 
-def _write_recipe_components(recipe_dir, tag, ensemble=False):
-    """Write the three required YAML files into a recipe_components directory."""
+def _write_recipe_components(
+    recipe_dir,
+    tag,
+    ensemble=False,
+    name="unit-test",
+    feat=None,
+    model=None,
+    transform=None,
+):
+    """
+    Write the three required YAML files into a recipe_components directory.
+
+    Defaults to a NullFeaturizer, which keeps every input row. Pass `feat` to
+    use a featurizer that drops rows, which is what exercises index propagation.
+    Pass `model` for an architecture that is sensitive to feature width, and
+    `transform` to declare a transform the loader then expects on disk.
+    """
     recipe_dir.mkdir(parents=True, exist_ok=True)
 
     metadata = {
         "version": "v1",
         "driver": "sklearn",
-        "name": "unit-test",
+        "name": name,
         "build_number": 0,
-        "description": "Unit test model",
+        "description": f"Unit test model ({tag})",
         "tag": tag,
         "authors": "Test Author",
         "email": "test@test.com",
@@ -35,14 +51,17 @@ def _write_recipe_components(recipe_dir, tag, ensemble=False):
         yaml.safe_dump(data_spec, f)
 
     procedure = {
-        "feat": {"type": "NullFeaturizer", "params": {}},
-        "model": {"type": "DummyRegressorModel", "params": {}},
+        "feat": feat or {"type": "NullFeaturizer", "params": {}},
+        "model": model or {"type": "DummyRegressorModel", "params": {}},
         "split": {
             "type": "ShuffleSplitter",
             "params": {"train_size": 0.8, "test_size": 0.2, "random_seed": 42},
         },
         "train": {"type": "SKLearnBasicTrainer", "params": {}},
     }
+    if transform is not None:
+        procedure["transform"] = transform
+
     if ensemble:
         procedure["ensemble"] = {
             "type": "CommitteeRegressor",
@@ -97,6 +116,87 @@ def null_ensemble_model_dir(tmp_path_factory):
         member_dir.mkdir()
         model = _make_trained_dummy(constant_value)
         model.serialize(member_dir / "model.json", member_dir / "model.pkl")
+
+    return model_dir
+
+
+@pytest.fixture(scope="session")
+def fingerprint_model_dir(tmp_path_factory):
+    """
+    Session-scoped on-disk model directory whose featurizer drops bad SMILES.
+
+    The NullFeaturizer used by the other fixtures keeps every row, so it cannot
+    exercise index propagation. This model always predicts 5.0 regardless of
+    input features (tag=FP, target=task_0).
+    """
+    model_dir = tmp_path_factory.mktemp("fingerprint_model")
+    _write_recipe_components(
+        model_dir / "recipe_components",
+        tag="FP",
+        name="unit-test-fp",
+        feat={
+            "type": "FingerprintFeaturizer",
+            "params": {"fp_type": "ecfp", "n_jobs": 1},
+        },
+    )
+
+    model = _make_trained_dummy(5.0)
+    model.serialize(model_dir / "model.json", model_dir / "model.pkl")
+
+    return model_dir
+
+
+@pytest.fixture(scope="session")
+def transform_model_dir(tmp_path_factory):
+    """
+    Session-scoped on-disk model directory whose recipe carries a fitted PCA transform.
+
+    The LGBM inside is trained in PCA space, so it only accepts the reduced
+    width. Anything that feeds it raw fingerprints instead of running the saved
+    transform first fails on the feature count (tag=TFM, target=task_0).
+    """
+    import sklearn
+
+    from openadmet.models.architecture.lgbm import LGBMRegressorModel
+    from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
+    from openadmet.models.transforms.pca import PCATransform
+
+    model_dir = tmp_path_factory.mktemp("transform_model")
+    _write_recipe_components(
+        model_dir / "recipe_components",
+        tag="TFM",
+        name="unit-test-tfm",
+        feat={
+            "type": "FingerprintFeaturizer",
+            "params": {"fp_type": "ecfp", "n_jobs": 1},
+        },
+        model={
+            "type": "LGBMRegressorModel",
+            "params": {"n_estimators": 2, "num_leaves": 2, "random_seed": 42},
+        },
+        transform={
+            "type": "PCATransform",
+            "params": {"n_components": 4, "random_seed": 42},
+        },
+    )
+
+    # Fit the transform the workflow would have saved next to the model
+    train_smiles = ["CCO", "CCN", "CC(=O)OC", "c1ccccc1", "CCCCO"]
+    feats, _ = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1).featurize(train_smiles)
+    pca = PCATransform(n_components=4, random_seed=42).fit(feats)
+    with open(model_dir / "transform.pickle", "wb") as f:
+        joblib.dump(
+            {
+                "schema": "v1",
+                "transforms": [pca],
+                "sklearn_version": sklearn.__version__,
+            },
+            f,
+        )
+
+    model = LGBMRegressorModel(n_estimators=2, num_leaves=2, random_seed=42)
+    model.train(pca.transform(feats), np.array([5.8, 5.6, 5.4, 5.2, 5.0]))
+    model.serialize(model_dir / "model.json", model_dir / "model.pkl")
 
     return model_dir
 
