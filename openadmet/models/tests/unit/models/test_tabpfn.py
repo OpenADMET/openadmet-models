@@ -16,7 +16,7 @@ from openadmet.models.architecture.tabpfn import (
 )
 
 
-@ pytest.fixture
+@pytest.fixture
 def regression_data():
     """20-sample, 4-feature regression data for train/predict tests."""
     rng = np.random.default_rng(0)
@@ -25,7 +25,7 @@ def regression_data():
     return X, y
 
 
-@ pytest.fixture
+@pytest.fixture
 def classification_data():
     """20-sample, 4-feature, 2-class classification data for train/predict tests."""
     rng = np.random.default_rng(0)
@@ -49,7 +49,7 @@ class TestTabPFNModelBase:
         with pytest.raises(ValueError, match="Invalid accelerator"):
             TabPFNModelBase(accelerator="not_a_real_device")
 
-    @ pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
+    @pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
     def test_accelerator_validator_accepts_known_values(self, accelerator):
         """cpu, gpu, auto, and unaliased torch device spellings must all construct cleanly."""
         TabPFNModelBase(accelerator=accelerator)
@@ -77,11 +77,11 @@ class TestTabPFNExtensionModelBase:
         with pytest.raises(ValueError, match="Invalid accelerator"):
             TabPFNPostHocRegressorModel(accelerator="bogus")
 
-    @ pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
+    @pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
     def test_accelerator_validator_accepts_known_values(self, accelerator):
         TabPFNPostHocRegressorModel(accelerator=accelerator)
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "model_cls",
         [TabPFNPostHocRegressorModel, TabPFNPostHocClassifierModel],
     )
@@ -97,8 +97,14 @@ class TestTabPFNExtensionModelBase:
 
         assert "TabPFNPostHocRegressorModel" in models._registry
         assert "TabPFNPostHocClassifierModel" in models._registry
-        assert models.get_class("TabPFNPostHocRegressorModel") is TabPFNPostHocRegressorModel
-        assert models.get_class("TabPFNPostHocClassifierModel") is TabPFNPostHocClassifierModel
+        assert (
+            models.get_class("TabPFNPostHocRegressorModel")
+            is TabPFNPostHocRegressorModel
+        )
+        assert (
+            models.get_class("TabPFNPostHocClassifierModel")
+            is TabPFNPostHocClassifierModel
+        )
 
     def test_build_license_warning(self):
         """build() must emit the TabPFN license warning."""
@@ -113,7 +119,7 @@ class TestTabPFNExtensionModelBase:
 class TestTabPFNBasicModels:
     """Tests for TabPFNRegressorModel and TabPFNClassifierModel (basic tabpfn)."""
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "model_cls",
         [TabPFNRegressorModel, TabPFNClassifierModel],
     )
@@ -135,7 +141,7 @@ class TestTabPFNBasicModels:
 class TestResolveDevice:
     """Tests for the private _resolve_device helper."""
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "accelerator,expected",
         [
             ("auto", "auto"),

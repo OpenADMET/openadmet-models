@@ -255,7 +255,8 @@ class TabPFNModelBase(PickleableModelBase):
     @field_validator("accelerator")
     @classmethod
     def validate_accelerator(cls, value: str) -> str:
-        """Reject accelerator spellings ``torch.device()`` cannot parse.
+        """
+        Reject accelerator spellings ``torch.device()`` cannot parse.
 
         Mirrors ``TabPFNExtensionModelBase.validate_accelerator`` so both the
         basic and extension model families fail eagerly on a bad accelerator.
