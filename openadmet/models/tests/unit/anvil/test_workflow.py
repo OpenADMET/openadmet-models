@@ -618,6 +618,42 @@ def test_workflow_accepts_valid_block_config(
     assert wf.transform == transform
 
 
+@pytest.fixture(scope="module")
+def aliased_concat_feat():
+    """Return a concatenator whose two same-class blocks are told apart by alias alone."""
+    return FeatureConcatenator(
+        featurizers=[
+            FingerprintFeaturizer(fp_type="ecfp:4", alias="ecfp"),
+            FingerprintFeaturizer(fp_type="maccs", alias="maccs"),
+        ]
+    )
+
+
+def test_workflow_accepts_alias_keyed_block_config(
+    metadata, data_spec, aliased_concat_feat
+):
+    """Same-class featurizers must be addressable per block by the aliases the recipe gave them."""
+    transform = [PCATransform(n_components={"ecfp": 8, "maccs": 4})]
+    wf = _make_anvil_workflow(
+        metadata, data_spec, aliased_concat_feat, transform=transform
+    )
+    assert wf.feat.feature_block_keys() == ["ecfp", "maccs"]
+    assert wf.transform == transform
+
+
+def test_workflow_rejects_type_keys_for_aliased_blocks(
+    metadata, data_spec, aliased_concat_feat
+):
+    """An alias replaces the type as the block key, so the type must no longer resolve."""
+    with pytest.raises(ValueError, match="PCATransform block keys must exactly match"):
+        _make_anvil_workflow(
+            metadata,
+            data_spec,
+            aliased_concat_feat,
+            transform=[PCATransform(n_components={"FingerprintFeaturizer": 8})],
+        )
+
+
 @pytest.mark.parametrize(
     "n_components",
     [
