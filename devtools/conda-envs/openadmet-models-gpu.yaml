@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - ase
+  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
@@ -31,6 +32,7 @@ dependencies:
   - pytest-xdist
   - rdkit
   - rich
+  - s3fs >=2021.9
   - scikit-learn
   - seaborn
   - splito
@@ -42,7 +44,6 @@ dependencies:
   - xgboost
   - zarr >=3.0.0
   - pip:
-    - boto3
     - email-validator
     - phx-class-registry
     - tabicl
