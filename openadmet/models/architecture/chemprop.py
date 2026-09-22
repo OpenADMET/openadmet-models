@@ -961,7 +961,7 @@ class ChemPropModel(LightningModelBase):
         return np.concatenate(all_embeddings, axis=0).astype(np.float32)
 
     def predict(
-        self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
+        self, X: np.ndarray, accelerator="auto", devices=1, **kwargs
     ) -> np.ndarray:
         """
         Predict using the trained model.
@@ -971,7 +971,10 @@ class ChemPropModel(LightningModelBase):
         X : np.ndarray
             Input data for prediction.
         accelerator : str, optional
-            Accelerator type to use ("gpu" or "cpu").
+            Accelerator type to use. "auto" (the default) resolves like
+            Lightning's auto accelerator (TPU, MPS, CUDA, NPU when available,
+            otherwise CPU). "gpu" maps to CUDA, and other values are used as
+            torch device names.
         devices : int, optional
             Number of devices to use for prediction.
         **kwargs
