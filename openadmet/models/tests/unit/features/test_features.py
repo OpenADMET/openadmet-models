@@ -283,3 +283,35 @@ def test_chemprop_training_shuffle_is_seed_reproducible():
 def test_chemprop_training_shuffle_varies_with_seed():
     """Different seeds produce different training sample orders."""
     assert _chemprop_train_sample_order(7) != _chemprop_train_sample_order(8)
+
+
+def test_chemprop_eval_targets_use_train_scaler():
+    """Eval targets must be normalized with the training scaler, not refit (#579)."""
+    featurizer = ChemPropFeaturizer(batch_size=4, n_jobs=0)
+    train_smiles = ["CCO", "CCN", "CCC", "CCCl"]
+    val_smiles = ["CCBr", "CCCC"]
+
+    _, _, train_scaler, _ = featurizer.featurize(
+        train_smiles, y=np.array([1.0, 2.0, 3.0, 4.0]), train=True
+    )
+
+    y_val = np.array([10.0, 20.0])
+    _, _, val_scaler, val_dataset = featurizer.featurize(
+        val_smiles, y=y_val, target_scaler=train_scaler
+    )
+
+    expected = train_scaler.transform(y_val.reshape(-1, 1))
+    assert val_dataset.Y == pytest.approx(expected)
+    assert val_scaler.mean_ == pytest.approx(train_scaler.mean_)
+
+
+def test_chemprop_eval_targets_refit_without_train_scaler():
+    """A standalone featurize call without a provided scaler keeps the old fit behavior."""
+    featurizer = ChemPropFeaturizer(batch_size=4, n_jobs=0)
+    smiles = ["CCO", "CCN", "CCC"]
+    y = np.array([1.0, 2.0, 3.0])
+
+    _, _, scaler, dataset = featurizer.featurize(smiles, y=y)
+
+    expected = scaler.transform(y.reshape(-1, 1))
+    assert dataset.Y == pytest.approx(expected)
