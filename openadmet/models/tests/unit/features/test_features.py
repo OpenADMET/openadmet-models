@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import RandomSampler, SequentialSampler
 
 from openadmet.models.features.chemprop import ChemPropFeaturizer
@@ -303,6 +304,10 @@ def test_chemprop_eval_targets_use_train_scaler():
     expected = train_scaler.transform(y_val.reshape(-1, 1))
     assert val_dataset.Y == pytest.approx(expected)
     assert val_scaler.mean_ == pytest.approx(train_scaler.mean_)
+
+    # Guard the distinction: a fresh scaler fit on the eval targets would give different values
+    refit = StandardScaler().fit_transform(y_val.reshape(-1, 1))
+    assert not np.allclose(val_dataset.Y, refit)
 
 
 def test_chemprop_eval_targets_refit_without_train_scaler():

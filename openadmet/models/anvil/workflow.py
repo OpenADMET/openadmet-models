@@ -622,10 +622,18 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         self.model = self.trainer.train(train_dataloader, val_dataloader)
         logger.info("Model trained")
 
-    def _train_ensemble(self, X_train, y_train, val_dataloader, output_dir, **kwargs):
+    def _train_ensemble(
+        self, X_train, y_train, val_dataloader, output_dir, train_scaler=None, **kwargs
+    ):
         # Safely cast to numpy
         X_train = _safe_to_numpy(X_train)
         y_train = _safe_to_numpy(y_train)
+
+        # Members share the train scaler so their outputs and the shared
+        # validation loader stay in the same normalized space
+        scaler_kwargs = (
+            {"target_scaler": train_scaler} if train_scaler is not None else {}
+        )
 
         # Check if there is an output directory
         if not self.trainer.output_dir:
@@ -680,6 +688,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                     X_train_bootstrap,
                     y_train_bootstrap,
                     train=True,
+                    **scaler_kwargs,
                 )
             )
 
@@ -902,6 +911,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 y_train,
                 val_dataloader,
                 output_dir,
+                train_scaler=train_scaler,
                 **kwargs,
             )
 
