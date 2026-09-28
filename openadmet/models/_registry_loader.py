@@ -21,6 +21,7 @@ _MODELS = [
 ]
 
 _EVALUATORS = [
+    "openadmet.models.eval.applicability_domain",
     "openadmet.models.eval.classification",
     "openadmet.models.eval.cross_validation",
     "openadmet.models.eval.regression",
