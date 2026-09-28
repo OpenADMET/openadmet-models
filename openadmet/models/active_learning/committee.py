@@ -33,7 +33,6 @@ class CommitteeRegressor(EnsembleBase):
     type: ClassVar[str] = "CommitteeRegressor"
     _calibration_model: Any = None
     _calibration_methods: dict = {
-        "isotonic-regression": "_isotonic_regression_calibration",
         "scaling-factor": "_scaling_factor_calibration",
         None: "_do_nothing_calibration",
     }
@@ -68,49 +67,6 @@ class CommitteeRegressor(EnsembleBase):
         )
 
         return instance
-
-    def _isotonic_regression_calibration(self, X, y, **kwargs):
-        """
-        Configure uncertainty calibration using isotonic regression.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input validation set samples to calibrate.
-        y : array-like of shape (n_samples, n_features)
-            The target validation set values.
-        **kwargs : dict
-            Additional keyword arguments to be passed to the committee's predict method.
-
-        """
-        # Reset calibration model
-        self._calibration_model = None
-
-        if isinstance(y, (pd.Series, pd.DataFrame)):
-            y = y.to_numpy()
-
-        # Predict on recalibration (validation) set
-        y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
-
-        # Fit a separate isotonic regression model for each target dimension
-        calibration_models = []
-        for i in range(y.shape[-1]):
-            # Get the predictive uncertainties in terms of expected proportions and
-            # observed proportions on the recalibration set
-            y_exp_props, y_obs_props = (
-                uct.metrics_calibration.get_proportion_lists_vectorized(
-                    y_pred_mean[:, i], y_pred_std[:, i], y[:, i]
-                )
-            )
-
-            # Train a recalibration model
-            iso_model = uct.recalibration.iso_recal(y_exp_props, y_obs_props).predict
-
-            # Append to per-dimension list
-            calibration_models.append(iso_model)
-
-        # Create per-dimension calibration model
-        self._calibration_model = {"isotonic-regression": calibration_models}
 
     def _scaling_factor_calibration(self, X, y, **kwargs):
         """
@@ -163,7 +119,7 @@ class CommitteeRegressor(EnsembleBase):
         """
         pass
 
-    def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
+    def calibrate_uncertainty(self, X, y, method="scaling-factor", **kwargs):
         """
         Configure uncertainty calibration using selected method.
 
@@ -174,7 +130,9 @@ class CommitteeRegressor(EnsembleBase):
         y : array-like of shape (n_samples, n_features)
             The target validation set values.
         method : str
-            The calibration method to use. Options are "isotonic-regression" or "scaling-factor".
+            The calibration method to use. Currently only "scaling-factor" is
+            supported; "isotonic-regression" was removed because it applied a
+            proportion-space model to raw standard deviations (#516).
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
 
@@ -199,15 +157,11 @@ class CommitteeRegressor(EnsembleBase):
                 axis=1,
             )
 
-        elif "isotonic-regression" in self._calibration_model:
-            # Create per-dimension calibration model
-            return lambda x: np.stack(
-                [
-                    self._calibration_model["isotonic-regression"][i](x[:, i])
-                    for i in range(x.shape[-1])
-                ],
-                axis=1,
-            )
+        raise ValueError(
+            f"Unrecognized calibration model: {list(self._calibration_model.keys())}. "
+            "Calibration models saved with the removed 'isotonic-regression' method "
+            "cannot be used; recalibrate with 'scaling-factor'."
+        )
 
     def plot_uncertainty_calibration(self, X, y, **kwargs):
         """

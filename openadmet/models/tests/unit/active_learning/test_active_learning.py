@@ -110,9 +110,35 @@ def test_invalid_calibration_method_raises(trained_committee):
         committee.calibrate_uncertainty(X_val, y_val, method="not-a-method")
 
 
-@pytest.mark.parametrize(
-    "calibration_method", ["isotonic-regression", "scaling-factor"]
-)
+def test_isotonic_regression_calibration_removed(trained_committee):
+    """The isotonic method mixed proportion space with std space (#516) and must not be selectable."""
+    committee, X_val, y_val = trained_committee
+    with pytest.raises(ValueError, match="Invalid calibration method"):
+        committee.calibrate_uncertainty(X_val, y_val, method="isotonic-regression")
+
+
+def test_default_calibration_is_scaling_factor(trained_committee):
+    """The default method must produce a calibrated std in standard-deviation space."""
+    committee, X_val, y_val = trained_committee
+    _, raw_std = committee._predict(X_val, return_std=True)
+
+    committee.calibrate_uncertainty(X_val, y_val)
+
+    assert "scaling-factor" in committee._calibration_model
+    _, cal_std = committee._predict(X_val, return_std=True)
+    expected = raw_std * committee._calibration_model["scaling-factor"][0]
+    assert_allclose(cal_std, expected)
+
+
+def test_unknown_calibration_model_key_raises(trained_committee):
+    """A loaded calibration model with a removed method key must fail loudly, not call None."""
+    committee, X_val, _ = trained_committee
+    committee._calibration_model = {"isotonic-regression": [lambda x: x]}
+    with pytest.raises(ValueError, match="Unrecognized calibration"):
+        committee.predict(X_val, return_std=True)
+
+
+@pytest.mark.parametrize("calibration_method", ["scaling-factor"])
 def test_calibration_paths(trained_committee, calibration_method):
     """
     Verify that uncertainty calibration methods can be applied successfully.
@@ -145,9 +171,7 @@ def test_train_and_train_validation(toy_data):
         CommitteeRegressor.train(X_train, y_train, mod_class=None, n_models=2)
 
 
-@pytest.mark.parametrize(
-    "calibration_method", ["isotonic-regression", "scaling-factor", None]
-)
+@pytest.mark.parametrize("calibration_method", ["scaling-factor", None])
 def test_save_load_roundtrip(tmp_path, trained_committee, calibration_method):
     """
     Verify that a CommitteeRegressor can be saved and loaded correctly.
@@ -177,9 +201,7 @@ def test_save_load_roundtrip(tmp_path, trained_committee, calibration_method):
     assert committee.calibrated is (calibration_method is not None)
 
 
-@pytest.mark.parametrize(
-    "calibration_method", ["isotonic-regression", "scaling-factor", None]
-)
+@pytest.mark.parametrize("calibration_method", ["scaling-factor", None])
 def test_serialize_deserialize_roundtrip(
     tmp_path, trained_committee, calibration_method
 ):
