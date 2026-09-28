@@ -94,6 +94,8 @@ class ScaffoldApplicabilityDomain:
             The fitted instance.
 
         """
+        if isinstance(smiles, str):
+            smiles = [smiles]
         smiles = np.asarray(smiles)
         abs_errors = np.asarray(abs_errors, dtype=float)
         if smiles.shape[0] != abs_errors.shape[0]:
@@ -167,6 +169,9 @@ class ScaffoldApplicabilityDomain:
         if not self.fitted:
             raise ValueError("ScaffoldApplicabilityDomain is not fit yet.")
 
+        if isinstance(smiles, str):
+            smiles = [smiles]
+
         return np.array(
             [
                 self.primary_bounds.get(
@@ -193,6 +198,9 @@ class ScaffoldApplicabilityDomain:
         """
         if not self.fitted:
             raise ValueError("ScaffoldApplicabilityDomain is not fit yet.")
+
+        if isinstance(smiles, str):
+            smiles = [smiles]
 
         return np.array(
             [(self.scaffold_smiles(s) or "") in self.primary_bounds for s in smiles]

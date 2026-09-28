@@ -82,6 +82,8 @@ class TanimotoApplicabilityDomain:
             The fitted instance.
 
         """
+        if isinstance(smiles, str):
+            smiles = [smiles]
         smiles = np.asarray(smiles)
         abs_errors = np.asarray(abs_errors, dtype=float)
         if smiles.shape[0] != abs_errors.shape[0]:
@@ -159,6 +161,9 @@ class TanimotoApplicabilityDomain:
         if not self.fitted:
             raise ValueError("TanimotoApplicabilityDomain is not fit yet.")
 
+        if isinstance(smiles, str):
+            smiles = [smiles]
+
         out = []
         for s in smiles:
             mask = self._neighbor_mask(s)
@@ -188,6 +193,10 @@ class TanimotoApplicabilityDomain:
         """
         if not self.fitted:
             raise ValueError("TanimotoApplicabilityDomain is not fit yet.")
+
+        if isinstance(smiles, str):
+            smiles = [smiles]
+
         return np.array([self._neighbor_mask(s).any() for s in smiles])
 
     def save(self, path: PathLike = "applicability_domain_tanimoto.pkl"):

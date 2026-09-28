@@ -709,7 +709,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             )
 
             if collect_ad:
-                ad_smiles.append(np.asarray(X_val).ravel())
+                # first column is the compound SMILES when X is tabular
+                xs = np.asarray(X_val)
+                ad_smiles.append(xs[:, 0] if xs.ndim > 1 else xs.ravel())
                 ad_true.append(np.asarray(y_val))
                 ad_pred.append(np.asarray(y_pred_fold))
 

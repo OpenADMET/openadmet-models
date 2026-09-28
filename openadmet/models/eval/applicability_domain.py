@@ -80,6 +80,12 @@ class ApplicabilityDomainMetrics(EvalBase):
 
         ad = ScaffoldApplicabilityDomain.load(self.ad_path)
 
+        # Coerce test SMILES to a flat array; first column when tabular
+        if isinstance(X_test, (pd.Series, pd.DataFrame)):
+            X_test = X_test.to_numpy()
+        X_test = np.asarray(X_test)
+        X_test = X_test[:, 0] if X_test.ndim > 1 else X_test.ravel()
+
         bounds = ad.bound(X_test)
         in_domain = ad.is_in_domain(X_test)
 
