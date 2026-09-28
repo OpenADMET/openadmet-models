@@ -7,7 +7,6 @@ import pandas as pd
 
 from openadmet.models.split.split_base import SplitterBase, splitters
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,8 @@ logger = logging.getLogger(__name__)
 @splitters.register("ScaffoldSplitter")
 class ScaffoldSplitter(SplitterBase):
     """Splits the data based on the scaffold of the molecules."""
+
+    n_jobs: int = -1
 
     def split(self, X, y):
         """
@@ -47,7 +48,7 @@ class ScaffoldSplitter(SplitterBase):
             # Split into train and val
             splitter = ScaffoldSplit(
                 smiles=X,
-                n_jobs=-1,
+                n_jobs=self.n_jobs,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_seed,
@@ -68,7 +69,7 @@ class ScaffoldSplitter(SplitterBase):
         # Split into train+val and test
         splitter = ScaffoldSplit(
             smiles=X,
-            n_jobs=-1,
+            n_jobs=self.n_jobs,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_seed,
@@ -115,6 +116,8 @@ class ScaffoldSplitter(SplitterBase):
 class PerimeterSplitter(SplitterBase):
     """Splits the data based on the perimeter of the molecules."""
 
+    n_jobs: int = -1
+
     def split(self, X, y):
         """
         Split the data into train, validation, and test sets.
@@ -146,7 +149,7 @@ class PerimeterSplitter(SplitterBase):
             # Split into train and val
             splitter = PerimeterSplit(
                 smiles=X,
-                n_jobs=-1,
+                n_jobs=self.n_jobs,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_seed,
@@ -166,7 +169,7 @@ class PerimeterSplitter(SplitterBase):
 
         # Split into train+val and test
         splitter = PerimeterSplit(
-            n_jobs=-1,
+            n_jobs=self.n_jobs,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_seed,
@@ -213,6 +216,8 @@ class PerimeterSplitter(SplitterBase):
 class MaxDissimilaritySplitter(SplitterBase):
     """Splits the data based on maximum dissimilarity."""
 
+    n_jobs: int = -1
+
     def split(self, X, y):
         """
         Split the data into train, validation, and test sets.
@@ -246,7 +251,7 @@ class MaxDissimilaritySplitter(SplitterBase):
             # Split into train and val
             splitter = MaxDissimilaritySplit(
                 smiles=X,
-                n_jobs=-1,
+                n_jobs=self.n_jobs,
                 train_size=None,
                 test_size=int(self.val_size * X.shape[0]),
                 random_state=self.random_seed,
@@ -266,7 +271,7 @@ class MaxDissimilaritySplitter(SplitterBase):
 
         # Split into train+val and test
         splitter = MaxDissimilaritySplit(
-            n_jobs=-1,
+            n_jobs=self.n_jobs,
             train_size=None,
             test_size=int(self.test_size * X.shape[0]),
             random_state=self.random_seed,
