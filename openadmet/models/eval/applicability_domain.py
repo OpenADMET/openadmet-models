@@ -142,9 +142,7 @@ class ApplicabilityDomainMetrics(EvalBase):
                 "n_valid": n_valid,
                 "n_missing": int(len(X_test) - n_valid),
                 "frac_in_domain": float(np.mean(in_domain)),
-                "ad_coverage": float(
-                    np.mean(covered[valid]) if n_valid else np.nan
-                ),
+                "ad_coverage": float(np.mean(covered[valid]) if n_valid else np.nan),
                 "ad_coverage_in_domain": float(
                     np.mean(covered[valid_in]) if valid_in.any() else np.nan
                 ),
