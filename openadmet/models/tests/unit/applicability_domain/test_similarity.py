@@ -188,3 +188,17 @@ def test_sklearn_cv_without_ad_flag_leaves_data_unset():
         tag="test",
     )
     assert cv_eval._ad_cv_data is None
+
+
+def test_fit_rejects_all_nan_errors():
+    """All-NaN errors must fail loudly rather than fit a NaN bound."""
+    with pytest.raises(ValueError):
+        TanimotoApplicabilityDomain().fit(BENZENE, [np.nan] * len(BENZENE))
+
+
+def test_invalid_parameters_rejected():
+    """Out-of-range threshold or percentile fail at construction."""
+    with pytest.raises(ValueError):
+        TanimotoApplicabilityDomain(similarity_threshold=1.5)
+    with pytest.raises(ValueError):
+        TanimotoApplicabilityDomain(error_percentile=0)

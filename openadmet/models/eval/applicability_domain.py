@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pandas as pd
 import wandb
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from openadmet.models.applicability_domain.scaffold import (
     ScaffoldApplicabilityDomain,
@@ -42,8 +42,8 @@ class ApplicabilityDomainMetrics(EvalBase):
         ..., description="Path to serialized ScaffoldApplicabilityDomain"
     )
     use_wandb: bool = Field(False, description="Whether to use wandb")
-    _data: dict = {}
-    _assignments: pd.DataFrame | None = None
+    _data: dict = PrivateAttr(default_factory=dict)
+    _assignments: pd.DataFrame | None = PrivateAttr(default=None)
 
     def evaluate(
         self,
@@ -92,10 +92,17 @@ class ApplicabilityDomainMetrics(EvalBase):
         # Convert to numpy array if needed
         if isinstance(y_true, (pd.Series, pd.DataFrame)):
             y_true = y_true.to_numpy()
+        if isinstance(y_pred, (pd.Series, pd.DataFrame)):
+            y_pred = y_pred.to_numpy()
 
-        y_pred = ensure_2d(y_pred)
-        y_true = ensure_2d(y_true)
+        y_pred = ensure_2d(np.asarray(y_pred, dtype=float))
+        y_true = ensure_2d(np.asarray(y_true, dtype=float))
 
+        if y_true.shape != y_pred.shape:
+            raise ValueError(
+                f"`y_true` and `y_pred` must have equal shape, got "
+                f"{y_true.shape} and {y_pred.shape}"
+            )
         if y_true.shape[0] != len(X_test):
             raise ValueError(
                 f"`y_true` and `X_test` must have the same number of samples, got "
@@ -105,6 +112,11 @@ class ApplicabilityDomainMetrics(EvalBase):
         n_tasks = y_true.shape[1]
         if target_labels is None:
             target_labels = [f"task_{i}" for i in range(n_tasks)]
+        elif len(target_labels) != n_tasks:
+            raise ValueError(
+                f"`target_labels` must match the number of tasks, got "
+                f"{len(target_labels)} labels for {n_tasks} tasks"
+            )
 
         self._assignments = pd.DataFrame(
             {
@@ -116,22 +128,35 @@ class ApplicabilityDomainMetrics(EvalBase):
 
         for task_id, task_label in enumerate(target_labels):
             abs_err = np.abs(y_true[:, task_id] - y_pred[:, task_id])
-            covered = abs_err <= bounds
+            # rows with a missing target or prediction are excluded from
+            # coverage. A NaN comparison would silently count them as failures
+            valid = np.isfinite(abs_err)
+            n_valid = int(valid.sum())
+            covered = np.zeros(len(X_test), dtype=bool)
+            covered[valid] = abs_err[valid] <= bounds[valid]
+            valid_in = valid & in_domain
+            valid_out = valid & ~in_domain
 
             self._data[task_label] = {
                 "n_compounds": int(len(X_test)),
+                "n_valid": n_valid,
+                "n_missing": int(len(X_test) - n_valid),
                 "frac_in_domain": float(np.mean(in_domain)),
-                "ad_coverage": float(np.mean(covered)),
+                "ad_coverage": float(
+                    np.mean(covered[valid]) if n_valid else np.nan
+                ),
                 "ad_coverage_in_domain": float(
-                    np.mean(covered[in_domain]) if in_domain.any() else np.nan
+                    np.mean(covered[valid_in]) if valid_in.any() else np.nan
                 ),
                 "ad_coverage_out_domain": float(
-                    np.mean(covered[~in_domain]) if (~in_domain).any() else np.nan
+                    np.mean(covered[valid_out]) if valid_out.any() else np.nan
                 ),
             }
 
             self._assignments[f"{task_label}_abs_err"] = abs_err
-            self._assignments[f"{task_label}_covered"] = covered
+            covered_col = pd.array(covered, dtype="boolean")
+            covered_col[~valid] = pd.NA
+            self._assignments[f"{task_label}_covered"] = covered_col
 
     def report(self, write=False, output_dir=None):
         """
