@@ -67,6 +67,20 @@ def test_unfit_and_length_mismatch_raise():
         ad.fit(["CCO", "CCN"], [0.1])
 
 
+def test_from_predictions_fits_from_residuals():
+    """from_predictions computes |y_true - y_pred| and fits equivalently."""
+    smiles = BENZENE + MISC
+    y_true = np.array([1.0] * 6)
+    y_pred = np.array([1.1, 1.2, 1.15, 1.25, 1.1, 3.0])
+    ad = ScaffoldApplicabilityDomain.from_predictions(smiles, y_true, y_pred)
+    expected = ScaffoldApplicabilityDomain().fit(smiles, np.abs(y_true - y_pred))
+    assert ad.primary_bounds == expected.primary_bounds
+    assert ad.global_bound == expected.global_bound
+
+    with pytest.raises(ValueError, match="equal shape"):
+        ScaffoldApplicabilityDomain.from_predictions(smiles, y_true, y_pred[:3])
+
+
 def test_save_load_roundtrip(tmp_path, fitted_ad):
     """A saved domain reproduces the same bounds after load."""
     path = tmp_path / "ad.pkl"

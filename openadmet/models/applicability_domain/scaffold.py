@@ -179,6 +179,52 @@ class ScaffoldApplicabilityDomain:
             [(self.scaffold_smiles(s) or "") in self.primary_bounds for s in smiles]
         )
 
+    @classmethod
+    def from_predictions(
+        cls,
+        smiles: Any,
+        y_true: Any,
+        y_pred: Any,
+        min_count: int = 5,
+        error_percentile: float = 95.0,
+    ) -> "ScaffoldApplicabilityDomain":
+        """
+        Fit a domain directly from a trained model's predictions.
+
+        Convenience wrapper for the post-hoc workflow: after training, compute
+        absolute errors on the training compounds and fit the domain.
+
+        Parameters
+        ----------
+        smiles : array-like of str
+            SMILES strings for the compounds with predictions, typically the
+            training set.
+        y_true : array-like of float
+            Ground truth values.
+        y_pred : array-like of float
+            Predicted values, same order as ``smiles``.
+        min_count : int
+            Minimum scaffold frequency for a per-scaffold bound.
+        error_percentile : float
+            Percentile of absolute errors used for bounds.
+
+        Returns
+        -------
+        ScaffoldApplicabilityDomain
+            The fitted instance.
+
+        """
+        y_true = np.asarray(y_true, dtype=float)
+        y_pred = np.asarray(y_pred, dtype=float)
+        if y_true.shape != y_pred.shape:
+            raise ValueError(
+                f"y_true and y_pred must have equal shape, got "
+                f"{y_true.shape} and {y_pred.shape}"
+            )
+        return cls(min_count=min_count, error_percentile=error_percentile).fit(
+            smiles, np.abs(y_true - y_pred)
+        )
+
     def save(self, path: PathLike = "applicability_domain.pkl"):
         """Serialize the fitted domain with joblib."""
         if not self.fitted:
