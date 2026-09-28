@@ -69,7 +69,9 @@ class ScaffoldApplicabilityDomain:
         scaffold = MurckoScaffoldSmiles(mol=mol)
         return scaffold if scaffold else None
 
-    def fit(self, smiles: Any, abs_errors: Any) -> "ScaffoldApplicabilityDomain":
+    def fit(
+        self, smiles: Any, abs_errors: Any, ood_errors: Any = None
+    ) -> "ScaffoldApplicabilityDomain":
         """
         Fit scaffold error profiles from a model's absolute errors.
 
@@ -80,6 +82,11 @@ class ScaffoldApplicabilityDomain:
             typically the training set.
         abs_errors : array-like of float
             Absolute errors for each compound, same order as ``smiles``.
+        ood_errors : array-like of float, optional
+            Errors measured on compounds whose scaffolds were held out
+            entirely, e.g. the held-out folds of scaffold-grouped CV. When
+            provided, this pool defines the global OOD bound instead of the
+            miscellaneous-bin errors, matching the two-pool design in #502.
 
         Returns
         -------
@@ -117,9 +124,13 @@ class ScaffoldApplicabilityDomain:
         }
         self.misc_scaffolds = set(unique) - primary
 
-        # Global OOD bound: misc-bin errors approximate held-out compounds
-        misc_mask = np.isin(keys, list(self.misc_scaffolds))
-        pool = abs_errors[misc_mask] if misc_mask.any() else abs_errors
+        # Global OOD bound: an explicit extrapolation pool when provided,
+        # otherwise the misc-bin errors approximate held-out compounds
+        if ood_errors is not None:
+            pool = np.asarray(ood_errors, dtype=float)
+        else:
+            misc_mask = np.isin(keys, list(self.misc_scaffolds))
+            pool = abs_errors[misc_mask] if misc_mask.any() else abs_errors
         self.global_bound = float(np.percentile(pool, self.error_percentile))
 
         return self

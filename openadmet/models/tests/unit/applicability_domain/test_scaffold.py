@@ -67,6 +67,20 @@ def test_unfit_and_length_mismatch_raise():
         ad.fit(["CCO", "CCN"], [0.1])
 
 
+def test_ood_errors_override_global_bound(fitted_ad):
+    """An explicit extrapolation pool replaces the misc-bin global bound."""
+    refit = ScaffoldApplicabilityDomain(min_count=4).fit(
+        BENZENE + MISC,
+        np.array([0.1, 0.2, 0.15, 0.25, 0.1, 2.0]),
+        ood_errors=np.array([5.0, 6.0, 7.0]),
+    )
+    expected = float(np.percentile([5.0, 6.0, 7.0], 95.0))
+    assert refit.global_bound == expected
+    assert refit.bound(UNSEEN)[0] == expected
+    # per-scaffold bounds unchanged
+    assert refit.primary_bounds == fitted_ad.primary_bounds
+
+
 def test_from_predictions_fits_from_residuals():
     """from_predictions computes |y_true - y_pred| and fits equivalently."""
     smiles = BENZENE + MISC

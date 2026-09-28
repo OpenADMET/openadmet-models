@@ -520,6 +520,15 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
+    collect_ad_errors: bool = Field(
+        False,
+        description="Collect held-out fold predictions for applicability-domain fitting",
+    )
+    ad_output_path: str | None = Field(
+        None,
+        description="Save a ScaffoldApplicabilityDomain fitted on held-out fold errors to this path",
+    )
+    _ad_cv_data: tuple | None = None
 
     @property
     def active_metrics(self):
@@ -634,6 +643,10 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
         self._metric_data = {}
 
+        # collect held-out fold predictions when an AD artifact is requested
+        collect_ad = self.collect_ad_errors or self.ad_output_path is not None
+        ad_smiles, ad_true, ad_pred = [], [], []
+
         # cast to numpy arrays
         X_all = X_all.to_numpy()
         y_all = y_all.to_numpy()
@@ -694,6 +707,11 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                 devices=trainer.devices,
             )
 
+            if collect_ad:
+                ad_smiles.append(np.asarray(X_val).ravel())
+                ad_true.append(np.asarray(y_val))
+                ad_pred.append(np.asarray(y_pred_fold))
+
             # calculate the mean and confidence interval for each metric
             # loop over tasks and calculate the statistics
             if not (n_tasks == y_pred_fold.shape[1]):
@@ -711,6 +729,18 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                     self._metric_data[t_label][metric_name].append(value)
 
         logger.info(f"Fold {fold} complete")
+
+        # store collected held-out fold data and optionally write the AD artifact
+        if collect_ad:
+            self._ad_cv_data = (
+                np.concatenate(ad_smiles),
+                np.concatenate(ad_true),
+                np.concatenate(ad_pred),
+            )
+        if self.ad_output_path is not None:
+            ad = self.fit_applicability_domain()
+            ad.save(self.ad_output_path)
+            logger.info(f"Applicability domain saved to {self.ad_output_path}")
 
         # now we have the metric data for each task, calculate the mean and confidence interval
         for t_label in target_labels:
@@ -767,6 +797,48 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                     )
 
         return self.data
+
+    def fit_applicability_domain(
+        self, min_count=5, error_percentile=95.0
+    ) -> "ScaffoldApplicabilityDomain":
+        """
+        Fit a scaffold applicability domain from collected held-out fold data.
+
+        Requires ``collect_ad_errors`` or ``ad_output_path`` on ``evaluate``.
+        Held-out fold errors stand in for the proposal's extrapolation pool;
+        per-scaffold bounds group those held-out errors by scaffold, which is
+        the pragmatic variant of the intra-scaffold val pools in #502.
+
+        Parameters
+        ----------
+        min_count : int
+            Minimum held-out occurrences for a scaffold to get its own bound.
+        error_percentile : float
+            Percentile of absolute errors used for bounds.
+
+        Returns
+        -------
+        ScaffoldApplicabilityDomain
+            The fitted domain.
+
+        """
+        from openadmet.models.applicability_domain.scaffold import (
+            ScaffoldApplicabilityDomain,
+        )
+
+        if self._ad_cv_data is None:
+            raise ValueError(
+                "No held-out fold data collected; run evaluate with "
+                "collect_ad_errors=True or ad_output_path set"
+            )
+        smiles, y_true, y_pred = self._ad_cv_data
+        return ScaffoldApplicabilityDomain.from_predictions(
+            smiles,
+            y_true,
+            y_pred,
+            min_count=min_count,
+            error_percentile=error_percentile,
+        )
 
     @property
     def task_names(self):
