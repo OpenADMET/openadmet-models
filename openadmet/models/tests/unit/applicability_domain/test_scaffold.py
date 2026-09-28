@@ -95,6 +95,16 @@ def test_from_predictions_fits_from_residuals():
         ScaffoldApplicabilityDomain.from_predictions(smiles, y_true, y_pred[:3])
 
 
+def test_nan_errors_do_not_poison_bounds():
+    """Missing-target rows are dropped; NaNs elsewhere are ignored by percentiles."""
+    smiles = BENZENE + MISC
+    errors = np.array([0.1, np.nan, 0.15, 0.25, 0.1, 2.0])
+    ad = ScaffoldApplicabilityDomain(min_count=4).fit(smiles, errors)
+    # benzene bound comes from its finite errors only
+    assert ad.global_bound == 2.0
+    assert np.isfinite(ad.bound(BENZENE[:1])[0])
+
+
 def test_save_load_roundtrip(tmp_path, fitted_ad):
     """A saved domain reproduces the same bounds after load."""
     path = tmp_path / "ad.pkl"

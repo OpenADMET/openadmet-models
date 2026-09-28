@@ -24,7 +24,7 @@ def ad_path(tmp_path):
     return path
 
 
-def test_evaluator_registered(ad_path):
+def test_evaluator_registered():
     """The evaluator resolves through the registry."""
     assert get_eval_class("ApplicabilityDomainMetrics") is ApplicabilityDomainMetrics
 

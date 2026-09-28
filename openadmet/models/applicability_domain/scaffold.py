@@ -102,6 +102,14 @@ class ScaffoldApplicabilityDomain:
                 f"{smiles.shape[0]} and {abs_errors.shape[0]}"
             )
 
+        # drop rows where every task's error is non-finite so missing targets
+        # do not poison the percentiles
+        if abs_errors.ndim > 1:
+            finite = np.isfinite(abs_errors).any(axis=1)
+        else:
+            finite = np.isfinite(abs_errors)
+        smiles, abs_errors = smiles[finite], abs_errors[finite]
+
         scaffolds = [self.scaffold_smiles(s) for s in smiles]
         n_failed = sum(s is None for s in scaffolds)
         if n_failed:
@@ -118,7 +126,7 @@ class ScaffoldApplicabilityDomain:
         # Per-scaffold bounds for primary scaffolds
         self.primary_bounds = {
             scaffold: float(
-                np.percentile(abs_errors[keys == scaffold], self.error_percentile)
+                np.nanpercentile(abs_errors[keys == scaffold], self.error_percentile)
             )
             for scaffold in primary
         }
@@ -131,7 +139,7 @@ class ScaffoldApplicabilityDomain:
         else:
             misc_mask = np.isin(keys, list(self.misc_scaffolds))
             pool = abs_errors[misc_mask] if misc_mask.any() else abs_errors
-        self.global_bound = float(np.percentile(pool, self.error_percentile))
+        self.global_bound = float(np.nanpercentile(pool, self.error_percentile))
 
         return self
 

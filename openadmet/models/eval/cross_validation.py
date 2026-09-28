@@ -642,6 +642,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         }
 
         self._metric_data = {}
+        self._ad_cv_data = None
 
         # collect held-out fold predictions when an AD artifact is requested
         collect_ad = self.collect_ad_errors or self.ad_output_path is not None

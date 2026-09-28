@@ -12,6 +12,7 @@ from openadmet.models.applicability_domain.similarity import (
 )
 
 BENZENE = ["c1ccccc1", "Cc1ccccc1", "Oc1ccccc1", "c1ccc(Cl)cc1", "CCc1ccccc1"]
+MISC_SMILES = ["C1CCCCC1"]
 
 
 @pytest.fixture
@@ -93,9 +94,6 @@ def test_fit_applicability_domain_from_cv_data():
     ad = cv_eval.fit_applicability_domain(min_count=4)
     assert ad.fitted
     assert ad.is_in_domain(["Cc1ccccc1"])[0]
-
-
-MISC_SMILES = ["C1CCCCC1"]
 
 
 def test_fit_applicability_domain_requires_collected_data():

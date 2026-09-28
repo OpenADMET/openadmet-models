@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import wandb
 from pydantic import Field
 
 from openadmet.models.applicability_domain.scaffold import (
@@ -166,3 +167,11 @@ class ApplicabilityDomainMetrics(EvalBase):
             self._assignments.to_csv(
                 output_dir / "applicability_domain_assignments.csv", index=False
             )
+
+        # Also log the JSON to wandb
+        if self.use_wandb:
+            artifact = wandb.Artifact(
+                name="applicability_domain_json", type="metric_json"
+            )
+            artifact.add_file(json_path)
+            wandb.log_artifact(artifact)

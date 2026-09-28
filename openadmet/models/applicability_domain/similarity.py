@@ -82,13 +82,22 @@ class TanimotoApplicabilityDomain:
             The fitted instance.
 
         """
-        smiles = list(smiles)
+        smiles = np.asarray(smiles)
         abs_errors = np.asarray(abs_errors, dtype=float)
-        if len(smiles) != abs_errors.shape[0]:
+        if smiles.shape[0] != abs_errors.shape[0]:
             raise ValueError(
                 f"smiles and abs_errors must have equal length, got "
-                f"{len(smiles)} and {abs_errors.shape[0]}"
+                f"{smiles.shape[0]} and {abs_errors.shape[0]}"
             )
+
+        # drop rows where every task's error is non-finite so missing targets
+        # do not poison the percentiles
+        if abs_errors.ndim > 1:
+            finite = np.isfinite(abs_errors).any(axis=1)
+        else:
+            finite = np.isfinite(abs_errors)
+        smiles = list(smiles[finite])
+        abs_errors = abs_errors[finite]
 
         fps, keep_smiles, keep_errors = [], [], []
         n_dropped = 0
@@ -110,7 +119,7 @@ class TanimotoApplicabilityDomain:
         self._abs_errors = np.asarray(keep_errors)
         self._fps = fps
         self.global_bound = float(
-            np.percentile(self._abs_errors, self.error_percentile)
+            np.nanpercentile(self._abs_errors, self.error_percentile)
         )
         return self
 
@@ -155,7 +164,9 @@ class TanimotoApplicabilityDomain:
             mask = self._neighbor_mask(s)
             if mask.any():
                 out.append(
-                    float(np.percentile(self._abs_errors[mask], self.error_percentile))
+                    float(
+                        np.nanpercentile(self._abs_errors[mask], self.error_percentile)
+                    )
                 )
             else:
                 out.append(self.global_bound)
