@@ -105,3 +105,86 @@ def test_fit_applicability_domain_requires_collected_data():
     cv_eval = PytorchLightningRepeatedKFoldCrossValidation(n_resamples=10)
     with pytest.raises(ValueError, match="collect_ad_errors"):
         cv_eval.fit_applicability_domain()
+
+
+def test_sklearn_cv_collects_ad_errors(tmp_path):
+    """The sklearn CV evaluator collects fold predictions and writes an AD."""
+    from types import SimpleNamespace
+
+    from sklearn.base import BaseEstimator, RegressorMixin
+
+    from openadmet.models.eval.cross_validation import (
+        SKLearnRepeatedKFoldCrossValidation,
+    )
+
+    class MeanRegressor(BaseEstimator, RegressorMixin):
+        def fit(self, X, y):
+            self._mu = float(np.mean(y))
+            return self
+
+        def predict(self, X):
+            return np.full(len(X), self._mu)
+
+    smiles = np.array(BENZENE + MISC_SMILES)
+    y = np.array([1.0, 2.0, 1.5, 2.5, 1.0, 9.0])
+    model = SimpleNamespace(estimator=MeanRegressor())
+    out_path = tmp_path / "ad.pkl"
+
+    cv_eval = SKLearnRepeatedKFoldCrossValidation(
+        n_splits=3, n_repeats=1, ad_output_path=str(out_path)
+    )
+    data = cv_eval.evaluate(
+        model=model,
+        X_train=smiles,
+        y_train=y,
+        y_pred=y.copy(),
+        y_true=y.copy(),
+        X_all=smiles,
+        y_all=y,
+        tag="test",
+    )
+
+    # every compound is held out exactly once across the folds
+    assert out_path.exists()
+    ad_smiles, ad_true, ad_pred = cv_eval._ad_cv_data
+    assert sorted(ad_smiles.tolist()) == sorted(smiles.tolist())
+    assert ad_true.shape == y.shape == ad_pred.shape
+    assert "task_0" in data
+
+    ad = ScaffoldApplicabilityDomain.load(out_path)
+    assert ad.fitted
+
+
+def test_sklearn_cv_without_ad_flag_leaves_data_unset():
+    """The default sklearn CV path does not collect applicability data."""
+    from types import SimpleNamespace
+
+    from sklearn.base import BaseEstimator, RegressorMixin
+
+    from openadmet.models.eval.cross_validation import (
+        SKLearnRepeatedKFoldCrossValidation,
+    )
+
+    class MeanRegressor(BaseEstimator, RegressorMixin):
+        def fit(self, X, y):
+            return self
+
+        def predict(self, X):
+            return np.zeros(len(X))
+
+    smiles = np.array(BENZENE + MISC_SMILES)
+    y = np.array([1.0, 2.0, 1.5, 2.5, 1.0, 9.0])
+    model = SimpleNamespace(estimator=MeanRegressor())
+
+    cv_eval = SKLearnRepeatedKFoldCrossValidation(n_splits=3, n_repeats=1)
+    cv_eval.evaluate(
+        model=model,
+        X_train=smiles,
+        y_train=y,
+        y_pred=y.copy(),
+        y_true=y.copy(),
+        X_all=smiles,
+        y_all=y,
+        tag="test",
+    )
+    assert cv_eval._ad_cv_data is None

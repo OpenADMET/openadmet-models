@@ -9,6 +9,7 @@ import numpy as np
 from loguru import logger
 from pydantic import Field
 from scipy.stats import norm
+from sklearn.base import clone
 from sklearn.metrics import (
     make_scorer,
     mean_absolute_error,
@@ -152,6 +153,15 @@ class CrossValidationBase(EvalBase):
     }
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
+    collect_ad_errors: bool = Field(
+        False,
+        description="Collect held-out fold predictions for applicability-domain fitting",
+    )
+    ad_output_path: str | None = Field(
+        None,
+        description="Save a ScaffoldApplicabilityDomain fitted on held-out fold errors to this path",
+    )
+    _ad_cv_data: tuple | None = None
 
     @property
     def active_metrics(self):
@@ -177,6 +187,45 @@ class CrossValidationBase(EvalBase):
 
         """
         return list(self.active_metrics.keys())
+
+    def fit_applicability_domain(self, min_count=5, error_percentile=95.0):
+        """
+        Fit a scaffold applicability domain on collected held-out fold errors.
+
+        Requires ``evaluate`` to have been run with ``collect_ad_errors`` or
+        ``ad_output_path`` set. Fold errors are a pragmatic stand-in for the
+        extrapolation pool described in the applicability-domain proposal.
+
+        Parameters
+        ----------
+        min_count : int
+            Minimum frequency for a scaffold to be treated as primary.
+        error_percentile : float
+            Percentile of absolute errors used for bounds.
+
+        Returns
+        -------
+        ScaffoldApplicabilityDomain
+            The fitted domain.
+
+        """
+        from openadmet.models.applicability_domain.scaffold import (
+            ScaffoldApplicabilityDomain,
+        )
+
+        if self._ad_cv_data is None:
+            raise ValueError(
+                "No held-out fold data collected; run evaluate with "
+                "collect_ad_errors=True or ad_output_path set"
+            )
+        smiles, y_true, y_pred = self._ad_cv_data
+        return ScaffoldApplicabilityDomain.from_predictions(
+            smiles,
+            y_true,
+            y_pred,
+            min_count=min_count,
+            error_percentile=error_percentile,
+        )
 
 
 @evaluators.register("SKLearnRepeatedKFoldCrossValidation")
@@ -294,9 +343,42 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         # evaluate the model, storing the results
         # we do one job here to avoid issues with double parallelization
         # we prefer to parallelize model training over cross-validation
-        scores = cross_validate(
-            estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
-        )
+        collect_ad = self.collect_ad_errors or self.ad_output_path is not None
+        self._ad_cv_data = None
+        if collect_ad:
+            # cross_validate does not return fold predictions, so collect them
+            # with a manual loop when an applicability-domain artifact is wanted
+            X_arr = np.asarray(X_all)
+            y_arr = np.asarray(y_all)
+            scores = defaultdict(list)
+            ad_smiles, ad_true, ad_pred = [], [], []
+            for tr_ids, te_ids in cv:
+                est = clone(estimator)
+                est.fit(X_arr[tr_ids], y_arr[tr_ids])
+                y_pred_fold = np.asarray(est.predict(X_arr[te_ids]))
+                xs = X_arr[te_ids]
+                ad_smiles.append(xs[:, 0] if xs.ndim > 1 else xs.ravel())
+                ad_true.append(y_arr[te_ids])
+                ad_pred.append(y_pred_fold)
+                for metric_name, metric_data in self.active_metrics.items():
+                    scores[f"test_{metric_name}"].append(
+                        metric_data[0](est, X_arr[te_ids], y_arr[te_ids])
+                    )
+            scores = {k: np.asarray(v) for k, v in scores.items()}
+            self._ad_cv_data = (
+                np.concatenate(ad_smiles),
+                np.concatenate(ad_true),
+                np.concatenate(ad_pred),
+            )
+        else:
+            scores = cross_validate(
+                estimator, X_all, y_all, cv=cv, n_jobs=1, scoring=self.sklearn_metrics
+            )
+
+        if self.ad_output_path is not None:
+            ad = self.fit_applicability_domain()
+            ad.save(self.ad_output_path)
+            logger.info(f"Applicability domain saved to {self.ad_output_path}")
 
         logger.info("Cross-validation complete")
 
@@ -520,15 +602,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
     min_val: float = Field(None, description="Minimum value for the axes")
     max_val: float = Field(None, description="Maximum value for the axes")
     use_wandb: bool = Field(False, description="Whether to use wandb")
-    collect_ad_errors: bool = Field(
-        False,
-        description="Collect held-out fold predictions for applicability-domain fitting",
-    )
-    ad_output_path: str | None = Field(
-        None,
-        description="Save a ScaffoldApplicabilityDomain fitted on held-out fold errors to this path",
-    )
-    _ad_cv_data: tuple | None = None
 
     @property
     def active_metrics(self):
@@ -800,48 +873,6 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
                     )
 
         return self.data
-
-    def fit_applicability_domain(
-        self, min_count=5, error_percentile=95.0
-    ) -> "ScaffoldApplicabilityDomain":
-        """
-        Fit a scaffold applicability domain from collected held-out fold data.
-
-        Requires ``collect_ad_errors`` or ``ad_output_path`` on ``evaluate``.
-        Held-out fold errors stand in for the proposal's extrapolation pool;
-        per-scaffold bounds group those held-out errors by scaffold, which is
-        the pragmatic variant of the intra-scaffold val pools in #502.
-
-        Parameters
-        ----------
-        min_count : int
-            Minimum held-out occurrences for a scaffold to get its own bound.
-        error_percentile : float
-            Percentile of absolute errors used for bounds.
-
-        Returns
-        -------
-        ScaffoldApplicabilityDomain
-            The fitted domain.
-
-        """
-        from openadmet.models.applicability_domain.scaffold import (
-            ScaffoldApplicabilityDomain,
-        )
-
-        if self._ad_cv_data is None:
-            raise ValueError(
-                "No held-out fold data collected; run evaluate with "
-                "collect_ad_errors=True or ad_output_path set"
-            )
-        smiles, y_true, y_pred = self._ad_cv_data
-        return ScaffoldApplicabilityDomain.from_predictions(
-            smiles,
-            y_true,
-            y_pred,
-            min_count=min_count,
-            error_percentile=error_percentile,
-        )
 
     @property
     def task_names(self):
