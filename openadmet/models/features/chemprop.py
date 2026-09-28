@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
 
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
+
+if TYPE_CHECKING:
+    from sklearn.preprocessing import StandardScaler
 
 
 # we vendor this from chemprop so that we can pass custom samplers
@@ -163,6 +166,12 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
 
         """
         from chemprop.data import MoleculeDatapoint, MoleculeDataset
+
+        if target_scaler is not None and not self.normalize_targets:
+            raise ValueError(
+                "target_scaler was provided but normalize_targets is False; "
+                "the scaler would be ignored"
+            )
 
         if y is not None:
             # if a pandas dataframe or series

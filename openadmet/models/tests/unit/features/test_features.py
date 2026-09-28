@@ -310,6 +310,16 @@ def test_chemprop_eval_targets_use_train_scaler():
     assert not np.allclose(val_dataset.Y, refit)
 
 
+def test_chemprop_target_scaler_rejects_normalize_targets_off():
+    """Passing a scaler while normalize_targets=False is contradictory and must error."""
+    featurizer = ChemPropFeaturizer(normalize_targets=False, batch_size=4, n_jobs=0)
+
+    with pytest.raises(ValueError, match="normalize_targets"):
+        featurizer.featurize(
+            ["CCO", "CCN"], y=np.array([1.0, 2.0]), target_scaler=StandardScaler()
+        )
+
+
 def test_chemprop_eval_targets_refit_without_train_scaler():
     """A standalone featurize call without a provided scaler keeps the old fit behavior."""
     featurizer = ChemPropFeaturizer(batch_size=4, n_jobs=0)
