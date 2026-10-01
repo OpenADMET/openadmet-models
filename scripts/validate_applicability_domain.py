@@ -34,6 +34,7 @@ DATA = "openadmet/models/tests/unit/test_data/AChE_CHEMBL4078_Landrum_maxcur.csv
 
 
 def morgan_fps(smiles_list):
+    """Return ECFP4 Morgan fingerprints for a list of SMILES."""
     gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
     fps, keep = [], []
     for i, s in enumerate(smiles_list):
@@ -49,6 +50,7 @@ def morgan_fps(smiles_list):
 
 
 def scaffold_groups(smiles_list):
+    """Return a Bemis-Murcko scaffold label for each SMILES."""
     out = []
     for s in smiles_list:
         mol = Chem.MolFromSmiles(s)
@@ -57,6 +59,7 @@ def scaffold_groups(smiles_list):
 
 
 def summarize(name, in_mask, test_err, bound, ad):
+    """Print coverage, discrimination, and bound diagnostics for one AD."""
     n_in, n_out = int(in_mask.sum()), int((~in_mask).sum())
     print(f"\n== {name} ==")
     print(f"  in-domain n={n_in}  out-of-domain n={n_out}")
@@ -98,6 +101,7 @@ def summarize(name, in_mask, test_err, bound, ad):
 
 
 def run_split(name, smiles, y, X, groups, test_mask):
+    """Train on the split, fit both ADs, and evaluate on held-out compounds."""
     tr, te = np.where(~test_mask)[0], np.where(test_mask)[0]
     print(
         f"\n########## {name}: train={len(tr)} test={len(te)} "
@@ -127,6 +131,7 @@ def run_split(name, smiles, y, X, groups, test_mask):
 
 
 def main():
+    """Load AChE data and run the random and scaffold-holdout regimes."""
     df = pd.read_csv(DATA).dropna(subset=["canonical_smiles", "pchembl_value"])
     smiles = df["canonical_smiles"].to_numpy()
     y = df["pchembl_value"].to_numpy(dtype=float)
