@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 if TYPE_CHECKING:
     from molfeat.trans import MoleculeTransformer
@@ -56,11 +56,62 @@ class FeaturizerBase(BaseModel, ABC):
     the `featurize` method to convert a list of SMILES strings into features suitable
     for machine learning models.
 
+    Attributes
+    ----------
+    alias : str or None
+        Name this featurizer answers to in place of its type, by default None.
+        Feature blocks are addressed by name, so combining several featurizers
+        of the same class requires an alias on each to tell their blocks apart;
+        per-block transforms are then configured against those aliases.
+
     """
 
     # Whether this featurizer can report per-block column layout via
     # feature_blocks(); the workflow only calls feature_blocks() when this is True
     provides_feature_blocks: ClassVar[bool] = False
+
+    alias: str | None = Field(
+        default=None,
+        description="Name used in place of the featurizer type when keying feature blocks",
+    )
+
+    @field_validator("alias")
+    @classmethod
+    def validate_alias(cls, value: str | None) -> str | None:
+        """
+        Reject a blank alias and strip surrounding whitespace from a real one.
+
+        An empty or whitespace-only alias would key a block to a name no
+        configuration can reference, so it is rejected rather than silently
+        falling back to the featurizer type.
+
+        Parameters
+        ----------
+        value : str or None
+            The configured alias, or None when the featurizer is keyed by type.
+
+        Returns
+        -------
+        str or None
+            The stripped alias, or None.
+
+        Raises
+        ------
+        ValueError
+            If the alias is empty or contains only whitespace.
+
+        """
+        if value is None:
+            return None
+
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError(
+                "alias must be a non-empty name; leave it unset to key this "
+                "featurizer's feature block by its type instead."
+            )
+
+        return stripped
 
     @abstractmethod
     def featurize(self, smiles: Iterable[str], *args, **kwargs):

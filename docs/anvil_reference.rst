@@ -266,8 +266,8 @@ For example, featurization for a traditional machine learning model using finger
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
 2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
-``feat`` section itself. At least two are required, and no two may be of the same type: blocks are addressed by
-featurizer name, so same-type entries could not be told apart.
+``feat`` section itself. At least two are required, and no two may emit the same block name: blocks are addressed by
+that name, so entries sharing one could not be told apart.
 
 .. code-block:: yaml
 
@@ -303,6 +303,39 @@ other featurizer.
 The featurizer emits one column per target column of the pretrained model. Setting ``return_std`` appends a second
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
 deviation, so setting it against a single model raises when the recipe is parsed.
+
+A block takes its name from the featurizer type, which is why two entries of one type collide. Give each an ``alias``
+to name its block explicitly and they no longer do, which is how several pretrained models are combined, one per
+endpoint. An alias sits beside ``type`` in the entry, not inside ``params``.
+
+.. code-block:: yaml
+
+   feat:
+     type: FeatureConcatenator
+     params:
+       featurizers:
+         - type: CheMeleonEmbeddingFeaturizer
+         - type: TrainedModelFeaturizer
+           alias: log2fc
+           params:
+             model_dir: models/chemprop_log2fc
+         - type: TrainedModelFeaturizer
+           alias: htchem
+           params:
+             model_dir: models/chemprop_htchem
+
+The alias replaces the type wherever blocks are named, so a per-block transform is configured against the aliases:
+
+.. code-block:: yaml
+
+   n_components:
+     CheMeleonEmbeddingFeaturizer: 256
+     log2fc: null
+     htchem: null
+
+Each block name must be unique across the whole concatenator, counting blocks contributed by a nested
+``FeatureConcatenator``, and an alias may not shadow another entry's type. Collisions are reported when the recipe is
+parsed. The ``FeatureConcatenator`` takes no alias of its own, since it is named by the blocks it contains.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
@@ -352,7 +385,8 @@ Example: reduce a fingerprint featurizer to 256 PCA components before training.
         n_components: 256
         random_seed: 42
 
-Per-block PCA: give ``n_components`` as a mapping from featurizer name to component count. Each featurizer in the
+Per-block PCA: give ``n_components`` as a mapping from block name (a featurizer's ``alias`` where it has one,
+otherwise its type) to component count. Each featurizer in the
 ``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation step ahead of
 them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is reported when
 the workflow is built, before any featurization runs. Note that a nested ``FeatureConcatenator`` contributes its
@@ -386,10 +420,10 @@ That recipe featurizes to 2223 columns: 223 from ``DescriptorFeaturizer`` and 20
 its default bit count. The median imputer fills missing descriptor values, then each block is reduced separately, and
 the model sees 32 + 256 = 288 columns.
 
-Blocks are keyed and ordered by featurizer class name, not by the order the recipe lists them, so the descriptor block
-comes first here even though ``FingerprintFeaturizer`` is written above it. Keying by class name is also why a
-``FeatureConcatenator`` rejects two featurizers of the same class, as noted above: their blocks would be
-indistinguishable.
+Blocks are keyed and ordered by block name, not by the order the recipe lists them, so the descriptor block comes
+first here even though ``FingerprintFeaturizer`` is written above it. An aliased block sorts under its alias, so
+aliasing a featurizer can move its columns within the matrix. Keying by name is also why a ``FeatureConcatenator``
+rejects two blocks sharing a name, as noted above: they would be indistinguishable.
 
 Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
 reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would
