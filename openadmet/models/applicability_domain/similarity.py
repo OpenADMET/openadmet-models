@@ -43,6 +43,16 @@ class TanimotoApplicabilityDomain:
         n_bits: int = 2048,
     ):
         """Initialize the domain with similarity and percentile parameters."""
+        if not 0 <= similarity_threshold <= 1:
+            raise ValueError(
+                f"similarity_threshold must be in [0, 1], got {similarity_threshold}"
+            )
+        if not 0 < error_percentile <= 100:
+            raise ValueError(
+                f"error_percentile must be in (0, 100], got {error_percentile}"
+            )
+        if radius < 1 or n_bits < 1:
+            raise ValueError(f"radius and n_bits must be >= 1, got {radius}, {n_bits}")
         self.similarity_threshold = similarity_threshold
         self.error_percentile = error_percentile
         self.radius = radius
@@ -117,18 +127,19 @@ class TanimotoApplicabilityDomain:
         if not fps:
             raise ValueError("No valid SMILES to fit on.")
 
+        bound = float(np.nanpercentile(keep_errors, self.error_percentile))
+        if not np.isfinite(bound):
+            raise ValueError("no finite absolute errors to bound")
         self._smiles = keep_smiles
         self._abs_errors = np.asarray(keep_errors)
         self._fps = fps
-        self.global_bound = float(
-            np.nanpercentile(self._abs_errors, self.error_percentile)
-        )
+        self.global_bound = bound
         return self
 
     @property
     def fitted(self) -> bool:
-        """Whether the domain has been fit."""
-        return self.global_bound is not None
+        """Whether the domain has been fit with a usable finite bound."""
+        return self.global_bound is not None and np.isfinite(self.global_bound)
 
     def _neighbor_mask(self, smiles: str) -> np.ndarray:
         """Boolean mask over training compounds above the similarity threshold."""

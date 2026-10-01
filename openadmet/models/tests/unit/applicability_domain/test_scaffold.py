@@ -113,3 +113,29 @@ def test_save_load_roundtrip(tmp_path, fitted_ad):
     queries = BENZENE[:1] + UNSEEN + BROKEN
     assert_allclose(loaded.bound(queries), fitted_ad.bound(queries))
     assert loaded.primary_bounds == fitted_ad.primary_bounds
+
+
+def test_fit_rejects_all_nan_errors():
+    """An error pool with no finite values cannot produce a bound."""
+    with pytest.raises(ValueError, match="no finite"):
+        ScaffoldApplicabilityDomain(min_count=4).fit(BENZENE, [np.nan] * 5)
+
+
+def test_fit_rejects_all_nan_ood_pool():
+    """An all-NaN extrapolation pool must not yield a NaN global bound."""
+    with pytest.raises(ValueError, match="no finite"):
+        ScaffoldApplicabilityDomain(min_count=4).fit(
+            BENZENE + MISC,
+            np.array([0.1, 0.2, 0.15, 0.25, 0.1, 2.0]),
+            ood_errors=[np.nan, np.nan],
+        )
+
+
+def test_invalid_parameters_rejected():
+    """Out-of-range percentile or min_count fail at construction."""
+    with pytest.raises(ValueError):
+        ScaffoldApplicabilityDomain(min_count=0)
+    with pytest.raises(ValueError):
+        ScaffoldApplicabilityDomain(error_percentile=0)
+    with pytest.raises(ValueError):
+        ScaffoldApplicabilityDomain(error_percentile=150)

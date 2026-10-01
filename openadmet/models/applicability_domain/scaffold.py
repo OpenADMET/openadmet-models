@@ -46,6 +46,12 @@ class ScaffoldApplicabilityDomain:
 
     def __init__(self, min_count: int = 5, error_percentile: float = 95.0):
         """Initialize the domain with binning and percentile parameters."""
+        if min_count < 1:
+            raise ValueError(f"min_count must be >= 1, got {min_count}")
+        if not 0 < error_percentile <= 100:
+            raise ValueError(
+                f"error_percentile must be in (0, 100], got {error_percentile}"
+            )
         self.min_count = min_count
         self.error_percentile = error_percentile
         self.primary_bounds: dict[str, float] = {}
@@ -111,6 +117,8 @@ class ScaffoldApplicabilityDomain:
         else:
             finite = np.isfinite(abs_errors)
         smiles, abs_errors = smiles[finite], abs_errors[finite]
+        if smiles.shape[0] == 0:
+            raise ValueError("no finite absolute errors to fit on")
 
         scaffolds = [self.scaffold_smiles(s) for s in smiles]
         n_failed = sum(s is None for s in scaffolds)
@@ -141,14 +149,16 @@ class ScaffoldApplicabilityDomain:
         else:
             misc_mask = np.isin(keys, list(self.misc_scaffolds))
             pool = abs_errors[misc_mask] if misc_mask.any() else abs_errors
+        if not np.isfinite(pool).any():
+            raise ValueError("error bound pool contains no finite values")
         self.global_bound = float(np.nanpercentile(pool, self.error_percentile))
 
         return self
 
     @property
     def fitted(self) -> bool:
-        """Whether the domain has been fit."""
-        return self.global_bound is not None
+        """Whether the domain has been fit with a usable finite bound."""
+        return self.global_bound is not None and np.isfinite(self.global_bound)
 
     def bound(self, smiles: Any) -> np.ndarray:
         """
