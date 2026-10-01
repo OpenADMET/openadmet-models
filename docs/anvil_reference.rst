@@ -245,6 +245,8 @@ while traditional machine learning models return a a 2D ``NumPy`` array or ``pan
     - Converts SMILES strings into a ChemProp compatible PyTorch DataLoader.
   * - :doc:`CheMeleonEmbeddingFeaturizer </_api/api/featurization/chemeleon_embedding>`
     - Extracts pooled MPNN embeddings from the pretrained `CheMeleon <https://github.com/JacksonBurns/chemeleon>`_ foundation model as a 2D NumPy array.
+  * - :doc:`MonroeFeaturizer </_api/api/featurization/monroe>`
+    - Extracts graph-level embeddings from the pretrained `Monroe <https://github.com/blazejba/monroe>`_ foundation model as a 2D NumPy array. Requires the ``monroe`` package, which installs from GitHub rather than PyPI. Embeddings are stochastic across runs, so features must be materialized once and reused.
   * - :doc:`DescriptorFeaturizer </_api/api/featurization/descriptors>`
     - Uses the  `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular descriptors.
   * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
