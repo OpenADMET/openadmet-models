@@ -123,7 +123,11 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         """Prepare the featurizer."""
 
     def featurize(
-        self, smiles: Iterable[str], y: Iterable[Any] = None, train: bool = False
+        self,
+        smiles: Iterable[str],
+        y: Iterable[Any] = None,
+        train: bool = False,
+        target_scaler: StandardScaler | None = None,
     ) -> tuple[
         DataLoader,
         np.ndarray,
@@ -143,6 +147,12 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             Whether this loader feeds model training, by default False. Shuffling and the
             batch-norm ``drop_last`` guard apply only when True; otherwise the loader
             preserves input order and returns every row.
+        target_scaler : StandardScaler, optional
+            Pre-fitted scaler to apply to targets instead of fitting a new one.
+            Pass the scaler returned by the training call so validation and test
+            targets live in train-normalized space, keeping val_loss and val
+            metrics on the model's output scale. Ignored when
+            ``normalize_targets`` is False.
 
         Returns
         -------
@@ -166,7 +176,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
                 [MoleculeDatapoint.from_smi(smi, y_) for smi, y_ in zip(smiles, y)]
             )
             if self.normalize_targets:
-                scaler = dataset.normalize_targets()
+                scaler = dataset.normalize_targets(target_scaler)
             else:
                 scaler = None
         else:

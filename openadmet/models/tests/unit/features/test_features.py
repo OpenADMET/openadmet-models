@@ -283,3 +283,33 @@ def test_chemprop_training_shuffle_is_seed_reproducible():
 def test_chemprop_training_shuffle_varies_with_seed():
     """Different seeds produce different training sample orders."""
     assert _chemprop_train_sample_order(7) != _chemprop_train_sample_order(8)
+
+
+def test_chemprop_val_uses_train_scaler(smiles):
+    """Regression (#579): val/test targets must be normalized by the
+    train-fitted scaler, not refit on their own split."""
+    featurizer = ChemPropFeaturizer(batch_size=2, n_jobs=0)
+    y_train = np.array([1.0, 2.0, 3.0])
+
+    _, _, train_scaler, _ = featurizer.featurize(smiles, y=y_train, train=True)
+    _, _, val_scaler, val_dataset = featurizer.featurize(
+        smiles, y=np.array([10.0, 20.0, 30.0]), target_scaler=train_scaler
+    )
+
+    # the applied scaler is the train scaler itself
+    assert val_scaler is train_scaler
+    # val targets are transformed by train mean/std, not their own
+    expected = (np.array([10.0, 20.0, 30.0]) - train_scaler.mean_) / train_scaler.scale_
+    assert np.asarray(val_dataset.Y).ravel() == pytest.approx(expected)
+
+
+def test_chemprop_target_scaler_ignored_when_normalization_off():
+    """A passed target_scaler is ignored when normalize_targets=False."""
+    from sklearn.preprocessing import StandardScaler
+
+    featurizer = ChemPropFeaturizer(batch_size=2, n_jobs=0, normalize_targets=False)
+    _, _, scaler, dataset = featurizer.featurize(
+        ["CCO"], y=np.array([1.0]), target_scaler=StandardScaler().fit([[5.0]])
+    )
+    assert scaler is None
+    assert float(dataset.Y[0][0]) == 1.0  # raw target, not rescaled to 0

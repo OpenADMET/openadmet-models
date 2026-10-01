@@ -858,7 +858,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         if X_val is not None and y_val is not None:
-            val_dataloader, _, _, val_dataset = self.feat.featurize(X_val, y_val)
+            val_dataloader, _, _, val_dataset = self.feat.featurize(
+                X_val, y_val, target_scaler=train_scaler
+            )
             torch.save(val_dataloader, output_dir / "val_dataloader.pth")
         else:
             val_dataloader = None
@@ -867,7 +869,9 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Dataloader, indices, scaler, dataset
         if X_test is not None and y_test is not None:
-            test_dataloader, _, _, test_dataset = self.feat.featurize(X_test, y_test)
+            test_dataloader, _, _, test_dataset = self.feat.featurize(
+                X_test, y_test, target_scaler=train_scaler
+            )
             torch.save(test_dataloader, output_dir / "test_dataloader.pth")
         else:
             test_dataloader = None
