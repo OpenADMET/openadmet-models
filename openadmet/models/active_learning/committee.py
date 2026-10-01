@@ -216,8 +216,7 @@ class CommitteeRegressor(EnsembleBase):
                 )
 
         raise ValueError(
-            f"Unrecognized calibration model: "
-            f"{list(self._calibration_model.keys())}."
+            f"Unrecognized calibration model: {list(self._calibration_model.keys())}."
         )
 
     def plot_uncertainty_calibration(self, X, y, **kwargs):
