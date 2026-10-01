@@ -287,7 +287,7 @@ def test_chemprop_training_shuffle_varies_with_seed():
 
 
 def test_chemprop_eval_targets_use_train_scaler():
-    """Eval targets must be normalized with the training scaler, not refit (#579)."""
+    """Eval targets must be normalized with the training scaler, not refit."""
     featurizer = ChemPropFeaturizer(batch_size=4, n_jobs=0)
     train_smiles = ["CCO", "CCN", "CCC", "CCCl"]
     val_smiles = ["CCBr", "CCCC"]

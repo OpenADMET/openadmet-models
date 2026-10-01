@@ -19,7 +19,10 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
-from openadmet.models.features.feature_base import DeepLearningFeaturizer
+from openadmet.models.features.feature_base import (
+    DeepLearningFeaturizer,
+    target_scaler_kwargs,
+)
 from openadmet.models.features.pairwise import PairwiseFeaturizer
 from openadmet.models.transforms.transform_base import (
     fit_transforms,
@@ -631,9 +634,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Members share the train scaler so their outputs and the shared
         # validation loader stay in the same normalized space
-        scaler_kwargs = (
-            {"target_scaler": train_scaler} if train_scaler is not None else {}
-        )
+        scaler_kwargs = target_scaler_kwargs(train_scaler)
 
         # Check if there is an output directory
         if not self.trainer.output_dir:
@@ -867,9 +868,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
         # Eval splits reuse the train scaler so normalized targets share train statistics
-        scaler_kwargs = (
-            {"target_scaler": train_scaler} if train_scaler is not None else {}
-        )
+        scaler_kwargs = target_scaler_kwargs(train_scaler)
 
         if X_val is not None and y_val is not None:
             val_dataloader, _, _, val_dataset = self.feat.featurize(

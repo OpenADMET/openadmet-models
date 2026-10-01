@@ -153,7 +153,7 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         target_scaler : StandardScaler, optional
             Scaler to normalize targets with instead of fitting a new one on this
             call's targets. Pass the scaler returned by the training featurization so
-            validation and test targets share the training statistics (#579).
+            validation and test targets share the training statistics.
 
         Returns
         -------
@@ -167,13 +167,12 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         """
         from chemprop.data import MoleculeDatapoint, MoleculeDataset
 
-        if target_scaler is not None and not self.normalize_targets:
-            raise ValueError(
-                "target_scaler was provided but normalize_targets is False; "
-                "the scaler would be ignored"
-            )
-
         if y is not None:
+            if target_scaler is not None and not self.normalize_targets:
+                raise ValueError(
+                    "target_scaler was provided but normalize_targets is False; "
+                    "the scaler would be ignored"
+                )
             # if a pandas dataframe or series
             if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):
                 y = y.to_numpy()

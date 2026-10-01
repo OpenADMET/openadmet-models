@@ -18,6 +18,17 @@ if TYPE_CHECKING:
 featurizers = ClassRegistry(unique=True)
 
 
+def target_scaler_kwargs(scaler: "StandardScaler | None") -> dict[str, Any]:
+    """
+    Featurizer kwargs that apply a pre-fitted target scaler, if one exists.
+
+    Featurizers that never normalize targets return no scaler from the
+    training featurization, so callers must omit the argument entirely rather
+    than pass ``None``.
+    """
+    return {"target_scaler": scaler} if scaler is not None else {}
+
+
 def get_featurizer_class(feat_type):
     """
     Retrieve a featurizer class from the registry by type.

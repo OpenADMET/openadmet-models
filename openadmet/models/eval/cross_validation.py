@@ -23,6 +23,7 @@ from openadmet.models.eval.regression import (
     pct_within_1_log_unit,
     relative_absolute_error,
 )
+from openadmet.models.features.feature_base import target_scaler_kwargs
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
 from openadmet.models.drivers import DriverType
@@ -669,11 +670,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             )
 
             # Reuse the fold's train scaler so val targets share train statistics
-            scaler_kwargs = (
-                {"target_scaler": fold_train_scaler}
-                if fold_train_scaler is not None
-                else {}
-            )
+            scaler_kwargs = target_scaler_kwargs(fold_train_scaler)
             fold_val_dataloader, _, _, _ = fold_featurizer.featurize(
                 X_val, y_val, **scaler_kwargs
             )

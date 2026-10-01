@@ -143,3 +143,83 @@ class TestCPUPosthocConfigs:
 
         result = runner.invoke(cli, cli_args)
         assert click_success(result)
+
+
+class _StopAfterValFeaturize(Exception):
+    pass
+
+
+@pytest.mark.cpu
+def test_dl_workflow_eval_splits_reuse_train_scaler(tmp_path, monkeypatch):
+    """Val and test featurize calls must reuse the scaler fitted on the train
+    split, so normalized eval targets stay in train space."""
+    import numpy as np
+
+    from openadmet.models.anvil.specification import DataSpec, Metadata
+    from openadmet.models.anvil.workflow import AnvilDeepLearningWorkflow
+    from openadmet.models.architecture.chemprop import ChemPropModel
+    from openadmet.models.features.chemprop import ChemPropFeaturizer
+    from openadmet.models.split.sklearn import ShuffleSplitter
+    from openadmet.models.tests.unit.datafiles import test_csv
+    from openadmet.models.trainer.lightning import LightningTrainer
+
+    calls = []
+    real_featurize = ChemPropFeaturizer.featurize
+
+    def spy(self, smiles, y=None, train=False, **kwargs):
+        result = real_featurize(self, smiles, y=y, train=train, **kwargs)
+        calls.append(
+            {
+                "train": train,
+                "y": np.asarray(y) if y is not None else None,
+                "scaler_in": kwargs.get("target_scaler"),
+                "scaler_out": result[2],
+                "dataset": result[3],
+            }
+        )
+        if len(calls) == 2:
+            raise _StopAfterValFeaturize
+        return result
+
+    monkeypatch.setattr(ChemPropFeaturizer, "featurize", spy)
+
+    workflow = AnvilDeepLearningWorkflow(
+        metadata=Metadata(
+            version="v1",
+            driver="lightning",
+            name="scaler-integration",
+            build_number=0,
+            description="d",
+            tag="t",
+            authors="a",
+            email="a@b.com",
+            biotargets=[],
+            tags=[],
+        ),
+        data_spec=DataSpec(
+            type="csv",
+            resource=test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
+        split=ShuffleSplitter(train_size=0.7, val_size=0.1, test_size=0.2),
+        feat=ChemPropFeaturizer(batch_size=4, n_jobs=0),
+        model=ChemPropModel(),
+        trainer=LightningTrainer(),
+        evals=[],
+        ensemble=None,
+        transform=None,
+    )
+
+    with pytest.raises(_StopAfterValFeaturize):
+        workflow.run(output_dir=tmp_path / "out")
+
+    train_call, val_call = calls
+    assert train_call["train"] is True
+
+    # The scaler handed to the val featurize must be the one fit on train
+    assert val_call["scaler_in"] is train_call["scaler_out"]
+
+    # Val targets in the dataset are transformed with train statistics
+    expected = train_call["scaler_out"].transform(val_call["y"].reshape(-1, 1))
+    assert val_call["dataset"].Y == pytest.approx(expected)
