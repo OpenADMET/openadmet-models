@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 featurizers = ClassRegistry(unique=True)
 
 
-def target_scaler_kwargs(scaler: "StandardScaler | None") -> dict[str, Any]:
+def target_scaler_kwargs(scaler: StandardScaler | None) -> dict[str, Any]:
     """
     Featurizer kwargs that apply a pre-fitted target scaler, if one exists.
 
