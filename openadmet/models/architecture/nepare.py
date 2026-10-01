@@ -278,10 +278,8 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         dataloader : DataLoader
             The data loader for prediction.
         accelerator : str, optional
-            Accelerator type to use. "auto" (the default) resolves like
-            Lightning's auto accelerator (TPU, MPS, CUDA, NPU when available,
-            otherwise CPU). "gpu" maps to CUDA, and other values are used as
-            torch device names.
+            Accelerator passed to the Lightning Trainer. "auto" (the default)
+            picks TPU, MPS, CUDA, or CPU, whichever is available.
         devices : int, optional
             Number of devices to use (default: 1).
 
