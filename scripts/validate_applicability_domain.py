@@ -1,4 +1,5 @@
-"""Exploratory validation of the scaffold and Tanimoto applicability domains.
+"""
+Exploratory validation of the scaffold and Tanimoto applicability domains.
 
 Trains a small model on AChE ChEMBL activity data, then checks whether
 compounds the AD flags as out-of-domain actually carry larger errors than
@@ -60,8 +61,10 @@ def summarize(name, in_mask, test_err, bound, ad):
     print(f"\n== {name} ==")
     print(f"  in-domain n={n_in}  out-of-domain n={n_out}")
     cov = np.mean(test_err <= bound)
-    print(f"  coverage (test_err <= bound) : {cov:.3f} "
-          f"(target {ad.error_percentile / 100:.2f})")
+    print(
+        f"  coverage (test_err <= bound) : {cov:.3f} "
+        f"(target {ad.error_percentile / 100:.2f})"
+    )
     if n_out == 0 or n_in == 0:
         print("  degenerate split: no discrimination possible")
         return in_mask
@@ -71,8 +74,10 @@ def summarize(name, in_mask, test_err, bound, ad):
     print(f"  mean   |err|  in={in_err.mean():.3f}  out={out_err.mean():.3f}")
     print(f"  worst-decile flagged OOD: {(top & ~in_mask).sum()}/{top.sum()}")
     cov = np.mean(test_err <= bound)
-    print(f"  coverage (test_err <= bound) : {cov:.3f} "
-          f"(target {ad.error_percentile / 100:.2f})")
+    print(
+        f"  coverage (test_err <= bound) : {cov:.3f} "
+        f"(target {ad.error_percentile / 100:.2f})"
+    )
     if len(np.unique(bound)) > 1:
         rho, p = spearmanr(bound, test_err)
         print(f"  spearman(bound, |err|): {rho:.3f} (p={p:.1e})")
@@ -85,16 +90,20 @@ def summarize(name, in_mask, test_err, bound, ad):
         if m.any() and (~m).any():
             null_gaps.append(test_err[~m].mean() - test_err[m].mean())
     gap = out_err.mean() - in_err.mean()
-    print(f"  in/out gap {gap:+.3f} vs random-flag gap "
-          f"{np.mean(null_gaps):+.3f} +- {np.std(null_gaps):.3f}")
+    print(
+        f"  in/out gap {gap:+.3f} vs random-flag gap "
+        f"{np.mean(null_gaps):+.3f} +- {np.std(null_gaps):.3f}"
+    )
     return in_mask
 
 
 def run_split(name, smiles, y, X, groups, test_mask):
     tr, te = np.where(~test_mask)[0], np.where(test_mask)[0]
-    print(f"\n########## {name}: train={len(tr)} test={len(te)} "
-          f"shared-scaffold fraction of test="
-          f"{np.isin(groups[te], groups[tr]).mean():.3f}")
+    print(
+        f"\n########## {name}: train={len(tr)} test={len(te)} "
+        f"shared-scaffold fraction of test="
+        f"{np.isin(groups[te], groups[tr]).mean():.3f}"
+    )
 
     oof = np.full(len(tr), np.nan)
     for f_tr, f_va in GroupKFold(5).split(X[tr], y[tr], groups[tr]):
@@ -126,21 +135,28 @@ def main():
     X = X  # row order already aligned to keep
 
     rng = np.random.default_rng(0)
-    run_split("random 80/20", smiles, y, X, groups,
-              rng.random(len(smiles)) < 0.2)
+    run_split("random 80/20", smiles, y, X, groups, rng.random(len(smiles)) < 0.2)
 
     counts = pd.Series(groups).value_counts().to_numpy()
-    rare = set(pd.Series(groups).value_counts()[counts <= np.quantile(counts, 0.5)].index)
+    rare = set(
+        pd.Series(groups).value_counts()[counts <= np.quantile(counts, 0.5)].index
+    )
     mask = np.isin(groups, list(rare))
     # trim toward ~20% by dropping the largest rare-scaffold groups first
     if mask.mean() > 0.30:
-        order = (pd.Series(groups)[mask]
-                 .map(pd.Series(groups).value_counts())
-                 .sort_values(ascending=False).index.to_numpy())
+        order = (
+            pd.Series(groups)[mask]
+            .map(pd.Series(groups).value_counts())
+            .sort_values(ascending=False)
+            .index.to_numpy()
+        )
         drop = set(order[: int(len(order) - 0.2 * len(smiles))])
-        mask = np.isin(np.arange(len(smiles)), list(drop)) | (mask & ~np.isin(np.arange(len(smiles)), list(drop)))
-        mask = np.isin(np.arange(len(smiles)),
-                       np.where(mask)[0]) & ~np.isin(np.arange(len(smiles)), list(drop))
+        mask = np.isin(np.arange(len(smiles)), list(drop)) | (
+            mask & ~np.isin(np.arange(len(smiles)), list(drop))
+        )
+        mask = np.isin(np.arange(len(smiles)), np.where(mask)[0]) & ~np.isin(
+            np.arange(len(smiles)), list(drop)
+        )
     run_split("scaffold holdout", smiles, y, X, groups, mask)
 
 
