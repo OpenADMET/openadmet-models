@@ -324,7 +324,7 @@ def test_anvil_workflow_ensemble_finetuning_raises(
     "ensemble_kwargs",
     [
         {"n_models": 2},
-        {"n_models": 2, "calibration_method": "scaling-factor"},
+        {"n_models": 2, "calibration_method": "isotonic-regression"},
     ],
     ids=["n-models-only", "with-calibration-method"],
 )

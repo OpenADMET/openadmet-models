@@ -8,10 +8,16 @@ import numpy as np
 import pandas as pd
 import uncertainty_toolbox as uct
 from loguru import logger
+from scipy.stats import norm
+from sklearn.isotonic import IsotonicRegression
 
 from openadmet.models.active_learning.acquisition import _ACQUISITION_FUNCTIONS
 from openadmet.models.active_learning.ensemble_base import EnsembleBase, ensemblers
 from openadmet.models.architecture.model_base import ModelBase
+
+# Central coverage levels used to summarize a fitted coverage-recalibration
+# curve as a single standard-deviation multiplier.
+_ISO_COVERAGE_LEVELS = np.linspace(0.05, 0.95, 19)
 
 
 @ensemblers.register("CommitteeRegressor")
@@ -33,6 +39,7 @@ class CommitteeRegressor(EnsembleBase):
     type: ClassVar[str] = "CommitteeRegressor"
     _calibration_model: Any = None
     _calibration_methods: dict = {
+        "isotonic-regression": "_isotonic_regression_calibration",
         "scaling-factor": "_scaling_factor_calibration",
         None: "_do_nothing_calibration",
     }
@@ -67,6 +74,60 @@ class CommitteeRegressor(EnsembleBase):
         )
 
         return instance
+
+    def _isotonic_regression_calibration(self, X, y, **kwargs):
+        """
+        Configure uncertainty calibration using isotonic regression.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input validation set samples to calibrate.
+        y : array-like of shape (n_samples, n_features)
+            The target validation set values.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the committee's predict method.
+
+        """
+        # Reset calibration model
+        self._calibration_model = None
+
+        if isinstance(y, (pd.Series, pd.DataFrame)):
+            y = y.to_numpy()
+
+        # Predict on recalibration (validation) set
+        y_pred_mean, y_pred_std = self._predict(X, return_std=True, **kwargs)
+
+        # Fit a separate recalibration model for each target dimension
+        calibration_models = []
+        for i in range(y.shape[-1]):
+            # Get the predictive uncertainties in terms of expected proportions and
+            # observed proportions on the recalibration set
+            y_exp_props, y_obs_props = (
+                uct.metrics_calibration.get_proportion_lists_vectorized(
+                    y_pred_mean[:, i], y_pred_std[:, i], y[:, i]
+                )
+            )
+
+            # The exp->obs coverage map lives in [0, 1] and cannot transform
+            # standard deviations directly. Its inverse maps a target
+            # coverage to the expected coverage level that actually achieves
+            # it under the uncalibrated predictions.
+            inv_model = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
+            inv_model.fit(y_obs_props, y_exp_props)
+
+            # To cover a nominal central level c, use the expected level
+            # p* = H^-1(c) from the uncalibrated distribution. In Gaussian
+            # z-space the corrected half-width is z(p*) = Phi^-1(0.5 + p*/2)
+            # times std, so the std multiplier is z(p*) / z(c). Average over
+            # coverage levels for a scalar per-target correction.
+            p_star = np.clip(inv_model.predict(_ISO_COVERAGE_LEVELS), 0.0, 1.0)
+            z_cal = norm.ppf(0.5 + p_star / 2)
+            z_ref = norm.ppf(0.5 + _ISO_COVERAGE_LEVELS / 2)
+            calibration_models.append(float(np.mean(z_cal / z_ref)))
+
+        # Create per-dimension calibration model
+        self._calibration_model = {"isotonic-regression": calibration_models}
 
     def _scaling_factor_calibration(self, X, y, **kwargs):
         """
@@ -119,7 +180,7 @@ class CommitteeRegressor(EnsembleBase):
         """
         pass
 
-    def calibrate_uncertainty(self, X, y, method="scaling-factor", **kwargs):
+    def calibrate_uncertainty(self, X, y, method="isotonic-regression", **kwargs):
         """
         Configure uncertainty calibration using selected method.
 
@@ -130,9 +191,7 @@ class CommitteeRegressor(EnsembleBase):
         y : array-like of shape (n_samples, n_features)
             The target validation set values.
         method : str
-            The calibration method to use. Currently only "scaling-factor" is
-            supported; "isotonic-regression" was removed because it applied a
-            proportion-space model to raw standard deviations (#516).
+            The calibration method to use. Options are "isotonic-regression" or "scaling-factor".
         **kwargs : dict
             Additional keyword arguments to be passed to the committee's predict method.
 
@@ -147,20 +206,18 @@ class CommitteeRegressor(EnsembleBase):
         getattr(self, self._calibration_methods[method])(X, y, **kwargs)
 
     def _get_calibration_function(self):
-        if "scaling-factor" in self._calibration_model:
-            # Create per-dimension calibration model
-            return lambda x: np.stack(
-                [
-                    self._calibration_model["scaling-factor"][i] * (x[:, i])
-                    for i in range(x.shape[-1])
-                ],
-                axis=1,
-            )
+        # Both calibration methods store per-dimension std multipliers
+        for method in ("scaling-factor", "isotonic-regression"):
+            if method in self._calibration_model:
+                multipliers = self._calibration_model[method]
+                return lambda x: np.stack(
+                    [multipliers[i] * x[:, i] for i in range(x.shape[-1])],
+                    axis=1,
+                )
 
         raise ValueError(
-            f"Unrecognized calibration model: {list(self._calibration_model.keys())}. "
-            "Calibration models saved with the removed 'isotonic-regression' method "
-            "cannot be used; recalibrate with 'scaling-factor'."
+            f"Unrecognized calibration model: "
+            f"{list(self._calibration_model.keys())}."
         )
 
     def plot_uncertainty_calibration(self, X, y, **kwargs):

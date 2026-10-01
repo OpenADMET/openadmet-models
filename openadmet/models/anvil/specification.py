@@ -600,7 +600,7 @@ class EnsembleSpec(AnvilSection):
     @field_validator("calibration_method")
     def check_method(cls, value):
         """Validate the calibration method."""
-        allowed = ["scaling-factor", None]
+        allowed = ["isotonic-regression", "scaling-factor", None]
         if value not in allowed:
             raise ValueError(
                 f"Invalid calibration method: {value}. Valid options are: {allowed}."
@@ -863,9 +863,9 @@ class AnvilSpecification(BaseModel):
             metadata=self.metadata,
             data_spec=self.data,
             model=model,
-            ensemble=(
-                self.procedure.ensemble.to_class() if self.procedure.ensemble else None
-            ),
+            ensemble=self.procedure.ensemble.to_class()
+            if self.procedure.ensemble
+            else None,
             transform=transform,
             split=split,
             feat=feat,
