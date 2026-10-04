@@ -1,10 +1,11 @@
 """Guard the default accelerator of the prediction entry points.
 
-``"gpu"`` is not a portable accelerator spelling: Lightning resolves it to
-CUDA, so on any machine without CUDA (an Ascend NPU box, a CPU-only runner, an
-Apple MPS host) the default either raises ``MisconfigurationException`` or
-silently ignores a usable accelerator. The prediction paths must therefore
-default to ``"auto"`` and let Lightning pick the best available accelerator.
+``"gpu"`` is not a portable accelerator spelling: the value is forwarded
+straight to the Lightning Trainer (it does not go through ``_resolve_device``),
+and Lightning resolves ``"gpu"`` to CUDA, so on a machine with no GPU at all the
+call raises ``MisconfigurationException``. Every prediction entry point must
+therefore default to ``"auto"``, which lets Lightning pick TPU, MPS, CUDA or CPU
+whichever is available -- matching ``predict_embedding``, which already does.
 """
 
 import inspect
