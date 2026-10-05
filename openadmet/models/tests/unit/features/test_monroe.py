@@ -14,7 +14,6 @@ from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.monroe import (
     _VERIFIED_MARKER,
     MonroeFeaturizer,
-    _download_monroe_checkpoint,
 )
 
 
@@ -43,7 +42,7 @@ def featurizer_factory(mocker):
             }
 
         embed_mock = mocker.patch.object(
-            monroe_module, "_embed_smiles", autospec=True, side_effect=_embed
+            MonroeFeaturizer, "_embed_smiles", autospec=True, side_effect=_embed
         )
 
         featurizer = MonroeFeaturizer(**kwargs)
@@ -303,7 +302,7 @@ def test_embedding_dim_rejects_unparseable_config(tmp_path):
 def test_encoder_uses_configured_checkpoint_and_ema(local_checkpoint, mocker):
     """Both documented options must reach monroe's loader."""
     load_mock = mocker.patch.object(
-        monroe_module, "_load_encoder", autospec=True, return_value=object()
+        MonroeFeaturizer, "_load_encoder", autospec=True, return_value=object()
     )
 
     MonroeFeaturizer(checkpoint_path=local_checkpoint, use_ema=True).encoder
@@ -313,13 +312,13 @@ def test_encoder_uses_configured_checkpoint_and_ema(local_checkpoint, mocker):
 
 def test_encoder_downloads_when_no_checkpoint_configured(mocker, tmp_path):
     download_mock = mocker.patch.object(
-        monroe_module,
-        "_download_monroe_checkpoint",
+        MonroeFeaturizer,
+        "_download_checkpoint",
         autospec=True,
         return_value=tmp_path / "downloaded",
     )
     load_mock = mocker.patch.object(
-        monroe_module, "_load_encoder", autospec=True, return_value=object()
+        MonroeFeaturizer, "_load_encoder", autospec=True, return_value=object()
     )
 
     MonroeFeaturizer().encoder
@@ -333,7 +332,7 @@ def test_download_verifies_and_marks_the_cache(tmp_path, pin_artifact, fake_down
     pin_artifact(payload)
     fake_download(config=b"{}", weights=payload)
 
-    ckpt_dir = _download_monroe_checkpoint(cache_root=tmp_path)
+    ckpt_dir = MonroeFeaturizer._download_checkpoint(cache_root=tmp_path)
 
     assert (ckpt_dir / "weights.pt").read_bytes() == payload
     assert (ckpt_dir / _VERIFIED_MARKER).read_text() == hashlib.sha256(
@@ -354,7 +353,7 @@ def test_download_reuses_verified_cache(tmp_path, mocker, pin_artifact):
 
     urlretrieve_mock = mocker.patch.object(monroe_module, "urlretrieve", autospec=True)
 
-    assert _download_monroe_checkpoint(cache_root=tmp_path) == ckpt_dir
+    assert MonroeFeaturizer._download_checkpoint(cache_root=tmp_path) == ckpt_dir
     urlretrieve_mock.assert_not_called()
 
 
@@ -370,7 +369,7 @@ def test_download_redownloads_unverified_cache(tmp_path, pin_artifact, fake_down
 
     fake_download(config=b"{}", weights=payload)
 
-    _download_monroe_checkpoint(cache_root=tmp_path)
+    MonroeFeaturizer._download_checkpoint(cache_root=tmp_path)
 
     assert (ckpt_dir / "weights.pt").read_bytes() == payload
 
@@ -390,7 +389,7 @@ def test_download_redownloads_when_weights_replaced_after_marking(
 
     fake_download(config=b"{}", weights=payload)
 
-    _download_monroe_checkpoint(cache_root=tmp_path)
+    MonroeFeaturizer._download_checkpoint(cache_root=tmp_path)
 
     assert (ckpt_dir / "weights.pt").read_bytes() == payload
 
@@ -401,7 +400,7 @@ def test_download_rejects_corrupt_weights(tmp_path, pin_artifact, fake_download)
     fake_download(config=b"{}", weights=b"not the weights")
 
     with pytest.raises(RuntimeError, match="is corrupt"):
-        _download_monroe_checkpoint(cache_root=tmp_path)
+        MonroeFeaturizer._download_checkpoint(cache_root=tmp_path)
 
     ckpt_dir = _cache_dir(tmp_path)
     assert not list(ckpt_dir.glob("*.part"))
@@ -423,7 +422,7 @@ def test_missing_monroe_raises_pinned_install_hint(mocker):
     mocker.patch.object(builtins, "__import__", side_effect=_blocked)
 
     with pytest.raises(ImportError, match=monroe_module._MONROE_CKPT_COMMIT):
-        monroe_module._import_monroe()
+        MonroeFeaturizer._import_monroe()
 
 
 def test_featurizer_is_registered():
@@ -506,7 +505,7 @@ def test_real_load_ckpt_builds_encoder(tiny_monroe_checkpoint):
     """The real monroe loader must accept the checkpoint layout this featurizer hands it."""
     from monroe.model.grit import GritTransformer
 
-    loaded = monroe_module._load_encoder(tiny_monroe_checkpoint, use_ema=False)
+    loaded = MonroeFeaturizer._load_encoder(tiny_monroe_checkpoint, use_ema=False)
 
     assert isinstance(loaded, GritTransformer)
     assert MonroeFeaturizer(checkpoint_path=tiny_monroe_checkpoint).embedding_dim == 16
@@ -524,7 +523,7 @@ def test_real_embed_smiles_contract(tiny_monroe_checkpoint):
         checkpoint_path=tiny_monroe_checkpoint, accelerator="cpu", n_workers=1
     )
 
-    embedded = monroe_module._embed_smiles(
+    embedded = MonroeFeaturizer._embed_smiles(
         ["CCO", "c1ccccc1"],
         featurizer.encoder,
         device="cpu",

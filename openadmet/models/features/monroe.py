@@ -56,237 +56,6 @@ _VERIFIED_MARKER = "weights.sha256"
 _MAX_REPORTED_DROPS = 10
 
 
-def _import_monroe() -> tuple[
-    Callable[..., torch.nn.Module], Callable[..., dict[str, np.ndarray]]
-]:
-    """
-    Import monroe's checkpoint loader and embedder, deferring the cost to first use.
-
-    Importing lazily is what lets this module be imported, and therefore
-    registered, in an environment where monroe is not installed.
-
-    Returns
-    -------
-    tuple
-        The ``(load_ckpt, embed_smiles)`` callables from monroe.
-
-    Raises
-    ------
-    ImportError
-        If monroe is not installed, re-raised with installation instructions.
-
-    """
-    try:
-        from monroe.eval.embed import embed_smiles
-        from monroe.model.ckpt import load_ckpt
-    except ImportError as e:
-        raise ImportError(_MONROE_INSTALL_HINT) from e
-    return load_ckpt, embed_smiles
-
-
-def _sha256(path: Path) -> str:
-    """
-    Return the hex sha256 digest of a file, read in chunks.
-
-    Parameters
-    ----------
-    path : Path
-        File to digest.
-
-    Returns
-    -------
-    str
-        Lowercase hex digest.
-
-    """
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _is_verified_cache(ckpt_dir: Path) -> bool:
-    """
-    Report whether a cache directory holds a complete, digest-matched checkpoint.
-
-    The marker records the digest of the weights that were promoted, so a cache
-    entry that was truncated, half-written, or replaced on disk after the fact
-    fails this check rather than being trusted forever on its size alone.
-
-    Parameters
-    ----------
-    ckpt_dir : Path
-        Candidate cache directory.
-
-    Returns
-    -------
-    bool
-        True when the directory can be handed to monroe as-is.
-
-    """
-    marker = ckpt_dir / _VERIFIED_MARKER
-    weights = ckpt_dir / "weights.pt"
-
-    if not (
-        marker.is_file() and weights.is_file() and (ckpt_dir / "config.json").is_file()
-    ):
-        return False
-
-    # Size is the cheap guard against a weights file replaced since promotion;
-    # the marker is what ties the entry to the pinned digest
-    if weights.stat().st_size != _MONROE_WEIGHTS_BYTES:
-        return False
-
-    return marker.read_text().strip() == _MONROE_WEIGHTS_SHA256
-
-
-def _fetch_to(url: str, destination: Path) -> None:
-    """
-    Download a URL into place through a process-private scratch file.
-
-    Promoting by rename means a concurrent reader sees either the previous
-    contents or the complete new ones, never a partial transfer.
-
-    Parameters
-    ----------
-    url : str
-        Source URL.
-    destination : Path
-        Final path to promote the download to.
-
-    """
-    scratch = destination.with_name(f"{destination.name}.{os.getpid()}.part")
-    try:
-        urlretrieve(url, scratch)
-        scratch.replace(destination)
-    finally:
-        scratch.unlink(missing_ok=True)
-
-
-def _download_monroe_checkpoint(cache_root: Path | None = None) -> Path:
-    """
-    Fetch the published Monroe checkpoint, returning a directory monroe can load.
-
-    Parameters
-    ----------
-    cache_root : Path, optional
-        Root under which checkpoints are cached, by default ``~/.openadmet``.
-
-    Returns
-    -------
-    Path
-        Directory holding ``config.json`` and ``weights.pt``.
-
-    Raises
-    ------
-    RuntimeError
-        If the downloaded weights do not match the expected sha256 digest.
-
-    """
-    root = cache_root if cache_root is not None else Path.home() / ".openadmet"
-    ckpt_dir = root / "monroe" / _MONROE_CKPT_COMMIT
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
-
-    if _is_verified_cache(ckpt_dir):
-        logger.info("Loading cached Monroe checkpoint from {}", ckpt_dir)
-        return ckpt_dir
-
-    logger.info(
-        "Downloading Monroe checkpoint ({:.0f} MB) to {}",
-        _MONROE_WEIGHTS_BYTES / 1e6,
-        ckpt_dir,
-    )
-
-    # The marker is removed first, so an interrupted re-download cannot leave the
-    # previous marker vouching for the new weights
-    marker_path = ckpt_dir / _VERIFIED_MARKER
-    marker_path.unlink(missing_ok=True)
-
-    _fetch_to(_MONROE_CONFIG_URL, ckpt_dir / "config.json")
-
-    weights_path = ckpt_dir / "weights.pt"
-    scratch = weights_path.with_name(f"weights.pt.{os.getpid()}.part")
-    try:
-        urlretrieve(_MONROE_WEIGHTS_URL, scratch)
-
-        digest = _sha256(scratch)
-        if digest != _MONROE_WEIGHTS_SHA256:
-            raise RuntimeError(
-                f"Monroe checkpoint download from {_MONROE_WEIGHTS_URL} is corrupt: "
-                f"expected sha256 {_MONROE_WEIGHTS_SHA256}, got {digest}. "
-                "The partial download has been removed; retry the featurization."
-            )
-
-        scratch.replace(weights_path)
-    finally:
-        scratch.unlink(missing_ok=True)
-
-    marker_path.write_text(_MONROE_WEIGHTS_SHA256)
-    return ckpt_dir
-
-
-def _load_encoder(checkpoint_dir: Path, use_ema: bool) -> torch.nn.Module:
-    """
-    Build the frozen Monroe encoder from a checkpoint directory.
-
-    Parameters
-    ----------
-    checkpoint_dir : Path
-        Directory holding ``config.json`` and ``weights.pt``.
-    use_ema : bool
-        Whether to load the exponential-moving-average weights.
-
-    Returns
-    -------
-    torch.nn.Module
-        The encoder, as returned by monroe's ``load_ckpt``.
-
-    """
-    load_ckpt, _ = _import_monroe()
-    return load_ckpt(str(checkpoint_dir), use_ema=use_ema)
-
-
-def _embed_smiles(
-    smiles: list[str],
-    encoder: torch.nn.Module,
-    device: str,
-    batch_size: int,
-    n_workers: int,
-) -> dict[str, np.ndarray]:
-    """
-    Embed SMILES with monroe, returning its SMILES-keyed mapping unchanged.
-
-    Parameters
-    ----------
-    smiles : list of str
-        SMILES strings to embed.
-    encoder : torch.nn.Module
-        Frozen Monroe encoder.
-    device : str
-        Torch device name to run the forward pass on.
-    batch_size : int
-        Molecules per forward pass.
-    n_workers : int
-        Worker processes used for graph construction.
-
-    Returns
-    -------
-    dict
-        Mapping of SMILES to embedding vector, keyed by the verbatim input
-        string. Molecules monroe could not featurize are absent from the mapping.
-
-    """
-    _, embed_smiles = _import_monroe()
-    return embed_smiles(
-        smiles,
-        encoder,
-        device=device,
-        batch_size=batch_size,
-        n_workers=n_workers,
-    )
-
-
 @featurizers.register("MonroeFeaturizer")
 class MonroeFeaturizer(FeaturizerBase):
     """
@@ -493,14 +262,253 @@ class MonroeFeaturizer(FeaturizerBase):
                 f"encoder.hidden_dim: {e}"
             ) from e
 
+    # Import monroe lazily so this module registers without it installed
+
+    @classmethod
+    def _import_monroe(
+        cls,
+    ) -> tuple[Callable[..., torch.nn.Module], Callable[..., dict[str, np.ndarray]]]:
+        """
+        Import monroe's checkpoint loader and embedder (deferred import).
+
+        Importing lazily is what lets this module be imported, and therefore
+        registered, in an environment where monroe is not installed.
+
+        Returns
+        -------
+        tuple
+            The ``(load_ckpt, embed_smiles)`` callables from monroe.
+
+        Raises
+        ------
+        ImportError
+            If monroe is not installed, re-raised with installation instructions.
+
+        """
+        try:
+            from monroe.eval.embed import embed_smiles
+            from monroe.model.ckpt import load_ckpt
+        except ImportError as e:
+            raise ImportError(_MONROE_INSTALL_HINT) from e
+        return load_ckpt, embed_smiles
+
+    @classmethod
+    def _load_encoder(cls, checkpoint_dir: Path, use_ema: bool) -> torch.nn.Module:
+        """
+        Build the frozen Monroe encoder from a checkpoint directory.
+
+        Parameters
+        ----------
+        checkpoint_dir : Path
+            Directory holding ``config.json`` and ``weights.pt``.
+        use_ema : bool
+            Whether to load the exponential-moving-average weights.
+
+        Returns
+        -------
+        torch.nn.Module
+            The encoder, as returned by monroe's ``load_ckpt``.
+
+        """
+        load_ckpt, _ = cls._import_monroe()
+        return load_ckpt(str(checkpoint_dir), use_ema=use_ema)
+
+    @classmethod
+    def _embed_smiles(
+        cls,
+        smiles: list[str],
+        encoder: torch.nn.Module,
+        device: str,
+        batch_size: int,
+        n_workers: int,
+    ) -> dict[str, np.ndarray]:
+        """
+        Embed SMILES with monroe, returning its SMILES-keyed mapping unchanged.
+
+        Parameters
+        ----------
+        smiles : list of str
+            SMILES strings to embed.
+        encoder : torch.nn.Module
+            Frozen Monroe encoder.
+        device : str
+            Torch device name to run the forward pass on.
+        batch_size : int
+            Molecules per forward pass.
+        n_workers : int
+            Worker processes used for graph construction.
+
+        Returns
+        -------
+        dict
+            Mapping of SMILES to embedding vector, keyed by the verbatim input
+            string. Molecules monroe could not featurize are absent from the mapping.
+
+        """
+        _, embed_smiles = cls._import_monroe()
+        return embed_smiles(
+            smiles,
+            encoder,
+            device=device,
+            batch_size=batch_size,
+            n_workers=n_workers,
+        )
+
+    # Download the published checkpoint and verify it against the pinned digest
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        """
+        Return the hex sha256 digest of a file, read in chunks.
+
+        Parameters
+        ----------
+        path : Path
+            File to digest.
+
+        Returns
+        -------
+        str
+            Lowercase hex digest.
+
+        """
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    @classmethod
+    def _is_verified_cache(cls, ckpt_dir: Path) -> bool:
+        """
+        Report whether a cache directory holds a complete, digest-matched checkpoint.
+
+        The marker records the digest of the weights that were promoted, so a cache
+        entry that was truncated, half-written, or replaced on disk after the fact
+        fails this check rather than being trusted forever on its size alone.
+
+        Parameters
+        ----------
+        ckpt_dir : Path
+            Candidate cache directory.
+
+        Returns
+        -------
+        bool
+            True when the directory can be handed to monroe as-is.
+
+        """
+        marker = ckpt_dir / _VERIFIED_MARKER
+        weights = ckpt_dir / "weights.pt"
+
+        if not (
+            marker.is_file()
+            and weights.is_file()
+            and (ckpt_dir / "config.json").is_file()
+        ):
+            return False
+
+        # Size is the cheap guard against a weights file replaced since promotion;
+        # the marker is what ties the entry to the pinned digest
+        if weights.stat().st_size != _MONROE_WEIGHTS_BYTES:
+            return False
+
+        return marker.read_text().strip() == _MONROE_WEIGHTS_SHA256
+
+    @staticmethod
+    def _fetch_to(url: str, destination: Path) -> None:
+        """
+        Download a URL into place through a process-private scratch file.
+
+        Promoting by rename means a concurrent reader sees either the previous
+        contents or the complete new ones, never a partial transfer.
+
+        Parameters
+        ----------
+        url : str
+            Source URL.
+        destination : Path
+            Final path to promote the download to.
+
+        """
+        scratch = destination.with_name(f"{destination.name}.{os.getpid()}.part")
+        try:
+            urlretrieve(url, scratch)
+            scratch.replace(destination)
+        finally:
+            scratch.unlink(missing_ok=True)
+
+    @classmethod
+    def _download_checkpoint(cls, cache_root: Path | None = None) -> Path:
+        """
+        Fetch the published Monroe checkpoint, returning a directory monroe can load.
+
+        Parameters
+        ----------
+        cache_root : Path, optional
+            Root under which checkpoints are cached, by default ``~/.openadmet``.
+
+        Returns
+        -------
+        Path
+            Directory holding ``config.json`` and ``weights.pt``.
+
+        Raises
+        ------
+        RuntimeError
+            If the downloaded weights do not match the expected sha256 digest.
+
+        """
+        root = cache_root if cache_root is not None else Path.home() / ".openadmet"
+        ckpt_dir = root / "monroe" / _MONROE_CKPT_COMMIT
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+        if cls._is_verified_cache(ckpt_dir):
+            logger.info("Loading cached Monroe checkpoint from {}", ckpt_dir)
+            return ckpt_dir
+
+        logger.info(
+            "Downloading Monroe checkpoint ({:.0f} MB) to {}",
+            _MONROE_WEIGHTS_BYTES / 1e6,
+            ckpt_dir,
+        )
+
+        # The marker is removed first, so an interrupted re-download cannot leave the
+        # previous marker vouching for the new weights
+        marker_path = ckpt_dir / _VERIFIED_MARKER
+        marker_path.unlink(missing_ok=True)
+
+        cls._fetch_to(_MONROE_CONFIG_URL, ckpt_dir / "config.json")
+
+        weights_path = ckpt_dir / "weights.pt"
+        scratch = weights_path.with_name(f"weights.pt.{os.getpid()}.part")
+        try:
+            urlretrieve(_MONROE_WEIGHTS_URL, scratch)
+
+            digest = cls._sha256(scratch)
+            if digest != _MONROE_WEIGHTS_SHA256:
+                raise RuntimeError(
+                    f"Monroe checkpoint download from {_MONROE_WEIGHTS_URL} is "
+                    f"corrupt: expected sha256 {_MONROE_WEIGHTS_SHA256}, got "
+                    f"{digest}. The partial download has been removed; retry the "
+                    "featurization."
+                )
+
+            scratch.replace(weights_path)
+        finally:
+            scratch.unlink(missing_ok=True)
+
+        marker_path.write_text(_MONROE_WEIGHTS_SHA256)
+        return ckpt_dir
+
     @property
     def encoder(self) -> torch.nn.Module:
         """Return the frozen Monroe encoder, building it on first access."""
         if self._encoder is None:
-            checkpoint_dir = self.checkpoint_path or _download_monroe_checkpoint()
+            checkpoint_dir = self.checkpoint_path or self._download_checkpoint()
 
             # Cache only after the load succeeds, so a failure is not memoized
-            self._encoder = _load_encoder(checkpoint_dir, self.use_ema)
+            self._encoder = self._load_encoder(checkpoint_dir, self.use_ema)
 
         return self._encoder
 
@@ -549,7 +557,7 @@ class MonroeFeaturizer(FeaturizerBase):
         # its result anyway, so pay for each distinct structure once
         unique_smiles = list(dict.fromkeys(smiles_list))
 
-        embedded = _embed_smiles(
+        embedded = self._embed_smiles(
             unique_smiles,
             self.encoder,
             device=_resolve_device(self.accelerator),
