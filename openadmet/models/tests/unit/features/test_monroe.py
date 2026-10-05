@@ -12,7 +12,6 @@ from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.feature_base import get_featurizer_class
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.monroe import (
-    _VERIFIED_MARKER,
     MonroeFeaturizer,
 )
 
@@ -72,9 +71,9 @@ def pin_artifact(mocker):
 
     def _apply(payload: bytes):
         mocker.patch.object(
-            monroe_module, "_MONROE_WEIGHTS_SHA256", hashlib.sha256(payload).hexdigest()
+            MonroeFeaturizer, "_WEIGHTS_SHA256", hashlib.sha256(payload).hexdigest()
         )
-        mocker.patch.object(monroe_module, "_MONROE_WEIGHTS_BYTES", len(payload))
+        mocker.patch.object(MonroeFeaturizer, "_WEIGHTS_BYTES", len(payload))
 
     return _apply
 
@@ -101,7 +100,7 @@ def fake_download(mocker):
 
 
 def _cache_dir(root: Path) -> Path:
-    return root / "monroe" / monroe_module._MONROE_CKPT_COMMIT
+    return root / "monroe" / MonroeFeaturizer._CKPT_COMMIT
 
 
 @pytest.mark.parametrize("accelerator", ["cpu", "gpu", "mps", "cuda:0"])
@@ -335,7 +334,7 @@ def test_download_verifies_and_marks_the_cache(tmp_path, pin_artifact, fake_down
     ckpt_dir = MonroeFeaturizer._download_checkpoint(cache_root=tmp_path)
 
     assert (ckpt_dir / "weights.pt").read_bytes() == payload
-    assert (ckpt_dir / _VERIFIED_MARKER).read_text() == hashlib.sha256(
+    assert (ckpt_dir / MonroeFeaturizer._VERIFIED_MARKER).read_text() == hashlib.sha256(
         payload
     ).hexdigest()
     assert not list(ckpt_dir.glob("*.part"))
@@ -349,7 +348,9 @@ def test_download_reuses_verified_cache(tmp_path, mocker, pin_artifact):
     ckpt_dir.mkdir(parents=True)
     (ckpt_dir / "config.json").write_text("{}")
     (ckpt_dir / "weights.pt").write_bytes(payload)
-    (ckpt_dir / _VERIFIED_MARKER).write_text(hashlib.sha256(payload).hexdigest())
+    (ckpt_dir / MonroeFeaturizer._VERIFIED_MARKER).write_text(
+        hashlib.sha256(payload).hexdigest()
+    )
 
     urlretrieve_mock = mocker.patch.object(monroe_module, "urlretrieve", autospec=True)
 
@@ -385,7 +386,9 @@ def test_download_redownloads_when_weights_replaced_after_marking(
     ckpt_dir.mkdir(parents=True)
     (ckpt_dir / "config.json").write_text("{}")
     (ckpt_dir / "weights.pt").write_bytes(b"a different length payload entirely")
-    (ckpt_dir / _VERIFIED_MARKER).write_text(hashlib.sha256(payload).hexdigest())
+    (ckpt_dir / MonroeFeaturizer._VERIFIED_MARKER).write_text(
+        hashlib.sha256(payload).hexdigest()
+    )
 
     fake_download(config=b"{}", weights=payload)
 
@@ -405,7 +408,7 @@ def test_download_rejects_corrupt_weights(tmp_path, pin_artifact, fake_download)
     ckpt_dir = _cache_dir(tmp_path)
     assert not list(ckpt_dir.glob("*.part"))
     assert not (ckpt_dir / "weights.pt").exists()
-    assert not (ckpt_dir / _VERIFIED_MARKER).exists()
+    assert not (ckpt_dir / MonroeFeaturizer._VERIFIED_MARKER).exists()
 
 
 def test_missing_monroe_raises_pinned_install_hint(mocker):
@@ -421,7 +424,7 @@ def test_missing_monroe_raises_pinned_install_hint(mocker):
 
     mocker.patch.object(builtins, "__import__", side_effect=_blocked)
 
-    with pytest.raises(ImportError, match=monroe_module._MONROE_CKPT_COMMIT):
+    with pytest.raises(ImportError, match=MonroeFeaturizer._CKPT_COMMIT):
         MonroeFeaturizer._import_monroe()
 
 

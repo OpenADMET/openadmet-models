@@ -18,43 +18,6 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from openadmet.models.architecture.chemprop import _resolve_device
 from openadmet.models.features.feature_base import FeaturizerBase, featurizers
 
-# The monroe package and the checkpoint are pinned to the same commit, because the
-# embedding is a function of both the weights and the graph-construction code
-_MONROE_CKPT_COMMIT = "3e138d9bb947e89c9f8faf7db86210385d6657c2"
-
-_MONROE_INSTALL_HINT = (
-    "MonroeFeaturizer requires the monroe package, which is not published on PyPI. "
-    "Install it with: pip install "
-    f"git+https://github.com/blazejba/monroe.git@{_MONROE_CKPT_COMMIT}"
-)
-
-_MONROE_CONFIG_URL = (
-    f"https://raw.githubusercontent.com/blazejba/monroe/{_MONROE_CKPT_COMMIT}"
-    "/checkpoint/config.json"
-)
-
-# weights.pt is Git LFS tracked, so raw.githubusercontent.com serves a pointer file
-# instead of the weights; the media endpoint serves the real bytes
-_MONROE_WEIGHTS_URL = (
-    f"https://media.githubusercontent.com/media/blazejba/monroe/{_MONROE_CKPT_COMMIT}"
-    "/checkpoint/weights.pt"
-)
-_MONROE_WEIGHTS_SHA256 = (
-    "df996e8e98b12a3cda5fe5acbef3e1e9a4ea31946d3736461cd07e53a5bf205a"
-)
-_MONROE_WEIGHTS_BYTES = 300057823
-
-# Width of the pinned checkpoint's graph-level embedding, which is its encoder
-# hidden_dim; lets an empty input be shaped without downloading anything
-_MONROE_EMBEDDING_DIM = 720
-
-# Written last, once both files are promoted, so its presence and contents are what
-# distinguish a complete cache entry from a partial or tampered one
-_VERIFIED_MARKER = "weights.sha256"
-
-# Cap on how many failed SMILES the drop warning names before it elides the rest
-_MAX_REPORTED_DROPS = 10
-
 
 @featurizers.register("MonroeFeaturizer")
 class MonroeFeaturizer(FeaturizerBase):
@@ -125,6 +88,43 @@ class MonroeFeaturizer(FeaturizerBase):
     """
 
     type: ClassVar[str] = "MonroeFeaturizer"
+
+    # The monroe package and the checkpoint are pinned to the same commit, because the
+    # embedding is a function of both the weights and the graph-construction code
+    _CKPT_COMMIT: ClassVar[str] = "3e138d9bb947e89c9f8faf7db86210385d6657c2"
+
+    _INSTALL_HINT: ClassVar[str] = (
+        "MonroeFeaturizer requires the monroe package, which is not published on PyPI. "
+        "Install it with: pip install "
+        f"git+https://github.com/blazejba/monroe.git@{_CKPT_COMMIT}"
+    )
+
+    _CONFIG_URL: ClassVar[str] = (
+        f"https://raw.githubusercontent.com/blazejba/monroe/{_CKPT_COMMIT}"
+        "/checkpoint/config.json"
+    )
+
+    # weights.pt is Git LFS tracked, so raw.githubusercontent.com serves a pointer file
+    # instead of the weights; the media endpoint serves the real bytes
+    _WEIGHTS_URL: ClassVar[str] = (
+        f"https://media.githubusercontent.com/media/blazejba/monroe/{_CKPT_COMMIT}"
+        "/checkpoint/weights.pt"
+    )
+    _WEIGHTS_SHA256: ClassVar[str] = (
+        "df996e8e98b12a3cda5fe5acbef3e1e9a4ea31946d3736461cd07e53a5bf205a"
+    )
+    _WEIGHTS_BYTES: ClassVar[int] = 300057823
+
+    # Width of the pinned checkpoint's graph-level embedding, which is its encoder
+    # hidden_dim; lets an empty input be shaped without downloading anything
+    _EMBEDDING_DIM: ClassVar[int] = 720
+
+    # Written last, once both files are promoted, so its presence and contents are what
+    # distinguish a complete cache entry from a partial or tampered one
+    _VERIFIED_MARKER: ClassVar[str] = "weights.sha256"
+
+    # Cap on how many failed SMILES the drop warning names before it elides the rest
+    _MAX_REPORTED_DROPS: ClassVar[int] = 10
 
     checkpoint_path: Path | None = Field(
         default=None,
@@ -250,7 +250,7 @@ class MonroeFeaturizer(FeaturizerBase):
 
         """
         if self.checkpoint_path is None:
-            return _MONROE_EMBEDDING_DIM
+            return self._EMBEDDING_DIM
 
         config_path = self.checkpoint_path / "config.json"
         try:
@@ -289,7 +289,7 @@ class MonroeFeaturizer(FeaturizerBase):
             from monroe.eval.embed import embed_smiles
             from monroe.model.ckpt import load_ckpt
         except ImportError as e:
-            raise ImportError(_MONROE_INSTALL_HINT) from e
+            raise ImportError(cls._INSTALL_HINT) from e
         return load_ckpt, embed_smiles
 
     @classmethod
@@ -398,7 +398,7 @@ class MonroeFeaturizer(FeaturizerBase):
             True when the directory can be handed to monroe as-is.
 
         """
-        marker = ckpt_dir / _VERIFIED_MARKER
+        marker = ckpt_dir / cls._VERIFIED_MARKER
         weights = ckpt_dir / "weights.pt"
 
         if not (
@@ -410,10 +410,10 @@ class MonroeFeaturizer(FeaturizerBase):
 
         # Size is the cheap guard against a weights file replaced since promotion;
         # the marker is what ties the entry to the pinned digest
-        if weights.stat().st_size != _MONROE_WEIGHTS_BYTES:
+        if weights.stat().st_size != cls._WEIGHTS_BYTES:
             return False
 
-        return marker.read_text().strip() == _MONROE_WEIGHTS_SHA256
+        return marker.read_text().strip() == cls._WEIGHTS_SHA256
 
     @staticmethod
     def _fetch_to(url: str, destination: Path) -> None:
@@ -460,7 +460,7 @@ class MonroeFeaturizer(FeaturizerBase):
 
         """
         root = cache_root if cache_root is not None else Path.home() / ".openadmet"
-        ckpt_dir = root / "monroe" / _MONROE_CKPT_COMMIT
+        ckpt_dir = root / "monroe" / cls._CKPT_COMMIT
         ckpt_dir.mkdir(parents=True, exist_ok=True)
 
         if cls._is_verified_cache(ckpt_dir):
@@ -469,27 +469,27 @@ class MonroeFeaturizer(FeaturizerBase):
 
         logger.info(
             "Downloading Monroe checkpoint ({:.0f} MB) to {}",
-            _MONROE_WEIGHTS_BYTES / 1e6,
+            cls._WEIGHTS_BYTES / 1e6,
             ckpt_dir,
         )
 
         # The marker is removed first, so an interrupted re-download cannot leave the
         # previous marker vouching for the new weights
-        marker_path = ckpt_dir / _VERIFIED_MARKER
+        marker_path = ckpt_dir / cls._VERIFIED_MARKER
         marker_path.unlink(missing_ok=True)
 
-        cls._fetch_to(_MONROE_CONFIG_URL, ckpt_dir / "config.json")
+        cls._fetch_to(cls._CONFIG_URL, ckpt_dir / "config.json")
 
         weights_path = ckpt_dir / "weights.pt"
         scratch = weights_path.with_name(f"weights.pt.{os.getpid()}.part")
         try:
-            urlretrieve(_MONROE_WEIGHTS_URL, scratch)
+            urlretrieve(cls._WEIGHTS_URL, scratch)
 
             digest = cls._sha256(scratch)
-            if digest != _MONROE_WEIGHTS_SHA256:
+            if digest != cls._WEIGHTS_SHA256:
                 raise RuntimeError(
-                    f"Monroe checkpoint download from {_MONROE_WEIGHTS_URL} is "
-                    f"corrupt: expected sha256 {_MONROE_WEIGHTS_SHA256}, got "
+                    f"Monroe checkpoint download from {cls._WEIGHTS_URL} is "
+                    f"corrupt: expected sha256 {cls._WEIGHTS_SHA256}, got "
                     f"{digest}. The partial download has been removed; retry the "
                     "featurization."
                 )
@@ -498,7 +498,7 @@ class MonroeFeaturizer(FeaturizerBase):
         finally:
             scratch.unlink(missing_ok=True)
 
-        marker_path.write_text(_MONROE_WEIGHTS_SHA256)
+        marker_path.write_text(cls._WEIGHTS_SHA256)
         return ckpt_dir
 
     @property
@@ -596,9 +596,9 @@ class MonroeFeaturizer(FeaturizerBase):
         """
         dropped = [smi for smi in dict.fromkeys(smiles_list) if smi not in embedded]
 
-        shown = ", ".join(dropped[:_MAX_REPORTED_DROPS])
-        if len(dropped) > _MAX_REPORTED_DROPS:
-            shown += f", ... ({len(dropped) - _MAX_REPORTED_DROPS} more)"
+        shown = ", ".join(dropped[: self._MAX_REPORTED_DROPS])
+        if len(dropped) > self._MAX_REPORTED_DROPS:
+            shown += f", ... ({len(dropped) - self._MAX_REPORTED_DROPS} more)"
 
         logger.warning(
             "Monroe could not featurize {} of {} distinct structures; the "
