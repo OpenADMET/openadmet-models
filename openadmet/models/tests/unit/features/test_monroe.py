@@ -80,7 +80,12 @@ def pin_artifact(mocker):
 
 @pytest.fixture
 def fake_download(mocker):
-    """Patch urlretrieve so it writes canned bytes instead of reaching the network."""
+    """
+    Patch urlretrieve so it writes canned bytes instead of reaching the network.
+
+    Exercises this module's cache and digest handling only. Monroe's own loading
+    is covered by the tiny_monroe_checkpoint tests, which use a real encoder.
+    """
 
     def _apply(config: bytes, weights: bytes):
         def _write(url, destination):
