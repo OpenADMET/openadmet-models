@@ -129,3 +129,13 @@ def test_validate_aq_fxns_errors(aq_fxns, beta, best_y, xi, error_message):
     """
     with pytest.raises(ValueError, match=error_message):
         predict_cli_module._validate_aq_fxns(aq_fxns, beta, best_y, xi)
+
+
+def test_predict_cli_accelerator_defaults_to_auto():
+    """The ``--accelerator`` CLI option must default to ``"auto"``."""
+    option = next(
+        param
+        for param in predict_cli_module.predict.params
+        if param.name == "accelerator"
+    )
+    assert option.default == "auto"

@@ -165,7 +165,7 @@ def predict(
     write_csv: bool = False,
     output_csv: str = None,
     debug: bool = False,
-    accelerator: str = "gpu",
+    accelerator: str = "auto",
     log: bool = True,
     aq_fxn_args: dict | None = None,
     **kwargs,
@@ -189,7 +189,8 @@ def predict(
     debug : bool, optional
         Whether to enable debug logging. Default is False.
     accelerator : str, optional
-        Accelerator to use for prediction ('cpu' or 'gpu'). Default is 'gpu'.
+        Accelerator passed to the Lightning Trainer. "auto" (the default)
+        picks TPU, MPS, CUDA, or CPU, whichever is available.
     log : bool, optional
         Whether to enable logging. Default is True.
     aq_fxn_args : dict, optional

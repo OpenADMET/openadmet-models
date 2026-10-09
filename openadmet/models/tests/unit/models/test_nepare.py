@@ -1,3 +1,5 @@
+import inspect
+
 import pytest
 from numpy.testing import assert_allclose
 
@@ -16,3 +18,13 @@ def test_nepare():
     """Verify initialization of the NeuralPairwiseRegressorModel."""
     nepare_model = NeuralPairwiseRegressorModel()
     assert nepare_model.type == "NeuralPairwiseRegressorModel"
+
+
+def test_nepare_predict_accelerator_defaults_to_auto():
+    """``NeuralPairwiseRegressorModel.predict`` defaults ``accelerator`` to ``"auto"``."""
+    assert (
+        inspect.signature(NeuralPairwiseRegressorModel.predict)
+        .parameters["accelerator"]
+        .default
+        == "auto"
+    )
