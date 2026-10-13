@@ -1,3 +1,4 @@
+import inspect
 import types
 
 import numpy as np
@@ -796,3 +797,11 @@ def test_resolve_device_auto_delegates_to_lightning(mocker):
         return_value="mps",
     )
     assert _resolve_device("auto") == "mps"
+
+
+def test_chemprop_predict_accelerator_defaults_to_auto():
+    """``ChemPropModel.predict`` must default ``accelerator`` to ``"auto"``."""
+    assert (
+        inspect.signature(ChemPropModel.predict).parameters["accelerator"].default
+        == "auto"
+    )

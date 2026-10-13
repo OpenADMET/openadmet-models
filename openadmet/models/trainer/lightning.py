@@ -18,7 +18,8 @@ class LightningTrainer(TrainerBase):
     max_epochs : int
         The maximum number of epochs to train for.
     accelerator : str
-        The accelerator to use, e.g. 'cpu', 'gpu'.
+        The accelerator to use, passed to the Lightning Trainer. "auto" (the
+        default) picks TPU, MPS, CUDA, or CPU, whichever is available.
     devices : int
         The number of devices to use, e.g. 1 for single GPU, -1
         for all available GPUs.
@@ -66,7 +67,7 @@ class LightningTrainer(TrainerBase):
     """
 
     max_epochs: int = 20
-    accelerator: str = "gpu"
+    accelerator: str = "auto"
     devices: int = 1
     use_wandb: bool = False
     output_dir: Path = None

@@ -269,7 +269,7 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
 
         return self
 
-    def predict(self, dataloader, accelerator="gpu", devices=1) -> torch.Tensor:
+    def predict(self, dataloader, accelerator="auto", devices=1) -> torch.Tensor:
         """
         Predict using the model.
 
@@ -278,7 +278,8 @@ class NeuralPairwiseRegressorModel(LightningModelBase):
         dataloader : DataLoader
             The data loader for prediction.
         accelerator : str, optional
-            Accelerator type (default: "gpu").
+            Accelerator passed to the Lightning Trainer. "auto" (the default)
+            picks TPU, MPS, CUDA, or CPU, whichever is available.
         devices : int, optional
             Number of devices to use (default: 1).
 

@@ -1,5 +1,6 @@
 """Tests for the inference orchestration pipeline using real, lightweight components."""
 
+import inspect
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -292,3 +293,11 @@ def test_predict_applies_transform_end_to_end(pca_model_dir):
 
     assert X.shape[1] != X_transformed.shape[1]
     np.testing.assert_allclose(preds, expected.ravel(), rtol=1e-12)
+
+
+def test_inference_predict_accelerator_defaults_to_auto():
+    """``inference.predict`` must default ``accelerator`` to ``"auto"``."""
+    assert (
+        inspect.signature(inference_module.predict).parameters["accelerator"].default
+        == "auto"
+    )
