@@ -282,7 +282,7 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # run CV
         if groups is None:
-            groups = np.array([i for i in range(X_all.shape[0])])
+            groups = np.array([*range(X_all.shape[0])])
 
         train_inds, test_inds = repeated_group_k_fold(
             X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_seed
@@ -619,7 +619,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         self.sklearn_metrics = {k: v[0] for k, v in self.active_metrics.items()}
 
         if groups is None:
-            groups = np.array([i for i in range(X_all.shape[0])])
+            groups = np.array([*range(X_all.shape[0])])
 
         train_inds, test_inds = repeated_group_k_fold(
             X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_seed
