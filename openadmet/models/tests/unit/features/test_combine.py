@@ -165,47 +165,6 @@ def test_alias_is_stripped():
     assert NullFeaturizer(alias="  padded  ").alias == "padded"
 
 
-def test_concatenator_rejects_alias_on_itself():
-    """A concatenator emits its children's blocks, so an alias on it would name nothing."""
-    with pytest.raises(ValidationError, match="takes no alias"):
-        FeatureConcatenator(
-            alias="everything",
-            featurizers=[
-                {"type": "NullFeaturizer"},
-                {
-                    "type": "FingerprintFeaturizer",
-                    "params": {"fp_type": "ecfp", "n_jobs": 1},
-                },
-            ],
-        )
-
-
-def test_concatenator_rejects_alias_on_nested_group():
-    """Aliasing a nested group would reorder its children while naming none of their blocks."""
-    with pytest.raises(ValidationError, match="takes no alias"):
-        FeatureConcatenator(
-            featurizers=[
-                {"type": "NullFeaturizer"},
-                {
-                    "type": "FeatureConcatenator",
-                    "params": {
-                        "alias": "fingerprints",
-                        "featurizers": [
-                            {
-                                "type": "FingerprintFeaturizer",
-                                "params": {"fp_type": "ecfp", "n_jobs": 1},
-                            },
-                            {
-                                "type": "DescriptorFeaturizer",
-                                "params": {"descr_type": "desc2d", "n_jobs": 1},
-                            },
-                        ]
-                    },
-                },
-            ]
-        )
-
-
 @pytest.mark.parametrize(
     "entry",
     [

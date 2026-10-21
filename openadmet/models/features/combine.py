@@ -173,41 +173,6 @@ class FeatureConcatenator(FeaturizerBase):
 
         return processed_featurizers
 
-    @field_validator("alias")
-    @classmethod
-    def reject_concatenator_alias(cls, value):
-        """
-        Reject an alias on the concatenator itself.
-
-        A concatenator emits its children's blocks rather than one block of its
-        own, so an alias here would name no block while still reordering the
-        children it holds.
-
-        Parameters
-        ----------
-        value : str or None
-            The configured alias.
-
-        Returns
-        -------
-        None
-            The unset alias.
-
-        Raises
-        ------
-        ValueError
-            If an alias is given.
-
-        """
-        if value is not None:
-            raise ValueError(
-                f"FeatureConcatenator takes no alias (got {value!r}); its feature "
-                "blocks are named by the featurizers it contains, so put the alias "
-                "on those instead."
-            )
-
-        return value
-
     @field_validator("featurizers", mode="after")
     @classmethod
     def reject_duplicates_and_sort(cls, value):
