@@ -266,8 +266,8 @@ For example, featurization for a traditional machine learning model using finger
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
 2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
-``feat`` section itself. At least two are required, and no two may emit the same block name: blocks are addressed by
-that name, so entries sharing one could not be told apart.
+``feat`` section itself. At least two are required. Each block is named by its featurizer type, or by its ``alias``
+if it has one (see below), and no two blocks may share a name.
 
 .. code-block:: yaml
 
@@ -383,10 +383,9 @@ Example: reduce a fingerprint featurizer to 256 PCA components before training.
         n_components: 256
         random_seed: 42
 
-Per-block PCA: give ``n_components`` as a mapping from block name (a featurizer's ``alias`` where it has one,
-otherwise its type) to component count. Each featurizer in the
-``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation step ahead of
-them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is reported when
+Per-block PCA: give ``n_components`` as a mapping from block name (the featurizer type, or its ``alias``) to component
+count. Each featurizer in the ``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a
+shared imputation step ahead of them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is reported when
 the workflow is built, before any featurization runs. Note that a nested ``FeatureConcatenator`` contributes its
 children's blocks rather than one block of its own, so give a key per leaf featurizer.
 
@@ -418,10 +417,9 @@ That recipe featurizes to 2223 columns: 223 from ``DescriptorFeaturizer`` and 20
 its default bit count. The median imputer fills missing descriptor values, then each block is reduced separately, and
 the model sees 32 + 256 = 288 columns.
 
-Blocks are keyed and ordered by block name, not by the order the recipe lists them, so the descriptor block comes
-first here even though ``FingerprintFeaturizer`` is written above it. An aliased block sorts under its alias, so
-aliasing a featurizer can move its columns within the matrix. Keying by name is also why a ``FeatureConcatenator``
-rejects two blocks sharing a name, as noted above: they would be indistinguishable.
+Blocks are ordered by block name, not by the order the recipe lists them, so the descriptor block comes first here
+even though ``FingerprintFeaturizer`` is written above it. An alias changes the name, so it can also move a block's
+columns within the matrix.
 
 Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
 reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would

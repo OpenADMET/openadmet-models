@@ -71,10 +71,9 @@ class FeatureConcatenator(FeaturizerBase):
     ----------
     featurizers : list of FeaturizerBase
         At least two featurizer instances to concatenate; concatenating fewer
-        is a no-op, so use the featurizer directly instead. Two featurizers
-        emitting the same block key are rejected because per-key transforms
-        address blocks by that key and could not tell the two apart; give
-        same-class featurizers distinct aliases to combine them.
+        is a no-op, so use the featurizer directly instead. Featurizers may
+        not share a block name, so give same-class featurizers distinct
+        aliases to combine them.
 
     """
 
@@ -177,14 +176,13 @@ class FeatureConcatenator(FeaturizerBase):
     @classmethod
     def reject_duplicates_and_sort(cls, value):
         """
-        Reject featurizers sharing a block key and fix the block order.
+        Reject featurizers that share a block name and fix the block order.
 
-        Blocks are sorted by key so that featurization and transformation stay
-        consistent across recipes naming the same featurizers. Featurizers
-        sharing a key are rejected because per-block transforms address blocks
-        by that key and could not tell two apart. The check covers the flattened
-        key list, so a nested concatenator's child cannot collide unnoticed with
-        an outer sibling.
+        A block is named by its alias if it has one, otherwise by its type.
+        Blocks are sorted by name so that featurization and transformation stay
+        consistent across recipes naming the same featurizers. Per-block
+        transforms address blocks by name, so two blocks sharing one are
+        rejected, including a nested concatenator's blocks.
 
         Parameters
         ----------
@@ -194,12 +192,12 @@ class FeatureConcatenator(FeaturizerBase):
         Returns
         -------
         list
-            The featurizers sorted by block key.
+            The featurizers sorted by block name.
 
         Raises
         ------
         ValueError
-            If two featurizers emit the same block key.
+            If two featurizers share a block name.
 
         """
         # Per-key transforms (e.g. per-block PCA) key blocks by featurizer name
@@ -208,9 +206,8 @@ class FeatureConcatenator(FeaturizerBase):
         duplicates = sorted({key for key in keys if keys.count(key) > 1})
         if duplicates:
             raise ValueError(
-                "FeatureConcatenator cannot combine featurizers that emit the same "
-                f"feature block key: {duplicates}. Per-key transforms cannot "
-                "disambiguate them, so give each one a distinct `alias`."
+                "FeatureConcatenator cannot combine featurizers that share a block "
+                f"name: {duplicates}. Give each one a distinct `alias`."
             )
 
         # Sort by block key

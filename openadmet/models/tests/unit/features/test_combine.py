@@ -86,7 +86,7 @@ def test_concatenator_list_entry_forms(entry, expected_name):
 )
 def test_concatenator_rejects_duplicate_block_keys(featurizers, duplicate):
     """Two blocks sharing a key are ambiguous for per-key transforms, however the collision arises."""
-    with pytest.raises(ValidationError, match="same feature block key") as excinfo:
+    with pytest.raises(ValidationError, match="share a block name") as excinfo:
         FeatureConcatenator(featurizers=featurizers)
 
     # The message must name the offending key and the way out of the collision
@@ -96,7 +96,7 @@ def test_concatenator_rejects_duplicate_block_keys(featurizers, duplicate):
 
 def test_concatenator_rejects_duplicate_keys_across_nesting():
     """A nested child colliding with an outer sibling must fail at construction, not at transform fit."""
-    with pytest.raises(ValidationError, match="same feature block key"):
+    with pytest.raises(ValidationError, match="share a block name"):
         FeatureConcatenator(
             featurizers=[
                 {
