@@ -70,11 +70,11 @@ class FeaturizerBase(BaseModel, ABC):
     # feature_blocks(); the workflow only calls feature_blocks() when this is True
     provides_feature_blocks: ClassVar[bool] = False
 
-    alias: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None = (
-        Field(
-            default=None,
-            description="Name used in place of the featurizer type when keying feature blocks",
-        )
+    alias: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None
+    ) = Field(
+        default=None,
+        description="Name used in place of the featurizer type when keying feature blocks",
     )
 
     @abstractmethod
