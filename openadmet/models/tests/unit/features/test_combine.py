@@ -156,7 +156,7 @@ def test_aliases_key_and_order_same_class_blocks(smiles):
 )
 def test_blank_alias_rejected(alias):
     """A blank alias would key a block to a name no transform config can reference."""
-    with pytest.raises(ValidationError, match="non-empty name"):
+    with pytest.raises(ValidationError, match="at least 1 character"):
         NullFeaturizer(alias=alias)
 
 
