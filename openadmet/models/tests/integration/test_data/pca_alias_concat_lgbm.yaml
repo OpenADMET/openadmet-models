@@ -36,12 +36,12 @@ procedure:
     params:
       featurizers:
         - type: FingerprintFeaturizer
-          alias: ecfp
           params:
+            alias: ecfp
             fp_type: "ecfp:4"
         - type: FingerprintFeaturizer
-          alias: maccs
           params:
+            alias: maccs
             fp_type: "maccs"
 
   # Reduce the wide ECFP block and pass the MACCS keys through as featurized

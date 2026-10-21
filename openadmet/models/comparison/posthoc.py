@@ -381,15 +381,10 @@ class PostHocComparison(ComparisonBase):
                             if isinstance(featurizers, dict):
                                 feat_items = list(featurizers.items())
                             else:
-                                feat_items = []
-                                for entry in featurizers:
-                                    fparams = dict(entry.get("params") or {})
-
-                                    # An alias may sit beside `type` or inside params;
-                                    # keep it with the params either way
-                                    if entry.get("alias"):
-                                        fparams["alias"] = entry["alias"]
-                                    feat_items.append((entry["type"], fparams))
+                                feat_items = [
+                                    (entry["type"], entry.get("params") or {})
+                                    for entry in featurizers
+                                ]
                             label = ""
                             for ind, (f, fparams) in enumerate(feat_items):
                                 # An alias is the name the recipe gave this block, and

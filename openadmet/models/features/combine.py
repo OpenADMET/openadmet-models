@@ -87,25 +87,6 @@ class FeatureConcatenator(FeaturizerBase):
     )
     _cached_feature_blocks: list[tuple[str, int]] | None = PrivateAttr(default=None)
 
-    @staticmethod
-    def _resolve_entry_alias(item: dict, params: dict) -> str:
-        """
-        Return the alias for one list entry, rejecting two conflicting spellings.
-
-        An alias may be written beside ``type`` or inside ``params``; giving
-        both with different values leaves no honest way to pick one.
-        """
-        entry_alias = item["alias"]
-        param_alias = params.get("alias")
-
-        if param_alias is not None and param_alias != entry_alias:
-            raise ValueError(
-                f"Featurizer entry for {item['type']} sets alias {entry_alias!r} "
-                f"beside `type` and {param_alias!r} inside `params`; give it once."
-            )
-
-        return entry_alias
-
     @field_validator("featurizers", mode="before")
     @classmethod
     def validate_featurizers(cls, value):
@@ -114,9 +95,8 @@ class FeatureConcatenator(FeaturizerBase):
 
         Accepts a list of featurizer instances, ``{type: ..., params: ...}``
         entries (the AnvilSection wrapper form, params optional), or a mix of
-        the two. An entry may carry an ``alias`` beside its ``type``, which is
-        folded into the params it is constructed with. A whole-field dict
-        mapping registry types to their params is also accepted but deprecated.
+        the two. A whole-field dict mapping registry types to their params is
+        also accepted but deprecated.
 
         Parameters
         ----------
@@ -175,16 +155,11 @@ class FeatureConcatenator(FeaturizerBase):
                     # Get the class from the registry
                     feat_class = get_featurizer_class(item["type"])
 
-                    # A bare `TypeName:` with no params parses as None, so treat
-                    # it as an empty mapping (`or {}`)
-                    params = dict(item.get("params") or {})
-
-                    # `alias` reads naturally beside `type` in a recipe, but it is
-                    # a field on the featurizer, so fold it into the params
-                    if "alias" in item:
-                        params["alias"] = cls._resolve_entry_alias(item, params)
-
-                    processed_featurizers.append(feat_class(**params))
+                    # Instantiate and append, same bare `TypeName:` with no params
+                    # applies, so treat it as an empty mapping (`or {}`)
+                    processed_featurizers.append(
+                        feat_class(**(item.get("params") or {}))
+                    )
 
                 # Invalid type path
                 else:

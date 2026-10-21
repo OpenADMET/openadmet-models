@@ -304,9 +304,8 @@ The featurizer emits one column per target column of the pretrained model. Setti
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
 deviation, so setting it against a single model raises when the recipe is parsed.
 
-A block takes its name from the featurizer type, which is why two entries of one type collide. Give each an ``alias``
-to name its block explicitly and they no longer do, which is how several pretrained models are combined, one per
-endpoint. An alias sits beside ``type`` in the entry, not inside ``params``.
+To combine several featurizers of the same type, give each an ``alias`` in its ``params``. The alias names that block
+in place of the type, which is how several pretrained models are combined, one per endpoint.
 
 .. code-block:: yaml
 
@@ -316,15 +315,15 @@ endpoint. An alias sits beside ``type`` in the entry, not inside ``params``.
        featurizers:
          - type: CheMeleonEmbeddingFeaturizer
          - type: TrainedModelFeaturizer
-           alias: log2fc
            params:
+             alias: log2fc
              model_dir: models/chemprop_log2fc
          - type: TrainedModelFeaturizer
-           alias: htchem
            params:
+             alias: htchem
              model_dir: models/chemprop_htchem
 
-The alias replaces the type wherever blocks are named, so a per-block transform is configured against the aliases:
+A per-block transform is configured against the aliases:
 
 .. code-block:: yaml
 
@@ -333,9 +332,8 @@ The alias replaces the type wherever blocks are named, so a per-block transform 
      log2fc: null
      htchem: null
 
-Each block name must be unique across the whole concatenator, counting blocks contributed by a nested
-``FeatureConcatenator``, and an alias may not shadow another entry's type. Collisions are reported when the recipe is
-parsed. The ``FeatureConcatenator`` takes no alias of its own, since it is named by the blocks it contains.
+Block names must be unique across the whole concatenator, including blocks from a nested ``FeatureConcatenator``.
+Duplicates are reported when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.

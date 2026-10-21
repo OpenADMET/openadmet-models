@@ -61,13 +61,11 @@ def test_concatenator_list_entry_forms(entry, expected_name):
             [
                 {
                     "type": "FingerprintFeaturizer",
-                    "alias": "fp",
-                    "params": {"fp_type": "ecfp"},
+                    "params": {"alias": "fp", "fp_type": "ecfp"},
                 },
                 {
                     "type": "FingerprintFeaturizer",
-                    "alias": "fp",
-                    "params": {"fp_type": "ecfp:4"},
+                    "params": {"alias": "fp", "fp_type": "ecfp:4"},
                 },
             ],
             "fp",
@@ -78,8 +76,7 @@ def test_concatenator_list_entry_forms(entry, expected_name):
                 {"type": "NullFeaturizer"},
                 {
                     "type": "FingerprintFeaturizer",
-                    "alias": "NullFeaturizer",
-                    "params": {"fp_type": "ecfp"},
+                    "params": {"alias": "NullFeaturizer", "fp_type": "ecfp"},
                 },
             ],
             "NullFeaturizer",
@@ -128,13 +125,11 @@ def test_aliases_key_and_order_same_class_blocks(smiles):
         featurizers=[
             {
                 "type": "FingerprintFeaturizer",
-                "alias": "zz_maccs",
-                "params": {"fp_type": "maccs", "n_jobs": 1},
+                "params": {"alias": "zz_maccs", "fp_type": "maccs", "n_jobs": 1},
             },
             {
                 "type": "FingerprintFeaturizer",
-                "alias": "aa_ecfp",
-                "params": {"fp_type": "ecfp", "n_jobs": 1},
+                "params": {"alias": "aa_ecfp", "fp_type": "ecfp", "n_jobs": 1},
             },
         ]
     )
@@ -154,32 +149,6 @@ def test_aliases_key_and_order_same_class_blocks(smiles):
     ]
     assert (feats[:, : ecfp_feats.shape[1]] == ecfp_feats).all()
     assert (feats[:, ecfp_feats.shape[1] :] == maccs_feats).all()
-
-
-def test_alias_accepted_inside_params():
-    """An alias inside params must key the block the same as one written beside `type`."""
-    concat = FeatureConcatenator(
-        featurizers=[
-            {"type": "NullFeaturizer", "params": {"alias": "first"}},
-            {"type": "NullFeaturizer", "alias": "second"},
-        ]
-    )
-    assert concat.feature_block_keys() == ["first", "second"]
-
-
-def test_alias_given_twice_with_different_values_raises():
-    """Two spellings of one entry's alias leave no honest choice and must be rejected."""
-    with pytest.raises(ValidationError, match="give it once"):
-        FeatureConcatenator(
-            featurizers=[
-                {
-                    "type": "NullFeaturizer",
-                    "alias": "beside",
-                    "params": {"alias": "inside"},
-                },
-                {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp"}},
-            ]
-        )
 
 
 @pytest.mark.parametrize(
@@ -219,8 +188,8 @@ def test_concatenator_rejects_alias_on_nested_group():
                 {"type": "NullFeaturizer"},
                 {
                     "type": "FeatureConcatenator",
-                    "alias": "fingerprints",
                     "params": {
+                        "alias": "fingerprints",
                         "featurizers": [
                             {
                                 "type": "FingerprintFeaturizer",
