@@ -4,10 +4,12 @@ import types
 import numpy as np
 import pytest
 import torch
+from chemprop import nn
 
 from openadmet.models.architecture.chemprop import (
     _CHEMELEON_MP_HPARAMS,
     ChemPropModel,
+    _build_aggregation,
     _resolve_device,
     _resolve_noam_steps_per_epoch,
 )
@@ -258,7 +260,7 @@ def test_chemprop_validation():
         ChemPropModel(messages="invalid")
 
     # Test invalid aggregation
-    with pytest.raises(ValueError, match="Aggregation must be either 'mean' or 'norm'"):
+    with pytest.raises(ValueError, match="Aggregation must be one of"):
         ChemPropModel(aggregation="invalid")
 
 
