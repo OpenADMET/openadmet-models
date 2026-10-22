@@ -304,8 +304,7 @@ The featurizer emits one column per target column of the pretrained model. Setti
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
 deviation, so setting it against a single model raises when the recipe is parsed.
 
-To combine several featurizers of the same type, give each an ``alias`` in its ``params``. The alias names that block
-in place of the type, which is how several pretrained models are combined, one per endpoint.
+For example, to combine pretrained models for different endpoints, set an ``alias`` in each entry's ``params``.
 
 .. code-block:: yaml
 
