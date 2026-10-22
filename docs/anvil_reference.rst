@@ -266,8 +266,8 @@ For example, featurization for a traditional machine learning model using finger
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
 2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
-``feat`` section itself. At least two are required. Each block is named by its featurizer type, or by its ``alias``
-if it has one (see below), and no two blocks may share a name.
+``feat`` section itself. At least two are required. Featurizers of the same type must be disambiguated by specifying
+``alias`` (e.g. two ``FingerprintFeaturizer`` entries with aliases "ecfp4" and "rdkit").
 
 .. code-block:: yaml
 
