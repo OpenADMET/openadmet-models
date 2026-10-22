@@ -70,6 +70,7 @@ class FeaturizerBase(BaseModel, ABC):
     # feature_blocks(); the workflow only calls feature_blocks() when this is True
     provides_feature_blocks: ClassVar[bool] = False
 
+    # Constrain the alias to a stripped, non-blank string
     alias: (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None
     ) = Field(
