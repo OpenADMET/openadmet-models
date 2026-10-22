@@ -382,11 +382,8 @@ Example: reduce a fingerprint featurizer to 256 PCA components before training.
         n_components: 256
         random_seed: 42
 
-Per-block PCA: give ``n_components`` as a mapping from featurizer name (or ``alias``) to component count. Each
-featurizer in the ``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation
-step ahead of them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is
-reported when the workflow is built, before any featurization runs. Note that a nested ``FeatureConcatenator``
-contributes its children's blocks rather than one block of its own, so give a key per leaf featurizer.
+Per-block PCA: give ``n_components`` as a mapping from featurizer name (or ``alias``) to component count. A shared
+imputation step runs first, then each block is reduced by a separate PCA to the count given for it.
 
 .. code-block:: yaml
 
