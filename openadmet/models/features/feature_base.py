@@ -59,10 +59,9 @@ class FeaturizerBase(BaseModel, ABC):
     Attributes
     ----------
     alias : str or None
-        Name this featurizer answers to in place of its type, by default None.
-        Feature blocks are addressed by name, so combining several featurizers
-        of the same class requires an alias on each to tell their blocks apart;
-        per-block transforms are then configured against those aliases.
+        Name used in place of the featurizer type when keying feature blocks,
+        by default None. Featurizers of the same type in a
+        ``FeatureConcatenator`` need distinct aliases.
 
     """
 

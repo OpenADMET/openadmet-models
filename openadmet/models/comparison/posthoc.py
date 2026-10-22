@@ -387,8 +387,7 @@ class PostHocComparison(ComparisonBase):
                                 ]
                             label = ""
                             for ind, (f, fparams) in enumerate(feat_items):
-                                # An alias is the name the recipe gave this block, and
-                                # two entries of one type are told apart by it alone
+                                # Label by alias so same-type entries stay distinct
                                 if fparams.get("alias"):
                                     label += fparams["alias"]
                                 elif f == "DescriptorFeaturizer":

@@ -620,7 +620,7 @@ def test_workflow_accepts_valid_block_config(
 
 @pytest.fixture(scope="module")
 def aliased_concat_feat():
-    """Return a concatenator whose two same-class blocks are told apart by alias alone."""
+    """Return a concatenator whose two same-class blocks are told apart by alias."""
     return FeatureConcatenator(
         featurizers=[
             FingerprintFeaturizer(fp_type="ecfp:4", alias="ecfp"),
@@ -632,7 +632,7 @@ def aliased_concat_feat():
 def test_workflow_accepts_alias_keyed_block_config(
     metadata, data_spec, aliased_concat_feat
 ):
-    """Same-class featurizers must be addressable per block by the aliases the recipe gave them."""
+    """Same-class featurizers must be addressable per block by their aliases."""
     transform = [PCATransform(n_components={"ecfp": 8, "maccs": 4})]
     wf = _make_anvil_workflow(
         metadata, data_spec, aliased_concat_feat, transform=transform

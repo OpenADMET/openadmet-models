@@ -32,7 +32,7 @@ def _block_key(feat: FeaturizerBase) -> str:
 
     """
     # Read both through getattr: a featurizer unpickled from a model saved
-    # before aliases existed carries no alias attribute at all
+    # before aliases existed carries no alias attribute
     return getattr(feat, "alias", None) or getattr(feat, "type", type(feat).__name__)
 
 
@@ -43,7 +43,7 @@ def _flatten_block_keys(feats: list[FeaturizerBase]) -> list[str]:
     Parameters
     ----------
     feats : list of FeaturizerBase
-        The featurizers whose block keys are wanted, in column order.
+        The featurizers to collect block keys from, in column order.
 
     Returns
     -------
@@ -217,10 +217,9 @@ class FeatureConcatenator(FeaturizerBase):
         """
         Return the feature block keys without featurizing.
 
-        Block widths are only knowable once ``featurize`` has run, but the keys
-        come from the featurizer aliases and types alone, so they are available
-        at construction time and can be checked against a transform's per-block
-        configuration before any data is loaded.
+        Unlike block widths, the keys do not depend on ``featurize``, so they can
+        be checked against a transform's per-block configuration before any data
+        is loaded.
 
         Returns
         -------
