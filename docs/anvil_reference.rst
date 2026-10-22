@@ -417,8 +417,7 @@ its default bit count. The median imputer fills missing descriptor values, then 
 the model sees 32 + 256 = 288 columns.
 
 Blocks are ordered by block name, not by the order the recipe lists them, so the descriptor block comes first here
-even though ``FingerprintFeaturizer`` is written above it. An alias changes the name, so it can also move a block's
-columns within the matrix.
+even though ``FingerprintFeaturizer`` is written above it.
 
 Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
 reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would
