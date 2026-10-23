@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 
 if TYPE_CHECKING:
     from molfeat.trans import MoleculeTransformer
@@ -56,11 +56,26 @@ class FeaturizerBase(BaseModel, ABC):
     the `featurize` method to convert a list of SMILES strings into features suitable
     for machine learning models.
 
+    Attributes
+    ----------
+    alias : str or None
+        Name used in place of the featurizer type when keying feature blocks,
+        by default None. Featurizers of the same type in a
+        ``FeatureConcatenator`` need distinct aliases.
+
     """
 
     # Whether this featurizer can report per-block column layout via
     # feature_blocks(); the workflow only calls feature_blocks() when this is True
     provides_feature_blocks: ClassVar[bool] = False
+
+    # Constrain the alias to a stripped, non-blank string
+    alias: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None
+    ) = Field(
+        default=None,
+        description="Name used in place of the featurizer type when keying feature blocks",
+    )
 
     @abstractmethod
     def featurize(self, smiles: Iterable[str], *args, **kwargs):

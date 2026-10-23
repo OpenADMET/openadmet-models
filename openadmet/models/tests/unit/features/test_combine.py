@@ -46,17 +46,123 @@ def test_concatenator_list_entry_forms(entry, expected_name):
     assert expected_name in [type(f).__name__ for f in concat.featurizers]
 
 
-def test_concatenator_rejects_duplicate_classes():
-    """Same-class featurizers are ambiguous for per-key transforms and must be rejected."""
-    with pytest.raises(
-        ValidationError, match="cannot combine multiple featurizers of the same class"
-    ):
-        FeatureConcatenator(
-            featurizers=[
+@pytest.mark.parametrize(
+    "featurizers, duplicate",
+    [
+        pytest.param(
+            [
                 {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp"}},
                 {"type": "FingerprintFeaturizer", "params": {"fp_type": "ecfp:4"}},
+            ],
+            "FingerprintFeaturizer",
+            id="same_class_unaliased",
+        ),
+        pytest.param(
+            [
+                {
+                    "type": "FingerprintFeaturizer",
+                    "params": {"alias": "fp", "fp_type": "ecfp"},
+                },
+                {
+                    "type": "FingerprintFeaturizer",
+                    "params": {"alias": "fp", "fp_type": "ecfp:4"},
+                },
+            ],
+            "fp",
+            id="repeated_alias",
+        ),
+        pytest.param(
+            [
+                {"type": "NullFeaturizer"},
+                {
+                    "type": "FingerprintFeaturizer",
+                    "params": {"alias": "NullFeaturizer", "fp_type": "ecfp"},
+                },
+            ],
+            "NullFeaturizer",
+            id="alias_shadows_other_type",
+        ),
+    ],
+)
+def test_concatenator_rejects_duplicate_block_keys(featurizers, duplicate):
+    """Two blocks sharing a key are ambiguous for per-key transforms, however the collision arises."""
+    with pytest.raises(ValidationError, match="share a block name") as excinfo:
+        FeatureConcatenator(featurizers=featurizers)
+
+    # The message must name the offending key and the way out of the collision
+    assert duplicate in str(excinfo.value)
+    assert "alias" in str(excinfo.value)
+
+
+def test_concatenator_rejects_duplicate_keys_across_nesting():
+    """A nested child colliding with an outer sibling must fail at construction, not at transform fit."""
+    with pytest.raises(ValidationError, match="share a block name"):
+        FeatureConcatenator(
+            featurizers=[
+                {
+                    "type": "FingerprintFeaturizer",
+                    "params": {"fp_type": "ecfp", "n_jobs": 1},
+                },
+                {
+                    "type": "FeatureConcatenator",
+                    "params": {
+                        "featurizers": [
+                            {
+                                "type": "FingerprintFeaturizer",
+                                "params": {"fp_type": "ecfp:6", "n_jobs": 1},
+                            },
+                            {"type": "NullFeaturizer"},
+                        ]
+                    },
+                },
             ]
         )
+
+
+def test_aliases_key_and_order_same_class_blocks(smiles):
+    """Aliased same-class featurizers must combine, keying and ordering their blocks by alias."""
+    concat = FeatureConcatenator(
+        featurizers=[
+            {
+                "type": "FingerprintFeaturizer",
+                "params": {"alias": "zz_maccs", "fp_type": "maccs", "n_jobs": 1},
+            },
+            {
+                "type": "FingerprintFeaturizer",
+                "params": {"alias": "aa_ecfp", "fp_type": "ecfp", "n_jobs": 1},
+            },
+        ]
+    )
+    feats, _ = concat.featurize(smiles)
+    blocks = concat.feature_blocks()
+
+    # Alias order, not class name, fixes the column layout
+    assert [key for key, _ in blocks] == ["aa_ecfp", "zz_maccs"]
+    assert concat.feature_block_keys() == ["aa_ecfp", "zz_maccs"]
+
+    ecfp_feats, _ = concat.featurizers[0].featurize(smiles)
+    maccs_feats, _ = concat.featurizers[1].featurize(smiles)
+    assert concat.featurizers[0].fp_type == "ecfp"
+    assert blocks == [
+        ("aa_ecfp", ecfp_feats.shape[1]),
+        ("zz_maccs", maccs_feats.shape[1]),
+    ]
+    assert (feats[:, : ecfp_feats.shape[1]] == ecfp_feats).all()
+    assert (feats[:, ecfp_feats.shape[1] :] == maccs_feats).all()
+
+
+@pytest.mark.parametrize(
+    "alias", [pytest.param("", id="empty"), pytest.param("   ", id="whitespace")]
+)
+def test_blank_alias_rejected(alias):
+    """A blank alias would key a block to a name no transform config can reference."""
+    with pytest.raises(ValidationError, match="at least 1 character"):
+        NullFeaturizer(alias=alias)
+
+
+def test_alias_is_stripped():
+    """Surrounding whitespace must not survive into the block key."""
+    assert NullFeaturizer(alias="  padded  ").alias == "padded"
 
 
 @pytest.mark.parametrize(

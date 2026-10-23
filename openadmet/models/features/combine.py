@@ -27,10 +27,39 @@ def _block_key(feat: FeaturizerBase) -> str:
     Returns
     -------
     str
-        The featurizer's registry type, falling back to its class name.
+        The featurizer's alias if it has one, otherwise its registry type,
+        falling back to its class name.
 
     """
-    return getattr(feat, "type", type(feat).__name__)
+    # Read both through getattr: a featurizer unpickled from a model saved
+    # before aliases existed carries no alias attribute
+    return getattr(feat, "alias", None) or getattr(feat, "type", type(feat).__name__)
+
+
+def _flatten_block_keys(feats: list[FeaturizerBase]) -> list[str]:
+    """
+    Return the block keys a list of featurizers emits, flattening nested concatenators.
+
+    Parameters
+    ----------
+    feats : list of FeaturizerBase
+        The featurizers to collect block keys from, in column order.
+
+    Returns
+    -------
+    list of str
+        One key per emitted block; a nested concatenator contributes its
+        children's keys rather than one key for itself, matching how
+        ``featurize`` flattens the block list.
+
+    """
+    keys: list[str] = []
+    for feat in feats:
+        if isinstance(feat, FeatureConcatenator):
+            keys.extend(_flatten_block_keys(feat.featurizers))
+        else:
+            keys.append(_block_key(feat))
+    return keys
 
 
 @featurizers.register("FeatureConcatenator")
@@ -42,9 +71,9 @@ class FeatureConcatenator(FeaturizerBase):
     ----------
     featurizers : list of FeaturizerBase
         At least two featurizer instances to concatenate; concatenating fewer
-        is a no-op, so use the featurizer directly instead. Same-class
-        featurizers are rejected because per-key transforms key blocks by
-        featurizer name and cannot disambiguate same-class blocks.
+        is a no-op, so use the featurizer directly instead. Featurizers may
+        not share a block name, so give same-class featurizers distinct
+        aliases to combine them.
 
     """
 
@@ -147,12 +176,13 @@ class FeatureConcatenator(FeaturizerBase):
     @classmethod
     def reject_duplicates_and_sort(cls, value):
         """
-        Reject same-class featurizers and fix the block order.
+        Reject featurizers that share a block name and fix the block order.
 
-        Blocks are sorted by class name so that featurization and transformation
-        stay consistent across recipes naming the same featurizers. Same-class
-        featurizers are rejected because per-block transforms address blocks by
-        that name and could not tell two apart.
+        A block is named by its alias if it has one, otherwise by its type.
+        Blocks are sorted by name so that featurization and transformation stay
+        consistent across recipes naming the same featurizers. Per-block
+        transforms address blocks by name, so two blocks sharing one are
+        rejected, including a nested concatenator's blocks.
 
         Parameters
         ----------
@@ -162,35 +192,34 @@ class FeatureConcatenator(FeaturizerBase):
         Returns
         -------
         list
-            The featurizers sorted by class name.
+            The featurizers sorted by block name.
 
         Raises
         ------
         ValueError
-            If two featurizers share a class.
+            If two featurizers share a block name.
 
         """
         # Per-key transforms (e.g. per-block PCA) key blocks by featurizer name
-        # and cannot tell same-class blocks apart
-        names = [feat.__class__.__name__ for feat in value]
-        duplicates = sorted({name for name in names if names.count(name) > 1})
+        # and cannot tell two blocks sharing a name apart
+        keys = _flatten_block_keys(value)
+        duplicates = sorted({key for key in keys if keys.count(key) > 1})
         if duplicates:
             raise ValueError(
-                "FeatureConcatenator cannot combine multiple featurizers of the same "
-                f"class: {duplicates}. Per-key transforms cannot disambiguate same-class blocks."
+                "FeatureConcatenator cannot combine featurizers that share a block "
+                f"name: {duplicates}. Give each one a distinct `alias`."
             )
 
-        # Sort by class name
-        return sorted(value, key=lambda f: f.__class__.__name__)
+        # Sort by block key
+        return sorted(value, key=_block_key)
 
     def feature_block_keys(self) -> list[str]:
         """
         Return the feature block keys without featurizing.
 
-        Block widths are only knowable once ``featurize`` has run, but the keys
-        come from the featurizer types alone, so they are available at
-        construction time and can be checked against a transform's per-block
-        configuration before any data is loaded.
+        Unlike block widths, the keys do not depend on ``featurize``, so they can
+        be checked against a transform's per-block configuration before any data
+        is loaded.
 
         Returns
         -------
@@ -199,15 +228,7 @@ class FeatureConcatenator(FeaturizerBase):
             nested concatenators are flattened the same way.
 
         """
-        keys: list[str] = []
-        for feat in self.featurizers:
-            # A nested concatenator contributes its children's keys, not one key
-            # for itself, matching how featurize flattens the block list
-            if isinstance(feat, FeatureConcatenator):
-                keys.extend(feat.feature_block_keys())
-            else:
-                keys.append(_block_key(feat))
-        return keys
+        return _flatten_block_keys(self.featurizers)
 
     def feature_blocks(self) -> list[tuple[str, int]]:
         """

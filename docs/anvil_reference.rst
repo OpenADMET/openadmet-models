@@ -268,8 +268,8 @@ For example, featurization for a traditional machine learning model using finger
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
 2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
-``feat`` section itself. At least two are required, and no two may be of the same type: blocks are addressed by
-featurizer name, so same-type entries could not be told apart.
+``feat`` section itself. At least two are required. Featurizers of the same type must be disambiguated by specifying
+``alias`` (e.g. two ``FingerprintFeaturizer`` entries with aliases "ecfp4" and "rdkit").
 
 .. code-block:: yaml
 
@@ -305,6 +305,36 @@ other featurizer.
 The featurizer emits one column per target column of the pretrained model. Setting ``return_std`` appends a second
 block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
 deviation, so setting it against a single model raises when the recipe is parsed.
+
+For example, to combine pretrained models for different endpoints, set an ``alias`` in each entry's ``params``.
+
+.. code-block:: yaml
+
+   feat:
+     type: FeatureConcatenator
+     params:
+       featurizers:
+         - type: CheMeleonEmbeddingFeaturizer
+         - type: TrainedModelFeaturizer
+           params:
+             alias: log2fc
+             model_dir: models/chemprop_log2fc
+         - type: TrainedModelFeaturizer
+           params:
+             alias: htchem
+             model_dir: models/chemprop_htchem
+
+A per-block transform is configured against the aliases:
+
+.. code-block:: yaml
+
+   n_components:
+     CheMeleonEmbeddingFeaturizer: 256
+     log2fc: null
+     htchem: null
+
+Block names must be unique across the whole concatenator, including blocks from a nested ``FeatureConcatenator``.
+Duplicates are reported when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
@@ -354,11 +384,8 @@ Example: reduce a fingerprint featurizer to 256 PCA components before training.
         n_components: 256
         random_seed: 42
 
-Per-block PCA: give ``n_components`` as a mapping from featurizer name to component count. Each featurizer in the
-``FeatureConcatenator`` output keeps its own PCA and its own dimensionality, with a shared imputation step ahead of
-them. The keys must match the emitted blocks exactly, one entry per block and no extras; a mismatch is reported when
-the workflow is built, before any featurization runs. Note that a nested ``FeatureConcatenator`` contributes its
-children's blocks rather than one block of its own, so give a key per leaf featurizer.
+Per-block PCA: give ``n_components`` as a mapping from featurizer name (or ``alias``) to component count. A shared
+imputation step runs first, then each block is reduced by a separate PCA to the count given for it.
 
 .. code-block:: yaml
 
@@ -388,10 +415,8 @@ That recipe featurizes to 2223 columns: 223 from ``DescriptorFeaturizer`` and 20
 its default bit count. The median imputer fills missing descriptor values, then each block is reduced separately, and
 the model sees 32 + 256 = 288 columns.
 
-Blocks are keyed and ordered by featurizer class name, not by the order the recipe lists them, so the descriptor block
-comes first here even though ``FingerprintFeaturizer`` is written above it. Keying by class name is also why a
-``FeatureConcatenator`` rejects two featurizers of the same class, as noted above: their blocks would be
-indistinguishable.
+Blocks are ordered by block name, not by the order the recipe lists them, so the descriptor block comes first here
+even though ``FingerprintFeaturizer`` is written above it.
 
 Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
 reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would

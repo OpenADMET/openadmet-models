@@ -387,7 +387,10 @@ class PostHocComparison(ComparisonBase):
                                 ]
                             label = ""
                             for ind, (f, fparams) in enumerate(feat_items):
-                                if f == "DescriptorFeaturizer":
+                                # Label by alias so same-type entries stay distinct
+                                if fparams.get("alias"):
+                                    label += fparams["alias"]
+                                elif f == "DescriptorFeaturizer":
                                     label += fparams.get("descr_type", f)
                                 elif f == "FingerprintFeaturizer":
                                     label += fparams.get("fp_type", f)
