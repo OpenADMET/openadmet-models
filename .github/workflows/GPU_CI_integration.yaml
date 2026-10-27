@@ -50,31 +50,37 @@ jobs:
           ulimit -a
 
 
-      # More info on options: https://github.com/marketplace/actions/setup-micromamba
-      - uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: devtools/conda-envs/openadmet-models-gpu.yaml
-          environment-name: openadmet-models
-          cache-environment: true
-          condarc: |
-            channels:
-              - conda-forge
+      - name: Show GPU
+        run: nvidia-smi
 
+      # More info on options: https://github.com/astral-sh/setup-uv
+      # The self-hosted runner is ephemeral, so the GitHub Actions cache is not used
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          python-version: "3.12"
+          enable-cache: false
+
+      # The cuda extra selects the CUDA 12.6 torch wheels
       - name: Install package
-        # conda setup requires this special shell
-        shell: bash -l {0}
+        run: uv sync --locked --extra all --extra cuda
+
+      - name: Show installed packages
+        run: uv pip list
+
+      - name: Check that torch can use the GPU
+        env:
+          OPENADMET_EXPECT_DEVICE: cuda
         run: |
-          python -m pip install . --no-deps
-          micromamba list
+          uv run --no-sync pytest -v openadmet/models/tests/unit/test_devices.py
 
       - name: Run GPU integration tests
-        # conda setup requires this special shell
-        shell: bash -l {0}
         # use the `-m gpu` marker to run only GPU tests
         run: |
-          pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
+          uv run --no-sync pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          OPENADMET_EXPECT_DEVICE: cuda
 
       - name: Post to failure to Slack Channel
         if: ${{ failure() }}
