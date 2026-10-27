@@ -2,25 +2,18 @@ name: openadmet-models
 channels:
   - conda-forge
 dependencies:
-  - ase
   - catboost
   - chemprop >= 2.1.1
   - click
-  - codecov
   - datamol
   - fsspec
-  - h5py
-  - hyperopt
   - intake
   - intake-parquet
   - jinja2
   - joblib
-  - jupyterlab
   - lightgbm
   - loguru
   - matplotlib
-  - mdanalysis
-  - modal
   - mordredcommunity
   - numpy
   - pandas
@@ -44,7 +37,6 @@ dependencies:
   - statsmodels
   # - tabpfn
   - tabulate
-  - umap-learn
   - uncertainty-toolbox
   - xgboost
   - zarr >=3.0.0

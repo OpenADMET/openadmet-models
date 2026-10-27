@@ -88,17 +88,6 @@ report = [
   "statsmodels",
   "tabulate",
 ]
-# Listed in the original environment files but not imported by the package or its tests
-misc = [
-  "ase",
-  "codecov",
-  "h5py",
-  "hyperopt",
-  "jupyterlab",
-  "mdanalysis",
-  "modal",
-  "umap-learn",
-]
 test = [
   "pytest>=6.1.2",
   "pytest-cov",
@@ -106,7 +95,7 @@ test = [
   "pytest-xdist",
 ]
 all = [
-  "openadmet-models[models,train,report,test,misc]",
+  "openadmet-models[models,train,report,test]",
 ]
 
 [project.scripts]
