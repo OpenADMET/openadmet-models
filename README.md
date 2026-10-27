@@ -24,20 +24,50 @@ This library is made available under the [MIT](https://opensource.org/licenses/M
 
 ### Development version
 
-The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
-
-First install the package dependencies using `mamba`:
+The development version of `openadmet-models` is installed from a clone of this repository with [uv](https://docs.astral.sh/uv/). The repository ships a `uv.lock` for macOS (Apple silicon) and Linux (x86_64) on Python 3.12 and 3.13, and uv downloads the Python interpreter when none is installed.
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml
+git clone https://github.com/OpenADMET/openadmet-models.git
+cd openadmet-models
 ```
 
-The `openadmet-models` library can then be installed via:
+Pick the command for your hardware. It installs the package in editable mode with the training, model, and reporting dependencies plus the test tools.
 
+| Hardware | Command |
+|---|---|
+| macOS, Apple silicon (uses MPS) | `uv sync --extra all` |
+| Linux, CPU only | `uv sync --extra all --extra cpu` |
+| Linux, NVIDIA GPU (CUDA 12.6 wheels) | `uv sync --extra all --extra cuda` |
+
+On Linux, always pass `--extra cpu` or `--extra cuda`. Without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB of wheels including the NVIDIA libraries. Add `--python 3.13` to use Python 3.13 (the default is the first interpreter that satisfies `requires-python`).
+
+Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, or activate it with `source .venv/bin/activate`. A plain `uv run` syncs again using only the flags passed to it, and on Linux that replaces the torch build you selected. Check that torch can use your accelerator with:
+
+```bash
+OPENADMET_EXPECT_DEVICE=mps uv run --no-sync pytest openadmet/models/tests/unit/test_devices.py  # or cpu, cuda
 ```
-python -m pip install -e --no-deps .
+
+### Inference only
+
+To load a trained model directory and run `openadmet predict`, install the core dependencies plus the `infer` extra and skip the test tools:
+
+```bash
+uv sync --no-dev --extra infer              # macOS
+uv sync --no-dev --extra infer --extra cpu  # Linux, CPU only
 ```
+
+Models trained with the CatBoost, LightGBM, XGBoost, TabPFN, TabICL, or NePaRe architectures, the monroe featurizer, or the mordred descriptors import that backend when loaded. Add `--extra models` to install them.
+
+| Extra | Contents |
+|---|---|
+| `infer` | Modules imported by the CLI and when a model directory is parsed (plotting, reporting, uncertainty, and tracking libraries) |
+| `models` | Model backends and the monroe and mordred featurizers |
+| `train` | Anvil training dependencies (splitting, zarr output); includes `infer` |
+| `report` | S3 support for comparison reports; includes `infer` |
+| `all` | `infer`, `models`, `train`, and `report` |
+| `cpu`, `cuda` | Torch build selectors for Linux (see above) |
+
+Without uv, `pip install -e ".[all]"` resolves the extras from `pyproject.toml` without the lockfile, and torch comes from PyPI.
 
 
 ## Authors

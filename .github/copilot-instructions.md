@@ -7,21 +7,22 @@
 ## Install & Setup
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-python -m pip install -e --no-deps .
+uv sync --extra all                 # macOS
+uv sync --extra all --extra cpu     # Linux, CPU only
+uv sync --extra all --extra cuda    # Linux, NVIDIA GPU
 ```
 
 ## Commands
 
 ```bash
 # Run all unit tests
-pytest -v -n auto --cov=openadmet.models openadmet/models/tests/unit
+uv run --no-sync pytest -v -n auto --cov=openadmet.models openadmet/models/tests/unit
 
 # Run a single test file
-pytest -v openadmet/models/tests/unit/models/test_xgboost.py
+uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_xgboost.py
 
 # Run a single test
-pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
+uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
 ```
 
 Lint/format is enforced via pre-commit hooks (ruff, black, isort, flake8). There is no standalone lint command — run `pre-commit run --all-files` to check manually.

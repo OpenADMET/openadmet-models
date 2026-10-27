@@ -26,13 +26,16 @@ Installation
 ------------
 
 Follow the steps in the :doc:`installation` guide to set up your development environment.
-Remember to install the package in editable mode using:
+``uv sync`` installs the package in editable mode with the test tools, so changes to the source code are reflected immediately.
 
-.. code-block:: bash
+Dependencies are declared in ``pyproject.toml`` and resolved in ``uv.lock``. Add a dependency with
+``uv add <package>`` (core), ``uv add --optional <extra> <package>`` (a user-facing extra), or
+``uv add --group test <package>`` (a development tool), then commit ``pyproject.toml`` and ``uv.lock``. CI installs with
+``uv sync --locked`` and fails when ``uv.lock`` is out of date, which ``uv lock --check`` also detects.
 
-    pip install -e .
-
-This ensures that changes to the source code are reflected immediately.
+The torch build varies by hardware. The ``cpu`` and ``cuda`` extras route it to the PyTorch package
+indexes on Linux (see ``[tool.uv.sources]`` in ``pyproject.toml``), and ``[tool.uv] conflicts`` prevents installing the ``cpu`` and ``cuda`` extras together.
+To move to another CUDA version, change the URL and index name of ``pytorch-cu126`` (in the index table and in ``[tool.uv.sources]``), then run ``uv lock``.
 
 Testing
 -------
@@ -47,23 +50,28 @@ Tests are separated into **unit** and **integration** tests:
 In particular, the `Anvil` workflows are tested extensively in the integration test suite.
 
 Tests are automatically run on each pull request using GitHub Actions.
-You can also run the tests locally:
+You can also run the tests locally. Use ``uv run --no-sync`` (or activate ``.venv``) so that uv does not change the torch build
+selected at install time:
 
 .. code-block:: bash
 
     # From the root of the repository
 
     # Run integration tests
-    pytest openadmet/models/tests/integration
+    uv run --no-sync pytest openadmet/models/tests/integration
 
     # Run unit tests
-    pytest openadmet/models/tests/unit
+    uv run --no-sync pytest openadmet/models/tests/unit
 
 To run integration tests using a GPU (if available and properly configured):
 
 .. code-block:: bash
 
-    pytest -v -m gpu openadmet/models/tests/integration
+    uv run --no-sync pytest -v -m gpu openadmet/models/tests/integration
+
+The device smoke test (``openadmet/models/tests/unit/test_devices.py``) skips an accelerator that is unavailable.
+Define ``OPENADMET_EXPECT_DEVICE`` as ``cpu``, ``mps``, or ``cuda`` to make it fail instead when that accelerator is unusable.
+CI defines it for each runner type.
 
 Documentation
 -------------
@@ -72,13 +80,13 @@ The documentation is built using Sphinx and is located in the ``docs/`` director
 
 To build the documentation locally:
 
-1. Create a new conda environment using the dependencies listed in ``docs/environment.yml``.
+1. Create a new conda environment using the dependencies listed in ``docs/requirements.yaml``.
 2. Activate the environment and build the HTML docs.
 
 .. code-block:: bash
 
-    mamba env create -f docs/environment.yml
-    mamba activate openadmet_models_docs
+    mamba env create -f docs/requirements.yaml
+    mamba activate docs_openadmet_models
     cd docs
     make html
 

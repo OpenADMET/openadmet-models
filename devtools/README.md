@@ -1,35 +1,39 @@
 # Development, testing, and deployment tools
 
 This directory contains a collection of tools for running Continuous Integration (CI) tests,
-conda installation, and other development tools not directly related to the coding process.
+container builds, and other development tools not directly related to the coding process.
 
 
 ## Manifest
 
 ### Continuous Integration
 
-You should test your code, but do not feel compelled to use these specific programs. You also may not need Unix and
-Windows testing if you only plan to deploy on specific platforms. These are just to help you get started.
+The workflows in `.github/workflows` install the package with [uv](https://docs.astral.sh/uv/) from the committed `uv.lock`
+(`uv sync --locked`) and run the tests with `uv run --no-sync`. `CI.yaml` also checks that the inference-only install
+(core dependencies plus the `infer` extra) can run `openadmet --help` and import `openadmet.models.inference.inference`.
+Each workflow defines `OPENADMET_EXPECT_DEVICE` (`cpu` or `cuda`) so the device smoke test fails instead of skipping when the
+runner cannot use the expected accelerator.
 
-### Conda Environment:
+### Environment
 
-This directory contains the files to setup the Conda environment for testing purposes
+The environment is defined in the repository root, not in this directory:
 
-* `conda-envs`: directory containing the YAML file(s) which fully describe Conda Environments, their dependencies, and those dependency provenance's
-  * `test_env.yaml`: Simple test environment file with base dependencies. Channels are not specified here and therefore respect global Conda configuration
+* `pyproject.toml`: dependencies, extras (`infer`, `models`, `train`, `report`, `all`, `cpu`, `cuda`), the `test` and `dev` groups,
+  and the `[tool.uv]` settings (locked platforms, PyTorch indexes)
+* `uv.lock`: the resolved environment for macOS arm64 and Linux x86_64 on Python 3.12 and 3.13
 
-### Additional Scripts:
+After editing dependencies, run `uv lock` and commit `uv.lock` with `pyproject.toml`. `uv lock --check` verifies that they agree.
 
-This directory contains OS agnostic helper scripts which don't fall in any of the previous categories
-* `scripts`
-  * `create_conda_env.py`: Helper program for spinning up new conda environments based on a starter file with Python Version and Env. Name command-line options
+### Containers
+
+* `containers/Dockerfile`: builds an image from `uv.lock` (`all` and `cuda` extras by default; `--build-arg TORCH_EXTRA=cpu` for a CPU image)
 
 
 ## How to contribute changes
 - Clone the repository if you have write access to the main repo, fork the repository if you are a collaborator.
 - Make a new branch with `git checkout -b {your branch name}`
 - Make changes and test your code
-- Ensure that the test environment dependencies (`conda-envs`) line up with the build and deploy dependencies (`conda-recipe/meta.yaml`)
+- Ensure that `uv.lock` is up to date with `pyproject.toml` (`uv lock --check`)
 - Push the branch to the repo (either the main or your fork) with `git push -u origin {your branch name}`
   * Note that `origin` is the default name assigned to the remote, yours may be different
 - Make a PR on GitHub with your changes
