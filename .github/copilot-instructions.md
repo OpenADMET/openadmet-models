@@ -7,9 +7,10 @@
 ## Install & Setup
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-python -m pip install -e --no-deps .
+pixi install -e dev-cpu-py312
 ```
+
+Environments are named `<group>-<hardware>-py<version>` (groups `infer`, `full`, `dev`; hardware `cpu`, `mps`, `cuda`; Python `312`, `313`) and are defined in `pyproject.toml` and `pixi.lock`. Prefix commands with `pixi run -e dev-cpu-py312`.
 
 ## Commands
 

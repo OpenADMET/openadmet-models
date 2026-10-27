@@ -25,14 +25,14 @@ OpenADMET Models is distributed under the **MIT License** — see the
 Installation
 ------------
 
-Follow the steps in the :doc:`installation` guide to set up your development environment.
-Remember to install the package in editable mode using:
+Follow the steps in the :doc:`installation` guide and install a ``dev`` environment, for example:
 
 .. code-block:: bash
 
-    pip install -e .
+    pixi install -e dev-cpu-py312
 
-This ensures that changes to the source code are reflected immediately.
+pixi installs the package in editable mode, so changes to the source code are reflected immediately.
+Commit ``pixi.lock`` together with any change to the dependencies in ``pyproject.toml``.
 
 Testing
 -------
@@ -53,17 +53,21 @@ You can also run the tests locally:
 
     # From the root of the repository
 
-    # Run integration tests
-    pytest openadmet/models/tests/integration
-
     # Run unit tests
-    pytest openadmet/models/tests/unit
+    pixi run -e dev-cpu-py312 test-unit
+
+    # Run CPU integration tests
+    pixi run -e dev-cpu-py312 test-integration-cpu
 
 To run integration tests using a GPU (if available and properly configured):
 
 .. code-block:: bash
 
-    pytest -v -m gpu openadmet/models/tests/integration
+    pixi run -e dev-cuda-py312 test-integration-gpu
+
+Export ``OPENADMET_EXPECT_DEVICE`` as ``cpu``, ``mps``, or ``cuda`` to make the device smoke tests in ``test_devices.py`` fail, instead of skip, when that device is unusable. CI exports ``cpu`` on the hosted runners and ``cuda`` on the GPU runner.
+
+CI also installs the ``infer`` environment and runs ``pixi run -e infer-cpu-py312 smoke-infer``, which imports the inference path without the training and test dependencies.
 
 Documentation
 -------------
@@ -72,13 +76,13 @@ The documentation is built using Sphinx and is located in the ``docs/`` director
 
 To build the documentation locally:
 
-1. Create a new conda environment using the dependencies listed in ``docs/environment.yml``.
+1. Create a conda environment from ``docs/requirements.yaml``, the file that Read the Docs also uses. It is separate from the pixi environments.
 2. Activate the environment and build the HTML docs.
 
 .. code-block:: bash
 
-    mamba env create -f docs/environment.yml
-    mamba activate openadmet_models_docs
+    mamba env create -f docs/requirements.yaml
+    mamba activate docs_openadmet_models
     cd docs
     make html
 

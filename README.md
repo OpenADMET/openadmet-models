@@ -24,21 +24,37 @@ This library is made available under the [MIT](https://opensource.org/licenses/M
 
 ### Development version
 
-The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
-
-First install the package dependencies using `mamba`:
+The development version of `openadmet-models` is installed from a clone of this repository with [pixi](https://pixi.sh), which reads `pyproject.toml` and the committed `pixi.lock`:
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml
+git clone git@github.com:OpenADMET/openadmet-models.git
+cd openadmet-models
+pixi install
+pixi run openadmet --help
 ```
 
-The `openadmet-models` library can then be installed via:
+`pixi install` creates the `default` environment: every model backend, training tool, and report dependency on CPU with Python 3.12, with the package installed in editable mode. Other environments are called `<group>-<hardware>-py<version>`:
 
-```
-python -m pip install -e --no-deps .
+| Group | Contents |
+|---|---|
+| `infer` | Load a trained model directory and run `openadmet predict` |
+| `full` | `infer` plus the `models`, `train`, and `report` extras |
+| `dev` | `full` plus the test tools |
+
+| Hardware | Platform | Torch build |
+|---|---|---|
+| `cpu` | linux-64, osx-arm64 | CPU |
+| `mps` | osx-arm64 | macOS build with the Metal Performance Shaders (MPS) backend |
+| `cuda` | linux-64 | CUDA 12 |
+
+The version suffix is `py312` or `py313`. For example, install the development environment for a CUDA machine with:
+
+```bash
+pixi install -e dev-cuda-py312
+pixi run -e dev-cuda-py312 test-unit
 ```
 
+See the [installation guide](docs/installation.rst) for details.
 
 ## Authors
 
