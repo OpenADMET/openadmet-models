@@ -138,6 +138,138 @@ markers = [
   "gpu: integration test that needs a CUDA device",
 ]
 
+# Environments are managed with pixi (https://pixi.sh) and locked in pixi.lock
+# The tables below name the conda-forge build of each dependency; pixi resolves
+# [project.dependencies] and [project.optional-dependencies] from PyPI for everything
+# that conda-forge does not provide (the pinned git dependencies and their extras)
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", { name = "linux-64-cuda-12", platform = "linux-64", cuda = "12" }]
+
+# Conda counterparts of [project.dependencies]; keep version bounds in step with the PyPI list
+# mordredcommunity is a dependency of the pinned molfeat fork, so it belongs to the core set
+[tool.pixi.dependencies]
+click = "*"
+datamol = "*"
+email-validator = "*"
+fsspec = "*"
+intake = "*"
+jinja2 = "*"
+joblib = "*"
+lightning = "<=2.6.1"
+loguru = "*"
+mordredcommunity = "*"
+numpy = "*"
+pandas = "*"
+phx-class-registry = "*"
+pydantic = "*"
+pytorch-lightning = "<=2.6.1"
+pyyaml = "*"
+rdkit = "*"
+rich = "*"
+scikit-learn = "*"
+scipy = "*"
+setuptools = "<82.0.0"
+
+[tool.pixi.pypi-dependencies]
+openadmet-models = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+smoke-infer = { cmd = "openadmet --help && python -c 'import openadmet.models.inference.inference'", description = "Check that the inference path imports" }
+
+# Python version features
+# conda-forge chemprop 2.1.1 to 2.3.1 requires python <3.13, so Python 3.13 resolves chemprop from PyPI
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+chemprop = ">=2.1.1"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+# Hardware features select the torch build
+# The conda-forge macOS arm64 build serves both cpu and mps, so those two features differ only by name
+[tool.pixi.feature.cpu]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.cpu.target.linux-64.dependencies]
+pytorch-cpu = "*"
+
+[tool.pixi.feature.cpu.target.osx-arm64.dependencies]
+pytorch = "*"
+
+[tool.pixi.feature.mps]
+platforms = ["osx-arm64"]
+
+[tool.pixi.feature.mps.dependencies]
+pytorch = "*"
+
+[tool.pixi.feature.cuda]
+platforms = ["linux-64-cuda-12"]
+
+# Restrict to CUDA 12 builds; the linux-64-cuda-12 platform declares a driver that supports CUDA 12
+[tool.pixi.feature.cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = ">=12,<13"
+
+# Conda counterparts of the optional-dependency extras, one feature per extra
+# tabpfn-extensions stays on PyPI because the conda-forge build depends on conda-forge tabpfn, which would conflict with the pinned tabpfn commit
+[tool.pixi.feature.models.dependencies]
+catboost = "*"
+lightgbm = "*"
+tabicl = "*"
+xgboost = "*"
+
+[tool.pixi.feature.train.dependencies]
+intake-parquet = "*"
+splito = "*"
+uncertainty-toolbox = "*"
+wandb = "<0.26.0"
+zarr = ">=3.0.0"
+
+[tool.pixi.feature.report.dependencies]
+boto3 = "*"
+matplotlib-base = "*"
+reportlab = "*"
+s3fs = ">=2021.9"
+seaborn = "*"
+statsmodels = "*"
+tabulate = "*"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=6.1.2"
+pytest-cov = "*"
+pytest-mock = "*"
+pytest-xdist = "*"
+
+[tool.pixi.feature.test.tasks]
+test-unit = { cmd = "pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit", description = "Run the unit tests" }
+test-integration-cpu = { cmd = "pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration", description = "Run the CPU integration tests" }
+test-integration-gpu = { cmd = "pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml --color=yes openadmet/models/tests/integration", description = "Run the GPU integration tests" }
+
+# Environments are named <group>-<hardware>-py<version>
+# cpu and mps environments with the same Python version share a solve group; cuda environments have their own
+# The default environment is the full group on CPU with Python 3.12
+[tool.pixi.environments]
+default = { features = ["cpu", "py312", "models", "train", "report"], solve-group = "cpu-py312" }
+infer-cpu-py312 = { features = ["cpu", "py312", "report"], solve-group = "cpu-py312" }
+full-cpu-py312 = { features = ["cpu", "py312", "models", "train", "report"], solve-group = "cpu-py312" }
+dev-cpu-py312 = { features = ["cpu", "py312", "models", "train", "report", "test"], solve-group = "cpu-py312" }
+infer-mps-py312 = { features = ["mps", "py312", "report"], solve-group = "cpu-py312" }
+full-mps-py312 = { features = ["mps", "py312", "models", "train", "report"], solve-group = "cpu-py312" }
+dev-mps-py312 = { features = ["mps", "py312", "models", "train", "report", "test"], solve-group = "cpu-py312" }
+infer-cuda-py312 = { features = ["cuda", "py312", "report"], solve-group = "cuda-py312" }
+full-cuda-py312 = { features = ["cuda", "py312", "models", "train", "report"], solve-group = "cuda-py312" }
+dev-cuda-py312 = { features = ["cuda", "py312", "models", "train", "report", "test"], solve-group = "cuda-py312" }
+infer-cpu-py313 = { features = ["cpu", "py313", "report"], solve-group = "cpu-py313" }
+full-cpu-py313 = { features = ["cpu", "py313", "models", "train", "report"], solve-group = "cpu-py313" }
+dev-cpu-py313 = { features = ["cpu", "py313", "models", "train", "report", "test"], solve-group = "cpu-py313" }
+infer-mps-py313 = { features = ["mps", "py313", "report"], solve-group = "cpu-py313" }
+full-mps-py313 = { features = ["mps", "py313", "models", "train", "report"], solve-group = "cpu-py313" }
+dev-mps-py313 = { features = ["mps", "py313", "models", "train", "report", "test"], solve-group = "cpu-py313" }
+infer-cuda-py313 = { features = ["cuda", "py313", "report"], solve-group = "cuda-py313" }
+full-cuda-py313 = { features = ["cuda", "py313", "models", "train", "report"], solve-group = "cuda-py313" }
+dev-cuda-py313 = { features = ["cuda", "py313", "models", "train", "report", "test"], solve-group = "cuda-py313" }
+
 [tool.ruff.lint]
 select = ["D", "D213", "D101"]
 ignore = ["D212"]

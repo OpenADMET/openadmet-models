@@ -137,3 +137,6 @@ lightning_logs/
 
 # Cookiecutter-CMS Test Artifacts
 /tests/CI_files
+
+# pixi environments
+.pixi/
