@@ -1,25 +1,40 @@
-# Use the conda-forge base image with Python
-FROM mambaorg/micromamba:2-ubuntu24.04
+# Use the Ubuntu base image and copy in the uv binary
+FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.source=https://github.com/OpenADMET/openadmet-models
 LABEL org.opencontainers.image.description="OpenADMET models"
 LABEL org.opencontainers.image.licenses=MIT
 
+# Torch build for the image: cuda (CUDA 12.6 wheels) or cpu
+ARG TORCH_EXTRA=cuda
+
 # set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV CONDA_OVERRIDE_CUDA="12.4"
+ENV PYTHONUNBUFFERED=1 \
+    UV_PYTHON=3.12 \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_INSTALL_DIR=/home/ubuntu/python \
+    UV_PROJECT_ENVIRONMENT=/home/ubuntu/venv \
+    PATH=/home/ubuntu/venv/bin:$PATH
 
-RUN micromamba config append channels conda-forge
+COPY --from=ghcr.io/astral-sh/uv:0.12.7 /uv /uvx /usr/local/bin/
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER  devtools/conda-envs/openadmet-models-gpu.yaml /tmp/env.yaml
-COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
+# git is required to fetch the git dependencies pinned in uv.lock
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN micromamba install -y -n base git -f /tmp/env.yaml && \
-    micromamba clean --all --yes
+# Create the project directory as the ubuntu user so editable installs can write build metadata there
+USER ubuntu
+RUN mkdir -p /home/ubuntu/openadmet-models
+WORKDIR /home/ubuntu/openadmet-models
 
-ARG MAMBA_DOCKERFILE_ACTIVATE=1
+# Install locked dependencies first so source edits do not invalidate this layer
+COPY --chown=ubuntu:ubuntu pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project --extra all --extra ${TORCH_EXTRA}
 
+# Install the project in editable mode
+COPY --chown=ubuntu:ubuntu . .
+RUN uv sync --locked --extra all --extra ${TORCH_EXTRA}
 
-WORKDIR /home/mambauser
-
-RUN python -m pip install --no-deps -e openadmet-models
+WORKDIR /home/ubuntu
