@@ -6,12 +6,15 @@ dependencies:
   - boto3
   - catboost
   - chemprop >= 2.1.1
+  - click
   - codecov
   - datamol
+  - fsspec
   - h5py
   - hyperopt
   - intake
   - intake-parquet
+  - jinja2
   - joblib
   - jupyterlab
   - lightgbm
@@ -22,6 +25,7 @@ dependencies:
   - mordredcommunity
   - numpy
   - pandas
+  - pydantic
   - pip
   - python >= 3.12,<3.14
   - pytorch-gpu
@@ -30,10 +34,13 @@ dependencies:
   - pytest-mock
   - pytest-cov
   - pytest-xdist
+  - pyyaml
   - rdkit
+  - reportlab
   - rich
   - s3fs >=2021.9
   - scikit-learn
+  - scipy
   - seaborn
   - splito
   - statsmodels
@@ -48,10 +55,10 @@ dependencies:
     - phx-class-registry
     - tabicl
     - tabpfn-extensions
-    - git+https://github.com/PriorLabs/TabPFN.git@main
-    - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
+    - git+https://github.com/PriorLabs/TabPFN.git@35e57171f86fee30715d6a25e1fbe3452ea71020
+    - git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed
     - git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2
-    - git+https://github.com/OpenADMET/molfeat.git@main
-    - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
+    - git+https://github.com/OpenADMET/molfeat.git@cfe2abb4d451e94a7fbe98e7942ad4d5018de8cd
+    - git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f
     - setuptools <82.0.0
     - wandb < 0.26.0
