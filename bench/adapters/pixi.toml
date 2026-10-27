@@ -1,0 +1,42 @@
+# Skeleton adapter: the candidate agent replaces every TODO and changes status to "ready"
+schema = 1
+name = "pixi"
+status = "draft"
+description = "TODO: pixi manifest and pixi.lock"
+
+# TODO: list executables in order of preference, e.g. ["micromamba", "mamba"]; omit when not needed
+# installers = []
+
+tool_version = ["TODO: command that prints the tool version"]
+
+# TODO: regenerate the lockfile from the manifest (phase lock)
+lock = "TODO: lock command"
+
+# TODO: verify the committed lockfile is current without installing (phase lock_check)
+lock_check = "TODO: lock check command"
+
+# TODO: re-lock to a past date; {date} is YYYY-MM-DD (phase resolve_asof)
+lock_asof = "TODO: lock command with {date}"
+
+# TODO: prefix that runs a command inside the environment at {env_dir}
+run_prefix = "TODO: run prefix command"
+
+# TODO: optional command printing the full package list, with package_list_format as freeze, conda-json, or conda-export
+# package_list = "TODO: list command"
+# package_list_format = "freeze"
+
+# TODO: purge package and download caches (global mode only)
+clear_cache = "TODO: clear cache command"
+cache_dirs = ["TODO: cache path"]
+
+# TODO: directory measured as environment size; it must be {env_dir} or inside it
+env_location = "{env_dir}"
+
+# TODO: environment variables that redirect every cache below {cache_dir}
+[isolated_env]
+TODO_CACHE_VARIABLE = "TODO: {cache_dir}/example"
+
+# TODO: one table per hardware (cpu, mps, cuda, or any) and group (full, infer, or any)
+[install.any.any]
+note = "TODO"
+steps = ["TODO: install command creating the environment at {env_dir} from the lockfile"]

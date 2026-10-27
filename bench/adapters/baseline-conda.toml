@@ -1,0 +1,57 @@
+# Adapter for the baseline: conda environment files installed with micromamba (as CI does today)
+schema = 1
+name = "baseline-conda"
+status = "ready"
+description = "devtools/conda-envs/*.yaml via micromamba (mamba when micromamba is absent), then pip install . --no-deps"
+
+# First executable found on PATH becomes {installer}; the result record stores which one ran
+installers = ["micromamba", "mamba"]
+
+tool_version = ["{installer} --version"]
+
+# The baseline has no lockfile, so lock, lock_check, and lock_asof are omitted and those phases are skipped
+# conda has no exclude-newer option, so the time-travel phase is reported as unsupported
+
+run_prefix = "{installer} run -p {env_dir}"
+
+# Full package list including conda-only libraries; the harness also records Python distributions separately
+package_list = "{installer} list -p {env_dir} --json"
+package_list_format = "conda-json"
+
+# Global mode only: purges the real caches, so the driver requires --yes-clear-cache
+clear_cache = [
+  "{installer} clean --all -y",
+  { cmd = "{harness_python} -m pip cache purge", allow_failure = true },
+]
+cache_dirs = [
+  "~/Library/Caches/pip",
+  "~/.cache/pip",
+  "~/.conda/pkgs",
+  "~/micromamba/pkgs",
+  "$MAMBA_ROOT_PREFIX/pkgs",
+]
+
+# The measured and deleted environment is {env_dir} itself
+env_location = "{env_dir}"
+
+# Isolated mode (default) redirects every cache below the work dir so a cold run deletes only that directory
+[isolated_env]
+CONDA_PKGS_DIRS = "{cache_dir}/conda-pkgs"
+MAMBA_ROOT_PREFIX = "{cache_dir}/mamba-root"
+PIP_CACHE_DIR = "{cache_dir}/pip"
+
+# The CPU yaml (pytorch) serves cpu and mps cells; macOS builds of pytorch include MPS
+[install.any.any]
+note = "cpu yaml; there is no inference-only manifest, so the infer group installs the full environment"
+steps = [
+  "{installer} create -y -p {env_dir} -f {repo}/devtools/conda-envs/openadmet-models.yaml python={python}",
+  "{installer} run -p {env_dir} python -m pip install . --no-deps",
+]
+
+# The GPU yaml (pytorch-gpu) serves cuda cells
+[install.cuda.any]
+note = "gpu yaml; there is no inference-only manifest, so the infer group installs the full environment"
+steps = [
+  "{installer} create -y -p {env_dir} -f {repo}/devtools/conda-envs/openadmet-models-gpu.yaml python={python}",
+  "{installer} run -p {env_dir} python -m pip install . --no-deps",
+]
