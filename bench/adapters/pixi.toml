@@ -34,7 +34,7 @@ infer = "infer"
 # PIXI_HOME holds the config file written by the first install step, so the real ~/.pixi is never touched
 [env]
 PIXI_HOME = "{work_dir}/pixi-home"
-PIXI_NO_PROGRESS = "1"
+PIXI_NO_PROGRESS = "true"
 
 [isolated_env]
 PIXI_CACHE_DIR = "{cache_dir}/pixi"
