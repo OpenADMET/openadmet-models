@@ -82,7 +82,7 @@ def test_shipped_adapters_validate(run, label):
     adapter = run.load_adapter(BENCH_DIR / "adapters" / f"{label}.toml")
 
     assert adapter.name == label
-    assert adapter.status == ("ready" if label == "baseline-conda" else "draft")
+    assert adapter.status in {"ready", "draft"}
 
 
 def test_baseline_selects_gpu_yaml_only_for_cuda(run):

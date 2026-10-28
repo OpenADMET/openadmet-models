@@ -2,6 +2,7 @@
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,6 +10,18 @@ import pytest
 
 BENCH_DIR = Path(__file__).resolve().parents[1]
 SCRIPT = BENCH_DIR / "ci" / "run_matrix.sh"
+
+DRAFT_ADAPTER = """
+schema = 1
+name = "fake-draft"
+status = "draft"
+tool_version = ["TODO: version command"]
+run_prefix = "TODO: run prefix"
+clear_cache = ["TODO: clear cache command"]
+
+[install.any.any]
+steps = ["TODO: install command"]
+"""
 
 
 def run_matrix(tmp_path: Path, **overrides: str) -> subprocess.CompletedProcess[str]:
@@ -65,7 +78,12 @@ def test_covers_every_python_and_group(tmp_path: Path):
 
 
 def test_draft_adapter_is_refused_and_no_cell_runs(tmp_path: Path):
-    result = run_matrix(tmp_path, CANDIDATES="uv", DRY_RUN="")
+    harness = tmp_path / "harness"
+    (harness / "bench" / "adapters").mkdir(parents=True)
+    shutil.copy(BENCH_DIR / "run.py", harness / "bench" / "run.py")
+    (harness / "bench" / "adapters" / "fake-draft.toml").write_text(DRAFT_ADAPTER)
+
+    result = run_matrix(tmp_path, HARNESS_DIR=str(harness), CANDIDATES="fake-draft", DRY_RUN="")
 
     assert result.returncode == 3
     assert "refused: 1" in result.stdout
