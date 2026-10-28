@@ -3135,7 +3135,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
@@ -3146,15 +3145,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b8/2f/1a717a25e97caf76f6c4b28714399039302f0afa3e10e68e7730aa82b6d2/posthog-7.79.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
@@ -5293,7 +5291,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
@@ -5304,15 +5301,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b8/2f/1a717a25e97caf76f6c4b28714399039302f0afa3e10e68e7730aa82b6d2/posthog-7.79.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
@@ -7369,7 +7365,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
@@ -7380,15 +7375,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b8/2f/1a717a25e97caf76f6c4b28714399039302f0afa3e10e68e7730aa82b6d2/posthog-7.79.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
@@ -9507,7 +9501,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
@@ -9518,15 +9511,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b8/2f/1a717a25e97caf76f6c4b28714399039302f0afa3e10e68e7730aa82b6d2/posthog-7.79.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
@@ -11204,17 +11196,15 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/44/3159af4fb3c868970a412e294320ed6bb1a9fbdfa6431050eda8e0b34b6e/xarray-2026.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/40/02/dc8584d5b477eefea7090a581312e8e3f0f5b62d144f6089311070e82c3e/mhfp-1.9.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
   infer-cuda-py312:
@@ -12957,17 +12947,15 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/04/b57109ac39c90054ca8239daa61f619042b73406309c33df06d3b73a48a7/pandas_flavor-0.8.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/1b/fc307991cf79f1eb6fb1eaacfa6e6cf447975b81c4b2c6c923723e5a375d/astartes-1.3.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/44/3159af4fb3c868970a412e294320ed6bb1a9fbdfa6431050eda8e0b34b6e/xarray-2026.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/40/02/dc8584d5b477eefea7090a581312e8e3f0f5b62d144f6089311070e82c3e/mhfp-1.9.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/3c/67bfc03db3f6527a54a0f9b696809bca55eb6de27928829218ab7e6c40e7/descriptastorus-2.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7f/74/d2c27e03cb84251dfe7249b8e82923643c6d48fa4883b9476b025e7dc7eb/multiprocess-0.70.19-py313-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/85/cf/a46472f3b7230a3020d87bd61cda4b14363e415ceade9a5582280140edea/chemprop-2.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/bd/de/f7fe2171f2b650ef7dd455c4c7f6dbaf53cc942430a2e0ff6b2450e728b5/configargparse-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/98/da8804e01b727ed6d087055524b2b724619850270d94b14a34c833d2b47f/aimsim_core-2.2.3-py3-none-any.whl
 packages:
@@ -29029,21 +29017,6 @@ packages:
   - pandas>=0.23
   - xarray
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/30/39/1a28c30fef2de2e747d927e4ae7a7daffe9ffce2b5975f380c090d9af455/myerson-1.0.1-py3-none-any.whl
-  name: myerson
-  version: 1.0.1
-  sha256: 7853647241da738ae0e026872285d66a59abce9be61e2e7db8b99eafd6750087
-  requires_dist:
-  - tqdm
-  - numpy>=1.25
-  - networkx>=3.1
-  - chemprop>=2,<3 ; extra == 'chemprop'
-  - sphinx-rtd-theme ; extra == 'docs'
-  - sphinx ; extra == 'docs'
-  - torch-geometric>=2.3.1,<3 ; extra == 'explain'
-  - torch>=2.0.1,<3 ; extra == 'explain'
-  - pytest ; extra == 'test'
-  requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
   name: tabpfn-extensions
   version: 0.6.3
@@ -29212,53 +29185,6 @@ packages:
   requires_dist:
   - click>=5.0 ; extra == 'cli'
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/77/cc/6961102704251a17fc600839c2a79d36c0c55820b8430a38a9ea414471c8/chemprop-2.3.1-py3-none-any.whl
-  name: chemprop
-  version: 2.3.1
-  sha256: ee4fa72d1d3c65ebf29853b6eb470a0a7ce607946304b19ca7e1913a6330e8b9
-  requires_dist:
-  - lightning>=2.0
-  - numpy
-  - pandas
-  - rdkit
-  - scikit-learn
-  - scipy
-  - torch>=2.1
-  - astartes[molecules]
-  - configargparse
-  - rich
-  - descriptastorus
-  - cuik-molmaker-pin
-  - myerson>=1.0.1
-  - ray[tune] ; extra == 'hpopt'
-  - hyperopt ; extra == 'hpopt'
-  - optuna ; extra == 'hpopt'
-  - pydantic ; extra == 'hpopt'
-  - setuptools<82 ; extra == 'hpopt'
-  - black==23.* ; extra == 'dev'
-  - bumpversion ; extra == 'dev'
-  - autopep8 ; extra == 'dev'
-  - flake8 ; extra == 'dev'
-  - pytest ; extra == 'dev'
-  - pytest-cov ; extra == 'dev'
-  - isort ; extra == 'dev'
-  - nbsphinx ; extra == 'docs'
-  - sphinx ; extra == 'docs'
-  - sphinx-argparse!=0.5.0 ; extra == 'docs'
-  - sphinx-autobuild ; extra == 'docs'
-  - sphinx-autoapi ; extra == 'docs'
-  - sphinxcontrib-bibtex ; extra == 'docs'
-  - sphinx-book-theme ; extra == 'docs'
-  - nbsphinx-link ; extra == 'docs'
-  - ipykernel ; extra == 'docs'
-  - docutils<0.21 ; extra == 'docs'
-  - readthedocs-sphinx-ext ; extra == 'docs'
-  - pandoc ; extra == 'docs'
-  - pytest>=6.2 ; extra == 'test'
-  - pytest-cov ; extra == 'test'
-  - ipykernel ; extra == 'notebooks'
-  - matplotlib ; extra == 'notebooks'
-  requires_python: '>=3.11,<3.15'
 - pypi: https://files.pythonhosted.org/packages/78/63/b825f02b52ead3b895118f5356f6078a2763685c5e468242b073862f5c49/padelpy-0.1.17-py3-none-any.whl
   name: padelpy
   version: 0.1.17
@@ -29454,20 +29380,6 @@ packages:
   requires_dist:
   - numpy>=1.21.2
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/b2/60/c6edb070fe3c758f7472d3e4d4005b52b75ca448b08f08080556e9deba72/cuik_molmaker_pin-2026.3.5-py313-none-macosx_11_0_arm64.whl
-  name: cuik-molmaker-pin
-  version: 2026.3.5
-  sha256: 63e91e66dcc9f91b1ea6fb7d82d110490ee223978eb2efc91aadf8bb26912228
-  requires_dist:
-  - rdkit==2026.3.5
-  - scipy
-  - pandas
-  - black>=24.2.0 ; extra == 'dev'
-  - flake8>=7.3.0 ; extra == 'dev'
-  - isort>=5.13.2 ; extra == 'dev'
-  - pre-commit>=3.6.0 ; extra == 'dev'
-  - bump2version>=1.0.1 ; extra == 'dev'
-  requires_python: '>=3.11,<3.15'
 - pypi: https://files.pythonhosted.org/packages/b2/c6/3a85fc0b821ed2dfcf6fb7cfdf07e0b261ada40374583a50abb3480f2863/xxhash-4.0.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
   name: xxhash
   version: 4.0.2

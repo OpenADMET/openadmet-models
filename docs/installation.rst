@@ -64,7 +64,7 @@ The ``cpu`` and ``mps`` environments contain the same packages on Apple silicon;
 
 The Python version is ``py312`` or ``py313``. The three groups, three hardware targets, and two Python versions give 18 environments; only the combinations needed for a task have to be installed.
 
-Packages come from conda-forge unless it does not provide them. The pinned git dependencies (molfeat, neural-pairwise-regression, TabPFN, monroe, useful_rdkit_utils), tabpfn-extensions, and their dependencies come from PyPI. On Python 3.13, chemprop also comes from PyPI because conda-forge builds of chemprop support Python below 3.13 only. conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the environments use torch 2.12.
+Packages come from conda-forge unless it does not provide them. The pinned git dependencies (molfeat, neural-pairwise-regression, TabPFN, monroe, useful_rdkit_utils), tabpfn-extensions, and their dependencies come from PyPI. On Python 3.13, chemprop comes from PyPI because conda-forge builds of chemprop support Python below 3.13 only. It is pinned to 2.2.4: chemprop 2.3 imports the cuik_molmaker wheel, which needs the libraries bundled in the PyPI rdkit wheel and fails to load next to conda-forge rdkit. conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the environments use torch 2.12.
 
 Checking the device
 -------------------

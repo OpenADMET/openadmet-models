@@ -185,12 +185,17 @@ smoke-infer = { cmd = "openadmet --help && python -c 'import openadmet.models.in
 
 # Python version features
 # conda-forge chemprop 2.1.1 to 2.3.1 requires python <3.13, so Python 3.13 resolves chemprop from PyPI
+# chemprop 2.3 imports cuik_molmaker at module level and the PyPI cuik_molmaker wheel links the libraries bundled
+# in the PyPI rdkit wheel, which are absent next to conda-forge rdkit; chemprop 2.2.4 imports it only when installed
 [tool.pixi.feature.py312.dependencies]
 python = "3.12.*"
 chemprop = ">=2.1.1"
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
+
+[tool.pixi.feature.py313.pypi-dependencies]
+chemprop = "==2.2.4"
 
 # Hardware features select the torch build
 # The conda-forge macOS arm64 build serves both cpu and mps, so those two features differ only by name
