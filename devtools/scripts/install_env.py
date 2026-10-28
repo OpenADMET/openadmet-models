@@ -11,9 +11,9 @@ Inference-only environment on a CPU::
 
     python devtools/scripts/install_env.py --python 3.12 --hardware cpu --group infer --name openadmet-infer
 
-Development environment with the package installed in editable mode on an NVIDIA GPU host::
+Development environment in a given directory with the package installed in editable mode on an NVIDIA GPU host::
 
-    python devtools/scripts/install_env.py --python 3.12 --hardware cuda --group dev --package editable
+    python devtools/scripts/install_env.py --python 3.12 --hardware cuda --group dev --prefix /data/envs/openadmet --package editable
 
 """
 
@@ -104,7 +104,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--python", choices=("3.12", "3.13"), default="3.12")
     parser.add_argument("--hardware", choices=tuple(HARDWARE_HOSTS), default="cpu")
     parser.add_argument("--group", choices=tuple(GROUP_CATEGORIES), default="full")
-    parser.add_argument("--name", default="openadmet-models", help="Environment name")
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument("--name", default="openadmet-models", help="Environment name")
+    target.add_argument(
+        "--prefix", help="Environment directory; replaces --name when given"
+    )
     parser.add_argument(
         "--installer",
         help="micromamba or mamba 2 executable (default: search the PATH)",
@@ -135,22 +139,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         logger.error("%s", error)
         return 2
 
+    # Address the environment by directory or by name
+    location = ["--prefix", args.prefix] if args.prefix else ["--name", args.name]
+
     # Install the conda packages of the selected lock categories
-    command = [
-        installer,
-        "create",
-        "--yes",
-        "--name",
-        args.name,
-        "--file",
-        str(lockfile),
-    ]
+    command = [installer, "create", "--yes", *location, "--file", str(lockfile)]
     for category in GROUP_CATEGORIES[args.group]:
         command += ["--category", category]
     run(command)
 
     # Install the pip layer without dependencies, then verify that conda provided every requirement
-    pip = [installer, "run", "--name", args.name, "python", "-m", "pip"]
+    pip = [installer, "run", *location, "python", "-m", "pip"]
     install = [*pip, "install", "--no-deps"]
     for name in GROUP_PIP_FILES[args.group]:
         install += ["--requirement", str(SPEC_DIR / name)]
