@@ -1,5 +1,11 @@
 # Python version fragment, combined with the group specs and a hardware fragment by devtools/scripts/lock_envs.py
+# conda-forge has no chemprop build for Python 3.13, so pip-chemprop-3.13.txt installs it and this
+# fragment lists its requirements
 channels:
   - conda-forge
 dependencies:
   - python 3.13.*
+  - aimsim
+  - astartes
+  - configargparse
+  - descriptastorus

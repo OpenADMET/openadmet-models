@@ -17,7 +17,7 @@
 version: 1
 metadata:
   content_hash:
-    osx-arm64: 738e624cff35e349a0f70f40938f6cc9d249e6bc73fd22e63dba3b07f9897ebb
+    osx-arm64: 41a488ff283df9cbb70358b90cef979a3ab8a15fdb8d759d4765ba7dc2bee295
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -967,6 +967,30 @@ package:
   hash:
     md5: e0ac3accc64e23e40969d660e5f58ac8
     sha256: cb60ef3e0631c8bacb4f7057196dee4496091a22baa3bb4b9bccb12c7e1c921b
+  category: main
+  optional: false
+- name: chemprop
+  version: 2.2.4
+  manager: conda
+  platform: osx-arm64
+  dependencies:
+    aimsim: ''
+    astartes: ''
+    configargparse: ''
+    descriptastorus: ''
+    lightning: '>=2.0'
+    numpy: ''
+    pandas: ''
+    python: '>=3.11,<3.13'
+    pytorch: '>=2.1'
+    rdkit: ''
+    rich: ''
+    scikit-learn: ''
+    scipy: ''
+  url: https://conda.anaconda.org/conda-forge/noarch/chemprop-2.2.4-pyhd8ed1ab_0.conda
+  hash:
+    md5: dfec28740cb18c10cc757f92e0551972
+    sha256: de7399397a4d49f87b6ca632f43a8deea948600cfeb5c7f84a9baafd7e075d19
   category: main
   optional: false
 - name: click
@@ -3881,22 +3905,22 @@ package:
   category: main
   optional: false
 - name: librdkit
-  version: 2026.03.6
+  version: 2026.09.1
   manager: conda
   platform: osx-arm64
   dependencies:
     __osx: '>=11.0'
-    cairo: '>=1.18.4,<2.0a0'
+    cairo: '>=1.18.6,<2.0a0'
     eigen-abi: '>=5.0.1.100,<5.0.1.101.0a0'
     libboost: '>=1.90.0,<1.91.0a0'
     libcxx: '>=21'
-    libexpat: '>=2.8.1,<3.0a0'
+    libexpat: '>=2.8.5,<3.0a0'
     libfreetype: '>=2.14.3'
     libfreetype6: '>=2.14.3'
-  url: https://conda.anaconda.org/conda-forge/osx-arm64/librdkit-2026.03.6-h9a9744d_0.conda
+  url: https://conda.anaconda.org/conda-forge/osx-arm64/librdkit-2026.09.1-h9a9744d_1.conda
   hash:
-    md5: 04410171bd0ba68d4d4f596d7cf7b533
-    sha256: 39da6a7ae6fcd1b11acdae1afd54f433234558110f93d6304e3c3176c1884a46
+    md5: 6b3336722ee937baf30347e1f24fe878
+    sha256: 0c3d4e34e09d7f89de112434e69c35f4eb7ee889f093a3b43a629795042fa307
   category: main
   optional: false
 - name: libre2-11
@@ -4519,21 +4543,6 @@ package:
   hash:
     md5: 37293a85a0f4f77bbd9cf7aaefc62609
     sha256: d09c47c2cf456de5c09fa66d2c3c5035aa1fa228a1983a433c47b876aa16ce90
-  category: main
-  optional: false
-- name: myerson
-  version: 1.0.1
-  manager: conda
-  platform: osx-arm64
-  dependencies:
-    networkx: '>=3.1'
-    numpy: '>=1.25'
-    python: '>=3.11'
-    tqdm: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/myerson-1.0.1-pyhd8ed1ab_0.conda
-  hash:
-    md5: 80e2c38429dd0e0ae293e0736b421ca1
-    sha256: 348fea621528af341d3e63a832fbb6f357d3bb8fe41ba1653d6dcf20f17be2ac
   category: main
   optional: false
 - name: mypy_extensions
@@ -6067,33 +6076,33 @@ package:
   category: main
   optional: false
 - name: rdkit
-  version: 2026.03.6
+  version: 2026.09.1
   manager: conda
   platform: osx-arm64
   dependencies:
     __osx: '>=11.0'
-    cairo: '>=1.18.4,<2.0a0'
+    cairo: '>=1.18.6,<2.0a0'
     libboost: '>=1.90.0,<1.91.0a0'
     libboost-python: '>=1.90.0,<1.91.0a0'
     libcxx: '>=21'
-    libexpat: '>=2.8.1,<3.0a0'
+    libexpat: '>=2.8.5,<3.0a0'
     libfreetype: '>=2.14.3'
     libfreetype6: '>=2.14.3'
     libpq: '>=18.6,<19.0a0'
-    librdkit: 2026.03.6
+    librdkit: 2026.09.1
     matplotlib-base: ''
     numpy: '>=1.25,<3'
     pandas: ''
     pillow: ''
     pycairo: ''
-    python: '>=3.12,<3.13.0a0,>=3.12,<3.13.0a0'
+    python: '>=3.12,<3.13.0a0'
     python_abi: 3.12.*
     reportlab: ''
     sqlalchemy: ''
-  url: https://conda.anaconda.org/conda-forge/osx-arm64/rdkit-2026.03.6-py312hf9c8e25_0.conda
+  url: https://conda.anaconda.org/conda-forge/osx-arm64/rdkit-2026.09.1-py312h19d9302_1.conda
   hash:
-    md5: 6537b72d46a2d83d1faea88c774bcf4a
-    sha256: a2858d1dfe6ada1ec9e188d01a05a65782886f82119a39a528ee82179643074c
+    md5: 7dbafd4b5d9b9baa8360afdc5fc2bfc0
+    sha256: aa52bb8317cd0bbcb06db569b68dc4a408ccdc71b60bd8b50bf1e7a14e994286
   category: main
   optional: false
 - name: re2

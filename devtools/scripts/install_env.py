@@ -2,7 +2,7 @@
 Create a conda environment for openadmet-models from a committed lock file.
 
 The script installs the lock categories of one dependency group with micromamba, then installs the
-group's pip layer (git dependencies and PyPI-only packages) without dependencies and runs
+group's pip layer (see install_pip_layer.py) without dependencies and runs
 ``pip check``. See docs/installation.rst for the dependency groups and hardware flavors.
 
 Examples
@@ -30,19 +30,13 @@ from pathlib import Path
 logger = logging.getLogger("install_env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SPEC_DIR = REPO_ROOT / "devtools" / "conda-envs"
 LOCK_DIR = REPO_ROOT / "devtools" / "locks"
 
-# Lock categories and pip layer files installed for each dependency group
+# Lock categories installed for each dependency group
 GROUP_CATEGORIES = {
     "infer": ("main",),
     "full": ("main", "full"),
     "dev": ("main", "full", "dev"),
-}
-GROUP_PIP_FILES = {
-    "infer": ("pip-infer.txt",),
-    "full": ("pip-infer.txt", "pip-full.txt"),
-    "dev": ("pip-infer.txt", "pip-full.txt"),
 }
 
 # Operating system and machine accepted by each hardware flavor
@@ -148,12 +142,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         command += ["--category", category]
     run(command)
 
-    # Install the pip layer without dependencies, then verify that conda provided every requirement
-    pip = [installer, "run", *location, "python", "-m", "pip"]
-    install = [*pip, "install", "--no-deps"]
-    for name in GROUP_PIP_FILES[args.group]:
-        install += ["--requirement", str(SPEC_DIR / name)]
-    run(install)
+    # Install the pip layer with the Python of the new environment, then verify the requirements below
+    python = [installer, "run", *location, "python"]
+    run(
+        [
+            *python,
+            str(REPO_ROOT / "devtools" / "scripts" / "install_pip_layer.py"),
+            "--group",
+            args.group,
+        ]
+    )
+    pip = [*python, "-m", "pip"]
     if args.package != "none":
         editable = ["--editable"] if args.package == "editable" else []
         run([*pip, "install", "--no-deps", *editable, str(REPO_ROOT)])

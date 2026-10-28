@@ -40,6 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
+from install_pip_layer import STEPS
 from packaging.specifiers import SpecifierSet
 
 logger = logging.getLogger("lock_envs")
@@ -63,7 +64,7 @@ GROUP_SPECS = (
     "pip-requires-full.yaml",
     "dev.yaml",
 )
-PIP_SPECS = ("pip-infer.txt", "pip-full.txt")
+PIP_SPECS = tuple(step.file for step in STEPS)
 
 # PyPI names whose conda-forge name differs, or that a hardware fragment provides
 CONDA_NAMES = {"matplotlib": "matplotlib-base", "seaborn": "seaborn-base"}
@@ -262,13 +263,53 @@ def check_specs() -> list[str]:
                 "add a '# via <package>' comment naming a pip layer package that needs it"
             )
 
+    # Packages that neither the group specs nor the hardware fragments provide must come from the Python
+    # fragment (conda) or the pip layer (pip) of every supported Python version
+    fragments = {
+        py: _read_spec_dependencies(SPEC_DIR / f"python-{py}.yaml")
+        for py in PYTHON_VERSIONS
+    }
+    fragments = {
+        py: {n: v for n, v in deps.items() if n != "python"}
+        for py, deps in fragments.items()
+    }
+    fragment_names = {name for deps in fragments.values() for name in deps}
+    core = _declared(project, ["dependencies", "infer"])
+    for name, specifier in core.items():
+        if (
+            name in HARDWARE_PROVIDED
+            or CONDA_NAMES.get(name, name) in spec_dependencies["infer.yaml"]
+        ):
+            continue
+        for py in PYTHON_VERSIONS:
+            pip_files = [step.file for step in STEPS if step.python in (None, py)]
+            in_pip = any(
+                name in _read_pip_requirements(SPEC_DIR / file)[0] for file in pip_files
+            )
+            if not in_pip and name not in fragments[py]:
+                problems.append(
+                    f"{name} is not provided by python-{py}.yaml or the pip layer for Python {py}"
+                )
+            elif not in_pip:
+                missing = (
+                    set(specifier.split(","))
+                    - {""}
+                    - set(fragments[py][name].split(","))
+                )
+                if missing:
+                    problems.append(
+                        f"{name}: python-{py}.yaml is missing {','.join(sorted(missing))} from pyproject.toml"
+                    )
+
     # Each spec file must list exactly the conda packages of its pyproject.toml groups
     main_names = {name for spec in MAIN_SPECS for name in spec_dependencies[spec]}
     for spec_name, groups in EXACT_SPECS.items():
         expected = {
             CONDA_NAMES.get(name, name): specifier
             for name, specifier in _declared(project, groups).items()
-            if name not in pip_requirements and name not in HARDWARE_PROVIDED
+            if name not in pip_requirements
+            and name not in HARDWARE_PROVIDED
+            and name not in fragment_names
         }
         if spec_name == "full.yaml":
             expected = {

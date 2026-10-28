@@ -1,6 +1,6 @@
 # Infer group (lock category main): the core dependencies plus the infer extra of pyproject.toml
 # Package names are the conda-forge equivalents; chemprop, molfeat, and torch are installed elsewhere
-# (pip-infer.txt and the hardware fragments)
+# (python fragments, pip-molfeat.txt, and hardware fragments)
 # Checked against pyproject.toml by devtools/scripts/lock_envs.py check
 category: main
 channels:
@@ -22,8 +22,7 @@ dependencies:
   - pydantic
   - pytorch-lightning <=2.6.1
   - pyyaml
-  # cuik_molmaker_pin in pip-infer.txt requires exactly this release
-  - rdkit ==2026.03.6
+  - rdkit
   - rich
   - scikit-learn
   - scipy

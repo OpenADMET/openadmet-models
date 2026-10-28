@@ -1,6 +1,0 @@
-# Installed with `pip install --no-deps` after the infer lock category
-# Every runtime requirement of these packages is a conda package in the infer lock category
-# Commits match the git dependencies in pyproject.toml (checked by devtools/scripts/lock_envs.py check)
-chemprop==2.3.1
-cuik_molmaker_pin==2026.3.6  # via chemprop
-molfeat @ git+https://github.com/OpenADMET/molfeat.git@cfe2abb4d451e94a7fbe98e7942ad4d5018de8cd

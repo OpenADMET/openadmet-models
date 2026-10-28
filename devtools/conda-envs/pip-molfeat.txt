@@ -1,0 +1,6 @@
+# Installed with `pip install --no-deps --ignore-requires-python` after the infer lock category
+# The molfeat fork declares requires-python ">=3.9,<=3.13", which excludes every 3.13.x release under
+# PEP 440, so pip refuses it on Python 3.13 without --ignore-requires-python
+# Every requirement of molfeat is a conda package in the infer lock category
+# The commit matches the git dependency in pyproject.toml (checked by devtools/scripts/lock_envs.py check)
+molfeat @ git+https://github.com/OpenADMET/molfeat.git@cfe2abb4d451e94a7fbe98e7942ad4d5018de8cd

@@ -1,0 +1,6 @@
+# Installed with `pip install --no-deps` after the infer lock category, on Python 3.13 only
+# conda-forge builds chemprop only for Python below 3.13, and the Python 3.12 locks use that package
+# chemprop 2.3 imports cuik_molmaker, whose PyPI wheel links the hash-named libRDKit libraries of the
+# PyPI rdkit wheel and fails to import next to the conda-forge rdkit; chemprop 2.2.4 does not use it
+# Every requirement of chemprop is a conda package listed in python-3.13.yaml
+chemprop==2.2.4

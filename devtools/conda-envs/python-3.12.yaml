@@ -1,5 +1,7 @@
 # Python version fragment, combined with the group specs and a hardware fragment by devtools/scripts/lock_envs.py
+# The conda-forge chemprop package supports Python 3.12 and brings its own requirements
 channels:
   - conda-forge
 dependencies:
   - python 3.12.*
+  - chemprop >=2.1.1
