@@ -69,24 +69,30 @@ models = [
   "monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2",
   "mordredcommunity",
 ]
-# Anvil training workflow: splitting, zarr output, experiment tracking, uncertainty metrics
-train = [
-  "intake-parquet",
-  "splito",
-  "uncertainty-toolbox",
-  "useful_rdkit_utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f",
-  "wandb<0.26.0",
-  "zarr>=3.0.0",
-]
-# Evaluation plots, statistics, and PDF comparison reports
-report = [
+# Inference install: core plus the modules imported when the CLI starts (comparison reports) and when a
+# trained model directory is parsed (evaluator registry); model backends are separate, see models
+infer = [
   "boto3",
   "matplotlib",
   "reportlab",
-  "s3fs>=2021.9",
   "seaborn",
   "statsmodels",
   "tabulate",
+  "uncertainty-toolbox",
+  "wandb<0.26.0",
+]
+# Anvil training workflow: splitting and zarr output
+train = [
+  "openadmet-models[infer]",
+  "intake-parquet",
+  "splito",
+  "useful_rdkit_utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f",
+  "zarr>=3.0.0",
+]
+# Comparison reports that read from S3
+report = [
+  "openadmet-models[infer]",
+  "s3fs>=2021.9",
 ]
 test = [
   "pytest>=6.1.2",
@@ -95,7 +101,7 @@ test = [
   "pytest-xdist",
 ]
 all = [
-  "openadmet-models[models,train,report,test]",
+  "openadmet-models[infer,models,train,report,test]",
 ]
 
 [project.scripts]
