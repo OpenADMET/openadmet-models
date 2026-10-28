@@ -50,12 +50,12 @@ Each lock file serves three dependency groups, which are lock categories:
      - Load a trained model directory and run ``openadmet predict``
    * - ``full``
      - ``main``, ``full``
-     - ``infer`` plus model backends, the Anvil training workflow, and reports
+     - ``infer`` plus the ``models``, ``train``, and ``report`` extras
    * - ``dev``
      - ``main``, ``full``, ``dev``
      - ``full`` plus the test tools
 
-The ``infer`` group contains the core dependencies of ``pyproject.toml``, the report packages (matplotlib, seaborn, statsmodels, reportlab, boto3, s3fs, tabulate), and the requirements of ``molfeat``. The ``openadmet`` command imports the report packages when it starts, so the command fails without them. Model directories that use CatBoost, LightGBM, XGBoost, TabPFN, TabICL, NEPARE, or the Monroe featurizer need the ``full`` group because those libraries are not in ``infer``. The ``infer`` group covers ChemProp, random forest, and support vector models, based on the imports of ``openadmet/models/architecture``.
+The ``infer`` group is the core dependencies plus the ``infer`` extra of ``pyproject.toml`` (boto3, matplotlib, reportlab, seaborn, statsmodels, tabulate, uncertainty-toolbox, wandb), and the requirements of ChemProp and ``molfeat``. The ``openadmet`` command imports these packages when it starts. Model directories that use CatBoost, LightGBM, XGBoost, TabPFN, TabICL, NEPARE, or the Monroe featurizer need the ``full`` group because those libraries are not in ``infer``. The ``infer`` group covers ChemProp, random forest, and support vector models, based on the imports of ``openadmet/models/architecture``.
 
 Install with micromamba
 ~~~~~~~~~~~~~~~~~~~~~~~

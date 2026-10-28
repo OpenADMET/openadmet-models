@@ -17,6 +17,7 @@ The conda environments are locked with [conda-lock](https://conda.github.io/cond
 
 * `conda-envs`: the specs that the lock files are solved from
   * `infer.yaml`, `full.yaml`, `dev.yaml`: conda-forge packages of the dependency groups, one lock category each (`main`, `full`, `dev`)
+  * `pip-requires-infer.yaml`, `pip-requires-full.yaml`: conda packages that the pip layer needs
   * `pip-infer.txt`, `pip-full.txt`: pinned git dependencies and packages that conda-forge does not provide for every supported Python, installed with `pip install --no-deps` after the lock file
   * `python-3.12.yaml`, `python-3.13.yaml`: Python version fragments
   * `hardware-cpu.yaml`, `hardware-mps.yaml`, `hardware-cuda.yaml`: PyTorch build fragments
