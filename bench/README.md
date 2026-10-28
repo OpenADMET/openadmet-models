@@ -77,6 +77,23 @@ The `import`, `cli`, and `predict_smoke` commands run from an empty directory so
 
 After the last install the driver records environment size, package list, package-set hash, and Python and torch facts, then runs the checks. Unless `--keep-env` is given, the environment and source copy are removed at the end.
 
+## Running on GitHub Actions
+
+The workflow `.github/workflows/env_benchmark.yaml` runs the harness on GitHub runners and aggregates the results. One job covers one operating system, Python version, and group, and runs every candidate in that job so the candidates share a host and a network. Candidates run in a rotated order in each round. The script `bench/ci/run_matrix.sh` contains the loop and validates every input before it reaches a command line.
+
+| Cells | Runner |
+|---|---|
+| `linux-cpu` | `ubuntu-latest` |
+| `mac-cpu` | `macos-latest` (arm64) |
+| `linux-cuda` | AWS g4dn runner, only when the `run_gpu` input is true |
+| `mac-mps` | Not available on hosted runners; run it on a physical Mac with `run.py` |
+
+Inputs: `candidates` (space-separated adapter names), `rounds` (default 3), `run_gpu` (default false, starts a paid instance), and `asof_date` (adds the time-travel resolve phase). A push to a branch matching `env/bench/**` runs the workflow with the defaults, for example `git push origin env/harness:env/bench/run1`. Each candidate branch is checked out from the refs listed in the workflow `env` block.
+
+Each job uploads a results directory (`.jsonl` plus the per-run logs), and the `aggregate` job writes the `analyze.py` tables to the job summary and uploads `combined-results`. Caches are disabled in the tool setup steps and the harness redirects them below the work directory, so cold installs are cold. A candidate that fails a phase is recorded in the results and does not fail the job; a job fails only when no cell ran.
+
+To check the loop without installing anything, run the script with `DRY_RUN=1` and the variables listed at the top of `bench/ci/run_matrix.sh`.
+
 ## Safety
 
 * Environments are created only below `--work-dir`. The driver creates a `.openadmet-bench-workdir` marker there and refuses to use an existing non-empty directory without it, and refuses `/`, the home directory, and any directory that contains or is inside the repository.
