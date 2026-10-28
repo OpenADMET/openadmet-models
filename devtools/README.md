@@ -11,25 +11,35 @@ conda installation, and other development tools not directly related to the codi
 You should test your code, but do not feel compelled to use these specific programs. You also may not need Unix and
 Windows testing if you only plan to deploy on specific platforms. These are just to help you get started.
 
-### Conda Environment:
+### Conda environments
 
-This directory contains the files to setup the Conda environment for testing purposes
+The conda environments are locked with [conda-lock](https://conda.github.io/conda-lock/) so every install resolves to the same packages. See `docs/installation.rst` for how to install them.
 
-* `conda-envs`: directory containing the YAML file(s) which fully describe Conda Environments, their dependencies, and those dependency provenance's
-  * `test_env.yaml`: Simple test environment file with base dependencies. Channels are not specified here and therefore respect global Conda configuration
+* `conda-envs`: the specs that the lock files are solved from
+  * `infer.yaml`, `full.yaml`, `dev.yaml`: conda-forge packages of the dependency groups, one lock category each (`main`, `full`, `dev`)
+  * `pip-infer.txt`, `pip-full.txt`: pinned git dependencies and packages that conda-forge does not provide for every supported Python, installed with `pip install --no-deps` after the lock file
+  * `python-3.12.yaml`, `python-3.13.yaml`: Python version fragments
+  * `hardware-cpu.yaml`, `hardware-mps.yaml`, `hardware-cuda.yaml`: PyTorch build fragments
+  * `virtual-packages-cpu.yaml`, `virtual-packages-cuda.yaml`: the driver and OS versions the lock files assume
+* `locks`: generated lock files named `py<version>-<hardware>-lock.yml`; do not edit them by hand
+
+### Containers
+
+* `containers/Dockerfile`: image built by `.github/workflows/docker_deploy.yaml` from a CUDA lock file
 
 ### Additional Scripts:
 
 This directory contains OS agnostic helper scripts which don't fall in any of the previous categories
 * `scripts`
-  * `create_conda_env.py`: Helper program for spinning up new conda environments based on a starter file with Python Version and Env. Name command-line options
+  * `lock_envs.py`: regenerates the lock files and checks that the specs, `pyproject.toml`, and the lock files agree
+  * `install_env.py`: creates an environment from a lock file for a Python version, hardware flavor, and dependency group
 
 
 ## How to contribute changes
 - Clone the repository if you have write access to the main repo, fork the repository if you are a collaborator.
 - Make a new branch with `git checkout -b {your branch name}`
 - Make changes and test your code
-- Ensure that the test environment dependencies (`conda-envs`) line up with the build and deploy dependencies (`conda-recipe/meta.yaml`)
+- Make `pyproject.toml`, the specs in `conda-envs`, and the lock files in `locks` agree: edit the specs, run `python devtools/scripts/lock_envs.py lock`, and commit the lock files
 - Push the branch to the repo (either the main or your fork) with `git push -u origin {your branch name}`
   * Note that `origin` is the default name assigned to the remote, yours may be different
 - Make a PR on GitHub with your changes

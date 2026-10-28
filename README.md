@@ -26,18 +26,17 @@ This library is made available under the [MIT](https://opensource.org/licenses/M
 
 The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
 
-First install the package dependencies using `mamba`:
+Install `micromamba` (or mamba 2.0 or newer), then create an environment from a lock file in `devtools/locks`. Lock files exist for Python 3.12 and 3.13 and for the hardware flavors `cpu` (macOS arm64 and Linux), `mps` (macOS arm64), and `cuda` (Linux with an NVIDIA GPU):
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml
+micromamba create --name openadmet-models --file devtools/locks/py312-cpu-lock.yml \
+    --category main --category full
+micromamba run --name openadmet-models python -m pip install --no-deps \
+    -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+micromamba run --name openadmet-models python -m pip install --no-deps -e .
 ```
 
-The `openadmet-models` library can then be installed via:
-
-```
-python -m pip install -e --no-deps .
-```
+Use `--category main` and only `pip-infer.txt` for an inference-only environment, and add `--category dev` for the test tools. `python devtools/scripts/install_env.py --help` runs these steps for you. The [installation guide](docs/installation.rst) describes the dependency groups, conda users, and how to regenerate the lock files.
 
 
 ## Authors

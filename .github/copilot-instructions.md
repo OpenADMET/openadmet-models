@@ -7,9 +7,12 @@
 ## Install & Setup
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-python -m pip install -e --no-deps .
+micromamba create -n openadmet-models -f devtools/locks/py312-cpu-lock.yml --category main --category full --category dev
+micromamba run -n openadmet-models python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+micromamba run -n openadmet-models python -m pip install --no-deps -e .
 ```
+
+Lock files for other hardware (`mps`, `cuda`) and Python 3.13 are in `devtools/locks`. After changing dependencies, edit `devtools/conda-envs` and run `python devtools/scripts/lock_envs.py lock`.
 
 ## Commands
 

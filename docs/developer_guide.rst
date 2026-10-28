@@ -25,14 +25,34 @@ OpenADMET Models is distributed under the **MIT License** — see the
 Installation
 ------------
 
-Follow the steps in the :doc:`installation` guide to set up your development environment.
+Follow the steps in the :doc:`installation` guide to set up your development environment with the ``dev`` group.
 Remember to install the package in editable mode using:
 
 .. code-block:: bash
 
-    pip install -e .
+    python -m pip install --no-deps -e .
 
 This ensures that changes to the source code are reflected immediately.
+
+Dependencies and lock files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``pyproject.toml`` declares the dependencies of the package for pip users. The conda environments are described by ``devtools/conda-envs`` and locked in ``devtools/locks``:
+
+- ``infer.yaml``, ``full.yaml``, and ``dev.yaml`` list the conda-forge packages of each dependency group.
+- ``pip-infer.txt`` and ``pip-full.txt`` pin the git dependencies and the packages that conda-forge does not provide for every supported Python (ChemProp is limited to Python below 3.13 there). They are installed with ``pip install --no-deps``, so every requirement of these packages must be a conda package in the group specs. ``pip check`` reports a missing requirement.
+- ``python-*.yaml`` and ``hardware-*.yaml`` select the Python version and the PyTorch build.
+
+After you change a dependency in ``pyproject.toml``, change the matching entry in the group specs or the pip layer files and regenerate the lock files:
+
+.. code-block:: bash
+
+    python devtools/scripts/lock_envs.py lock      # all lock files, needs uvx or conda-lock 4.0.3 and network access
+    python devtools/scripts/lock_envs.py check     # specs against pyproject.toml, lock files against specs
+
+Run the script in the ``dev`` environment, which provides PyYAML and packaging. Solving the six lock files takes several minutes.
+
+``lock --python 3.12 --hardware cuda`` regenerates one lock file. CI runs ``check --specs-only`` on every pull request and the lock freshness check in the ``lock-check`` job. Commit the regenerated lock files with the change that caused them.
 
 Testing
 -------
@@ -63,7 +83,7 @@ To run integration tests using a GPU (if available and properly configured):
 
 .. code-block:: bash
 
-    pytest -v -m gpu openadmet/models/tests/integration
+    OPENADMET_EXPECT_DEVICE=cuda pytest -v -m gpu openadmet/models/tests/integration
 
 Documentation
 -------------
