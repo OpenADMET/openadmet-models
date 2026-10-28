@@ -98,6 +98,13 @@ jobs:
           run-install: false
           cache: false
 
+      # PyPI wheels of LightGBM and similar packages load a system libomp on macOS, which conda packages bundle;
+      # it is installed for every candidate so that only the install route differs, and the need is a finding
+      - name: Install libomp on macOS
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        run: brew install libomp
+
       - name: Host and tool versions
         shell: bash
         run: |
