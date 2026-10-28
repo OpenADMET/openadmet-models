@@ -30,6 +30,9 @@ dependencies plus the test tools.
     # Linux, NVIDIA GPU (CUDA 12.6 wheels)
     uv sync --extra all --extra cuda
 
+On macOS, the LightGBM and XGBoost wheels from PyPI link a system OpenMP runtime, so install it with Homebrew before using
+the ``models`` extra: ``brew install libomp``. On Linux, the LightGBM wheel needs the system ``libgomp`` (package ``libgomp1`` on Debian and Ubuntu).
+
 On Linux, always pass ``--extra cpu`` or ``--extra cuda``. Without one, PyPI supplies the CUDA 13 build of torch,
 which downloads about 3.4 GB of wheels including the NVIDIA libraries. The CUDA 12.6 wheels need an NVIDIA driver that
 supports CUDA 12.x (525 or newer, following NVIDIA's minor-version compatibility rule). Add ``--python 3.13`` to use Python 3.13.

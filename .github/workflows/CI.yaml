@@ -43,6 +43,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
+      # The LightGBM and XGBoost macOS wheels link a system OpenMP runtime
+      - name: Install OpenMP
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
       # Linux installs pick CPU-only torch; macOS uses the PyPI wheel
       - name: Install package
         run: uv sync --locked --extra all ${{ runner.os == 'Linux' && '--extra cpu' || '' }}

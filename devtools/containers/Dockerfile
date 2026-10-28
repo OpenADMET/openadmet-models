@@ -19,9 +19,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.7 /uv /uvx /usr/local/bin/
 
-# git is required to fetch the git dependencies pinned in uv.lock
+# git fetches the git dependencies pinned in uv.lock; libgomp1 is the OpenMP runtime that the LightGBM wheel links
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get install -y --no-install-recommends git ca-certificates libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Create the project directory as the ubuntu user so editable installs can write build metadata there
