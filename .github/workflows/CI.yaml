@@ -35,28 +35,41 @@ jobs:
           df -h
           ulimit -a
 
+      - name: Select lock file
+        id: lock
+        shell: bash
+        run: |
+          echo "file=devtools/locks/py$(echo '${{ matrix.python-version }}' | tr -d .)-cpu-lock.yml" >> "$GITHUB_OUTPUT"
+
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
+      # The lock file installs exactly the locked packages; create-args only selects the dev group's lock categories
       - uses: mamba-org/setup-micromamba@v2
         with:
-          environment-file: devtools/conda-envs/openadmet-models.yaml
+          environment-file: ${{ steps.lock.outputs.file }}
           environment-name: openadmet-models
           cache-environment: true
           condarc: |
             channels:
               - conda-forge
           create-args: >-
-            python=${{ matrix.python-version }}
+            --category main
+            --category full
+            --category dev
 
-      - name: Install package
+      - name: Install pip layer and package
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
+          python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
           python -m pip install . --no-deps
+          python -m pip check
           micromamba list
 
       - name: Run unit tests
         # conda setup requires this special shell
         shell: bash -l {0}
+        env:
+          OPENADMET_EXPECT_DEVICE: cpu
         run: |
           pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit
 
@@ -66,3 +79,68 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  test-infer:
+    name: Inference-only install on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select lock file
+        id: lock
+        shell: bash
+        run: |
+          echo "file=devtools/locks/py$(echo '${{ matrix.python-version }}' | tr -d .)-cpu-lock.yml" >> "$GITHUB_OUTPUT"
+
+      # The infer group is the main lock category (see docs/installation.rst)
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: ${{ steps.lock.outputs.file }}
+          environment-name: openadmet-models-infer
+          cache-environment: true
+          condarc: |
+            channels:
+              - conda-forge
+          create-args: >-
+            --category main
+
+      - name: Install pip layer and package
+        shell: bash -l {0}
+        run: |
+          python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt
+          python -m pip install . --no-deps
+          python -m pip check
+          micromamba list
+
+      - name: Check the command line interface and inference imports
+        shell: bash -l {0}
+        run: |
+          openadmet --help
+          openadmet predict --help
+          python -c "import openadmet.models.inference.inference"
+
+  lock-check:
+    name: Check lock files
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lock tools
+        run: python -m pip install pyyaml packaging conda-lock==4.0.3
+
+      # Compares the specs with pyproject.toml and the lock files with the specs
+      - name: Check specs and lock files
+        env:
+          CONDA_LOCK: conda-lock
+        run: python devtools/scripts/lock_envs.py check

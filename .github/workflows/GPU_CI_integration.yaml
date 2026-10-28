@@ -51,21 +51,37 @@ jobs:
 
 
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
+      # The lock file installs exactly the locked packages; create-args only selects the dev group's lock categories
       - uses: mamba-org/setup-micromamba@v2
         with:
-          environment-file: devtools/conda-envs/openadmet-models-gpu.yaml
+          environment-file: devtools/locks/py312-cuda-lock.yml
           environment-name: openadmet-models
           cache-environment: true
           condarc: |
             channels:
               - conda-forge
+          create-args: >-
+            --category main
+            --category full
+            --category dev
 
-      - name: Install package
+      - name: Install pip layer and package
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
+          python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
           python -m pip install . --no-deps
+          python -m pip check
           micromamba list
+
+      - name: Run device smoke tests
+        # conda setup requires this special shell
+        shell: bash -l {0}
+        # fails instead of skipping when torch cannot use the CUDA device
+        env:
+          OPENADMET_EXPECT_DEVICE: cuda
+        run: |
+          pytest -v openadmet/models/tests/unit/test_devices.py
 
       - name: Run GPU integration tests
         # conda setup requires this special shell
@@ -75,6 +91,7 @@ jobs:
           pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml  --color=yes openadmet/models/tests/integration
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          OPENADMET_EXPECT_DEVICE: cuda
 
       - name: Post to failure to Slack Channel
         if: ${{ failure() }}
