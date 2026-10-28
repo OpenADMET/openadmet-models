@@ -1,42 +1,55 @@
-# Skeleton adapter: the candidate agent replaces every TODO and changes status to "ready"
+# Adapter for pixi with the [tool.pixi.*] tables in pyproject.toml and pixi.lock (branch env/pixi)
 schema = 1
 name = "pixi"
-status = "draft"
-description = "TODO: pixi manifest and pixi.lock"
+status = "ready"
+description = "pixi install --locked into a detached environment at {env_dir}; environments are named <group>-<hardware>-py<312|313>"
 
-# TODO: list executables in order of preference, e.g. ["micromamba", "mamba"]; omit when not needed
-# installers = []
+tool_version = ["pixi --version"]
 
-tool_version = ["TODO: command that prints the tool version"]
+# The time-travel phase is omitted: no workspace-level exclude-newer setting was found for conda packages in pixi 0.83
+lock_check = "pixi lock --check"
+lock = ["rm -f pixi.lock", "pixi lock"]
 
-# TODO: regenerate the lockfile from the manifest (phase lock)
-lock = "TODO: lock command"
+# The manifest path must match the one used by install because pixi derives the detached environment path from it
+run_prefix = "pixi run --frozen --manifest-path {repo}/pyproject.toml -e {tool_group}-{hardware}-py{python_nodot}"
 
-# TODO: verify the committed lockfile is current without installing (phase lock_check)
-lock_check = "TODO: lock check command"
+package_list = "pixi list --manifest-path {repo}/pyproject.toml -e {tool_group}-{hardware}-py{python_nodot} --json"
+package_list_format = "conda-json"
 
-# TODO: re-lock to a past date; {date} is YYYY-MM-DD (phase resolve_asof)
-lock_asof = "TODO: lock command with {date}"
+# Global mode only: purges the real pixi cache, so the driver requires --yes-clear-cache
+clear_cache = ["pixi clean cache --yes"]
+cache_dirs = [
+  "~/Library/Caches/rattler",
+  "~/.cache/rattler",
+]
 
-# TODO: prefix that runs a command inside the environment at {env_dir}
-run_prefix = "TODO: run prefix command"
-
-# TODO: optional command printing the full package list, with package_list_format as freeze, conda-json, or conda-export
-# package_list = "TODO: list command"
-# package_list_format = "freeze"
-
-# TODO: purge package and download caches (global mode only)
-clear_cache = "TODO: clear cache command"
-cache_dirs = ["TODO: cache path"]
-
-# TODO: directory measured as environment size; it must be {env_dir} or inside it
+# The detached environment lives in a hashed directory below {env_dir}, and only one environment is installed per run
 env_location = "{env_dir}"
 
-# TODO: environment variables that redirect every cache below {cache_dir}
-[isolated_env]
-TODO_CACHE_VARIABLE = "TODO: {cache_dir}/example"
+# The harness group full maps to the pixi dev environment (full plus test tools)
+[group_aliases]
+full = "dev"
+infer = "infer"
 
-# TODO: one table per hardware (cpu, mps, cuda, or any) and group (full, infer, or any)
-[install.any.any]
-note = "TODO"
-steps = ["TODO: install command creating the environment at {env_dir} from the lockfile"]
+# PIXI_HOME holds the config file written by the first install step, so the real ~/.pixi is never touched
+[env]
+PIXI_HOME = "{work_dir}/pixi-home"
+PIXI_NO_PROGRESS = "1"
+
+[isolated_env]
+PIXI_CACHE_DIR = "{cache_dir}/pixi"
+RATTLER_CACHE_DIR = "{cache_dir}/rattler"
+
+[install.any.full]
+note = "dev environment (core plus all extras plus test tools)"
+steps = [
+  "pixi config set --global detached-environments {env_dir}",
+  "pixi install --locked --manifest-path {repo}/pyproject.toml -e {tool_group}-{hardware}-py{python_nodot}",
+]
+
+[install.any.infer]
+note = "infer environment (core plus the infer extra)"
+steps = [
+  "pixi config set --global detached-environments {env_dir}",
+  "pixi install --locked --manifest-path {repo}/pyproject.toml -e {tool_group}-{hardware}-py{python_nodot}",
+]
