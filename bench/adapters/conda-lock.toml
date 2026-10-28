@@ -1,42 +1,53 @@
-# Skeleton adapter: the candidate agent replaces every TODO and changes status to "ready"
+# Adapter for conda-lock lock files installed with micromamba (branch env/conda-lock)
 schema = 1
 name = "conda-lock"
-status = "draft"
-description = "TODO: conda-lock (lockfile solved from the conda yaml files)"
+status = "ready"
+description = "devtools/locks/*.yml installed by devtools/scripts/install_env.py into a prefix at {env_dir}"
 
-# TODO: list executables in order of preference, e.g. ["micromamba", "mamba"]; omit when not needed
-# installers = []
+# Only micromamba is listed because mamba 1.x cannot read these lock files
+installers = ["micromamba"]
 
-tool_version = ["TODO: command that prints the tool version"]
+tool_version = ["{installer} --version"]
 
-# TODO: regenerate the lockfile from the manifest (phase lock)
-lock = "TODO: lock command"
+# conda-lock has no exclude-newer option, so the time-travel phase is omitted
+# The lock commands run through uvx and need network access to fetch conda-lock
+lock = "uvx --with pyyaml --with packaging python devtools/scripts/lock_envs.py lock --python {python} --hardware {hardware}"
+lock_check = "uvx --with pyyaml --with packaging python devtools/scripts/lock_envs.py check --python {python} --hardware {hardware}"
 
-# TODO: verify the committed lockfile is current without installing (phase lock_check)
-lock_check = "TODO: lock check command"
+run_prefix = "{installer} run -p {env_dir}"
 
-# TODO: re-lock to a past date; {date} is YYYY-MM-DD (phase resolve_asof)
-lock_asof = "TODO: lock command with {date}"
+package_list = "{installer} list -p {env_dir} --json"
+package_list_format = "conda-json"
 
-# TODO: prefix that runs a command inside the environment at {env_dir}
-run_prefix = "TODO: run prefix command"
+# Global mode only: purges the real caches, so the driver requires --yes-clear-cache
+clear_cache = [
+  "{installer} clean --all -y",
+  { cmd = "{harness_python} -m pip cache purge", allow_failure = true },
+]
+cache_dirs = [
+  "~/Library/Caches/pip",
+  "~/.cache/pip",
+  "~/.conda/pkgs",
+  "~/micromamba/pkgs",
+  "$MAMBA_ROOT_PREFIX/pkgs",
+]
 
-# TODO: optional command printing the full package list, with package_list_format as freeze, conda-json, or conda-export
-# package_list = "TODO: list command"
-# package_list_format = "freeze"
-
-# TODO: purge package and download caches (global mode only)
-clear_cache = "TODO: clear cache command"
-cache_dirs = ["TODO: cache path"]
-
-# TODO: directory measured as environment size; it must be {env_dir} or inside it
 env_location = "{env_dir}"
 
-# TODO: environment variables that redirect every cache below {cache_dir}
-[isolated_env]
-TODO_CACHE_VARIABLE = "TODO: {cache_dir}/example"
+# The harness group full maps to the dev lock category (full plus test tools)
+[group_aliases]
+full = "dev"
+infer = "infer"
 
-# TODO: one table per hardware (cpu, mps, cuda, or any) and group (full, infer, or any)
+# Isolated mode redirects the conda package cache and the pip cache of the pip layer below the work dir
+[isolated_env]
+CONDA_PKGS_DIRS = "{cache_dir}/conda-pkgs"
+MAMBA_ROOT_PREFIX = "{cache_dir}/mamba-root"
+PIP_CACHE_DIR = "{cache_dir}/pip"
+
+# One install table covers every cell: the script picks the lock file from the Python version and hardware
 [install.any.any]
-note = "TODO"
-steps = ["TODO: install command creating the environment at {env_dir} from the lockfile"]
+note = "install_env.py with --prefix; installs the lock categories of the group, then the pip layer, then the package without dependencies"
+steps = [
+  "{harness_python} devtools/scripts/install_env.py --python {python} --hardware {hardware} --group {tool_group} --prefix {env_dir} --installer {installer} --package regular",
+]
