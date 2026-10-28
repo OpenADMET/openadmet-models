@@ -109,6 +109,8 @@ DEFAULT_PHASES = {
 BASE_PLACEHOLDERS = frozenset(
     {
         "python",
+        "python_nodot",
+        "tool_group",
         "hardware",
         "group",
         "repo",
@@ -138,6 +140,7 @@ TOP_LEVEL_KEYS = frozenset(
         "env_location",
         "env",
         "isolated_env",
+        "group_aliases",
     }
 )
 PACKAGE_LIST_FORMATS = ("freeze", "conda-json", "conda-export")
@@ -241,6 +244,7 @@ class Adapter:
     env_location: str
     env: Mapping[str, str]
     isolated_env: Mapping[str, str]
+    group_aliases: Mapping[str, str]
     install: Mapping[tuple[str, str], InstallSpec]
 
     @property
@@ -427,6 +431,39 @@ def _parse_steps(
     return tuple(steps)
 
 
+def _parse_group_aliases(raw: object, errors: list[str]) -> dict[str, str]:
+    """
+    Validate the optional ``group_aliases`` table.
+
+    Parameters
+    ----------
+    raw : object
+        Parsed TOML value for ``group_aliases``.
+    errors : list of str
+        Collector that receives validation messages.
+
+    Returns
+    -------
+    dict of str to str
+        Map from a harness group to the environment group name used by the tool.
+
+    """
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        errors.append("group_aliases must be a table")
+        return {}
+    aliases: dict[str, str] = {}
+    for group, alias in raw.items():
+        if group not in GROUPS:
+            errors.append(f"group_aliases.{group}: group must be one of {GROUPS}")
+        elif not isinstance(alias, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", alias):
+            errors.append(f"group_aliases.{group}: alias must match [a-z0-9][a-z0-9-]*")
+        else:
+            aliases[group] = alias
+    return aliases
+
+
 def _parse_str_table(
     value: Any, where: str, allowed: frozenset[str], draft: bool, errors: list[str]
 ) -> dict[str, str]:
@@ -540,6 +577,9 @@ def validate_adapter(data: Mapping[str, Any], path: Path) -> Adapter:
         data.get("isolated_env"), "isolated_env", allowed, draft, errors
     )
 
+    # Parse the group aliases that map a harness group to the tool's own environment name
+    group_aliases = _parse_group_aliases(data.get("group_aliases"), errors)
+
     # Parse the install sub-tables
     install: dict[tuple[str, str], InstallSpec] = {}
     install_raw = data.get("install", {})
@@ -599,6 +639,7 @@ def validate_adapter(data: Mapping[str, Any], path: Path) -> Adapter:
         env_location=env_location,
         env=env,
         isolated_env=isolated_env,
+        group_aliases=group_aliases,
         install=install,
     )
 
@@ -1332,6 +1373,8 @@ def build_state(
 
     context = {
         "python": opts.python,
+        "python_nodot": opts.python.replace(".", ""),
+        "tool_group": adapter.group_aliases.get(opts.group, opts.group),
         "hardware": opts.hardware,
         "group": opts.group,
         "repo": str(source_dir),

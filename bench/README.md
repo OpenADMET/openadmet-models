@@ -135,6 +135,9 @@ UV_PROJECT_ENVIRONMENT = "{env_dir}"
 [isolated_env]                         # extra variables in isolated cache mode
 UV_CACHE_DIR = "{cache_dir}/uv"
 
+[group_aliases]                        # optional; maps a harness group to the tool's own environment group
+full = "dev"                           # exposed as {tool_group}; defaults to the harness group
+
 [install.<hardware>.<group>]           # hardware: cpu|mps|cuda|any; group: full|infer|any
 note  = "free text recorded with the result"
 steps = ["cmd one", "cmd two"]
@@ -144,7 +147,7 @@ Rules:
 
 * A command value is a string or a list. A list item is a string or an inline table `{ cmd = "...", allow_failure = true }`. An empty or omitted value means "not applicable" and the phase is skipped.
 * Install lookup order is `<hardware>.<group>`, `<hardware>.any`, `any.<group>`, `any.any`. A cell with no match is recorded with `status = "skipped"`.
-* Placeholders: `{python}` (for example `3.12`), `{hardware}`, `{group}`, `{repo}` (the source copy), `{env_dir}`, `{work_dir}`, `{cache_dir}`, `{installer}` (only when `installers` is present), `{harness_python}`, and `{date}` (only in `lock_asof`). Write `{{` and `}}` for literal braces.
+* Placeholders: `{python}` (for example `3.12`), `{python_nodot}` (`312`), `{tool_group}` (the group, or its alias), `{hardware}`, `{group}`, `{repo}` (the source copy), `{env_dir}`, `{work_dir}`, `{cache_dir}`, `{installer}` (only when `installers` is present), `{harness_python}`, and `{date}` (only in `lock_asof`). Write `{{` and `}}` for literal braces.
 * Each command is split with `shlex` first and placeholders are expanded per token, so values with spaces stay intact. There is no shell, so pipes, `&&`, and `$VAR` are not interpreted; use a list of steps and the `[env]` tables instead.
 * Install steps run with the source copy as working directory and must create the environment at `{env_dir}`. `run_prefix` must make `python`, `pytest`, and `openadmet` resolve inside that environment.
 * A `ready` adapter must define `tool_version`, `run_prefix`, `clear_cache`, and at least one `install` table, and must contain no `TODO`. Unknown keys and placeholders are errors.

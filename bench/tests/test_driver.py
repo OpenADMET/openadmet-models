@@ -132,6 +132,17 @@ def test_ready_adapter_rejects_invalid_content(run, tmp_path, edit, message):
         run.load_adapter(path)
 
 
+def test_group_alias_is_loaded_and_rejects_unknown_group(run, tmp_path):
+    good = FAKE_ADAPTER + '\n[group_aliases]\nfull = "dev"\n'
+    bad = FAKE_ADAPTER + '\n[group_aliases]\nnightly = "dev"\n'
+
+    adapter = run.load_adapter(write_adapter(tmp_path, good))
+
+    assert adapter.group_aliases == {"full": "dev"}
+    with pytest.raises(run.AdapterError, match="group must be one of"):
+        run.load_adapter(write_adapter(tmp_path, bad))
+
+
 def test_draft_adapter_accepts_todo_placeholders(run, tmp_path):
     body = (
         'schema = 1\nname = "fake"\nstatus = "draft"\n'
@@ -739,3 +750,11 @@ def test_missing_executable_reports_exit_127(run, tmp_path):
     )
 
     assert code == 127
+
+
+def test_expand_argv_supports_python_without_dot_and_tool_group(run):
+    context = {"python_nodot": "313", "tool_group": "dev", "hardware": "cpu"}
+
+    argv = run.expand_argv("pixi run -e {tool_group}-{hardware}-py{python_nodot}", context)
+
+    assert argv == ["pixi", "run", "-e", "dev-cpu-py313"]
