@@ -1,0 +1,311 @@
+name: Environment tooling benchmark
+
+# Benchmarks the environment tooling candidates from issue #615 on GitHub runners.
+# Each job installs every candidate on the same host, in a rotated order per round,
+# so that host and network differences cancel in the comparison.
+#
+# Trigger: run the workflow manually once it exists on the default branch, or push
+# the harness branch to a branch matching env/bench/** (for example
+# `git push origin env/harness:env/bench/run1`), which uses the input defaults.
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidates:
+        description: "Space-separated adapter names"
+        default: "baseline-conda conda-lock pixi uv"
+      rounds:
+        description: "Repetitions of the candidate list per Python and group (1 to 99)"
+        default: "3"
+      run_gpu:
+        description: "Also run the CUDA cells on the AWS GPU runner (starts a paid instance)"
+        type: boolean
+        default: false
+      asof_date:
+        description: "Optional YYYY-MM-DD; adds the time-travel resolve phase"
+        default: ""
+  push:
+    branches:
+      - "env/bench/**"
+
+concurrency:
+  group: env-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Branches under test; change these to benchmark other refs
+  BRANCH_BASELINE_CONDA: env/base
+  BRANCH_CONDA_LOCK: env/conda-lock
+  BRANCH_PIXI: env/pixi
+  BRANCH_UV: env/uv
+
+jobs:
+  bench-hosted:
+    name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, ${{ matrix.group }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+        group: [full, infer]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: harness
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_BASELINE_CONDA }}
+          path: cand/baseline-conda
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_CONDA_LOCK }}
+          path: cand/conda-lock
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_PIXI }}
+          path: cand/pixi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_UV }}
+          path: cand/uv
+
+      # The harness uses only the standard library; this Python is not the one under test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Install the tool binaries with all caching disabled so cold installs are cold
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          init-shell: none
+          cache-environment: false
+          cache-downloads: false
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - uses: prefix-dev/setup-pixi@v0.11.2
+        with:
+          pixi-version: v0.83.0
+          run-install: false
+          cache: false
+
+      - name: Host and tool versions
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          python3 --version
+          micromamba --version
+          uv --version
+          pixi --version
+
+      - name: Check adapters
+        shell: bash
+        run: python3 -I harness/bench/run.py --check-adapters
+
+      - name: Run the benchmark matrix
+        shell: bash
+        env:
+          HARNESS_DIR: ${{ github.workspace }}/harness
+          CAND_ROOT: ${{ github.workspace }}/cand
+          WORK_DIR: ${{ runner.temp }}/openadmet-bench
+          RESULTS: ${{ runner.temp }}/results/${{ matrix.os }}-py${{ matrix.python-version }}-${{ matrix.group }}.jsonl
+          OUT_ROOT: ${{ runner.temp }}/results/runs
+          HARDWARE: cpu
+          PYTHONS: ${{ matrix.python-version }}
+          BENCH_GROUPS: ${{ matrix.group }}
+          CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
+          ASOF_DATE: ${{ inputs.asof_date }}
+        run: |
+          mkdir -p "$(dirname "$RESULTS")"
+          bash "$HARNESS_DIR/bench/ci/run_matrix.sh"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: bench-results-${{ matrix.os }}-py${{ matrix.python-version }}-${{ matrix.group }}
+          path: ${{ runner.temp }}/results
+          retention-days: 30
+          if-no-files-found: warn
+
+  # The GPU instance is started and stopped around a single job so that every candidate
+  # runs on the same machine; the job sequence follows GPU_CI_integration.yaml
+  start-aws-runner:
+    if: ${{ inputs.run_gpu }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      mapping: ${{ steps.aws-start.outputs.mapping }}
+      instances: ${{ steps.aws-start.outputs.instances }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GPU_SELF_HOSTED_ARN }}
+          aws-region: us-east-1
+      - name: Create cloud runner
+        id: aws-start
+        uses: omsf/start-aws-gha-runner@v1.0.0
+        with:
+          aws_image_id: ami-010e080c2b31bb75e
+          aws_instance_type: g4dn.xlarge
+          aws_home_dir: /home/ubuntu
+          aws_root_device_size: 200
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
+  bench-gpu:
+    name: linux-cuda, all candidates
+    needs: start-aws-runner
+    runs-on: ${{ fromJSON(needs.start-aws-runner.outputs.instances) }}
+    timeout-minutes: 600
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: harness
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_BASELINE_CONDA }}
+          path: cand/baseline-conda
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_CONDA_LOCK }}
+          path: cand/conda-lock
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_PIXI }}
+          path: cand/pixi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_UV }}
+          path: cand/uv
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          init-shell: none
+          cache-environment: false
+          cache-downloads: false
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - uses: prefix-dev/setup-pixi@v0.11.2
+        with:
+          pixi-version: v0.83.0
+          run-install: false
+          cache: false
+
+      - name: Host and tool versions
+        shell: bash
+        run: |
+          uname -a
+          nvidia-smi
+          df -h
+          python3 --version
+          micromamba --version
+          uv --version
+          pixi --version
+
+      - name: Check adapters
+        shell: bash
+        run: python3 -I harness/bench/run.py --check-adapters
+
+      - name: Run the benchmark matrix
+        shell: bash
+        env:
+          HARNESS_DIR: ${{ github.workspace }}/harness
+          CAND_ROOT: ${{ github.workspace }}/cand
+          WORK_DIR: ${{ runner.temp }}/openadmet-bench
+          RESULTS: ${{ runner.temp }}/results/linux-cuda.jsonl
+          OUT_ROOT: ${{ runner.temp }}/results/runs
+          HARDWARE: cuda
+          PYTHONS: "3.12 3.13"
+          BENCH_GROUPS: "full infer"
+          CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
+          ASOF_DATE: ${{ inputs.asof_date }}
+        run: |
+          mkdir -p "$(dirname "$RESULTS")"
+          bash "$HARNESS_DIR/bench/ci/run_matrix.sh"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: bench-results-linux-cuda
+          path: ${{ runner.temp }}/results
+          retention-days: 30
+          if-no-files-found: warn
+
+  stop-aws-runner:
+    needs:
+      - start-aws-runner
+      - bench-gpu
+    if: ${{ always() && needs.start-aws-runner.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GPU_SELF_HOSTED_ARN }}
+          aws-region: us-east-1
+      - name: Stop instances
+        uses: omsf/stop-aws-gha-runner@v1.0.0
+        with:
+          instance_mapping: ${{ needs.start-aws-runner.outputs.mapping }}
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
+  aggregate:
+    name: Aggregate results
+    needs:
+      - bench-hosted
+      - bench-gpu
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bench-results-*
+          path: collected
+
+      - name: Combine results and write the summary
+        shell: bash
+        run: |
+          mkdir -p combined
+          find collected -name '*.jsonl' -print0 | xargs -0 -r cat > combined/results.jsonl
+          wc -l combined/results.jsonl
+          if [ -s combined/results.jsonl ]; then
+            python3 -I bench/analyze.py combined/results.jsonl > combined/summary.md
+            head -c 900000 combined/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No results were collected" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: combined-results
+          path: combined
+          retention-days: 90
+          if-no-files-found: warn
