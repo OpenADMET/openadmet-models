@@ -57,18 +57,6 @@ dependencies = [
 "Documentation" = "https://openadmet-models.readthedocs.io/en/latest/?badge=latest"
 
 [project.optional-dependencies]
-# Inference install: core plus the modules imported by `openadmet --help` (comparison reports) and by the
-# evaluator registry that loads when a trained model directory is parsed
-infer = [
-  "boto3",
-  "matplotlib",
-  "reportlab",
-  "seaborn",
-  "statsmodels",
-  "tabulate",
-  "uncertainty-toolbox",
-  "wandb<0.26.0",
-]
 # Model backends registered by openadmet.models.architecture
 models = [
   "catboost",
@@ -81,7 +69,19 @@ models = [
   "monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2",
   "mordredcommunity",
 ]
-# Anvil training workflow: splitting, zarr output, experiment tracking
+# Inference install: core plus the modules imported when the CLI starts (comparison reports) and when a
+# trained model directory is parsed (evaluator registry); model backends are separate, see models
+infer = [
+  "boto3",
+  "matplotlib",
+  "reportlab",
+  "seaborn",
+  "statsmodels",
+  "tabulate",
+  "uncertainty-toolbox",
+  "wandb<0.26.0",
+]
+# Anvil training workflow: splitting and zarr output
 train = [
   "openadmet-models[infer]",
   "intake-parquet",
@@ -89,12 +89,12 @@ train = [
   "useful_rdkit_utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f",
   "zarr>=3.0.0",
 ]
-# Comparison reports with S3 paths
+# Comparison reports that read from S3
 report = [
   "openadmet-models[infer]",
   "s3fs>=2021.9",
 ]
-# Everything a user needs to train, evaluate, and report
+# Everything a user needs to train, evaluate, and report; test tools are in the test dependency group
 all = [
   "openadmet-models[infer,models,train,report]",
 ]
