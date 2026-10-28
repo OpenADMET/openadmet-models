@@ -88,7 +88,7 @@ The workflow `.github/workflows/env_benchmark.yaml` runs the harness on GitHub r
 | `linux-cuda` | AWS g4dn runner, only when the `run_gpu` input is true |
 | `mac-mps` | Not available on hosted runners; run it on a physical Mac with `run.py` |
 
-Inputs: `candidates` (space-separated adapter names), `rounds` (default 3), `run_gpu` (default false, starts a paid instance), and `asof_date` (adds the time-travel resolve phase). A push to a branch matching `env/bench/**` runs the workflow with the defaults, for example `git push origin env/harness:env/bench/run1`. Each candidate branch is checked out from the refs listed in the workflow `env` block.
+Inputs: `candidates` (space-separated adapter names), `rounds` (default 1), `run_gpu` (default false, starts a paid instance), and `asof_date` (adds the time-travel resolve phase). A push to a branch matching `env/bench/**` runs the workflow with the defaults, for example `git push origin env/harness:env/bench/run1`. Each candidate branch is checked out from the refs listed in the workflow `env` block.
 
 Each job uploads a results directory (`.jsonl` plus the per-run logs), and the `aggregate` job writes the `analyze.py` tables to the job summary and uploads `combined-results`. Caches are disabled in the tool setup steps and the harness redirects them below the work directory, so cold installs are cold. A candidate that fails a phase is recorded in the results and does not fail the job; a job fails only when no cell ran.
 

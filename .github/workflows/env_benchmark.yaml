@@ -6,7 +6,8 @@ name: Environment tooling benchmark
 #
 # Trigger: run the workflow manually once it exists on the default branch, or push
 # the harness branch to a branch matching env/bench/** (for example
-# `git push origin env/harness:env/bench/run1`), which uses the input defaults.
+# `git push origin env/harness:env/bench/run1`), which uses the input defaults (one round).
+# Results from several pushes can be combined by downloading their artifacts.
 
 on:
   workflow_dispatch:
@@ -16,7 +17,7 @@ on:
         default: "baseline-conda conda-lock pixi uv"
       rounds:
         description: "Repetitions of the candidate list per Python and group (1 to 99)"
-        default: "3"
+        default: "1"
       run_gpu:
         description: "Also run the CUDA cells on the AWS GPU runner (starts a paid instance)"
         type: boolean
@@ -123,7 +124,7 @@ jobs:
           PYTHONS: ${{ matrix.python-version }}
           BENCH_GROUPS: ${{ matrix.group }}
           CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
-          ROUNDS: ${{ inputs.rounds || '3' }}
+          ROUNDS: ${{ inputs.rounds || '1' }}
           ASOF_DATE: ${{ inputs.asof_date }}
         run: |
           mkdir -p "$(dirname "$RESULTS")"
@@ -239,7 +240,7 @@ jobs:
           PYTHONS: "3.12 3.13"
           BENCH_GROUPS: "full infer"
           CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
-          ROUNDS: ${{ inputs.rounds || '3' }}
+          ROUNDS: ${{ inputs.rounds || '1' }}
           ASOF_DATE: ${{ inputs.asof_date }}
         run: |
           mkdir -p "$(dirname "$RESULTS")"
