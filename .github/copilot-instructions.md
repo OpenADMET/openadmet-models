@@ -8,7 +8,7 @@
 
 ```bash
 micromamba create -n openadmet-models -f devtools/locks/py312-cpu-lock.yml --category main --category full --category dev
-micromamba run -n openadmet-models python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+micromamba run -n openadmet-models python devtools/scripts/install_pip_layer.py --group dev
 micromamba run -n openadmet-models python -m pip install --no-deps -e .
 ```
 

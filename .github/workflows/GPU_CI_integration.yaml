@@ -69,7 +69,7 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+          python devtools/scripts/install_pip_layer.py --group dev
           python -m pip install . --no-deps
           python -m pip check
           micromamba list

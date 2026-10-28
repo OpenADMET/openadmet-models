@@ -15,7 +15,8 @@ ARG LOCK_CATEGORIES="--category main --category full"
 
 # micromamba only recognizes lock files whose name ends in -lock.yml
 COPY --chown=$MAMBA_USER:$MAMBA_USER ${LOCK_FILE} /tmp/openadmet-models-lock.yml
-COPY --chown=$MAMBA_USER:$MAMBA_USER devtools/conda-envs/pip-infer.txt devtools/conda-envs/pip-full.txt /tmp/
+COPY --chown=$MAMBA_USER:$MAMBA_USER devtools/scripts/install_pip_layer.py /tmp/devtools/scripts/
+COPY --chown=$MAMBA_USER:$MAMBA_USER devtools/conda-envs/pip-*.txt /tmp/devtools/conda-envs/
 
 RUN micromamba install -y -n base -f /tmp/openadmet-models-lock.yml ${LOCK_CATEGORIES} && \
     micromamba clean --all --yes
@@ -23,7 +24,7 @@ RUN micromamba install -y -n base -f /tmp/openadmet-models-lock.yml ${LOCK_CATEG
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
 # The pip layer contains the git dependencies; git is part of the lock file
-RUN python -m pip install --no-deps -r /tmp/pip-infer.txt -r /tmp/pip-full.txt
+RUN python /tmp/devtools/scripts/install_pip_layer.py --group full
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
 
