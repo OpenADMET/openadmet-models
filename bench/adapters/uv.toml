@@ -1,42 +1,63 @@
-# Skeleton adapter: the candidate agent replaces every TODO and changes status to "ready"
+# Adapter for uv with pyproject.toml extras and uv.lock (branch env/uv)
 schema = 1
 name = "uv"
-status = "draft"
-description = "TODO: uv with pyproject.toml and uv.lock"
+status = "ready"
+description = "uv sync --locked from uv.lock with a managed interpreter, into a project environment at {env_dir}"
 
-# TODO: list executables in order of preference, e.g. ["micromamba", "mamba"]; omit when not needed
-# installers = []
+tool_version = ["uv --version"]
 
-tool_version = ["TODO: command that prints the tool version"]
+lock = "uv lock"
+lock_check = "uv lock --check"
+lock_asof = "uv lock --exclude-newer {date}T00:00:00Z"
 
-# TODO: regenerate the lockfile from the manifest (phase lock)
-lock = "TODO: lock command"
+# The harness runs this prefix from an empty directory, so the project is passed explicitly
+run_prefix = "uv run --no-sync --project {repo}"
 
-# TODO: verify the committed lockfile is current without installing (phase lock_check)
-lock_check = "TODO: lock check command"
+package_list = "uv pip freeze --python {env_dir}/bin/python"
+package_list_format = "freeze"
 
-# TODO: re-lock to a past date; {date} is YYYY-MM-DD (phase resolve_asof)
-lock_asof = "TODO: lock command with {date}"
+# Global mode only: purges the real caches, so the driver requires --yes-clear-cache
+clear_cache = ["uv cache clean"]
+cache_dirs = [
+  "~/Library/Caches/uv",
+  "~/.cache/uv",
+  "~/.local/share/uv/python",
+]
 
-# TODO: prefix that runs a command inside the environment at {env_dir}
-run_prefix = "TODO: run prefix command"
-
-# TODO: optional command printing the full package list, with package_list_format as freeze, conda-json, or conda-export
-# package_list = "TODO: list command"
-# package_list_format = "freeze"
-
-# TODO: purge package and download caches (global mode only)
-clear_cache = "TODO: clear cache command"
-cache_dirs = ["TODO: cache path"]
-
-# TODO: directory measured as environment size; it must be {env_dir} or inside it
 env_location = "{env_dir}"
 
-# TODO: environment variables that redirect every cache below {cache_dir}
-[isolated_env]
-TODO_CACHE_VARIABLE = "TODO: {cache_dir}/example"
+[env]
+UV_PROJECT_ENVIRONMENT = "{env_dir}"
+# Install the interpreter through uv so that it counts as part of the install, as conda does
+UV_PYTHON_PREFERENCE = "only-managed"
+UV_NO_PROGRESS = "1"
 
-# TODO: one table per hardware (cpu, mps, cuda, or any) and group (full, infer, or any)
-[install.any.any]
-note = "TODO"
-steps = ["TODO: install command creating the environment at {env_dir} from the lockfile"]
+# Isolated mode redirects the wheel cache, git checkouts, and managed interpreters below the work dir
+[isolated_env]
+UV_CACHE_DIR = "{cache_dir}/uv"
+UV_PYTHON_INSTALL_DIR = "{cache_dir}/uv-python"
+
+# The cpu extra selects the CPU torch index on Linux and is a no-op on macOS; mps uses the PyPI wheel
+[install.cpu.full]
+note = "uv sync --locked --extra all --extra cpu (includes the default dev group with test tools)"
+steps = ["uv sync --locked --python {python} --extra all --extra cpu"]
+
+[install.cpu.infer]
+note = "uv sync --locked --no-dev --extra infer --extra cpu"
+steps = ["uv sync --locked --python {python} --no-dev --extra infer --extra cpu"]
+
+[install.mps.full]
+note = "uv sync --locked --extra all"
+steps = ["uv sync --locked --python {python} --extra all"]
+
+[install.mps.infer]
+note = "uv sync --locked --no-dev --extra infer"
+steps = ["uv sync --locked --python {python} --no-dev --extra infer"]
+
+[install.cuda.full]
+note = "uv sync --locked --extra all --extra cuda (CUDA 12.6 wheels)"
+steps = ["uv sync --locked --python {python} --extra all --extra cuda"]
+
+[install.cuda.infer]
+note = "uv sync --locked --no-dev --extra infer --extra cuda (CUDA 12.6 wheels)"
+steps = ["uv sync --locked --python {python} --no-dev --extra infer --extra cuda"]
