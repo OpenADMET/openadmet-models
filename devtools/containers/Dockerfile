@@ -1,4 +1,4 @@
-# Use the conda-forge base image with Python
+# Use the conda-forge base image with micromamba
 FROM mambaorg/micromamba:2-ubuntu24.04
 
 LABEL org.opencontainers.image.source=https://github.com/OpenADMET/openadmet-models
@@ -7,19 +7,27 @@ LABEL org.opencontainers.image.licenses=MIT
 
 # set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV CONDA_OVERRIDE_CUDA="12.4"
 
-RUN micromamba config append channels conda-forge
+# Lock file to install, relative to the repository root; the CUDA builds are pinned inside it
+ARG LOCK_FILE=devtools/locks/py312-cuda-lock.yml
+# Lock categories to install (the full dependency group, see docs/installation.rst)
+ARG LOCK_CATEGORIES="--category main --category full"
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER  devtools/conda-envs/openadmet-models-gpu.yaml /tmp/env.yaml
-COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
+# micromamba only recognizes lock files whose name ends in -lock.yml
+COPY --chown=$MAMBA_USER:$MAMBA_USER ${LOCK_FILE} /tmp/openadmet-models-lock.yml
+COPY --chown=$MAMBA_USER:$MAMBA_USER devtools/conda-envs/pip-infer.txt devtools/conda-envs/pip-full.txt /tmp/
 
-RUN micromamba install -y -n base git -f /tmp/env.yaml && \
+RUN micromamba install -y -n base -f /tmp/openadmet-models-lock.yml ${LOCK_CATEGORIES} && \
     micromamba clean --all --yes
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
+# The pip layer contains the git dependencies; git is part of the lock file
+RUN python -m pip install --no-deps -r /tmp/pip-infer.txt -r /tmp/pip-full.txt
+
+COPY --chown=$MAMBA_USER:$MAMBA_USER  .  /home/mambauser/openadmet-models
 
 WORKDIR /home/mambauser
 
-RUN python -m pip install --no-deps -e openadmet-models
+RUN python -m pip install --no-deps -e openadmet-models && \
+    python -m pip check

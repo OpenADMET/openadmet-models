@@ -50,6 +50,9 @@ jobs:
         with:
           context: .
           file: devtools/containers/Dockerfile
+          # The image installs the CUDA lock file; change LOCK_FILE to build a CPU image
+          build-args: |
+            LOCK_FILE=devtools/locks/py312-cuda-lock.yml
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
