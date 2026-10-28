@@ -1,0 +1,61 @@
+# Infer group (lock category main): load a trained model directory and run `openadmet predict`
+# Names are the conda-forge equivalents of the dependencies table in pyproject.toml, plus the
+# runtime requirements of the pip layer (devtools/conda-envs/pip-infer.txt) and of the openadmet CLI
+# chemprop itself is in the pip layer
+# Checked against pyproject.toml by devtools/scripts/lock_envs.py check
+category: main
+channels:
+  - conda-forge
+dependencies:
+  # pyproject.toml dependencies
+  - click
+  - datamol
+  - email-validator
+  - fsspec
+  - intake
+  - jinja2
+  - joblib
+  - lightning <=2.6.1
+  - loguru
+  - numpy
+  - pandas
+  - phx-class-registry
+  - pydantic
+  - pytorch-lightning <=2.6.1
+  - pyyaml
+  # cuik_molmaker_pin in pip-infer.txt requires exactly this release
+  - rdkit ==2026.03.6
+  - rich
+  - scikit-learn
+  - scipy
+  - setuptools <82.0.0
+  # Installs the pip layer from pinned git commits
+  - git
+  - pip
+  # Imported at module level by openadmet.models.comparison.posthoc, which the openadmet CLI
+  # loads for every subcommand (pyproject.toml report extra)
+  - boto3
+  - matplotlib-base
+  - reportlab
+  - s3fs >=2021.9
+  - seaborn-base
+  - statsmodels
+  - tabulate
+  # Runtime requirements of chemprop, which pip-infer.txt installs because the conda-forge
+  # package is limited to Python below 3.13
+  - aimsim
+  - astartes
+  - configargparse
+  - descriptastorus
+  - myerson >=1.0.1
+  # Runtime requirements of molfeat, which pip-infer.txt installs without dependencies
+  - filelock
+  - gcsfs >=2021.9
+  - h5py
+  - mordredcommunity
+  - packaging
+  - platformdirs
+  - pmapper
+  - pyarrow
+  - python-dotenv
+  - tqdm

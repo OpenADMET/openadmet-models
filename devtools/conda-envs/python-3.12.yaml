@@ -1,0 +1,5 @@
+# Python version fragment, combined with the group specs and a hardware fragment by devtools/scripts/lock_envs.py
+channels:
+  - conda-forge
+dependencies:
+  - python 3.12.*

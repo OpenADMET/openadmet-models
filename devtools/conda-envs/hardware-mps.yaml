@@ -1,0 +1,8 @@
+# PyTorch for Apple silicon GPUs through the Metal Performance Shaders (MPS) backend, osx-arm64 only
+# conda-forge builds one macOS arm64 flavor (cpu_generic), so this lock file has the same packages as
+# the osx-arm64 part of the cpu lock file; run the device smoke test with OPENADMET_EXPECT_DEVICE=mps
+# on an Apple silicon machine to confirm MPS is usable
+channels:
+  - conda-forge
+dependencies:
+  - pytorch * cpu_generic*

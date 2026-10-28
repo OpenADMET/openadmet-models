@@ -1,0 +1,8 @@
+# CUDA 12.x PyTorch for linux-64 (NVIDIA T4 and newer)
+# The cuda-version pin restricts the solver to CUDA 12 builds; the matching __cuda virtual package
+# is in virtual-packages-cuda.yaml
+channels:
+  - conda-forge
+dependencies:
+  - pytorch * cuda*
+  - cuda-version 12.*

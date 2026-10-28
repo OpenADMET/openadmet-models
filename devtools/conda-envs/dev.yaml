@@ -1,0 +1,11 @@
+# Dev group (lock category dev): test tools on top of the full group
+# Names are the test extra in pyproject.toml
+# Checked against pyproject.toml by devtools/scripts/lock_envs.py check
+category: dev
+channels:
+  - conda-forge
+dependencies:
+  - pytest >=6.1.2
+  - pytest-cov
+  - pytest-mock
+  - pytest-xdist

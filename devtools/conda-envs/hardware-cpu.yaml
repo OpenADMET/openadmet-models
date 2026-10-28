@@ -1,0 +1,6 @@
+# CPU-only PyTorch for osx-arm64 and linux-64
+# pyproject.toml lists PyTorch as torch; the group specs omit it so each hardware flavor picks the build
+channels:
+  - conda-forge
+dependencies:
+  - pytorch * cpu_*
