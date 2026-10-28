@@ -34,13 +34,13 @@ Groups select the dependencies:
    * - Group
      - Contents
    * - ``infer``
-     - Core dependencies from ``[project.dependencies]`` plus the ``report`` extra. Enough to load a trained model directory and run ``openadmet predict``.
+     - Core dependencies from ``[project.dependencies]`` plus the ``infer`` extra. Enough to load a trained model directory and run ``openadmet predict``.
    * - ``full``
-     - ``infer`` plus the ``models``, ``train``, and ``report`` extras. Required to train models and to predict with the CatBoost, LightGBM, XGBoost, TabICL, TabPFN, and neural pairwise regression backends.
+     - ``infer`` plus the ``models``, ``train``, and ``report`` extras (``report`` adds s3fs). Required to train models and to predict with the CatBoost, LightGBM, XGBoost, TabICL, TabPFN, and neural pairwise regression backends.
    * - ``dev``
      - ``full`` plus the ``test`` extra (pytest and plugins).
 
-The ``report`` extra belongs to ``infer`` because the ``openadmet`` command imports the comparison module at startup, and that module imports boto3, matplotlib, seaborn, reportlab, statsmodels, and tabulate.
+The ``infer`` extra covers the packages that the ``openadmet`` command imports at startup (the comparison module) and while parsing a trained model directory (the evaluator registry).
 
 Hardware selects the torch build:
 
@@ -64,7 +64,7 @@ The ``cpu`` and ``mps`` environments contain the same packages on Apple silicon;
 
 The Python version is ``py312`` or ``py313``. The three groups, three hardware targets, and two Python versions give 18 environments; only the combinations needed for a task have to be installed.
 
-Packages come from conda-forge unless it does not provide them. The pinned git dependencies (molfeat, neural-pairwise-regression, TabPFN, monroe, useful_rdkit_utils), tabpfn-extensions, and their dependencies come from PyPI. On Python 3.13, chemprop also comes from PyPI because conda-forge builds of chemprop support Python below 3.13 only.
+Packages come from conda-forge unless it does not provide them. The pinned git dependencies (molfeat, neural-pairwise-regression, TabPFN, monroe, useful_rdkit_utils), tabpfn-extensions, and their dependencies come from PyPI. On Python 3.13, chemprop also comes from PyPI because conda-forge builds of chemprop support Python below 3.13 only. conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the environments use torch 2.12.
 
 Checking the device
 -------------------
