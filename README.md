@@ -31,12 +31,11 @@ Install `micromamba` (or mamba 2.0 or newer), then create an environment from a 
 ```bash
 micromamba create --name openadmet-models --file devtools/locks/py312-cpu-lock.yml \
     --category main --category full
-micromamba run --name openadmet-models python -m pip install --no-deps \
-    -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+micromamba run --name openadmet-models python devtools/scripts/install_pip_layer.py --group full
 micromamba run --name openadmet-models python -m pip install --no-deps -e .
 ```
 
-Use `--category main` and only `pip-infer.txt` for an inference-only environment, and add `--category dev` for the test tools. `python devtools/scripts/install_env.py --help` runs these steps for you. The [installation guide](docs/installation.rst) describes the dependency groups, conda users, and how to regenerate the lock files.
+Use `--category main` and `--group infer` for an inference-only environment, and add `--category dev` for the test tools. `python devtools/scripts/install_env.py --help` runs these steps for you. The [installation guide](docs/installation.rst) describes the dependency groups, conda users, and how to regenerate the lock files.
 
 
 ## Authors

@@ -18,7 +18,7 @@ The conda environments are locked with [conda-lock](https://conda.github.io/cond
 * `conda-envs`: the specs that the lock files are solved from
   * `infer.yaml`, `full.yaml`, `dev.yaml`: conda-forge packages of the dependency groups, one lock category each (`main`, `full`, `dev`)
   * `pip-requires-infer.yaml`, `pip-requires-full.yaml`: conda packages that the pip layer needs
-  * `pip-infer.txt`, `pip-full.txt`: pinned git dependencies and packages that conda-forge does not provide for every supported Python, installed with `pip install --no-deps` after the lock file
+  * `pip-molfeat.txt`, `pip-chemprop-3.13.txt`, `pip-full.txt`: pinned git dependencies and packages that conda-forge does not provide for every supported Python, installed by `scripts/install_pip_layer.py` with `pip install --no-deps` after the lock file
   * `python-3.12.yaml`, `python-3.13.yaml`: Python version fragments
   * `hardware-cpu.yaml`, `hardware-mps.yaml`, `hardware-cuda.yaml`: PyTorch build fragments
   * `virtual-packages-cpu.yaml`, `virtual-packages-cuda.yaml`: the driver and OS versions the lock files assume
@@ -33,6 +33,7 @@ The conda environments are locked with [conda-lock](https://conda.github.io/cond
 This directory contains OS agnostic helper scripts which don't fall in any of the previous categories
 * `scripts`
   * `lock_envs.py`: regenerates the lock files and checks that the specs, `pyproject.toml`, and the lock files agree
+  * `install_pip_layer.py`: installs the pip layer of a dependency group into the active Python environment
   * `install_env.py`: creates an environment from a lock file for a Python version, hardware flavor, and dependency group
 
 

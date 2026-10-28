@@ -60,17 +60,18 @@ The ``infer`` group is the core dependencies plus the ``infer`` extra of ``pypro
 Install with micromamba
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Install `micromamba <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_ (or mamba 2.0 or newer), then create the environment and install the pip layer. The pip layer contains the git dependencies and the packages that conda-forge does not provide for every supported Python, such as ChemProp:
+Install `micromamba <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_ (or mamba 2.0 or newer), then create the environment and install the pip layer. The pip layer contains the git dependencies and the packages that conda-forge does not provide for every supported Python:
 
 .. code-block:: bash
 
     micromamba create --name openadmet-models --file devtools/locks/py312-cpu-lock.yml \
         --category main --category full
-    micromamba run --name openadmet-models python -m pip install --no-deps \
-        -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+    micromamba run --name openadmet-models python devtools/scripts/install_pip_layer.py --group full
     micromamba run --name openadmet-models python -m pip install --no-deps -e .
 
-Without ``--category`` flags micromamba installs only the ``main`` category, which is the ``infer`` group. For the ``dev`` group add ``--category dev``. For the ``infer`` group install only ``pip-infer.txt``.
+Without ``--category`` flags micromamba installs only the ``main`` category, which is the ``infer`` group. For the ``dev`` group add ``--category dev``. For the ``infer`` group use ``--group infer`` in the pip layer step.
+
+ChemProp comes from conda-forge on Python 3.12 and from PyPI on Python 3.13, where conda-forge has no build. The Python 3.13 pip layer pins ChemProp 2.2.4 because ChemProp 2.3 imports ``cuik_molmaker``, whose PyPI wheel links the libraries of the PyPI ``rdkit`` wheel and cannot import next to the conda-forge ``rdkit``. The ``molfeat`` fork declares ``requires-python = "<=3.13"``, which pip rejects on every 3.13.x release, so ``install_pip_layer.py`` installs it with ``--ignore-requires-python``.
 
 The helper script runs the same steps and checks the result with ``pip check``:
 
@@ -88,7 +89,7 @@ Conda cannot read lock files directly. Use `conda-lock <https://conda.github.io/
 
     conda-lock install --name openadmet-models -e full --no-dev devtools/locks/py312-cpu-lock.yml
     conda activate openadmet-models
-    python -m pip install --no-deps -r devtools/conda-envs/pip-infer.txt -r devtools/conda-envs/pip-full.txt
+    python devtools/scripts/install_pip_layer.py --group full
     python -m pip install --no-deps -e .
 
 Check the accelerator

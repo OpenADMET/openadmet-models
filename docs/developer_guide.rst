@@ -40,8 +40,8 @@ Dependencies and lock files
 ``pyproject.toml`` declares the dependencies of the package for pip users. The conda environments are described by ``devtools/conda-envs`` and locked in ``devtools/locks``:
 
 - ``infer.yaml``, ``full.yaml``, and ``dev.yaml`` list the conda-forge packages of the core dependencies plus the ``infer`` extra, the other extras, and the ``test`` extra. ``lock_envs.py check`` requires an exact match. ``pip-requires-infer.yaml`` and ``pip-requires-full.yaml`` list the requirements of the pip layer.
-- ``pip-infer.txt`` and ``pip-full.txt`` pin the git dependencies and the packages that conda-forge does not provide for every supported Python (ChemProp is limited to Python below 3.13 there). They are installed with ``pip install --no-deps``, so every requirement of these packages must be a conda package in the group specs. ``pip check`` reports a missing requirement.
-- ``python-*.yaml`` and ``hardware-*.yaml`` select the Python version and the PyTorch build.
+- ``pip-molfeat.txt``, ``pip-chemprop-3.13.txt``, and ``pip-full.txt`` pin the git dependencies and the packages that conda-forge does not provide for every supported Python, and ``install_pip_layer.py`` installs them. They are installed with ``pip install --no-deps``, so every requirement of these packages must be a conda package in the group specs. ``pip check`` reports a missing requirement.
+- ``python-*.yaml`` select the Python version and provide ChemProp (conda-forge on Python 3.12, its requirements on Python 3.13), and ``hardware-*.yaml`` select the PyTorch build.
 
 After you change a dependency in ``pyproject.toml``, change the matching entry in the group specs or the pip layer files and regenerate the lock files:
 
