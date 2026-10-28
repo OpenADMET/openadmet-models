@@ -1,0 +1,17 @@
+# Lock category full: requirements of the packages in pip-full.txt, which pip installs without dependencies
+# These are not declared in pyproject.toml; pip would install them as transitive dependencies
+category: full
+channels:
+  - conda-forge
+dependencies:
+  - einops
+  - huggingface_hub
+  - mlx  # [osx]
+  - psutil
+  - py3dmol
+  - pydantic-settings >=2.10.1
+  - pystow
+  - pytorch_geometric
+  - safetensors
+  - skrub >=0.7,<0.11
+  - tabpfn-common-utils

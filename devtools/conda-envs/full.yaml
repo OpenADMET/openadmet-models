@@ -1,31 +1,15 @@
-# Full group (lock category full): everything beyond infer for training, model backends, and reports
-# Names are the conda-forge equivalents of the models and train extras in pyproject.toml, plus the
-# runtime requirements of the pip layer (devtools/conda-envs/pip-full.txt)
+# Full group (lock category full): the models, train, and report extras of pyproject.toml that infer does
+# not already contain, as conda-forge packages
 # Checked against pyproject.toml by devtools/scripts/lock_envs.py check
 category: full
 channels:
   - conda-forge
 dependencies:
-  # pyproject.toml models extra
+  # Models extra
   - catboost
   - lightgbm
   - xgboost
-  # pyproject.toml train extra
+  # Train extra
   - intake-parquet
   - splito
-  - uncertainty-toolbox
-  # The lower bound stops the solver from choosing a 2022 release when only the upper bound is given
-  - wandb >=0.25,<0.26.0
   - zarr >=3.0.0
-  # Runtime requirements of the git packages, tabicl, and tabpfn-extensions in pip-full.txt
-  - einops
-  - huggingface_hub
-  - mlx  # [osx]
-  - pydantic-settings >=2.10.1
-  - psutil
-  - py3dmol
-  - pystow
-  - pytorch_geometric
-  - safetensors
-  - skrub >=0.7,<0.11
-  - tabpfn-common-utils

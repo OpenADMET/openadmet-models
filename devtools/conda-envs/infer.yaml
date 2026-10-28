@@ -1,13 +1,12 @@
-# Infer group (lock category main): load a trained model directory and run `openadmet predict`
-# Names are the conda-forge equivalents of the dependencies table in pyproject.toml, plus the
-# runtime requirements of the pip layer (devtools/conda-envs/pip-infer.txt) and of the openadmet CLI
-# chemprop itself is in the pip layer
+# Infer group (lock category main): the core dependencies plus the infer extra of pyproject.toml
+# Package names are the conda-forge equivalents; chemprop, molfeat, and torch are installed elsewhere
+# (pip-infer.txt and the hardware fragments)
 # Checked against pyproject.toml by devtools/scripts/lock_envs.py check
 category: main
 channels:
   - conda-forge
 dependencies:
-  # pyproject.toml dependencies
+  # Core dependencies
   - click
   - datamol
   - email-validator
@@ -29,33 +28,13 @@ dependencies:
   - scikit-learn
   - scipy
   - setuptools <82.0.0
-  # Installs the pip layer from pinned git commits
-  - git
-  - pip
-  # Imported at module level by openadmet.models.comparison.posthoc, which the openadmet CLI
-  # loads for every subcommand (pyproject.toml report extra)
+  # Infer extra
   - boto3
   - matplotlib-base
   - reportlab
-  - s3fs >=2021.9
   - seaborn-base
   - statsmodels
   - tabulate
-  # Runtime requirements of chemprop, which pip-infer.txt installs because the conda-forge
-  # package is limited to Python below 3.13
-  - aimsim
-  - astartes
-  - configargparse
-  - descriptastorus
-  - myerson >=1.0.1
-  # Runtime requirements of molfeat, which pip-infer.txt installs without dependencies
-  - filelock
-  - gcsfs >=2021.9
-  - h5py
-  - mordredcommunity
-  - packaging
-  - platformdirs
-  - pmapper
-  - pyarrow
-  - python-dotenv
-  - tqdm
+  - uncertainty-toolbox
+  # The lower bound stops the solver from choosing a 2022 release when only the upper bound is given
+  - wandb >=0.25,<0.26.0

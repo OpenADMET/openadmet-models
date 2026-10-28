@@ -1,5 +1,5 @@
 # Installed with `pip install --no-deps` after the full lock category
-# Every runtime requirement of these packages is a conda package in infer.yaml or full.yaml
+# Every runtime requirement of these packages is a conda package in the infer or full lock category
 # Commits match the git dependencies in pyproject.toml (checked by devtools/scripts/lock_envs.py check)
 monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2
 nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed

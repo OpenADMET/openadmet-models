@@ -1,0 +1,29 @@
+# Lock category main: requirements of the packages in pip-infer.txt, which pip installs without
+# dependencies, plus the tools that run the pip layer
+# These are not declared in pyproject.toml; pip would install them as transitive dependencies
+category: main
+channels:
+  - conda-forge
+dependencies:
+  # Installs the pip layer from pinned git commits
+  - git
+  - pip
+  # Requirements of chemprop, which pip-infer.txt installs because the conda-forge package is limited
+  # to Python below 3.13
+  - aimsim
+  - astartes
+  - configargparse
+  - descriptastorus
+  - myerson >=1.0.1
+  # Requirements of molfeat (mordredcommunity and s3fs are also in the models and report extras)
+  - filelock
+  - gcsfs >=2021.9
+  - h5py
+  - mordredcommunity
+  - packaging
+  - platformdirs
+  - pmapper
+  - pyarrow
+  - python-dotenv
+  - s3fs >=2021.9
+  - tqdm

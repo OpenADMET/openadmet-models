@@ -54,22 +54,29 @@ CONDA_LOCK_VERSION = "4.0.3"
 
 PYTHON_VERSIONS = ("3.12", "3.13")
 
-# Group spec files in order of increasing scope; a package must appear in only one of them
-GROUP_SPECS = ("infer.yaml", "full.yaml", "dev.yaml")
+# Spec files in order of increasing scope; a package must appear in only one of them
+# The requires files hold the requirements of the pip layer, which pyproject.toml does not declare
+GROUP_SPECS = (
+    "infer.yaml",
+    "pip-requires-infer.yaml",
+    "full.yaml",
+    "pip-requires-full.yaml",
+    "dev.yaml",
+)
 PIP_SPECS = ("pip-infer.txt", "pip-full.txt")
 
 # PyPI names whose conda-forge name differs, or that a hardware fragment provides
 CONDA_NAMES = {"matplotlib": "matplotlib-base", "seaborn": "seaborn-base"}
 HARDWARE_PROVIDED = {"torch"}
 
-# Spec files that may contain each pyproject.toml requirement group
-ALLOWED_SPECS = {
-    "dependencies": ("infer.yaml",),
-    "models": ("infer.yaml", "full.yaml"),
-    "train": ("infer.yaml", "full.yaml"),
-    "report": ("infer.yaml", "full.yaml"),
-    "test": ("dev.yaml",),
+# pyproject.toml requirement groups that each spec file must list exactly
+# The full spec lists the models, train, and report requirements that the main spec files do not contain
+EXACT_SPECS = {
+    "infer.yaml": ("dependencies", "infer"),
+    "full.yaml": ("models", "train", "report"),
+    "dev.yaml": ("test",),
 }
+MAIN_SPECS = ("infer.yaml", "pip-requires-infer.yaml")
 
 
 @dataclass(frozen=True)
@@ -185,15 +192,27 @@ def _read_pip_requirements(path: Path) -> tuple[dict[str, str], dict[str, str]]:
     return requirements, via
 
 
+def _declared(project: dict, groups: Sequence[str]) -> dict[str, str]:
+    """Return the requirements of pyproject.toml groups as a mapping of name to specifier."""
+    tables = {
+        "dependencies": project["dependencies"],
+        **project["optional-dependencies"],
+    }
+    declared: dict[str, str] = {}
+    for group in groups:
+        for requirement in tables[group]:
+            name, specifier = _split_requirement(requirement)
+
+            # An extra that includes other extras of this package adds no requirements of its own
+            if name != "openadmet-models":
+                declared[name] = specifier
+    return declared
+
+
 def check_specs() -> list[str]:
-    """Return disagreements between pyproject.toml, the group specs, and the pip layer files."""
+    """Return disagreements between pyproject.toml, the spec files, and the pip layer files."""
     with PYPROJECT.open("rb") as handle:
         project = tomllib.load(handle)["project"]
-
-    groups = {"dependencies": project["dependencies"]}
-    for extra, requirements in project["optional-dependencies"].items():
-        if extra != "all":
-            groups[extra] = requirements
 
     spec_dependencies = {
         name: _read_spec_dependencies(SPEC_DIR / name) for name in GROUP_SPECS
@@ -207,7 +226,7 @@ def check_specs() -> list[str]:
 
     problems: list[str] = []
 
-    # A package in two group specs would be assigned to the later group by conda-lock
+    # A package in two spec files would be assigned to the later file by conda-lock
     seen: dict[str, str] = {}
     for spec_name, dependencies in spec_dependencies.items():
         for dependency in dependencies:
@@ -217,69 +236,62 @@ def check_specs() -> list[str]:
                 )
             seen[dependency] = spec_name
 
-    # Every pyproject.toml requirement must be a conda dependency or a pinned pip layer entry
-    for group, requirements in groups.items():
-        for requirement in requirements:
-            name, specifier = _split_requirement(requirement)
-            if name in HARDWARE_PROVIDED:
-                continue
-
-            # Git dependencies must use the same URL and commit in the pip layer
-            if specifier.startswith("@"):
-                if pip_requirements.get(name) != specifier:
-                    problems.append(
-                        f"{name}: pyproject.toml has {specifier} but the pip layer has {pip_requirements.get(name)}"
-                    )
-                continue
-
-            # A pip layer pin must satisfy the specifier that pyproject.toml declares
-            if name in pip_requirements:
-                pinned = pip_requirements[name]
-                if (
-                    specifier
-                    and pinned.startswith("==")
-                    and pinned[2:] not in SpecifierSet(specifier)
-                ):
-                    problems.append(
-                        f"{name}: pip layer pins {pinned[2:]} which does not satisfy {specifier}"
-                    )
-                continue
-            conda_name = CONDA_NAMES.get(name, name)
-            found = [
-                spec
-                for spec in ALLOWED_SPECS[group]
-                if conda_name in spec_dependencies[spec]
-            ]
-            if not found:
-                problems.append(
-                    f"{name} ({group}) is missing from {' or '.join(ALLOWED_SPECS[group])}"
-                )
-                continue
-            # A spec may tighten a constraint but must contain every clause that pyproject.toml declares
-            locked_specifier = spec_dependencies[found[0]][conda_name]
-            missing = (
-                set(specifier.split(",")) - {""} - set(locked_specifier.split(","))
+    # Pip layer pins must match the git commits and satisfy the specifiers of pyproject.toml
+    all_declared = _declared(
+        project, ["dependencies", *project["optional-dependencies"]]
+    )
+    for name, specifier in all_declared.items():
+        if name not in pip_requirements:
+            continue
+        pinned = pip_requirements[name]
+        if specifier.startswith("@") and pinned != specifier:
+            problems.append(
+                f"{name}: pyproject.toml has {specifier} but the pip layer has {pinned}"
             )
-            if missing:
+        elif specifier and not specifier.startswith("@") and pinned.startswith("=="):
+            if pinned[2:] not in SpecifierSet(specifier):
                 problems.append(
-                    f"{name}: {found[0]} has {locked_specifier or 'no specifier'} "
-                    f"and is missing {','.join(sorted(missing))} from pyproject.toml"
+                    f"{name}: pip layer pins {pinned[2:]} which does not satisfy {specifier}"
                 )
 
     # Pip layer entries that pyproject.toml does not declare must name the pip layer package that needs them
-    declared = {
-        _split_requirement(requirement)[0]
-        for requirements in groups.values()
-        for requirement in requirements
-    }
     for name in pip_requirements:
-        if name in declared:
-            continue
-        if pip_via.get(name) not in pip_requirements:
+        if name not in all_declared and pip_via.get(name) not in pip_requirements:
             problems.append(
                 f"{name} is in the pip layer but not declared in pyproject.toml; "
                 "add a '# via <package>' comment naming a pip layer package that needs it"
             )
+
+    # Each spec file must list exactly the conda packages of its pyproject.toml groups
+    main_names = {name for spec in MAIN_SPECS for name in spec_dependencies[spec]}
+    for spec_name, groups in EXACT_SPECS.items():
+        expected = {
+            CONDA_NAMES.get(name, name): specifier
+            for name, specifier in _declared(project, groups).items()
+            if name not in pip_requirements and name not in HARDWARE_PROVIDED
+        }
+        if spec_name == "full.yaml":
+            expected = {
+                name: spec for name, spec in expected.items() if name not in main_names
+            }
+        listed = spec_dependencies[spec_name]
+        for name in sorted(expected.keys() - listed.keys()):
+            problems.append(f"{name} ({'/'.join(groups)}) is missing from {spec_name}")
+        for name in sorted(listed.keys() - expected.keys()):
+            problems.append(
+                f"{name} in {spec_name} is not in the {'/'.join(groups)} requirements of pyproject.toml"
+            )
+
+        # A spec may tighten a constraint but must contain every clause that pyproject.toml declares
+        for name in sorted(expected.keys() & listed.keys()):
+            missing = (
+                set(expected[name].split(",")) - {""} - set(listed[name].split(","))
+            )
+            if missing:
+                problems.append(
+                    f"{name}: {spec_name} has {listed[name] or 'no specifier'} "
+                    f"and is missing {','.join(sorted(missing))} from pyproject.toml"
+                )
     return problems
 
 
