@@ -1,0 +1,55 @@
+name: Diagnose uv unit tests on macOS
+
+# Finds the test that stalls when the uv environment runs the unit suite on macOS (benchmark runs showed
+# the suite stopping at about 67 percent). Trigger by pushing the harness branch to env/diag/<anything>.
+
+on:
+  push:
+    branches:
+      - "env/diag/**"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: macOS, pytest ${{ matrix.pytest-args }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        pytest-args: ["-n 0", "-n 2"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: env/uv
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+
+      - name: Install libomp
+        run: brew install libomp
+
+      - name: Install the environment
+        run: uv sync --locked --python 3.12 --extra all
+
+      - name: Show OpenMP runtimes in the environment
+        run: |
+          find .venv -name '*omp*.dylib' | sort
+          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
+            echo "== $lib"
+            otool -L "$lib" | grep -i omp || true
+          done
+
+      - name: Run the unit tests with stack dumps for stalled tests
+        timeout-minutes: 30
+        env:
+          PYTHONFAULTHANDLER: "1"
+          PYTEST_ARGS: ${{ matrix.pytest-args }}
+        run: |
+          # shellcheck disable=SC2086
+          uv run --no-sync pytest openadmet/models/tests/unit $PYTEST_ARGS -v -o faulthandler_timeout=180 -p no:cacheprovider
