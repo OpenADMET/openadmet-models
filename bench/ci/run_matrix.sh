@@ -14,6 +14,7 @@
 #   CANDIDATES   space-separated adapter names
 #   ROUNDS       repetitions of the whole candidate list per Python and group
 #   ASOF_DATE    optional YYYY-MM-DD; adds the resolve_asof phase
+#   CMD_TIMEOUT  optional; seconds allowed per command, default 1500 (a hung test run is recorded as a failure)
 #   DRY_RUN      optional; any non-empty value passes --dry-run so nothing is executed
 # Candidates run in a rotated order each round so that no candidate always runs
 # first on a host that warms up or degrades over the job.
@@ -42,6 +43,9 @@ done
 for g in ${BENCH_GROUPS}; do
     [[ "${g}" =~ ^(full|infer)$ ]] || { echo "error: bad group ${g}" >&2; exit 2; }
 done
+
+cmd_timeout="${CMD_TIMEOUT:-1500}"
+[[ "${cmd_timeout}" =~ ^[1-9][0-9]{1,4}$ ]] || { echo "error: bad CMD_TIMEOUT" >&2; exit 2; }
 
 phase_args=()
 if [[ -n "${ASOF_DATE:-}" ]]; then
@@ -82,7 +86,7 @@ for py in ${PYTHONS}; do
                     --out-dir "${OUT_ROOT}/${label}" \
                     --cache-mode isolated \
                     --cold-reps 1 --warm-reps 1 --reps 3 \
-                    --timeout 3600 \
+                    --timeout "${cmd_timeout}" \
                     ${phase_args[@]+"${phase_args[@]}"} \
                     ${dry_args[@]+"${dry_args[@]}"}
                 status=$?
