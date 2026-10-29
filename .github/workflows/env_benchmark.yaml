@@ -6,7 +6,7 @@ name: Environment tooling benchmark
 #
 # Trigger: run the workflow manually once it exists on the default branch, or push
 # the harness branch to a branch matching env/bench/** (for example
-# `git push origin env/harness:env/bench/run1`), which uses the input defaults (one round).
+# `git push origin env/harness:env/bench/run`), which uses the input defaults (three rounds).
 # Results from several pushes can be combined by downloading their artifacts.
 
 on:
@@ -17,7 +17,7 @@ on:
         default: "baseline-conda conda-lock pixi uv"
       rounds:
         description: "Repetitions of the candidate list per Python and group (1 to 99)"
-        default: "1"
+        default: "3"
       run_gpu:
         description: "Also run the CUDA cells on the AWS GPU runner (starts a paid instance)"
         type: boolean
@@ -37,11 +37,11 @@ permissions:
   contents: read
 
 env:
-  # Branches under test; change these to benchmark other refs
-  BRANCH_BASELINE_CONDA: env/base
-  BRANCH_CONDA_LOCK: env/conda-lock
-  BRANCH_PIXI: env/pixi
-  BRANCH_UV: env/uv
+  # Commits under test, frozen for the final measurement (branch tips env/base, env/conda-lock, env/pixi, env/uv)
+  BRANCH_BASELINE_CONDA: 6776502d785a9500c0650b5195f6f751656a9ffb
+  BRANCH_CONDA_LOCK: 2e7ad1b28a6a7d15ddff6d18c5e8e1d0d319bf39
+  BRANCH_PIXI: 12426e359cedfd442931f0e1d4ca91c574241f53
+  BRANCH_UV: 51ed62df4aa7807f2c99ef9c81b3908a1622d4a1
 
 jobs:
   bench-hosted:
@@ -131,7 +131,7 @@ jobs:
           PYTHONS: ${{ matrix.python-version }}
           BENCH_GROUPS: ${{ matrix.group }}
           CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
-          ROUNDS: ${{ inputs.rounds || '1' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
           ASOF_DATE: ${{ inputs.asof_date }}
         run: |
           mkdir -p "$(dirname "$RESULTS")"
@@ -247,7 +247,7 @@ jobs:
           PYTHONS: "3.12 3.13"
           BENCH_GROUPS: "full infer"
           CANDIDATES: ${{ inputs.candidates || 'baseline-conda conda-lock pixi uv' }}
-          ROUNDS: ${{ inputs.rounds || '1' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
           ASOF_DATE: ${{ inputs.asof_date }}
         run: |
           mkdir -p "$(dirname "$RESULTS")"
