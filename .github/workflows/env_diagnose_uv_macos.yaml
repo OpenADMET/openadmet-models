@@ -1,7 +1,7 @@
 name: Diagnose uv unit tests on macOS
 
-# Finds the test that stalls when the uv environment runs the unit suite on macOS (benchmark runs showed
-# the suite stopping at about 67 percent). Trigger by pushing the harness branch to env/diag/<anything>.
+# Finds out why LightGBM dataset construction stalls when the uv environment runs on macOS and which
+# variant fixes it. Trigger by pushing to env/diag/<anything>.
 
 on:
   push:
@@ -13,13 +13,27 @@ permissions:
 
 jobs:
   diagnose:
-    name: macOS, pytest ${{ matrix.pytest-args }}
+    name: macOS, ${{ matrix.variant }}
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        pytest-args: ["-n 0", "-n 2"]
+        include:
+          - variant: baseline
+          - variant: omp-threads-1
+            env_name: OMP_NUM_THREADS
+            env_value: "1"
+          - variant: kmp-duplicate-ok
+            env_name: KMP_DUPLICATE_LIB_OK
+            env_value: "TRUE"
+          - variant: njobs-1
+            env_name: OPENADMET_DIAG_NJOBS
+            env_value: "1"
+          - variant: shared-libomp
+            share_libomp: "yes"
+          - variant: lightgbm-4.5.0
+            lightgbm_pin: "4.5.0"
 
     steps:
       - uses: actions/checkout@v4
@@ -37,19 +51,70 @@ jobs:
       - name: Install the environment
         run: uv sync --locked --python 3.12 --extra all
 
-      - name: Show OpenMP runtimes in the environment
+      - name: Pin another LightGBM wheel
+        if: matrix.lightgbm_pin
+        run: uv pip install --python .venv/bin/python "lightgbm==${{ matrix.lightgbm_pin }}"
+
+      - name: Replace the bundled OpenMP runtimes with the Homebrew copy
+        if: matrix.share_libomp
         run: |
-          find .venv -name '*omp*.dylib' | sort
-          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
-            echo "== $lib"
-            otool -L "$lib" | grep -i omp || true
+          brew_lib="$(brew --prefix libomp)/lib/libomp.dylib"
+          for lib in .venv/lib/python3.12/site-packages/sklearn/.dylibs/libomp.dylib .venv/lib/python3.12/site-packages/torch/lib/libomp.dylib; do
+            ln -sf "$brew_lib" "$lib"
           done
 
+      - name: Show OpenMP runtimes in the environment
+        run: |
+          brew list --versions libomp
+          find .venv -name '*omp*.dylib' | sort
+          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' -o -name 'libomp.dylib' | sort); do
+            echo "== $lib"
+            otool -L "$lib" | grep -i omp || true
+            otool -l "$lib" | grep -A2 LC_RPATH | grep path || true
+          done
+          uv pip freeze --python .venv/bin/python | grep -i -E "^(lightgbm|xgboost|torch|scikit-learn)=="
+
+      - name: Reproduce the stall outside pytest
+        id: repro
+        continue-on-error: true
+        env:
+          VARIANT_ENV_NAME: ${{ matrix.env_name }}
+          VARIANT_ENV_VALUE: ${{ matrix.env_value }}
+        run: |
+          if [ -n "$VARIANT_ENV_NAME" ]; then export "$VARIANT_ENV_NAME=$VARIANT_ENV_VALUE"; fi
+          cat > "$RUNNER_TEMP/repro.py" <<'EOF'
+          import faulthandler, os, subprocess
+
+          faulthandler.dump_traceback_later(90, exit=True)
+
+          import numpy as np
+          import sklearn
+          import torch
+          from rdkit import Chem
+          import lightgbm
+          import xgboost
+
+          out = subprocess.run(["vmmap", str(os.getpid())], capture_output=True, text=True).stdout
+          print(sorted({line.split()[-1] for line in out.splitlines() if "libomp" in line or "libiomp" in line}))
+
+          n_jobs = int(os.environ["OPENADMET_DIAG_NJOBS"]) if "OPENADMET_DIAG_NJOBS" in os.environ else None
+          rng = np.random.RandomState(0)
+          X = rng.rand(5, 4)
+          y = np.array([5.8, 5.6, 5.4, 5.2, 5.0])
+          lightgbm.LGBMRegressor(n_estimators=2, num_leaves=2, verbose=-1, n_jobs=n_jobs).fit(X, y)
+          print("lightgbm ok")
+          xgboost.XGBRegressor(n_estimators=2, n_jobs=n_jobs).fit(X, y)
+          print("xgboost ok")
+          EOF
+          uv run --no-sync python "$RUNNER_TEMP/repro.py"
+
       - name: Run the unit tests with stack dumps for stalled tests
+        if: steps.repro.outcome == 'success' && matrix.variant != 'njobs-1'
         timeout-minutes: 30
         env:
           PYTHONFAULTHANDLER: "1"
-          PYTEST_ARGS: ${{ matrix.pytest-args }}
+          VARIANT_ENV_NAME: ${{ matrix.env_name }}
+          VARIANT_ENV_VALUE: ${{ matrix.env_value }}
         run: |
-          # shellcheck disable=SC2086
-          uv run --no-sync pytest openadmet/models/tests/unit $PYTEST_ARGS -v -o faulthandler_timeout=180 -p no:cacheprovider
+          if [ -n "$VARIANT_ENV_NAME" ]; then export "$VARIANT_ENV_NAME=$VARIANT_ENV_VALUE"; fi
+          uv run --no-sync pytest openadmet/models/tests/unit -n 2 -v -o faulthandler_timeout=180 -p no:cacheprovider
