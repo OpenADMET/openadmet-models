@@ -787,8 +787,8 @@ class PostHocComparison(ComparisonBase):
                 vmax=None,
             )
 
-            x_label_list = [x for x in labels]
-            y_label_list = [x for x in labels]
+            x_label_list = [*labels]
+            y_label_list = [*labels]
             hax.set_xticklabels(
                 x_label_list, ha="center", va="top", rotation=0, rotation_mode="anchor"
             )
@@ -855,7 +855,7 @@ class PostHocComparison(ComparisonBase):
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
-            errorbars = [i for i in np.transpose(tukey_metric_df["errorbars"])]
+            errorbars = [*np.transpose(tukey_metric_df["errorbars"])]
             to_plot_df = pd.DataFrame(
                 {
                     "method": tukey_metric_df["method"],
