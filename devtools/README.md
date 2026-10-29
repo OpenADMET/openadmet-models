@@ -24,6 +24,10 @@ The environment is defined in the repository root, not in this directory:
 
 After editing dependencies, run `uv lock` and commit `uv.lock` with `pyproject.toml`. `uv lock --check` verifies that they agree.
 
+### Scripts
+
+* `scripts/share_libomp_macos.sh`: links the OpenMP runtimes bundled in the torch and scikit-learn wheels to the Homebrew libomp on macOS, so LightGBM and XGBoost share one runtime with them
+
 ### Containers
 
 * `containers/Dockerfile`: builds an image from `uv.lock` (`all` and `cuda` extras by default; `--build-arg TORCH_EXTRA=cpu` for a CPU image)

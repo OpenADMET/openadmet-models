@@ -43,7 +43,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
-      # The LightGBM and XGBoost macOS wheels link a system OpenMP runtime
+      # The LightGBM and XGBoost macOS wheels link the Homebrew OpenMP runtime
       - name: Install OpenMP
         if: runner.os == 'macOS'
         run: brew install libomp
@@ -53,6 +53,11 @@ jobs:
 
       - name: Show installed packages
         run: uv pip list
+
+      # Torch and scikit-learn bundle their own OpenMP runtime, and loading several runtimes stalls LightGBM
+      - name: Share one OpenMP runtime
+        if: runner.os == 'macOS'
+        run: sh devtools/scripts/share_libomp_macos.sh
 
       - name: Run CPU integration tests
         env:

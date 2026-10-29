@@ -39,7 +39,7 @@ Pick the command for your hardware. It installs the package in editable mode wit
 | Linux, CPU only | `uv sync --extra all --extra cpu` |
 | Linux, NVIDIA GPU (CUDA 12.6 wheels) | `uv sync --extra all --extra cuda` |
 
-On macOS, the LightGBM and XGBoost wheels from PyPI link a system OpenMP runtime, so install it with Homebrew before using the `models` extra: `brew install libomp`. On Linux, the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
+On macOS, the LightGBM and XGBoost wheels from PyPI link the Homebrew OpenMP runtime, while the torch and scikit-learn wheels bundle their own copy. A process that loads several runtimes crashes or stalls inside LightGBM and XGBoost. After `brew install libomp` and `uv sync`, run `sh devtools/scripts/share_libomp_macos.sh` to link the bundled copies to the Homebrew one, and repeat it whenever `uv sync` reinstalls torch or scikit-learn. This applies to the `models` extra (and `all`). On Linux, the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
 
 On Linux, always pass `--extra cpu` or `--extra cuda`. Without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB of wheels including the NVIDIA libraries. Add `--python 3.13` to use Python 3.13 (the default is the first interpreter that satisfies `requires-python`).
 
