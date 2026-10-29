@@ -20,20 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - variant: baseline
-          - variant: omp-threads-1
-            env_name: OMP_NUM_THREADS
-            env_value: "1"
-          - variant: kmp-duplicate-ok
-            env_name: KMP_DUPLICATE_LIB_OK
-            env_value: "TRUE"
-          - variant: njobs-1
-            env_name: OPENADMET_DIAG_NJOBS
-            env_value: "1"
-          - variant: shared-libomp
-            share_libomp: "yes"
-          - variant: lightgbm-4.5.0
-            lightgbm_pin: "4.5.0"
+          - variant: script-py3.12
+            python: "3.12"
+          - variant: script-py3.13
+            python: "3.13"
 
     steps:
       - uses: actions/checkout@v4
@@ -49,19 +39,10 @@ jobs:
         run: brew install libomp
 
       - name: Install the environment
-        run: uv sync --locked --python 3.12 --extra all
+        run: uv sync --locked --python ${{ matrix.python }} --extra all
 
-      - name: Pin another LightGBM wheel
-        if: matrix.lightgbm_pin
-        run: uv pip install --python .venv/bin/python "lightgbm==${{ matrix.lightgbm_pin }}"
-
-      - name: Replace the bundled OpenMP runtimes with the Homebrew copy
-        if: matrix.share_libomp
-        run: |
-          brew_lib="$(brew --prefix libomp)/lib/libomp.dylib"
-          for lib in .venv/lib/python3.12/site-packages/sklearn/.dylibs/libomp.dylib .venv/lib/python3.12/site-packages/torch/lib/libomp.dylib; do
-            ln -sf "$brew_lib" "$lib"
-          done
+      - name: Share one OpenMP runtime
+        run: sh devtools/scripts/share_libomp_macos.sh
 
       - name: Show OpenMP runtimes in the environment
         run: |
@@ -109,7 +90,7 @@ jobs:
           uv run --no-sync python "$RUNNER_TEMP/repro.py"
 
       - name: Run the unit tests with stack dumps for stalled tests
-        if: steps.repro.outcome == 'success' && matrix.variant != 'njobs-1'
+        if: steps.repro.outcome == 'success' 
         timeout-minutes: 30
         env:
           PYTHONFAULTHANDLER: "1"
