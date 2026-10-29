@@ -37,27 +37,47 @@ UV_NO_PROGRESS = "1"
 UV_CACHE_DIR = "{cache_dir}/uv"
 UV_PYTHON_INSTALL_DIR = "{cache_dir}/uv-python"
 
+# On macOS each install is followed by a script that links the OpenMP runtimes bundled in the torch and
+# scikit-learn wheels to the Homebrew libomp; with several runtimes loaded, LightGBM and XGBoost crash or stall
 # The cpu extra selects the CPU torch index on Linux and is a no-op on macOS; mps uses the PyPI wheel
 [install.cpu.full]
 note = "uv sync --locked --extra all --extra cpu (includes the default dev group with test tools)"
-steps = ["uv sync --locked --python {python} --extra all --extra cpu"]
+steps = [
+  "uv sync --locked --python {python} --extra all --extra cpu",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
 
 [install.cpu.infer]
 note = "uv sync --locked --no-dev --extra infer --extra cpu"
-steps = ["uv sync --locked --python {python} --no-dev --extra infer --extra cpu"]
+steps = [
+  "uv sync --locked --python {python} --no-dev --extra infer --extra cpu",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
 
 [install.mps.full]
 note = "uv sync --locked --extra all"
-steps = ["uv sync --locked --python {python} --extra all"]
+steps = [
+  "uv sync --locked --python {python} --extra all",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
 
 [install.mps.infer]
 note = "uv sync --locked --no-dev --extra infer"
-steps = ["uv sync --locked --python {python} --no-dev --extra infer"]
+steps = [
+  "uv sync --locked --python {python} --no-dev --extra infer",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
 
 [install.cuda.full]
 note = "uv sync --locked --extra all --extra cuda (CUDA 12.6 wheels)"
-steps = ["uv sync --locked --python {python} --extra all --extra cuda"]
+steps = [
+  "uv sync --locked --python {python} --extra all --extra cuda",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
 
 [install.cuda.infer]
 note = "uv sync --locked --no-dev --extra infer --extra cuda (CUDA 12.6 wheels)"
-steps = ["uv sync --locked --python {python} --no-dev --extra infer --extra cuda"]
+steps = [
+  "uv sync --locked --python {python} --no-dev --extra infer --extra cuda",
+  "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then sh \"$1/devtools/scripts/share_libomp_macos.sh\" \"$2\"; fi' sh {repo} {env_dir}",
+]
