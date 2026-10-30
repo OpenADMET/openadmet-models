@@ -1,7 +1,7 @@
 name: Diagnose package choices for OpenMP on macOS
 
-# Applies one package-choice variant to a copy of the env/uv project, locks and syncs it with no step
-# after the sync, then probes import orders and runs the unit suite. Trigger by pushing to env/diag/pkgs.
+# Overlays a committed pyproject.toml and uv.lock onto a copy of the env/uv project, syncs it from the lock
+# with no step after the sync, then probes import orders and runs the unit suite. Trigger by pushing to env/diag/pkgs.
 
 on:
   push:
@@ -13,14 +13,13 @@ permissions:
 
 jobs:
   project:
-    name: ${{ matrix.variant }}, Python ${{ matrix.python-version }}
+    name: committed lock, Python ${{ matrix.python-version }}
     runs-on: macos-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        variant: ["src-rpath", "torch210"]
 
     steps:
       - uses: actions/checkout@v4
@@ -38,36 +37,26 @@ jobs:
           enable-cache: false
 
       # The source build needs the libomp headers and library once; the run must not use Homebrew libomp
-      - name: Set up the system libomp for the variant
-        shell: bash
-        run: |
-          if [ "${{ matrix.variant }}" = src-rpath ]; then brew install libomp; else brew uninstall --ignore-dependencies libomp || true; fi
+      - name: Install Homebrew libomp for the build
+        run: brew install libomp
 
-      - name: Apply the variant and lock
+      - name: Overlay the committed project files
         working-directory: uv
         run: |
-          python3 -I ../diag/bench/diag/apply_pkgs_variant.py "${{ matrix.variant }}" pyproject.toml
+          cp ../diag/bench/diag/variant-src-rpath/pyproject.toml ../diag/bench/diag/variant-src-rpath/uv.lock .
           git diff --stat
-          uv lock
-          git diff --stat uv.lock
-          grep -A1 -E '^name = "(torch|lightgbm|xgboost|scikit-learn)"$' uv.lock | grep -E 'name|version'
 
-      - name: Install the environment with no step afterwards
+      - name: Install the environment from the lock with no step afterwards
         working-directory: uv
         run: |
           start=$(date +%s)
           uv sync --locked --python ${{ matrix.python-version }} --extra all
           echo "SYNC_SECONDS=$(( $(date +%s) - start ))"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lock-${{ matrix.variant }}-${{ matrix.python-version }}
-          path: |
-            uv/uv.lock
-            uv/pyproject.toml
-
       - name: Remove Homebrew libomp so the run cannot use it
-        run: brew uninstall --ignore-dependencies libomp || true
+        run: |
+          brew uninstall --ignore-dependencies libomp
+          ls /opt/homebrew/opt/libomp 2>&1 || echo "no Homebrew libomp"
 
       - name: Show the OpenMP libraries and rpaths
         working-directory: uv
@@ -80,17 +69,21 @@ jobs:
             otool -l "$lib" | grep -A2 LC_RPATH | grep path || true
           done
 
-      - name: Probe import orders without Homebrew libomp
+      - name: Probe import orders
         working-directory: uv
         shell: bash
         run: |
           python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe.md
-          { echo "### ${{ matrix.variant }}, Python ${{ matrix.python-version }}, no Homebrew libomp"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### committed lock, Python ${{ matrix.python-version }}"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
         env:
           PROBE_TIMEOUT: "45"
         continue-on-error: true
 
-      - name: Run the unit tests without Homebrew libomp
+      - name: Time training
+        working-directory: uv
+        run: .venv/bin/python ../diag/bench/diag/mini_bench.py
+
+      - name: Run the unit tests
         working-directory: uv
         timeout-minutes: 20
         env:
@@ -98,23 +91,43 @@ jobs:
         run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
         continue-on-error: true
 
-      - name: Probe import orders with Homebrew libomp installed
-        if: matrix.variant == 'torch210'
-        working-directory: uv
-        shell: bash
+  no-homebrew:
+    name: source build with no Homebrew libomp
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - name: Build LightGBM and XGBoost from source with no libomp on the machine
         run: |
-          brew install libomp
-          python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe-brew.md
-          { echo "### ${{ matrix.variant }}, Python ${{ matrix.python-version }}, Homebrew libomp"; sed -n '/^| import order/,$p' probe-brew.md; } >> "$GITHUB_STEP_SUMMARY"
-        env:
-          PROBE_TIMEOUT: "45"
+          brew uninstall --ignore-dependencies libomp || true
+          ls /opt/homebrew/opt/libomp 2>&1 || echo "no Homebrew libomp"
+          uv venv --python 3.12 "$RUNNER_TEMP/v"
+          uv pip install --python "$RUNNER_TEMP/v/bin/python" numpy --no-binary lightgbm lightgbm==4.7.0 2>&1 | tail -30
         continue-on-error: true
 
-      - name: Run the unit tests with Homebrew libomp installed
-        if: matrix.variant == 'torch210'
+  linux:
+    name: Linux install from the committed lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: diag
+      - uses: actions/checkout@v4
+        with:
+          ref: env/uv
+          path: uv
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - name: Sync the CPU environment and import the three libraries
         working-directory: uv
-        timeout-minutes: 20
-        env:
-          PYTHONFAULTHANDLER: "1"
-        run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
-        continue-on-error: true
+        run: |
+          cp ../diag/bench/diag/variant-src-rpath/pyproject.toml ../diag/bench/diag/variant-src-rpath/uv.lock .
+          uv sync --locked --python 3.12 --extra cpu --extra all
+          uv pip list 2>/dev/null | grep -Ei '^(torch|lightgbm|xgboost|scikit-learn) '
+          .venv/bin/python -c "import torch, lightgbm, xgboost, sklearn; print('imports ok')"

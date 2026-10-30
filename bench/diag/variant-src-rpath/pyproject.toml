@@ -1,0 +1,207 @@
+[build-system]
+requires = ["setuptools>=61.0", "versioningit~=2.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openadmet-models"
+description = "A short description of the project (less than one line)."
+dynamic = ["version"]
+readme = "README.md"
+authors = [
+    { name = "OpenADMET Contributors", email = "hugo.macdermott-opeskin@omsf.io" }
+]
+license = { text = "MIT" }
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Chemistry",
+]
+
+requires-python = ">=3.12,<3.14"
+
+# Library core: the inference API and model directory loading; the infer extra adds modules the CLI imports eagerly
+dependencies = [
+  "chemprop>=2.1.1",
+  "click",
+  "datamol",
+  "email-validator",
+  "fsspec",
+  "intake",
+  "jinja2",
+  "joblib",
+  "lightning<=2.6.1",
+  "loguru",
+  "molfeat @ git+https://github.com/OpenADMET/molfeat.git@cfe2abb4d451e94a7fbe98e7942ad4d5018de8cd",
+  "numpy",
+  "pandas",
+  "phx-class-registry",
+  "pydantic",
+  "pytorch-lightning<=2.6.1",
+  "pyyaml",
+  "rdkit",
+  "rich",
+  "scikit-learn",
+  "scipy",
+  "setuptools<82.0.0",
+  "torch",
+]
+
+[project.urls]
+"Source" = "https://github.com/OpenADMET/openadmet-models"
+"Documentation" = "https://openadmet-models.readthedocs.io/en/latest/?badge=latest"
+
+[project.optional-dependencies]
+# Model backends registered by openadmet.models.architecture
+models = [
+  "catboost",
+  "lightgbm",
+  "nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed",
+  "tabicl",
+  "tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@35e57171f86fee30715d6a25e1fbe3452ea71020",
+  "tabpfn-extensions",
+  "xgboost",
+  "monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2",
+  "mordredcommunity",
+]
+# Inference install: core plus the modules imported when the CLI starts (comparison reports) and when a
+# trained model directory is parsed (evaluator registry); model backends are separate, see models
+infer = [
+  "boto3",
+  "matplotlib",
+  "reportlab",
+  "seaborn",
+  "statsmodels",
+  "tabulate",
+  "uncertainty-toolbox",
+  "wandb<0.26.0",
+]
+# Anvil training workflow: splitting and zarr output
+train = [
+  "openadmet-models[infer]",
+  "intake-parquet",
+  "splito",
+  "useful_rdkit_utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f",
+  "zarr>=3.0.0",
+]
+# Comparison reports that read from S3
+report = [
+  "openadmet-models[infer]",
+  "s3fs>=2021.9",
+]
+# Everything a user needs to train, evaluate, and report; test tools are in the test dependency group
+all = [
+  "openadmet-models[infer,models,train,report]",
+]
+# Torch build selectors for Linux x86_64: cpu uses the CPU-only index and cuda uses the CUDA 12.6 index
+# On macOS both resolve to the PyPI wheel, which includes MPS
+cpu = ["torch"]
+cuda = ["torch"]
+
+[dependency-groups]
+test = [
+  "pytest>=6.1.2",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-xdist",
+]
+dev = [
+  { include-group = "test" },
+]
+
+[project.scripts]
+openadmet = "openadmet.models.cli.cli:cli"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+license-files = [ "LICENSE" ]
+
+[tool.setuptools.packages.find]
+namespaces = true
+where = ["."]
+
+[tool.setuptools.package-data]
+"openadmet.models.tests.unit.test_data" = ["**"]
+"openadmet.models.tests.integration.test_data" = ["**"]
+
+[tool.versioningit]
+default-version = "1+unknown"
+
+[tool.versioningit.format]
+distance = "{base_version}+{distance}.{vcs}{rev}"
+dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
+
+[tool.versioningit.vcs]
+# The method key:
+method = "git"  # <- The method name
+# Parameters to pass to the method:
+match = ["*"]
+default-tag = "0.0.0"
+
+[tool.versioningit.write]
+file = "openadmet/models/_version.py"
+
+[tool.pytest.ini_options]
+markers = [
+  "cpu: integration test that runs on CPU only",
+  "gpu: integration test that needs a CUDA device",
+]
+
+[tool.ruff.lint]
+select = ["D", "D213", "D101"]
+ignore = ["D212"]
+
+[tool.ruff.per-file-ignores]
+"**/__init__.py" = ["D104"] # Ignore D104 (Missing docstring in public package) specifically for __init__.py files
+"**/tests/**.py" = ["D"] # Ignore all D and S101 (Use of assert detected) and S311 (Standard pseudo-random generators are not suitable for security/cryptographic purposes) and D103 (Missing docstring in public function) specifically for test files
+
+[tool.uv]
+required-version = ">=0.12.7"
+# Lock only the platforms the project supports
+environments = [
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+# A Linux environment has one torch build
+conflicts = [
+  [{ extra = "cpu" }, { extra = "cuda" }],
+]
+
+[tool.uv.sources]
+# PyPI serves the CUDA 13 build to Linux, so Linux installs pick an index through the cpu or cuda extra
+torch = [
+  { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'" },
+  { index = "pytorch-cu126", extra = "cuda", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+# Build LightGBM and XGBoost from source on macOS and add an rpath to the libomp bundled with torch
+[tool.uv.sources.lightgbm]
+url = "https://files.pythonhosted.org/packages/63/8e/4db5e29290d7e619c307fdb8dab0a0514090af2ce3ec483050e024ec6126/lightgbm-4.7.0.tar.gz"
+marker = "sys_platform == 'darwin'"
+
+[tool.uv.sources.xgboost]
+url = "https://files.pythonhosted.org/packages/38/a9/295320f741c5be4be996c73ee65a2a11852028c50daa7229adb0d61c330b/xgboost-3.4.1.tar.gz"
+marker = "sys_platform == 'darwin'"
+
+[tool.uv.config-settings-package.lightgbm]
+"cmake.define.CMAKE_SHARED_LINKER_FLAGS" = "-Wl,-rpath,@loader_path/../../torch/lib"
+
+[tool.uv.config-settings-package.xgboost]
+"cmake.define.CMAKE_SHARED_LINKER_FLAGS" = "-Wl,-rpath,@loader_path/../../torch/lib"
