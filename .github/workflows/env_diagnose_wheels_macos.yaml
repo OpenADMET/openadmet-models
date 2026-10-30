@@ -43,7 +43,7 @@ jobs:
         run: |
           for mode in rpath change; do
             for whl in orig/*.whl; do
-              python3 -I diag/bench/diag/wheels/repair_wheel.py "$mode" "$whl" "out/$mode"
+              python3 -I diag/bench/diag/repair/repair_wheel.py "$mode" "$whl" "out/$mode"
             done
           done
           find out -name '*.whl' | sort | xargs ls -l
@@ -129,7 +129,7 @@ jobs:
           cp uv.lock uv.lock.orig
           lg=$(ls ../wheels/lightgbm-*.whl)
           xg=$(ls ../wheels/xgboost-*.whl)
-          python3 -I ../diag/bench/diag/wheels/edit_pyproject.py wheels pyproject.toml "$lg" "$xg"
+          python3 -I ../diag/bench/diag/repair/edit_pyproject.py wheels pyproject.toml "$lg" "$xg"
           git diff pyproject.toml
           uv lock
           diff uv.lock.orig uv.lock | head -120 || true
@@ -214,7 +214,7 @@ jobs:
         shell: bash
         run: |
           torch_omp=$(find "$PWD/.venv" -path '*torch/lib/libomp.dylib')
-          python3 -I ../diag/bench/diag/wheels/edit_pyproject.py source pyproject.toml "$torch_omp" "$(brew --prefix libomp)/include"
+          python3 -I ../diag/bench/diag/repair/edit_pyproject.py source pyproject.toml "$torch_omp" "$(brew --prefix libomp)/include"
           git diff pyproject.toml
           s=$(date +%s)
           # The edit changes only build settings, so the lock is used as recorded
