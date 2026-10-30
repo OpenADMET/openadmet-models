@@ -1,7 +1,7 @@
 name: Diagnose package choices for OpenMP on macOS
 
-# Screens package versions and source builds for the macOS OpenMP collision between torch and
-# LightGBM or XGBoost. Trigger by pushing to env/diag/pkgs.
+# Applies one package-choice variant to a copy of the env/uv project, locks and syncs it with no step
+# after the sync, then probes import orders and runs the unit suite. Trigger by pushing to env/diag/pkgs.
 
 on:
   push:
@@ -12,75 +12,109 @@ permissions:
   contents: read
 
 jobs:
-  torch-versions:
-    name: torch versions, Homebrew libomp ${{ matrix.brew }}
+  project:
+    name: ${{ matrix.variant }}, Python ${{ matrix.python-version }}
     runs-on: macos-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        brew: ["present", "absent"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v10.3.2
-        with:
-          version: "0.12.7"
-          enable-cache: false
-      - name: Set up the system libomp
-        run: |
-          if [ "${{ matrix.brew }}" = present ]; then brew install libomp; else brew uninstall --ignore-dependencies libomp || true; fi
-          ls -l "$(brew --prefix)/opt/libomp/lib" 2>&1 || echo "no Homebrew libomp"
-      - name: Probe each torch version with the latest other libraries
-        run: |
-          for v in 2.6.0 2.7.1 2.9.1 2.10.0 2.11.0 2.14.1 2.15.0; do
-            bash bench/diag/pkgs_screen.sh "torch-$v" 3.12 "torch==$v" scikit-learn==1.9.1 lightgbm==4.7.0 xgboost==3.4.1 numpy 2>&1
-          done | tee screen.txt
-          { echo "### torch versions, Homebrew libomp ${{ matrix.brew }}"; echo; echo "| label | import order | result |"; echo "|---|---|---|"; grep '^RESULT' screen.txt | sed -E 's/^RESULT ([^ ]+) \| ([^|]*)\| ([^|]*)\|/| \1 | \2 | \3 |/'; } >> "$GITHUB_STEP_SUMMARY"
+        python-version: ["3.12", "3.13"]
+        variant: ["src-rpath", "torch210"]
 
-  source-builds:
-    name: source build, ${{ matrix.variant }}
-    runs-on: macos-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ["no-openmp", "torch-rpath"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: diag
+
+      - uses: actions/checkout@v4
+        with:
+          ref: env/uv
+          path: uv
+
       - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: "0.12.7"
           enable-cache: false
-      - name: Install Homebrew libomp for the build and the wheel baseline
-        run: brew install libomp
-      - name: Build the environment from source
+
+      # The source build needs the libomp headers and library once; the run must not use Homebrew libomp
+      - name: Set up the system libomp for the variant
+        shell: bash
         run: |
-          venv="$RUNNER_TEMP/venv-${{ matrix.variant }}"
-          uv venv --quiet --python 3.12 "$venv"
-          uv pip install --quiet --python "$venv/bin/python" torch==2.14.1 scikit-learn==1.9.1 numpy
-          case "${{ matrix.variant }}" in
-            no-openmp)
-              settings=(--config-settings-package lightgbm:cmake.define.USE_OPENMP=OFF --config-settings-package xgboost:cmake.define.USE_OPENMP=OFF)
-              ;;
-            torch-rpath)
-              settings=(--config-settings-package "lightgbm:cmake.define.CMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@loader_path/../../torch/lib" --config-settings-package "xgboost:cmake.define.CMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@loader_path/../../torch/lib")
-              ;;
-          esac
+          if [ "${{ matrix.variant }}" = src-rpath ]; then brew install libomp; else brew uninstall --ignore-dependencies libomp || true; fi
+
+      - name: Apply the variant and lock
+        working-directory: uv
+        run: |
+          python3 -I ../diag/bench/diag/apply_pkgs_variant.py "${{ matrix.variant }}" pyproject.toml
+          git diff --stat
+          uv lock
+          git diff --stat uv.lock
+          grep -A1 -E '^name = "(torch|lightgbm|xgboost|scikit-learn)"$' uv.lock | grep -E 'name|version'
+
+      - name: Install the environment with no step afterwards
+        working-directory: uv
+        run: |
           start=$(date +%s)
-          uv pip install --python "$venv/bin/python" --no-binary lightgbm --no-binary xgboost "${settings[@]}" lightgbm==4.7.0 xgboost==3.4.1
-          echo "BUILD_SECONDS=$(( $(date +%s) - start ))"
+          uv sync --locked --python ${{ matrix.python-version }} --extra all
+          echo "SYNC_SECONDS=$(( $(date +%s) - start ))"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lock-${{ matrix.variant }}-${{ matrix.python-version }}
+          path: |
+            uv/uv.lock
+            uv/pyproject.toml
+
       - name: Remove Homebrew libomp so the run cannot use it
-        run: brew uninstall --ignore-dependencies libomp
-      - name: Probe import orders
+        run: brew uninstall --ignore-dependencies libomp || true
+
+      - name: Show the OpenMP libraries and rpaths
+        working-directory: uv
+        shell: bash
         run: |
-          SKIP_INSTALL=1 bash bench/diag/pkgs_screen.sh "${{ matrix.variant }}" 3.12 2>&1 | tee screen.txt
-          { echo "### source build ${{ matrix.variant }}"; echo; echo "| label | import order | result |"; echo "|---|---|---|"; grep '^RESULT' screen.txt | sed -E 's/^RESULT ([^ ]+) \| ([^|]*)\| ([^|]*)\|/| \1 | \2 | \3 |/'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: Time training against the wheel baseline
-        if: matrix.variant == 'no-openmp'
+          find .venv -name '*omp*.dylib' | sort
+          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
+            echo "== $lib"
+            otool -L "$lib" | grep -Ei 'libi?omp' || true
+            otool -l "$lib" | grep -A2 LC_RPATH | grep path || true
+          done
+
+      - name: Probe import orders without Homebrew libomp
+        working-directory: uv
+        shell: bash
+        run: |
+          python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe.md
+          { echo "### ${{ matrix.variant }}, Python ${{ matrix.python-version }}, no Homebrew libomp"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PROBE_TIMEOUT: "45"
+        continue-on-error: true
+
+      - name: Run the unit tests without Homebrew libomp
+        working-directory: uv
+        timeout-minutes: 20
+        env:
+          PYTHONFAULTHANDLER: "1"
+        run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
+        continue-on-error: true
+
+      - name: Probe import orders with Homebrew libomp installed
+        if: matrix.variant == 'torch210'
+        working-directory: uv
+        shell: bash
         run: |
           brew install libomp
-          base="$RUNNER_TEMP/venv-wheels"
-          uv venv --quiet --python 3.12 "$base"
-          uv pip install --quiet --python "$base/bin/python" numpy lightgbm==4.7.0 xgboost==3.4.1
-          echo "== wheels with OpenMP"; "$base/bin/python" bench/diag/mini_bench.py
-          echo "== source build without OpenMP"; "$RUNNER_TEMP/venv-no-openmp/bin/python" bench/diag/mini_bench.py
+          python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe-brew.md
+          { echo "### ${{ matrix.variant }}, Python ${{ matrix.python-version }}, Homebrew libomp"; sed -n '/^| import order/,$p' probe-brew.md; } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PROBE_TIMEOUT: "45"
+        continue-on-error: true
+
+      - name: Run the unit tests with Homebrew libomp installed
+        if: matrix.variant == 'torch210'
+        working-directory: uv
+        timeout-minutes: 20
+        env:
+          PYTHONFAULTHANDLER: "1"
+        run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
+        continue-on-error: true
