@@ -20,15 +20,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
         variant:
-          - none
-          - brew-only
-          - brew-relink
-          - torch-loader
-          - torch-rpath
-          - preload-brew
-          - preload-torch
+          - script-nobrew
+          - script-brew
 
     steps:
       - uses: actions/checkout@v4
@@ -45,12 +40,12 @@ jobs:
           version: "0.12.7"
           enable-cache: false
 
-      # Variants named none and torch-* must not rely on a system libomp
+      # The nobrew variant must not rely on a system libomp
       - name: Set up the system libomp for the variant
         shell: bash
         run: |
           case "${{ matrix.variant }}" in
-            none | torch-loader | torch-rpath | preload-torch)
+            script-nobrew)
               brew uninstall --ignore-dependencies libomp || true
               ;;
             *)
@@ -79,10 +74,9 @@ jobs:
         working-directory: uv
         shell: bash
         run: |
-          sh ../diag/bench/diag/apply_variant.sh "${{ matrix.variant }}" "$PWD/.venv" | tee extra_env.txt
-          while IFS= read -r line; do
-            [ -n "$line" ] && echo "$line" >> "$GITHUB_ENV"
-          done < extra_env.txt
+          # Run twice to check that a rerun after the first patch is safe
+          sh ../diag/bench/diag/share_libomp_macos.sh "$PWD/.venv"
+          sh ../diag/bench/diag/share_libomp_macos.sh "$PWD/.venv"
           find .venv -name 'libomp.dylib' -exec ls -l {} +
 
       - name: Probe import orders
