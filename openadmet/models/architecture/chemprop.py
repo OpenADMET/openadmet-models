@@ -318,7 +318,9 @@ class ChemPropModel(LightningModelBase):
         Aggregation method ("mean", "norm" or "attentive"). Default is "mean", matching the
         original ChemProp paper baseline. "norm" divides the sum by a fixed normalization
         constant instead of the node count, and "attentive" learns per-node attention weights
-        over the node representations (so it depends on ``message_hidden_dim``).
+        over the node representations (so it depends on ``message_hidden_dim``). When loading
+        from a foundation checkpoint the aggregation must match the one those weights were
+        trained with; ``from_foundation="chemeleon"`` therefore defaults to "mean".
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
@@ -713,6 +715,24 @@ class ChemPropModel(LightningModelBase):
             if self.from_foundation:
                 if self.from_foundation == "chemeleon":
                     foundation_mp = self._download_chemeleon(save_dir=Path.home())
+                    # CheMeleon was pretrained with mean aggregation, so that is what its
+                    # foundation weights expect. Override unless the user asked for
+                    # something else, in which case the run continues but is not what the
+                    # weights were pretrained for.
+                    if "aggregation" not in self._explicit_init_fields:
+                        self.aggregation = "mean"
+                        logger.warning(
+                            "CheMeleon was pretrained with mean aggregation; using "
+                            "'mean'. Pass aggregation= explicitly to select another one."
+                        )
+                    elif self.aggregation != "mean":
+                        logger.warning(
+                            "CheMeleon was pretrained with mean aggregation, but {} was "
+                            "requested. The run continues, but the foundation weights "
+                            "were not pretrained with that aggregation.".format(
+                                self.aggregation
+                            )
+                        )
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, and messages"
                     )
@@ -720,6 +740,13 @@ class ChemPropModel(LightningModelBase):
                     logger.info(f"Loading foundation model from {self.from_foundation}")
                     foundation_mp = self._load_foundation_model(
                         Path(self.from_foundation)
+                    )
+                    logger.warning(
+                        "A foundation checkpoint does not record its aggregation: it has "
+                        "to be set by the user and must match the aggregation used when "
+                        "the weights were pretrained. Using {} as configured.".format(
+                            self.aggregation
+                        )
                     )
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
 
@@ -735,9 +762,6 @@ class ChemPropModel(LightningModelBase):
                 # Built after the message passing module so that the width of the
                 # node representations is known (attentive aggregation needs it)
                 aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
-                logger.warning(
-                    "Using a foundation model overrides settings for depth, message_hidden_dim, and messages"
-                )
             else:
                 message_cls = (
                     nn.BondMessagePassing
