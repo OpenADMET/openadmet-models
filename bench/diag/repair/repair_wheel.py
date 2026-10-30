@@ -74,7 +74,7 @@ def repair(wheel: Path, outdir: Path, mode: str) -> Path:
     parts = wheel.name[: -len(".whl")].split("-")
     if len(parts) != 5:
         raise SystemExit(f"Unexpected wheel name {wheel.name}")
-    out = outdir / "-".join([*parts[:2], "1", *parts[2:]]) + ".whl"
+    out = outdir / ("-".join([*parts[:2], "1", *parts[2:]]) + ".whl")
     outdir.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(wheel) as src, tempfile.TemporaryDirectory() as tmp:
