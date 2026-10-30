@@ -117,9 +117,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {mode: rpath, python-version: "3.12"}
-          - {mode: rpath, python-version: "3.13"}
-          - {mode: change, python-version: "3.12"}
           - {mode: delocate, python-version: "3.12"}
 
     steps:
@@ -162,7 +159,7 @@ jobs:
           diff uv.lock.orig uv.lock | head -120 || true
           grep -n -B1 -A14 '^name = "lightgbm"' uv.lock
           grep -n -B1 -A6 '^name = "xgboost"' uv.lock | head -40
-          grep -n -A3 'xgboost-3.4.1-1' uv.lock | head
+          grep -n 'xgboost-3.4.1' uv.lock | head || true
 
       - name: Install with the locked environment only
         working-directory: uv
@@ -203,10 +200,16 @@ jobs:
           uv sync --locked --python ${{ matrix.python-version }} --extra all --reinstall-package lightgbm --reinstall-package xgboost
           python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | sed -n '/^| import order/,$p'
 
-  source:
-    name: Source build against the Homebrew libomp with a torch rpath
+  linkmode:
+    name: Post-sync script with uv link mode ${{ matrix.link }}
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        link: [clone, hardlink, symlink, copy]
+    env:
+      UV_LINK_MODE: ${{ matrix.link }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -222,48 +225,71 @@ jobs:
           version: "0.12.7"
           enable-cache: false
 
-      # Homebrew libomp supplies omp.h and the link target for the build only
-      - name: Install the compiler prerequisites
-        run: brew install libomp
+      - name: Remove the system libomp
+        shell: bash
+        run: brew uninstall --ignore-dependencies libomp || true
 
-      - name: Build lightgbm and xgboost from source with a relative rpath flag
+      - name: Install with a private uv cache
         working-directory: uv
         shell: bash
         run: |
-          python3 -I ../diag/bench/diag/repair/edit_pyproject.py source-brew pyproject.toml x x
-          git diff pyproject.toml
-          s=$(date +%s)
-          # The edit changes only build settings, so the lock is used as recorded
-          uv sync --frozen --python 3.12 --extra all
-          echo "full sync seconds: $(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
-          # Rerun to time a sync that reuses the cached built wheels
-          rm -rf .venv
-          s=$(date +%s)
-          uv sync --frozen --python 3.12 --extra all
-          echo "cached sync seconds: $(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          export UV_CACHE_DIR="$RUNNER_TEMP/uvcache"
+          uv sync --locked --python 3.12 --extra all
+          lib=.venv/lib/python3.12/site-packages/lightgbm/lib/lib_lightgbm.dylib
+          ls -l "$lib"
+          stat -f 'installed inode=%i links=%l' "$lib"
+          find "$UV_CACHE_DIR" -name lib_lightgbm.dylib -exec sh -c 'for f; do stat -f "cache inode=%i links=%l $f" "$f"; shasum -a 256 "$f"; done' sh {} +
+          shasum -a 256 "$lib"
 
-      - name: Show the OpenMP libraries
+      - name: Edit a copy without signing again
+        shell: bash
+        run: |
+          cp uv/.venv/lib/python3.12/site-packages/xgboost/lib/libxgboost.dylib "$RUNNER_TEMP/unsigned.dylib"
+          install_name_tool -add_rpath @loader_path/../../torch/lib "$RUNNER_TEMP/unsigned.dylib" || true
+          codesign --verify --strict --verbose=2 "$RUNNER_TEMP/unsigned.dylib" || echo "signature invalid after edit"
+          codesign -dv "$RUNNER_TEMP/unsigned.dylib" 2>&1 | grep -i 'signature\|flags' || true
+
+      - name: Run the post-sync script
+        working-directory: uv
+        shell: bash
+        run: sh ../diag/bench/diag/share_libomp_macos.sh "$PWD/.venv"
+
+      - name: Compare the uv cache and the environment after the script
         working-directory: uv
         shell: bash
         run: |
-          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
-            echo "== $lib"
-            otool -L "$lib" | grep -i omp || true
-            otool -l "$lib" | grep -A2 LC_RPATH | grep path || true
-            codesign --verify --strict --verbose=2 "$lib"
-          done
+          export UV_CACHE_DIR="$RUNNER_TEMP/uvcache"
+          lib=.venv/lib/python3.12/site-packages/lightgbm/lib/lib_lightgbm.dylib
+          ls -l "$lib"
+          stat -f 'installed inode=%i links=%l' "$lib"
+          find "$UV_CACHE_DIR" -name lib_lightgbm.dylib -exec sh -c 'for f; do stat -f "cache inode=%i links=%l $f" "$f"; shasum -a 256 "$f"; otool -l "$f" | grep -A2 LC_RPATH | grep path; codesign --verify --strict "$f" && echo "cache signature valid"; done' sh {} +
+          shasum -a 256 "$lib"
+          otool -l "$lib" | grep -A2 LC_RPATH | grep path
+          codesign --verify --strict --verbose=2 "$lib"
 
       - name: Probe import orders
         working-directory: uv
         shell: bash
         run: |
           python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe.md
-          { echo "### source build, Homebrew libomp"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### script, link mode ${{ matrix.link }}"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
         continue-on-error: true
 
-      - name: Run the unit tests
+      - name: Probe a moved copy of the environment
         working-directory: uv
-        timeout-minutes: 15
-        env:
-          PYTHONFAULTHANDLER: "1"
-        run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
+        shell: bash
+        run: |
+          cp -R .venv "$RUNNER_TEMP/moved-venv"
+          python3 -I ../diag/bench/diag/run_probe.py "$RUNNER_TEMP/moved-venv/bin/python" | sed -n '/^| import order/,$p'
+        continue-on-error: true
+
+      # A reinstall that reuses the cache shows whether the cache copy still has the original libraries
+      - name: Reinstall from the cache and probe without the script
+        working-directory: uv
+        shell: bash
+        run: |
+          export UV_CACHE_DIR="$RUNNER_TEMP/uvcache"
+          uv sync --locked --python 3.12 --extra all --reinstall-package lightgbm --reinstall-package xgboost
+          otool -l .venv/lib/python3.12/site-packages/lightgbm/lib/lib_lightgbm.dylib | grep -A2 LC_RPATH | grep path
+          python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | sed -n '/^| import order/,$p'
+        continue-on-error: true
