@@ -1,0 +1,50 @@
+name: Diagnose startup-time OpenMP sharing on macOS
+
+# Probes how dyld resolves libomp after an in-process preload, and whether a local uv package can apply the fix.
+# Trigger by pushing to env/diag/<anything>.
+
+on:
+  push:
+    branches:
+      - "env/diag/**"
+
+permissions:
+  contents: read
+
+jobs:
+  semantics:
+    name: semantics, ${{ matrix.variant }}, Python ${{ matrix.python-version }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+        variant: [nobrew, brew]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+
+      - name: Set up the system libomp for the variant
+        shell: bash
+        run: |
+          if [ "${{ matrix.variant }}" = nobrew ]; then
+            brew uninstall --ignore-dependencies libomp || true
+          else
+            brew install libomp
+          fi
+          ls -l "$(brew --prefix)/opt/libomp/lib" 2>&1 || echo "no Homebrew libomp"
+
+      - name: Install the locked library versions
+        run: |
+          uv venv --python ${{ matrix.python-version }} /tmp/venv
+          uv pip install --python /tmp/venv/bin/python numpy torch==2.14.1 scikit-learn==1.9.1 lightgbm==4.7.0 xgboost==3.4.1
+
+      - name: Probe dyld resolution
+        run: python3 -I bench/startup/dyld_semantics.py /tmp/venv/bin/python | tee probe.md
+        continue-on-error: true
