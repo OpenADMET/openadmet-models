@@ -212,10 +212,18 @@ class PickleableModelBase(ModelBase):
             Path to load the model from
 
         """
-        import joblib
+        import functools
 
-        with open(path, "rb") as f:
-            self.estimator = joblib.load(f)
+        import joblib
+        import torch
+
+        _orig_torch_load = torch.load
+        torch.load = functools.partial(torch.load, map_location="cpu")
+        try:
+            with open(path, "rb") as f:
+                self.estimator = joblib.load(f)
+        finally:
+            torch.load = _orig_torch_load
 
     def make_new(self) -> "PickleableModelBase":
         """Copy parameters to a new model instance without copying the estimator."""
