@@ -45,6 +45,40 @@ jobs:
           uv venv --python ${{ matrix.python-version }} /tmp/venv
           uv pip install --python /tmp/venv/bin/python numpy torch==2.14.1 scikit-learn==1.9.1 lightgbm==4.7.0 xgboost==3.4.1
 
-      - name: Probe dyld resolution
-        run: python3 -I bench/startup/dyld_semantics.py /tmp/venv/bin/python | tee probe.md
+      - name: Show load commands of the OpenMP users
+        run: |
+          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
+          for lib in "$site/torch/lib/libtorch_cpu.dylib" "$site/torch/lib/libomp.dylib" "$site/lightgbm/lib/lib_lightgbm.dylib" "$site/xgboost/lib/libxgboost.dylib" $(find "$site/sklearn" -name '*.so' | head -400); do
+            if otool -L "$lib" | grep -q omp; then
+              echo "== $lib"
+              otool -L "$lib" | grep omp
+              otool -l "$lib" | grep -A2 LC_RPATH | grep path
+            fi
+          done 2>&1 | awk '/^== /{n++} n<=12 || !/^==/{print}' | head -80
+          sw_vers
+
+      - name: Shim without any modification of installed files
+        run: |
+          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
+          mkdir -p "$site/omp_shim"
+          sh bench/startup/build_shim.sh "$site" "$site/omp_shim"
+          python3 -I bench/startup/orders.py /tmp/venv/bin/python shim "$site/omp_shim/libomp.dylib" | tee shim.md
+          python3 -I bench/startup/orders.py /tmp/venv/bin/python control none | tee control.md
+        continue-on-error: true
+
+      - name: Repair only the lightgbm and xgboost rpaths
+        run: |
+          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
+          for lib in "$site/lightgbm/lib/lib_lightgbm.dylib" "$site/xgboost/lib/libxgboost.dylib"; do
+            install_name_tool -add_rpath "@loader_path/../../torch/lib" "$lib"
+            codesign --force --sign - "$lib"
+          done
+          python3 -I bench/startup/orders.py /tmp/venv/bin/python rpath-only none | tee rpath.md
+        continue-on-error: true
+
+      - name: Repair the rpaths and link the scikit-learn runtime
+        run: |
+          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
+          ln -sf "$site/torch/lib/libomp.dylib" "$site/sklearn/.dylibs/libomp.dylib"
+          python3 -I bench/startup/orders.py /tmp/venv/bin/python rpath-and-sklearn-link none | tee rpath_sk.md
         continue-on-error: true
