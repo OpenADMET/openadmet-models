@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +17,11 @@ ORDERS = [
     ["lightgbm", "xgboost"],
     ["sklearn", "torch"],
 ]
-TIMEOUT_SECONDS = 120
+TIMEOUT_SECONDS = int(os.environ.get("PROBE_TIMEOUT", "120"))
+
+# PROBE_ORDERS="torch,lightgbm;lightgbm,torch" replaces the default list of import orders
+if os.environ.get("PROBE_ORDERS"):
+    ORDERS = [order.split(",") for order in os.environ["PROBE_ORDERS"].split(";")]
 
 
 def probe(python: str, script: Path, order: list[str]) -> tuple[str, str]:

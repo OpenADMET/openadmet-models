@@ -1,0 +1,86 @@
+name: Diagnose package choices for OpenMP on macOS
+
+# Screens package versions and source builds for the macOS OpenMP collision between torch and
+# LightGBM or XGBoost. Trigger by pushing to env/diag/pkgs.
+
+on:
+  push:
+    branches:
+      - "env/diag/pkgs"
+
+permissions:
+  contents: read
+
+jobs:
+  torch-versions:
+    name: torch versions, Homebrew libomp ${{ matrix.brew }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        brew: ["present", "absent"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - name: Set up the system libomp
+        run: |
+          if [ "${{ matrix.brew }}" = present ]; then brew install libomp; else brew uninstall --ignore-dependencies libomp || true; fi
+          ls -l "$(brew --prefix)/opt/libomp/lib" 2>&1 || echo "no Homebrew libomp"
+      - name: Probe each torch version with the latest other libraries
+        run: |
+          for v in 2.6.0 2.7.1 2.9.1 2.10.0 2.11.0 2.14.1 2.15.0; do
+            bash bench/diag/pkgs_screen.sh "torch-$v" 3.12 "torch==$v" scikit-learn==1.9.1 lightgbm==4.7.0 xgboost==3.4.1 numpy 2>&1
+          done | tee screen.txt
+          { echo "### torch versions, Homebrew libomp ${{ matrix.brew }}"; echo; echo "| label | import order | result |"; echo "|---|---|---|"; grep '^RESULT' screen.txt | sed -E 's/^RESULT ([^ ]+) \| ([^|]*)\| ([^|]*)\|/| \1 | \2 | \3 |/'; } >> "$GITHUB_STEP_SUMMARY"
+
+  source-builds:
+    name: source build, ${{ matrix.variant }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ["no-openmp", "torch-rpath"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          enable-cache: false
+      - name: Install Homebrew libomp for the build and the wheel baseline
+        run: brew install libomp
+      - name: Build the environment from source
+        run: |
+          venv="$RUNNER_TEMP/venv-${{ matrix.variant }}"
+          uv venv --quiet --python 3.12 "$venv"
+          uv pip install --quiet --python "$venv/bin/python" torch==2.14.1 scikit-learn==1.9.1 numpy
+          case "${{ matrix.variant }}" in
+            no-openmp)
+              settings=(--config-settings-package lightgbm:cmake.define.USE_OPENMP=OFF --config-settings-package xgboost:cmake.define.USE_OPENMP=OFF)
+              ;;
+            torch-rpath)
+              settings=(--config-settings-package "lightgbm:cmake.define.CMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@loader_path/../../torch/lib" --config-settings-package "xgboost:cmake.define.CMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@loader_path/../../torch/lib")
+              ;;
+          esac
+          start=$(date +%s)
+          uv pip install --python "$venv/bin/python" --no-binary lightgbm --no-binary xgboost "${settings[@]}" lightgbm==4.7.0 xgboost==3.4.1
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))"
+      - name: Remove Homebrew libomp so the run cannot use it
+        run: brew uninstall --ignore-dependencies libomp
+      - name: Probe import orders
+        run: |
+          SKIP_INSTALL=1 bash bench/diag/pkgs_screen.sh "${{ matrix.variant }}" 3.12 2>&1 | tee screen.txt
+          { echo "### source build ${{ matrix.variant }}"; echo; echo "| label | import order | result |"; echo "|---|---|---|"; grep '^RESULT' screen.txt | sed -E 's/^RESULT ([^ ]+) \| ([^|]*)\| ([^|]*)\|/| \1 | \2 | \3 |/'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Time training against the wheel baseline
+        if: matrix.variant == 'no-openmp'
+        run: |
+          brew install libomp
+          base="$RUNNER_TEMP/venv-wheels"
+          uv venv --quiet --python 3.12 "$base"
+          uv pip install --quiet --python "$base/bin/python" numpy lightgbm==4.7.0 xgboost==3.4.1
+          echo "== wheels with OpenMP"; "$base/bin/python" bench/diag/mini_bench.py
+          echo "== source build without OpenMP"; "$RUNNER_TEMP/venv-no-openmp/bin/python" bench/diag/mini_bench.py
