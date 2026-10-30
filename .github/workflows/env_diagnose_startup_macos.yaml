@@ -1,6 +1,7 @@
 name: Diagnose startup-time OpenMP sharing on macOS
 
-# Probes how dyld resolves libomp after an in-process preload, and whether a local uv package can apply the fix.
+# Installs the locked uv environment with a uv-native fix (local shim package or repaired wheels), then probes
+# import orders, a sync that reinstalls the OpenMP users, startup cost, and the unit suite.
 # Trigger by pushing to env/diag/<anything>.
 
 on:
@@ -12,18 +13,30 @@ permissions:
   contents: read
 
 jobs:
-  semantics:
-    name: semantics, ${{ matrix.variant }}, Python ${{ matrix.python-version }}
+  startup:
+    name: ${{ matrix.variant }}, ${{ matrix.libomp }}, Python ${{ matrix.python-version }}
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
-        variant: [nobrew, brew]
+        include:
+          - { variant: shim, libomp: nobrew, python-version: "3.12" }
+          - { variant: shim, libomp: brew, python-version: "3.12" }
+          - { variant: shim, libomp: nobrew, python-version: "3.13" }
+          - { variant: wheels, libomp: nobrew, python-version: "3.12" }
+          - { variant: wheels, libomp: brew, python-version: "3.12" }
+          - { variant: wheels, libomp: nobrew, python-version: "3.13" }
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: diag
+
+      - uses: actions/checkout@v4
+        with:
+          ref: env/uv
+          path: uv
 
       - uses: astral-sh/setup-uv@v10.3.2
         with:
@@ -33,52 +46,100 @@ jobs:
       - name: Set up the system libomp for the variant
         shell: bash
         run: |
-          if [ "${{ matrix.variant }}" = nobrew ]; then
+          if [ "${{ matrix.libomp }}" = nobrew ]; then
             brew uninstall --ignore-dependencies libomp || true
           else
             brew install libomp
           fi
           ls -l "$(brew --prefix)/opt/libomp/lib" 2>&1 || echo "no Homebrew libomp"
-
-      - name: Install the locked library versions
-        run: |
-          uv venv --python ${{ matrix.python-version }} /tmp/venv
-          uv pip install --python /tmp/venv/bin/python numpy torch==2.14.1 scikit-learn==1.9.1 lightgbm==4.7.0 xgboost==3.4.1
-
-      - name: Show load commands of the OpenMP users
-        run: |
-          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
-          for lib in "$site/torch/lib/libtorch_cpu.dylib" "$site/torch/lib/libomp.dylib" "$site/lightgbm/lib/lib_lightgbm.dylib" "$site/xgboost/lib/libxgboost.dylib" $(find "$site/sklearn" -name '*.so' | head -400); do
-            if otool -L "$lib" | grep -q omp; then
-              echo "== $lib"
-              otool -L "$lib" | grep omp
-              otool -l "$lib" | grep -A2 LC_RPATH | grep path
-            fi
-          done 2>&1 | awk '/^== /{n++} n<=12 || !/^==/{print}' | head -80
           sw_vers
 
-      - name: Shim without any modification of installed files
+      - name: Build the repaired wheels
+        if: matrix.variant == 'wheels'
+        working-directory: uv
         run: |
-          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
-          mkdir -p "$site/omp_shim"
-          sh bench/startup/build_shim.sh "$site" "$site/omp_shim"
-          python3 -I bench/startup/orders.py /tmp/venv/bin/python shim "$site/omp_shim/libomp.dylib" | tee shim.md
-          python3 -I bench/startup/orders.py /tmp/venv/bin/python control none | tee control.md
-        continue-on-error: true
-
-      - name: Repair only the lightgbm and xgboost rpaths
-        run: |
-          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
-          for lib in "$site/lightgbm/lib/lib_lightgbm.dylib" "$site/xgboost/lib/libxgboost.dylib"; do
-            install_name_tool -add_rpath "@loader_path/../../torch/lib" "$lib"
-            codesign --force --sign - "$lib"
+          python3 -I ../diag/bench/startup/fetch_wheels.py uv.lock /tmp/original lightgbm xgboost
+          mkdir -p devtools/omp-wheels
+          for wheel in /tmp/original/*.whl; do
+            python3 -I ../diag/devtools/omp-wheels/repair_wheel.py "$wheel" devtools/omp-wheels
           done
-          python3 -I bench/startup/orders.py /tmp/venv/bin/python rpath-only none | tee rpath.md
+          ls -l devtools/omp-wheels
+
+      - name: Add the local shim package
+        if: matrix.variant == 'shim'
+        working-directory: uv
+        run: cp -R ../diag/devtools/omp-shim devtools/omp-shim
+
+      - name: Apply the fix to pyproject.toml and lock it
+        working-directory: uv
+        run: |
+          python3 -I ../diag/bench/startup/patch_project.py ${{ matrix.variant }} .
+          git diff pyproject.toml
+          uv lock
+          git diff --stat uv.lock
+          git diff uv.lock | grep -E '^[+-]' | grep -E '^[+-](name|version|source)' | head -40
+
+      - name: Install the environment
+        working-directory: uv
+        run: uv sync --locked --python ${{ matrix.python-version }} --extra all
+
+      - name: Show the installed OpenMP files
+        working-directory: uv
+        run: |
+          find .venv -name '*omp*' \( -name '*.dylib' -o -name '*.pth' \) | sort
+          cat .venv/lib/python*/site-packages/omp_shim.pth 2>/dev/null || true
+          for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
+            echo "== $lib"
+            otool -l "$lib" | grep -A2 LC_RPATH | grep path
+          done
+
+      - name: Probe import orders
+        working-directory: uv
+        run: python3 -I ../diag/bench/startup/orders.py "$PWD/.venv/bin/python" "${{ matrix.variant }}-${{ matrix.libomp }}" none | tee probe.md
         continue-on-error: true
 
-      - name: Repair the rpaths and link the scikit-learn runtime
+      - name: Reinstall the OpenMP users and probe again
+        working-directory: uv
         run: |
-          site=$(/tmp/venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
-          ln -sf "$site/torch/lib/libomp.dylib" "$site/sklearn/.dylibs/libomp.dylib"
-          python3 -I bench/startup/orders.py /tmp/venv/bin/python rpath-and-sklearn-link none | tee rpath_sk.md
+          uv sync --locked --python ${{ matrix.python-version }} --extra all --reinstall-package torch --reinstall-package scikit-learn --reinstall-package lightgbm --reinstall-package xgboost
+          python3 -I ../diag/bench/startup/orders.py "$PWD/.venv/bin/python" "resync-${{ matrix.variant }}-${{ matrix.libomp }}" none | tee probe2.md
+        continue-on-error: true
+
+      - name: Measure interpreter startup
+        working-directory: uv
+        run: |
+          site=$(.venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'])")
+          bench() {
+            python3 -I - "$1" <<'PY'
+          import subprocess, sys, time
+          py = sys.argv[1]
+          times = []
+          for _ in range(30):
+              t = time.perf_counter()
+              subprocess.run([py, "-c", "pass"], check=True)
+              times.append(time.perf_counter() - t)
+          times.sort()
+          print(f"median {times[15] * 1000:.1f} ms, min {times[0] * 1000:.1f} ms")
+          PY
+          }
+          echo "with the fix:"; bench "$PWD/.venv/bin/python"
+          if [ -f "$site/omp_shim.pth" ]; then
+            mv "$site/omp_shim.pth" /tmp/omp_shim.pth
+            echo "without the .pth file:"; bench "$PWD/.venv/bin/python"
+            mv /tmp/omp_shim.pth "$site/omp_shim.pth"
+          fi
+          echo "CLI help:"; time .venv/bin/openadmet --help > /dev/null
+        continue-on-error: true
+
+      - name: Run the unit tests
+        working-directory: uv
+        timeout-minutes: 20
+        env:
+          PYTHONFAULTHANDLER: "1"
+        run: uv run --no-sync pytest openadmet/models/tests/unit -n 0 -q -o faulthandler_timeout=180 -p no:cacheprovider
+
+      - name: Run the unit tests with xdist workers
+        working-directory: uv
+        timeout-minutes: 20
+        run: uv run --no-sync pytest openadmet/models/tests/unit -n 2 -q -p no:cacheprovider
         continue-on-error: true
