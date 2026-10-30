@@ -2,6 +2,7 @@
 
 Usage: edit_pyproject.py wheels PYPROJECT LIGHTGBM_WHEEL XGBOOST_WHEEL
        edit_pyproject.py source PYPROJECT TORCH_OMP_LIBRARY OMP_INCLUDE_DIR
+       edit_pyproject.py source-brew PYPROJECT x x
 """
 
 from __future__ import annotations
@@ -29,6 +30,15 @@ def main(mode: str, pyproject: str, a: str, b: str) -> None:
             "[tool.uv.sources]",
             f'lightgbm = {{ path = "{a}", marker = "{DARWIN}" }}\n'
             f'xgboost = {{ path = "{b}", marker = "{DARWIN}" }}\n',
+        )
+    elif mode == "source-brew":
+        # Build both from source against the default libomp and add a relative rpath by linker flag
+        body = '"cmake.define.CMAKE_SHARED_LINKER_FLAGS" = "-Wl,-rpath,@loader_path/../../torch/lib"'
+        text = insert_after(
+            text,
+            "[tool.uv]",
+            'no-binary-package = ["lightgbm", "xgboost"]\n'
+            f"config-settings-package = {{ lightgbm = {{ {body} }}, xgboost = {{ {body} }} }}\n",
         )
     else:
         # Build both from source against the libomp inside torch and add a relative rpath

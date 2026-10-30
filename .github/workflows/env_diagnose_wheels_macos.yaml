@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           for mode in rpath change; do
-            rm -rf "x/$mode"
+            rm -rf "x/$mode"; mkdir -p "x/$mode"
             for whl in out/$mode/*.whl; do unzip -q -o "$whl" -d "x/$mode"; done
             for lib in "x/$mode/lightgbm/lib/lib_lightgbm.dylib" "x/$mode/xgboost/lib/libxgboost.dylib"; do
               echo "== $mode $lib"
@@ -63,6 +63,24 @@ jobs:
           done
           unzip -p out/rpath/xgboost-*.whl 'xgboost-*.dist-info/WHEEL'
           unzip -p out/rpath/xgboost-*.whl 'xgboost-*.dist-info/RECORD' | grep -E 'libxgboost|WHEEL|RECORD'
+
+      # The standard tool vendors libomp into the wheel, which adds a third runtime copy
+      - name: Run delocate-wheel on the PyPI wheels
+        continue-on-error: true
+        shell: bash
+        run: |
+          brew install libomp
+          uvx --from delocate delocate-listdeps -d orig/*.whl
+          uvx --from delocate delocate-wheel -v -w out/delocate orig/*.whl
+          find out/delocate -name '*.whl' | sort | xargs ls -l
+          for whl in out/delocate/*.whl; do unzip -l "$whl" | grep -i 'dylib'; done
+          rm -rf x/delocate; mkdir -p x/delocate
+          for whl in out/delocate/*.whl; do unzip -q -o "$whl" -d x/delocate; done
+          for lib in $(find x/delocate -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib'); do
+            otool -L "$lib" | grep -i omp || true
+            otool -l "$lib" | grep -A2 LC_RPATH | grep path || true
+          done
+          find x/delocate -name 'libomp.dylib' -exec otool -D {} +
 
       - name: Check that uv accepts the build tag and RECORD
         shell: bash
@@ -80,6 +98,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: wheels-delocate
+          path: out/delocate/*.whl
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
           name: wheels-change
           path: out/change/*.whl
           if-no-files-found: error
@@ -92,8 +116,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
-        mode: [rpath, change]
+        include:
+          - {mode: rpath, python-version: "3.12"}
+          - {mode: rpath, python-version: "3.13"}
+          - {mode: change, python-version: "3.12"}
+          - {mode: delocate, python-version: "3.12"}
 
     steps:
       - uses: actions/checkout@v4
@@ -177,7 +204,7 @@ jobs:
           python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | sed -n '/^| import order/,$p'
 
   source:
-    name: Source build against the torch libomp
+    name: Source build against the Homebrew libomp with a torch rpath
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
@@ -195,31 +222,25 @@ jobs:
           version: "0.12.7"
           enable-cache: false
 
-      # Homebrew libomp supplies omp.h for the build only
+      # Homebrew libomp supplies omp.h and the link target for the build only
       - name: Install the compiler prerequisites
         run: brew install libomp
 
-      - name: Install everything except lightgbm and xgboost
+      - name: Build lightgbm and xgboost from source with a relative rpath flag
         working-directory: uv
         shell: bash
         run: |
-          s=$(date +%s)
-          uv sync --locked --python 3.12 --extra all --no-install-package lightgbm --no-install-package xgboost
-          echo "stage 1 seconds: $(( $(date +%s) - s ))"
-          find .venv -name 'omp.h'
-          find .venv -name 'libomp.dylib' -exec otool -D {} +
-
-      - name: Build lightgbm and xgboost from source
-        working-directory: uv
-        shell: bash
-        run: |
-          torch_omp=$(find "$PWD/.venv" -path '*torch/lib/libomp.dylib')
-          python3 -I ../diag/bench/diag/repair/edit_pyproject.py source pyproject.toml "$torch_omp" "$(brew --prefix libomp)/include"
+          python3 -I ../diag/bench/diag/repair/edit_pyproject.py source-brew pyproject.toml x x
           git diff pyproject.toml
           s=$(date +%s)
           # The edit changes only build settings, so the lock is used as recorded
-          uv sync --frozen --python 3.12 --extra all -v 2>&1 | grep -v '^DEBUG' | tail -n 80
-          echo "stage 2 seconds: $(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          uv sync --frozen --python 3.12 --extra all
+          echo "full sync seconds: $(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Rerun to time a sync that reuses the cached built wheels
+          rm -rf .venv
+          s=$(date +%s)
+          uv sync --frozen --python 3.12 --extra all
+          echo "cached sync seconds: $(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Show the OpenMP libraries
         working-directory: uv
@@ -237,7 +258,7 @@ jobs:
         shell: bash
         run: |
           python3 -I ../diag/bench/diag/run_probe.py "$PWD/.venv/bin/python" | tee probe.md
-          { echo "### source build"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### source build, Homebrew libomp"; sed -n '/^| import order/,$p' probe.md; } >> "$GITHUB_STEP_SUMMARY"
         continue-on-error: true
 
       - name: Run the unit tests
