@@ -18,6 +18,11 @@ def main(variant: str, project: str) -> int:
     if variant == "shim":
         text = text.replace('  "torch",\n]\n', '  "torch",\n  "omp-shim ; sys_platform == \'darwin\'",\n]\n', 1)
         text = text.replace(header, header + 'omp-shim = { path = "devtools/omp-shim" }\n', 1)
+    elif variant in {"shim-group", "shim-prebuilt"}:
+        # Keep the shim out of the published project metadata by using a dependency group installed by default
+        text = text.replace("dev = [\n", 'macos = [\n  "omp-shim ; sys_platform == \'darwin\'",\n]\ndev = [\n', 1)
+        text = text.replace("[tool.uv]\n", '[tool.uv]\ndefault-groups = ["dev", "macos"]\n', 1)
+        text = text.replace(header, header + 'omp-shim = { path = "devtools/omp-shim" }\n', 1)
     elif variant == "wheels":
         lines = []
         for wheel in sorted((Path(project) / "devtools/omp-wheels").glob("*.whl")):

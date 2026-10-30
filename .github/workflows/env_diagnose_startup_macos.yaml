@@ -14,19 +14,19 @@ permissions:
 
 jobs:
   startup:
-    name: ${{ matrix.variant }}, ${{ matrix.libomp }}, Python ${{ matrix.python-version }}
-    runs-on: macos-latest
+    name: ${{ matrix.variant }}, ${{ matrix.runner }}, ${{ matrix.libomp }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { variant: shim, libomp: nobrew, python-version: "3.12" }
-          - { variant: shim, libomp: brew, python-version: "3.12" }
-          - { variant: shim, libomp: nobrew, python-version: "3.13" }
-          - { variant: wheels, libomp: nobrew, python-version: "3.12" }
-          - { variant: wheels, libomp: brew, python-version: "3.12" }
-          - { variant: wheels, libomp: nobrew, python-version: "3.13" }
+          - { variant: shim-group, runner: macos-latest, libomp: nobrew, python-version: "3.12" }
+          - { variant: shim-group, runner: macos-15, libomp: nobrew, python-version: "3.12" }
+          - { variant: shim-prebuilt, runner: macos-14, libomp: nobrew, python-version: "3.12" }
+          - { variant: shim-prebuilt, runner: macos-15, libomp: brew, python-version: "3.13" }
+          - { variant: shim-prebuilt, runner: macos-latest, libomp: brew, python-version: "3.13" }
+          - { variant: wheels, runner: macos-14, libomp: brew, python-version: "3.13" }
 
     steps:
       - uses: actions/checkout@v4
@@ -66,9 +66,22 @@ jobs:
           ls -l devtools/omp-wheels
 
       - name: Add the local shim package
-        if: matrix.variant == 'shim'
+        if: startsWith(matrix.variant, 'shim')
         working-directory: uv
-        run: cp -R ../diag/devtools/omp-shim devtools/omp-shim
+        run: |
+          cp -R ../diag/devtools/omp-shim devtools/omp-shim
+          if [ "${{ matrix.variant }}" = shim-prebuilt ]; then
+            # Replace the compile hook with a committed-style binary built once here
+            sh devtools/omp-shim/build_dylib.sh devtools/omp-shim/src/omp_shim/libomp.dylib
+            rm devtools/omp-shim/hatch_build.py
+            python3 -I - <<'PY'
+          from pathlib import Path
+          p = Path("devtools/omp-shim/pyproject.toml")
+          text = p.read_text().split("# Build the platform shim library")[0]
+          p.write_text(text)
+          PY
+            cat devtools/omp-shim/pyproject.toml
+          fi
 
       - name: Apply the fix to pyproject.toml and lock it
         working-directory: uv
@@ -88,6 +101,11 @@ jobs:
         run: |
           find .venv -name '*omp*' \( -name '*.dylib' -o -name '*.pth' \) | sort
           cat .venv/lib/python*/site-packages/omp_shim.pth 2>/dev/null || true
+          grep -A3 'name = "omp-shim"' uv.lock || true
+          grep -n 'default-groups' pyproject.toml || true
+          uv pip show --python .venv/bin/python omp-shim 2>/dev/null | head -3 || true
+          pkg=$(python3 -c "import tomllib;d=tomllib.load(open('uv.lock','rb'));print([p for p in d['package'] if p['name']=='openadmet-models'][0].get('dependencies'))")
+          echo "openadmet-models locked dependencies mention omp-shim: $pkg" | grep -c omp-shim || true
           for lib in $(find .venv -name 'lib_lightgbm.dylib' -o -name 'libxgboost.dylib' | sort); do
             echo "== $lib"
             otool -l "$lib" | grep -A2 LC_RPATH | grep path
