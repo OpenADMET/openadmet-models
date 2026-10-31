@@ -759,9 +759,6 @@ class ChemPropModel(LightningModelBase):
                     )
                 mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
-                # Built after the message passing module so that the width of the
-                # node representations is known (attentive aggregation needs it)
-                aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
             else:
                 message_cls = (
                     nn.BondMessagePassing
@@ -773,7 +770,11 @@ class ChemPropModel(LightningModelBase):
                 mp = message_cls(
                     d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout
                 )
-                aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
+
+            # Built once, after the message passing module: the width of the node
+            # representations has to be known first (attentive aggregation needs it),
+            # and the foundation path may have just changed it via mp.output_dim.
+            aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
 
             ffn = nn.RegressionFFN(
                 n_tasks=self.n_tasks,
