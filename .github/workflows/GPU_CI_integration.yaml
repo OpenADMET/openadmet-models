@@ -59,6 +59,10 @@ jobs:
           locked: true
           cache: true
 
+      # The GPU tests skip when CUDA is unavailable, so fail here if the environment cannot use the GPU
+      - name: Check CUDA is available with pixi
+        run: pixi run --locked -e cuda-py312 python -c "import torch; assert torch.cuda.is_available(), torch.__version__"
+
       - name: Run GPU integration tests
         # the `gpu` marker selects only GPU tests, see test-integration-gpu in pyproject.toml
         run: pixi run --locked -e cuda-py312 test-integration-gpu
@@ -66,17 +70,25 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       # The uv route uses the CUDA 12.6 wheels, so it is tested on the same instance
+      # The uv steps run even when the pixi steps fail, so one failure does not hide the other route
       # More info on options: https://github.com/astral-sh/setup-uv
       - uses: astral-sh/setup-uv@v10.3.2
+        if: ${{ !cancelled() }}
         with:
           version: "0.12.7"
           python-version: "3.12"
           enable-cache: false
 
       - name: Install package with uv
+        if: ${{ !cancelled() }}
         run: uv sync --locked --extra test --extra cuda
 
+      - name: Check CUDA is available with uv
+        if: ${{ !cancelled() }}
+        run: uv run --no-sync python -c "import torch; assert torch.cuda.is_available(), torch.__version__"
+
       - name: Run GPU integration tests with uv
+        if: ${{ !cancelled() }}
         # use the `-m gpu` marker to run only GPU tests
         run: uv run --no-sync pytest -v -n auto -m gpu --color=yes openadmet/models/tests/integration
         env:
