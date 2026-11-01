@@ -133,3 +133,113 @@ ignore = ["D212"]
 [tool.ruff.per-file-ignores]
 "**/__init__.py" = ["D104"] # Ignore D104 (Missing docstring in public package) specifically for __init__.py files
 "**/tests/**.py" = ["D"] # Ignore all D and S101 (Use of assert detected) and S311 (Standard pseudo-random generators are not suitable for security/cryptographic purposes) and D103 (Missing docstring in public function) specifically for test files
+
+# Environments are managed with pixi (https://pixi.sh) and locked in pixi.lock
+# The tables below name the conda-forge build of each dependency; pixi resolves
+# [project.dependencies] from PyPI for everything that conda-forge does not provide
+# (the pinned git dependencies and tabpfn-extensions)
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", { name = "linux-64-cuda-12", platform = "linux-64", cuda = "12" }]
+
+# Conda counterparts of [project.dependencies]; match the version bounds in the PyPI list
+# mordredcommunity is a dependency of the pinned molfeat fork
+# tabpfn-extensions stays on PyPI because the conda-forge build depends on conda-forge tabpfn, which would conflict with the pinned tabpfn commit
+# conda-forge wandb below 0.26 requires protobuf below 7; without the protobuf bound the solver falls back to wandb 0.13.1
+# (broken with numpy 2) and torch 2.14. The bound selects torch 2.12, the newest build that uses libprotobuf 6
+[tool.pixi.dependencies]
+boto3 = "*"
+catboost = "*"
+click = "*"
+datamol = "*"
+email-validator = "*"
+fsspec = "*"
+intake = "*"
+intake-parquet = "*"
+jinja2 = "*"
+joblib = "*"
+lightgbm = "*"
+lightning = "<=2.6.1"
+loguru = "*"
+matplotlib-base = "*"
+mordredcommunity = "*"
+numpy = "*"
+pandas = "*"
+phx-class-registry = "*"
+protobuf = "<7"
+pydantic = "*"
+pytorch-lightning = "<=2.6.1"
+pyyaml = "*"
+rdkit = "*"
+reportlab = "*"
+rich = "*"
+s3fs = ">=2021.9"
+scikit-learn = "*"
+scipy = "*"
+seaborn = "*"
+setuptools = "<82.0.0"
+splito = "*"
+statsmodels = "*"
+tabicl = "*"
+tabulate = "*"
+uncertainty-toolbox = "*"
+wandb = "<0.26.0"
+xgboost = "*"
+zarr = ">=3.0.0"
+
+[tool.pixi.pypi-dependencies]
+openadmet-models = { path = ".", editable = true }
+
+# Python version features
+# conda-forge chemprop 2.1.1 to 2.3.1 requires python <3.13, so Python 3.13 resolves chemprop from PyPI
+# chemprop 2.3 imports cuik_molmaker at module level and the PyPI cuik_molmaker wheel links the libraries bundled
+# in the PyPI rdkit wheel, which are absent next to conda-forge rdkit; chemprop 2.2.4 imports it only when installed
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+chemprop = ">=2.1.1"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py313.pypi-dependencies]
+chemprop = "==2.2.4"
+
+# Hardware features select the torch build
+# On Apple silicon the cpu environments install the macOS build, which includes the MPS backend
+[tool.pixi.feature.cpu]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.cpu.target.linux-64.dependencies]
+pytorch-cpu = "*"
+
+[tool.pixi.feature.cpu.target.osx-arm64.dependencies]
+pytorch = "*"
+
+[tool.pixi.feature.cuda]
+platforms = ["linux-64-cuda-12"]
+
+# Restrict to CUDA 12 builds; the linux-64-cuda-12 platform declares a driver that supports CUDA 12
+[tool.pixi.feature.cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = ">=12,<13"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=6.1.2"
+pytest-cov = "*"
+pytest-mock = "*"
+pytest-xdist = "*"
+
+[tool.pixi.feature.test.tasks]
+test-unit = { cmd = "pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit", description = "Run the unit tests" }
+test-integration-cpu = { cmd = "pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration", description = "Run the CPU integration tests" }
+test-integration-gpu = { cmd = "pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml --color=yes openadmet/models/tests/integration", description = "Run the GPU integration tests" }
+
+# Environments are named <hardware>-py<version> and include the test tools
+# cpu environments with the same Python version share a solve group; cuda environments have their own
+# The default environment is cpu with Python 3.12
+[tool.pixi.environments]
+default = { features = ["cpu", "py312", "test"], solve-group = "cpu-py312" }
+cpu-py312 = { features = ["cpu", "py312", "test"], solve-group = "cpu-py312" }
+cuda-py312 = { features = ["cuda", "py312", "test"], solve-group = "cuda-py312" }
+cpu-py313 = { features = ["cpu", "py313", "test"], solve-group = "cpu-py313" }
+cuda-py313 = { features = ["cuda", "py313", "test"], solve-group = "cuda-py313" }
