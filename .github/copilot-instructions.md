@@ -7,21 +7,25 @@
 ## Install & Setup
 
 ```bash
-mamba env create -f devtools/conda-envs/openadmet-models.yaml
-python -m pip install -e --no-deps .
+pixi install -e cpu-py312           # pixi, any supported platform
+uv sync --extra test                # uv, macOS
+uv sync --extra test --extra cpu    # uv, Linux, CPU only
+uv sync --extra test --extra cuda   # uv, Linux, NVIDIA GPU
 ```
+
+Both pixi and uv are supported and are tested in CI; `pip install -e ".[test]"` and the conda file `devtools/conda-envs/openadmet-models.yaml` are best-effort routes. pixi environments are named `<hardware>-py<version>` (hardware `cpu`, `cuda`, where `cpu` is also the Apple silicon environment; Python `312`, `313`) and are defined in `pyproject.toml` and `pixi.lock`; prefix commands with `pixi run -e cpu-py312`. uv environments are defined by `pyproject.toml` and `uv.lock`; run commands with `uv run --no-sync`. On macOS with uv, run `sh devtools/scripts/share_libomp_macos.sh` after every `uv sync`.
 
 ## Commands
 
 ```bash
-# Run all unit tests
-pytest -v -n auto --cov=openadmet.models openadmet/models/tests/unit
+# Run all unit tests (pixi: pixi run -e cpu-py312 test-unit)
+uv run --no-sync pytest -v -n auto --cov=openadmet.models openadmet/models/tests/unit
 
 # Run a single test file
-pytest -v openadmet/models/tests/unit/models/test_xgboost.py
+uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_xgboost.py
 
 # Run a single test
-pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
+uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
 ```
 
 Lint/format is enforced via pre-commit hooks (ruff, black, isort, flake8). There is no standalone lint command — run `pre-commit run --all-files` to check manually.
