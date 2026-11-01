@@ -7,25 +7,30 @@
 ## Install & Setup
 
 ```bash
-pixi install -e cpu-py312           # pixi, any supported platform
-uv sync --extra test                # uv, macOS
-uv sync --extra test --extra cpu    # uv, Linux, CPU only
-uv sync --extra test --extra cuda   # uv, Linux, NVIDIA GPU
+pixi install --locked -e cpu-py312           # pixi, any supported platform
+uv sync --locked --extra test                # uv, macOS
+uv sync --locked --extra test --extra cpu    # uv, Linux, CPU only
+uv sync --locked --extra test --extra cuda   # uv, Linux, NVIDIA GPU
 ```
+
+On Linux, pass exactly one of `--extra cpu` or `--extra cuda` to uv. They conflict, and without one uv installs the PyPI default (the CUDA 13 build).
 
 Both pixi and uv are supported and are tested in CI; `pip install -e ".[test]"` and the conda file `devtools/conda-envs/openadmet-models.yaml` are best-effort routes. pixi environments are named `<hardware>-py<version>` (hardware `cpu`, `cuda`, where `cpu` is also the Apple silicon environment; Python `312`, `313`) and are defined in `pyproject.toml` and `pixi.lock`; prefix commands with `pixi run -e cpu-py312`. uv environments are defined by `pyproject.toml` and `uv.lock`; run commands with `uv run --no-sync`. On macOS with uv, run `sh devtools/scripts/share_libomp_macos.sh` after every `uv sync`.
 
 ## Commands
 
 ```bash
-# Run all unit tests (pixi: pixi run -e cpu-py312 test-unit)
+# Run all unit tests
 uv run --no-sync pytest -v -n auto --cov=openadmet.models openadmet/models/tests/unit
+pixi run -e cpu-py312 test-unit
 
 # Run a single test file
 uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_xgboost.py
+pixi run -e cpu-py312 pytest -v openadmet/models/tests/unit/models/test_xgboost.py
 
 # Run a single test
 uv run --no-sync pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
+pixi run -e cpu-py312 pytest -v openadmet/models/tests/unit/models/test_base.py::test_save_load_pickleable
 ```
 
 Lint/format is enforced via pre-commit hooks (ruff, black, isort, flake8). There is no standalone lint command — run `pre-commit run --all-files` to check manually.

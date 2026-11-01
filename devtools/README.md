@@ -1,12 +1,15 @@
 # Development, testing, and deployment tools
 
 This directory contains a collection of tools for running Continuous Integration (CI) tests,
-environment management, container builds, and other development tools not directly related to the coding process.
+conda installation, and other development tools not directly related to the coding process.
 
 
 ## Manifest
 
 ### Continuous Integration
+
+You should test your code, but do not feel compelled to use these specific programs. You also may not need Unix and
+Windows testing if you only plan to deploy on specific platforms. These are just to help you get started.
 
 The workflows in `.github/workflows` test each supported install route in its own job: [pixi](https://pixi.sh) from `pixi.lock`
 (`pixi run --locked`) and [uv](https://docs.astral.sh/uv/) from `uv.lock` (`uv sync --locked`, tests with `uv run --no-sync`) on
@@ -14,21 +17,30 @@ Python 3.12 and 3.13, pip (`pip install -e ".[test]"`, unlocked) on Python 3.12 
 `conda-envs/openadmet-models.yaml` on Python 3.12. The pip and conda jobs are best effort, so a failure is reported without blocking
 a merge. The scheduled GPU workflow tests the pixi and uv CUDA environments on one instance.
 
-### Environments
+### Conda Environment:
 
-Dependencies are declared once in `pyproject.toml` at the repository root, and each supported install route has its own lock:
+This directory contains the files to setup the Conda environment for testing purposes
+
+* `conda-envs`: directory containing the YAML file(s) which fully describe Conda Environments, their dependencies, and those dependency provenance's
+  * `openadmet-models.yaml`: unlocked environment file for Python 3.12 (best effort)
+  * `openadmet-models-gpu.yaml`: the same environment with the GPU build of PyTorch
+
+### Lock files
+
+Dependencies are declared once in `pyproject.toml` at the repository root, and the pixi and uv routes each have a lock file:
 
 * `pyproject.toml`: dependencies, the `test` extra, the `cpu` and `cuda` torch selectors, the `[tool.uv]` settings (locked platforms, PyTorch indexes), and the `[tool.pixi]` tables (conda-forge dependencies and environments)
 * `pixi.lock`: the resolved pixi environments for osx-arm64 and linux-64 on Python 3.12 and 3.13; after changing dependencies, run `pixi lock`
 * `uv.lock`: the resolved uv environment for macOS arm64 and Linux x86_64 on Python 3.12 and 3.13; after changing dependencies, run `uv lock`
-* `conda-envs/openadmet-models.yaml`: an unlocked conda file for Python 3.12 (best effort)
 
 See `docs/installation.rst` for the commands.
 
-### Scripts
+### Additional Scripts:
 
-* `scripts/share_libomp_macos.sh`: points scikit-learn, LightGBM, and XGBoost at the OpenMP runtime bundled in the torch wheel on macOS, so one runtime is loaded per process and Homebrew libomp is not needed; it applies to uv environments only
-* `scripts/create_conda_env.py`: helper for creating a conda environment from a starter file with a Python version and environment name
+This directory contains helper scripts which don't fall in any of the previous categories
+* `scripts`
+  * `create_conda_env.py`: Helper program for spinning up new conda environments based on a starter file with Python Version and Env. Name command-line options
+  * `share_libomp_macos.sh`: macOS only; points scikit-learn, LightGBM, and XGBoost at the OpenMP runtime bundled in the torch wheel, so one runtime is loaded per process and Homebrew libomp is not needed. Run it in uv and pip environments, not in pixi or conda
 
 ### Containers
 

@@ -4,7 +4,14 @@ Getting Started
 Installation
 ------------
 
-**openadmet-models** is installed from a clone of the GitHub repository. Four routes are supported:
+You can install **openadmet-models** via our GitHub package. If you want the latest development version, clone the repository and install in editable mode:
+
+.. code-block:: bash
+
+    git clone git@github.com:OpenADMET/openadmet-models.git
+    cd openadmet-models
+
+Four install routes are supported:
 
 .. list-table::
    :header-rows: 1
@@ -39,15 +46,11 @@ Pixi installs everything from conda-forge (with PyPI for the few packages that c
 extra steps on any platform. uv installs from PyPI, is the fastest route, and needs one extra step on macOS (see
 `Known issues`_). The lock files make a clone of the repository install the same packages on every machine.
 
-.. code-block:: bash
-
-    git clone git@github.com:OpenADMET/openadmet-models.git
-    cd openadmet-models
-
 Hardware
 --------
 
-Every route offers two hardware targets, which differ in the torch build:
+The pixi and uv routes offer two hardware targets, which differ in the torch build. pip installs the PyPI build of torch, and the
+conda files select the CPU or GPU build by file:
 
 .. list-table::
    :header-rows: 1
@@ -125,7 +128,7 @@ Choose a route. The commands for each hardware target are in the tab.
    .. tab-item:: pip
 
       Create a virtual environment and install from ``pyproject.toml``. This route does not use a lock file, so the
-      resolved versions can differ from the tested ones (a fresh install resolved a newer torch than ``uv.lock`` pins):
+      resolved versions can differ from the tested ones:
 
       .. code-block:: bash
 
@@ -133,7 +136,7 @@ Choose a route. The commands for each hardware target are in the tab.
           source .venv/bin/activate
           pip install -e ".[test]"          # Python 3.13: add --ignore-requires-python (see Known issues)
 
-      Torch comes from PyPI, so a Linux install downloads the CUDA build (see `Known issues`_). On macOS, run
+      Torch comes from PyPI, so a Linux install downloads the CUDA 13 build (see `Known issues`_). On macOS, run
       ``sh devtools/scripts/share_libomp_macos.sh .venv`` after the install (see `Known issues`_).
 
    .. tab-item:: conda
@@ -146,7 +149,8 @@ Choose a route. The commands for each hardware target are in the tab.
           mamba activate openadmet-models
           pip install -e . --no-deps
 
-      ``devtools/conda-envs/openadmet-models-gpu.yaml`` is the variant for NVIDIA GPUs.
+      ``devtools/conda-envs/openadmet-models-gpu.yaml`` is the variant for NVIDIA GPUs. To solve it on a machine without a GPU,
+      export ``CONDA_OVERRIDE_CUDA=12`` first, as for the pixi ``cuda`` environments.
 
 Known issues
 ------------
@@ -194,3 +198,5 @@ Container image
 
 ``devtools/containers/Dockerfile`` installs ``cuda-py312`` from ``pixi.lock``. Choose another environment with
 ``--build-arg PIXI_ENV=<name>``.
+
+For more details, see the full documentation or the README.

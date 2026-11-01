@@ -25,21 +25,24 @@ OpenADMET Models is distributed under the **MIT License** — see the
 Installation
 ------------
 
-Follow the steps in the :doc:`installation` guide to set up a development environment with pixi (for example
-``pixi install -e cpu-py312``) or with uv (``uv sync --extra test``). Both install the package in editable mode with the test
-tools, so changes to the source code are reflected immediately.
+Follow the steps in the :doc:`installation` guide to set up your development environment, with pixi (for example
+``pixi install -e cpu-py312``) or with uv (``uv sync --extra test --extra cpu`` on Linux, ``uv sync --extra test`` on macOS, where you
+also run the OpenMP script described under Known issues). Both install the package in editable mode with the test tools.
+This ensures that changes to the source code are reflected immediately.
 
 Dependencies are declared in ``pyproject.toml`` (in ``[project.dependencies]`` for uv and pip, and in the ``[tool.pixi]`` tables
 for pixi) and resolved in two lock files, ``uv.lock`` and ``pixi.lock``. Commit both lock files together with any change to the
 dependencies; CI installs with ``uv sync --locked`` and ``pixi install --locked`` and fails when a lock file is out of date.
 
-* uv: add a dependency with ``uv add <package>``, or ``uv add --optional test <package>`` for a test tool, then run ``uv lock``
+* uv: add a dependency with ``uv add <package>``, or ``uv add --optional test <package>`` for a test tool; both update ``uv.lock``
   (``uv lock --check`` detects drift).
-* pixi: edit the ``[tool.pixi.dependencies]`` table (or ``[tool.pixi.feature.test.dependencies]`` for a test tool), then run ``pixi lock``.
+* pixi: edit the ``[tool.pixi.dependencies]`` table (or ``[tool.pixi.feature.test.dependencies]`` for a test tool) with the same
+  version bounds as ``[project.dependencies]``, then run ``pixi lock``.
 
 The torch build varies by hardware. For uv, the ``cpu`` and ``cuda`` extras route it to the PyTorch package
 indexes on Linux (see ``[tool.uv.sources]`` in ``pyproject.toml``), and ``[tool.uv] conflicts`` prevents installing the ``cpu`` and ``cuda`` extras together.
-To move to another CUDA version, change the URL and index name of ``pytorch-cu126`` (in the index table and in ``[tool.uv.sources]``), then run ``uv lock``.
+To move to another CUDA version, change the URL and index name of ``pytorch-cu126`` (in the index table and in ``[tool.uv.sources]``), then run ``uv lock``,
+and update the CUDA versions in the pixi ``cuda`` feature and in :doc:`installation`.
 For pixi, the ``cpu`` and ``cuda`` features select the torch package.
 
 Testing
@@ -55,20 +58,20 @@ Tests are separated into **unit** and **integration** tests:
 In particular, the `Anvil` workflows are tested extensively in the integration test suite.
 
 Tests are automatically run on each pull request using GitHub Actions.
-You can also run the tests locally. With uv, use ``uv run --no-sync`` (or activate ``.venv``) so that uv does not change the torch build
-selected at install time:
+You can also run the tests locally:
 
 .. code-block:: bash
 
     # From the root of the repository
+    # With uv, use "uv run --no-sync" so that uv does not change the torch build selected at install time
+
+    # Run integration tests (pixi runs the cpu tests)
+    pixi run -e cpu-py312 test-integration-cpu
+    uv run --no-sync pytest openadmet/models/tests/integration
 
     # Run unit tests
     pixi run -e cpu-py312 test-unit
     uv run --no-sync pytest openadmet/models/tests/unit
-
-    # Run CPU integration tests
-    pixi run -e cpu-py312 test-integration-cpu
-    uv run --no-sync pytest -m cpu openadmet/models/tests/integration
 
 To run integration tests using a GPU (if available and properly configured):
 
@@ -84,7 +87,7 @@ The documentation is built using Sphinx and is located in the ``docs/`` director
 
 To build the documentation locally:
 
-1. Create a conda environment from ``docs/requirements.yaml``, the file that Read the Docs also uses. It is separate from the pixi and uv environments.
+1. Create a new conda environment using the dependencies listed in ``docs/requirements.yaml``.
 2. Activate the environment and build the HTML docs.
 
 .. code-block:: bash

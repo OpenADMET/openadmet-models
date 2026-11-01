@@ -24,7 +24,9 @@ This library is made available under the [MIT](https://opensource.org/licenses/M
 
 ### Development version
 
-The development version of `openadmet-models` is installed from a clone of this repository:
+The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
+
+First clone the repository:
 
 ```bash
 git clone git@github.com:OpenADMET/openadmet-models.git
@@ -75,9 +77,9 @@ On macOS, run `sh devtools/scripts/share_libomp_macos.sh` after every `uv sync` 
 
 #### pip and conda
 
-Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI. On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases. On macOS, run the OpenMP script described under Known issues with the path of the virtual environment, for example `sh devtools/scripts/share_libomp_macos.sh .venv`.
+Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI (on Linux, the CUDA 13 build, which downloads about 3.4 GB; use pixi or uv with `--extra cpu` for a CPU-only install). On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases. On macOS, run the OpenMP script described under Known issues with the path of the virtual environment, for example `sh devtools/scripts/share_libomp_macos.sh .venv`.
 
-For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` followed by `pip install -e . --no-deps` works on Python 3.12 only, because chemprop 2.1.1 or newer is not on conda-forge for Python 3.13.
+For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` (or `devtools/conda-envs/openadmet-models-gpu.yaml` for a GPU compatible version), `mamba activate openadmet-models`, and `pip install -e . --no-deps` works on Python 3.12 only, because chemprop 2.1.1 or newer is not on conda-forge for Python 3.13.
 
 #### Known issues
 
