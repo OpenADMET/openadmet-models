@@ -1,3 +1,8 @@
 .pixi/
 .venv
 **/__pycache__
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

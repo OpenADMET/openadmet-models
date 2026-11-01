@@ -1,5 +1,5 @@
 #!/bin/sh
-# Make every OpenMP user in a uv environment load the libomp bundled with torch, so one runtime exists per process
+# Make every OpenMP user in a uv or pip environment load the libomp bundled with torch, so one runtime exists per process
 #
 # The macOS wheels of torch and scikit-learn each bundle a libomp, while lightgbm and xgboost link
 # @rpath/libomp.dylib and search the Homebrew location. Loading several runtimes into one process
@@ -11,6 +11,12 @@
 # Usage: share_libomp_macos.sh [environment-directory]   (default: $UV_PROJECT_ENVIRONMENT or .venv)
 
 set -eu
+
+# Skip platforms whose wheels do not bundle libomp
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "Not macOS; nothing to do"
+  exit 0
+fi
 
 venv="${1:-${UV_PROJECT_ENVIRONMENT:-.venv}}"
 
@@ -78,5 +84,5 @@ for site in "$venv"/lib/python*/site-packages; do
 done
 
 if [ "$patched" -eq 0 ]; then
-  echo "No lightgbm or xgboost library found under $venv; nothing to patch" >&2
+  echo "No lightgbm or xgboost library found next to torch under $venv; nothing to patch" >&2
 fi
