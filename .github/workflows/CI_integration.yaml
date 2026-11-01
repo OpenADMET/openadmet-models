@@ -15,9 +15,10 @@ on:
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * 0"
 
+# Each supported install route has its own job so that a failure names the route
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+  test-pixi:
+    name: Test with pixi on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,6 +35,90 @@ jobs:
           uname -a
           df -h
           ulimit -a
+
+      - name: Select pixi environment
+        id: pixi-env
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          echo "env=cpu-py${PYTHON_VERSION//./}" >> "$GITHUB_OUTPUT"
+
+      # More info on options: https://github.com/marketplace/actions/setup-pixi
+      - uses: prefix-dev/setup-pixi@v0.11.2
+        with:
+          pixi-version: v0.83.0
+          manifest-path: pyproject.toml
+          environments: ${{ steps.pixi-env.outputs.env }}
+          locked: true
+          cache: true
+
+      - name: Run CPU integration tests
+        # the `cpu` marker selects only CPU tests, see test-integration-cpu in pyproject.toml
+        run: pixi run --locked -e ${{ steps.pixi-env.outputs.env }} test-integration-cpu
+
+      - name: CodeCov
+        uses: codecov/codecov-action@v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-pixi-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  test-uv:
+    name: Test with uv on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Additional info about the build
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      # More info on options: https://github.com/astral-sh/setup-uv
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install package
+        run: uv sync --locked --extra test --extra cpu
+
+      - name: Show installed packages
+        run: uv pip list
+
+      - name: Run CPU integration tests
+        # use the `-m cpu` marker to run only CPU tests
+        run: |
+          uv run --no-sync pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration
+
+      - name: CodeCov
+        uses: codecov/codecov-action@v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-uv-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  # The conda environment file is a best-effort route on Python 3.12 only
+  test-conda:
+    name: Test with conda on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
 
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
       - uses: mamba-org/setup-micromamba@v2
@@ -61,9 +146,8 @@ jobs:
         run: |
           pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration
 
-
       - name: CodeCov
         uses: codecov/codecov-action@v5.4.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: codecov-conda-${{ matrix.os }}-py${{ matrix.python-version }}

@@ -15,15 +15,16 @@ on:
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * 0"
 
+# Each supported install route has its own job so that a failure names the route
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+  test-pixi:
+    name: Test with pixi on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +35,138 @@ jobs:
           uname -a
           df -h
           ulimit -a
+
+      - name: Select pixi environment
+        id: pixi-env
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          echo "env=cpu-py${PYTHON_VERSION//./}" >> "$GITHUB_OUTPUT"
+
+      # More info on options: https://github.com/marketplace/actions/setup-pixi
+      - uses: prefix-dev/setup-pixi@v0.11.2
+        with:
+          pixi-version: v0.83.0
+          manifest-path: pyproject.toml
+          environments: ${{ steps.pixi-env.outputs.env }}
+          locked: true
+          cache: true
+
+      - name: Run unit tests
+        run: pixi run --locked -e ${{ steps.pixi-env.outputs.env }} test-unit
+
+      - name: CodeCov
+        uses: codecov/codecov-action@v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-pixi-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  test-uv:
+    name: Test with uv on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Additional info about the build
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      # More info on options: https://github.com/astral-sh/setup-uv
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.7"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # Linux installs pick CPU-only torch; macOS uses the PyPI wheel
+      - name: Install package
+        run: uv sync --locked --extra test ${{ runner.os == 'Linux' && '--extra cpu' || '' }}
+
+      - name: Show installed packages
+        run: uv pip list
+
+      # The macOS wheels of torch and scikit-learn each bundle an OpenMP runtime, and loading several stalls LightGBM
+      - name: Share one OpenMP runtime
+        if: runner.os == 'macOS'
+        run: sh devtools/scripts/share_libomp_macos.sh
+
+      - name: Run unit tests
+        run: |
+          uv run --no-sync pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit
+
+      - name: CodeCov
+        uses: codecov/codecov-action@v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-uv-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  # The pip route is not locked, so a failure here can come from a new upstream release; it reports without blocking merges
+  test-pip:
+    name: Test with pip on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          # The molfeat fork declares requires-python "<=3.13", which pip rejects on 3.13.x patch releases
+          .venv/bin/python -m pip install -e ".[test]" ${{ matrix.python-version == '3.13' && '--ignore-requires-python' || '' }}
+
+      # The macOS wheels of torch and scikit-learn each bundle an OpenMP runtime, and loading several stalls LightGBM
+      - name: Share one OpenMP runtime
+        if: runner.os == 'macOS'
+        run: sh devtools/scripts/share_libomp_macos.sh .venv
+
+      - name: Show installed packages
+        run: .venv/bin/python -m pip list
+
+      - name: Run unit tests
+        run: |
+          .venv/bin/python -m pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit
+
+      - name: CodeCov
+        uses: codecov/codecov-action@v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov-pip-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  # The conda environment file is a best-effort route on Python 3.12 only, since chemprop 2.1.1 or newer is not on conda-forge for 3.13
+  test-conda:
+    name: Test with conda on ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
 
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
       - uses: mamba-org/setup-micromamba@v2
@@ -60,9 +193,8 @@ jobs:
         run: |
           pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit
 
-
       - name: CodeCov
         uses: codecov/codecov-action@v5.4.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: codecov-conda-${{ matrix.os }}-py${{ matrix.python-version }}
