@@ -1,0 +1,3 @@
+.pixi/
+.venv
+**/__pycache__
