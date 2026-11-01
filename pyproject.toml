@@ -85,6 +85,10 @@ test = [
   "pytest-mock",
   "pytest-xdist",
 ]
+# Torch build selectors for Linux x86_64: cpu uses the CPU-only index and cuda uses the CUDA 12.6 index
+# On macOS both resolve to the PyPI wheel, which includes MPS
+cpu = ["torch"]
+cuda = ["torch"]
 
 [project.scripts]
 openadmet = "openadmet.models.cli.cli:cli"
@@ -243,3 +247,32 @@ cpu-py312 = { features = ["cpu", "py312", "test"], solve-group = "cpu-py312" }
 cuda-py312 = { features = ["cuda", "py312", "test"], solve-group = "cuda-py312" }
 cpu-py313 = { features = ["cpu", "py313", "test"], solve-group = "cpu-py313" }
 cuda-py313 = { features = ["cuda", "py313", "test"], solve-group = "cuda-py313" }
+
+[tool.uv]
+required-version = ">=0.12.7"
+# Lock only the platforms the project supports
+environments = [
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+# A Linux environment has one torch build
+conflicts = [
+  [{ extra = "cpu" }, { extra = "cuda" }],
+]
+
+[tool.uv.sources]
+# PyPI serves the CUDA 13 build to Linux, so Linux installs pick an index through the cpu or cuda extra
+torch = [
+  { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'" },
+  { index = "pytorch-cu126", extra = "cuda", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
