@@ -19,8 +19,9 @@ dependencies:
   - pandas
   - pydantic
   - pip
-  - python >= 3.12,<3.14
+  - python >= 3.12,<3.13
   - pytorch
+  - lightning<=2.6.1
   - pytorch-lightning<=2.6.1
   - pytest
   - pytest-mock
@@ -31,6 +32,7 @@ dependencies:
   - reportlab
   - rich
   - scikit-learn
+  - s3fs >=2021.9
   - scipy
   - seaborn
   - splito
