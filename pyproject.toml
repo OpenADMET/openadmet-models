@@ -85,8 +85,9 @@ test = [
   "pytest-mock",
   "pytest-xdist",
 ]
-# Torch build selectors for Linux x86_64: cpu uses the CPU-only index and cuda uses the CUDA 12.6 index
-# On macOS both resolve to the PyPI wheel, which includes MPS
+# Torch build selectors for uv on Linux x86_64. The extras add no packages beyond torch; they are labels that
+# [tool.uv.sources] binds to an index (cpu to the PyTorch CPU index, cuda to the CUDA 12.6 index), because PyPI serves
+# Linux only the CUDA 13 build. On macOS, and with pip, both resolve to the PyPI wheel (which includes MPS)
 cpu = ["torch"]
 cuda = ["torch"]
 
