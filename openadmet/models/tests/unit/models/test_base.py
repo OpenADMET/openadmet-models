@@ -58,5 +58,5 @@ def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
 
     LightningModelBase.load(model, path)
 
-    torch_load.assert_called_once_with(path, weights_only=True)
+    torch_load.assert_called_once_with(path, weights_only=True, map_location="cpu")
     estimator.load_state_dict.assert_called_once_with(state_dict)
