@@ -14,7 +14,7 @@ Windows testing if you only plan to deploy on specific platforms. These are just
 The workflows in `.github/workflows` test each supported install route in its own job: [pixi](https://pixi.sh) from `pixi.lock`
 (`pixi run --locked`) and [uv](https://docs.astral.sh/uv/) from `uv.lock` (`uv sync --locked`, tests with `uv run --no-sync`) on
 Python 3.12 and 3.13, pip (`pip install -e ".[test]"`, unlocked) on Python 3.12 and 3.13, and the conda file
-`conda-envs/openadmet-models.yaml` on Python 3.12. The pip and conda jobs are best effort, so a failure is reported without blocking
+`conda-envs/openadmet-models.yaml` on Python 3.12 and 3.13. The pip and conda jobs are best effort, so a failure is reported without blocking
 a merge. The scheduled GPU workflow tests the pixi and uv CUDA environments on one instance.
 
 ### Conda Environment:

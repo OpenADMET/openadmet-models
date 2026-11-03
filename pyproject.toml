@@ -196,7 +196,7 @@ zarr = ">=3.0.0"
 openadmet-models = { path = ".", editable = true }
 
 # Python version features
-# conda-forge chemprop 2.1.1 to 2.3.1 requires python <3.13, so Python 3.13 resolves chemprop from PyPI
+# Python 3.13 resolves chemprop from PyPI
 # chemprop 2.3 imports cuik_molmaker at module level and the PyPI cuik_molmaker wheel links the libraries bundled
 # in the PyPI rdkit wheel, which are absent next to conda-forge rdkit; chemprop 2.2.4 imports it only when installed
 [tool.pixi.feature.py312.dependencies]

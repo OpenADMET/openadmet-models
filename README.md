@@ -40,7 +40,7 @@ Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](
 | pixi | Recommended; tested in CI | 3.12, 3.13 | `pixi.lock` |
 | uv | Supported; tested in CI | 3.12, 3.13 | `uv.lock` |
 | pip | Best effort; not locked | 3.12, 3.13 | none |
-| conda | Best effort | 3.12 only | none |
+| conda | Best effort | 3.12, 3.13 | none |
 
 #### pixi
 
@@ -79,13 +79,13 @@ On macOS, run `sh devtools/scripts/share_libomp_macos.sh` after every `uv sync` 
 
 Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI (on Linux, the CUDA 13 build, which downloads about 3.4 GB; use pixi or uv with `--extra cpu` for a CPU-only install). On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases. On macOS, run the OpenMP script described under Known issues with the path of the virtual environment, for example `sh devtools/scripts/share_libomp_macos.sh .venv`.
 
-For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` (or `devtools/conda-envs/openadmet-models-gpu.yaml` for a GPU compatible version), `mamba activate openadmet-models`, and `pip install -e . --no-deps` works on Python 3.12 only, because chemprop 2.1.1 or newer is not on conda-forge for Python 3.13.
+For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` (or `devtools/conda-envs/openadmet-models-gpu.yaml` for a GPU compatible version), `mamba activate openadmet-models`, and `pip install -e . --no-deps` works on Python 3.12 and 3.13. On Python 3.13, prefix the first command with `PIP_IGNORE_REQUIRES_PYTHON=1`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases.
 
 #### Known issues
 
 * **uv on macOS:** the torch and scikit-learn wheels bundle an OpenMP runtime, while the LightGBM and XGBoost wheels search for a Homebrew one. A process that loads several runtimes crashes or stalls inside LightGBM and XGBoost. After `uv sync`, run `sh devtools/scripts/share_libomp_macos.sh` to point all four libraries at the runtime in the torch wheel (no Homebrew `libomp` is needed; the script uses `install_name_tool` and `codesign` from the Xcode command line tools), and repeat it whenever `uv sync` reinstalls torch, scikit-learn, LightGBM, or XGBoost. pip installs show the same problem; pixi and conda are not affected.
 * **Linux:** the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
-* **Python 3.13 with conda files:** not supported; use pixi or uv.
+* **Python 3.13 with conda files:** set `PIP_IGNORE_REQUIRES_PYTHON=1` when creating the environment (the molfeat fork's `requires-python` bound rejects 3.13.x releases).
 
 See the [installation guide](docs/installation.rst) for details.
 

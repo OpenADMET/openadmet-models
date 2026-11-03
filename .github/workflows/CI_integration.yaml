@@ -107,7 +107,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: codecov-uv-${{ matrix.os }}-py${{ matrix.python-version }}
 
-  # The conda environment file is a best-effort route on Python 3.12 only
+  # The conda environment file is a best-effort route
   test-conda:
     name: Test with conda on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -115,13 +115,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
       # More info on options: https://github.com/marketplace/actions/setup-micromamba
       - uses: mamba-org/setup-micromamba@v2
+        env:
+          # The molfeat fork in the pip section of the file declares requires-python "<=3.13", which pip rejects on 3.13.x
+          PIP_IGNORE_REQUIRES_PYTHON: "1"
         with:
           environment-file: devtools/conda-envs/openadmet-models.yaml
           environment-name: openadmet-models

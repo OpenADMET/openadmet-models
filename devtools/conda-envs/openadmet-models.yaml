@@ -19,7 +19,7 @@ dependencies:
   - pandas
   - pydantic
   - pip
-  - python >= 3.12,<3.13
+  - python >= 3.12,<3.14
   - pytorch
   - lightning<=2.6.1
   - pytorch-lightning<=2.6.1

@@ -141,7 +141,8 @@ Choose a route. The commands for each hardware target are in the tab.
 
    .. tab-item:: conda
 
-      The conda files are unlocked and are tested on Python 3.12 only (the GPU file has not been solved on macOS):
+      The conda files are unlocked and are tested on Python 3.12 and 3.13 (the GPU file has not been solved on macOS). On Python 3.13,
+      set ``PIP_IGNORE_REQUIRES_PYTHON=1`` for the first command (see `Known issues`_):
 
       .. code-block:: bash
 
@@ -170,13 +171,14 @@ CUDA 12.x (525 or newer, following NVIDIA's minor-version compatibility rule). T
 (package ``libgomp1`` on Debian and Ubuntu).
 
 **pip on Python 3.13: molfeat.** The molfeat fork declares ``requires-python "<=3.13"``, which pip rejects on every 3.13.x patch
-release. Add ``--ignore-requires-python`` to the ``pip install -e ".[test]"`` command. uv does not enforce the bound, and pixi and conda
-do not install the package this way.
+release. Add ``--ignore-requires-python`` to the ``pip install -e ".[test]"`` command. uv does not enforce the bound, and pixi does not
+install the package this way.
 
-**conda files: Python 3.12 only.** chemprop 2.1.1 or newer is not available on conda-forge for Python 3.13, so the conda files
-cannot be solved there. Use pixi or uv for Python 3.13.
+**conda files on Python 3.13: molfeat.** The pip section of the conda files installs the same molfeat fork, so the same bound stops
+``mamba env create`` on 3.13.x. Set ``PIP_IGNORE_REQUIRES_PYTHON=1`` for that command, for example
+``PIP_IGNORE_REQUIRES_PYTHON=1 mamba env create -f devtools/conda-envs/openadmet-models.yaml``.
 
-**pixi on Python 3.13.** chemprop comes from PyPI because conda-forge builds of chemprop support Python below 3.13 only. It is pinned
+**pixi on Python 3.13.** chemprop comes from PyPI. It is pinned
 to 2.2.4: chemprop 2.3 imports the cuik_molmaker wheel, which needs the libraries bundled in the PyPI rdkit wheel and fails to load
 next to conda-forge rdkit. conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the
 pixi environments use torch 2.12.
