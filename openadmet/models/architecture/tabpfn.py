@@ -1,7 +1,10 @@
 """TabPFN model implementations."""
 
+import functools
 import warnings
+from os import PathLike
 from typing import ClassVar, Optional
+from unittest import mock
 
 import numpy as np
 import torch
@@ -13,6 +16,28 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 # TabPFN's device kwarg accepts "auto" natively (DevicesSpecification = "auto");
 # these are the two trainer aliases that differ from torch device names
 _ACCELERATOR_ALIASES = {"gpu": "cuda", "tpu": "xla"}
+
+
+def _load_pickle_mapped_to_cpu(path: PathLike):
+    """
+    Unpickle a joblib-dumped estimator, remapping any embedded torch storage to CPU.
+
+    Parameters
+    ----------
+    path : PathLike
+        Path to the joblib-pickled estimator.
+
+    Returns
+    -------
+    Any
+        The unpickled estimator.
+
+    """
+    import joblib
+
+    with mock.patch("torch.load", functools.partial(torch.load, map_location="cpu")):
+        with open(path, "rb") as f:
+            return joblib.load(f)
 
 
 def _resolve_device(accelerator: str) -> str:
@@ -171,6 +196,18 @@ class TabPFNExtensionModelBase(PickleableModelBase):
             raise ValueError("Model not trained")
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
+    def load(self, path: PathLike):
+        """
+        Load the model from a pickle file, mapping any torch state to CPU.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        """
+        self.estimator = _load_pickle_mapped_to_cpu(path)
+
 
 @models.register("TabPFNPostHocRegressorModel")
 class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
@@ -321,6 +358,18 @@ class TabPFNModelBase(PickleableModelBase):
         if not self.estimator:
             raise ValueError("Model not trained")
         return np.expand_dims(self.estimator.predict(X), axis=1)
+
+    def load(self, path: PathLike):
+        """
+        Load the model from a pickle file, mapping any torch state to CPU.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        """
+        self.estimator = _load_pickle_mapped_to_cpu(path)
 
 
 @models.register("TabPFNRegressorModel")
