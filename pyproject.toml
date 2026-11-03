@@ -155,6 +155,7 @@ platforms = ["linux-64", "osx-arm64", { name = "linux-64-cuda-12", platform = "l
 [tool.pixi.dependencies]
 boto3 = "*"
 catboost = "*"
+chemprop = ">=2.1.1"
 click = "*"
 datamol = "*"
 email-validator = "*"
@@ -196,18 +197,11 @@ zarr = ">=3.0.0"
 openadmet-models = { path = ".", editable = true }
 
 # Python version features
-# Python 3.13 resolves chemprop from PyPI
-# chemprop 2.3 imports cuik_molmaker at module level and the PyPI cuik_molmaker wheel links the libraries bundled
-# in the PyPI rdkit wheel, which are absent next to conda-forge rdkit; chemprop 2.2.4 imports it only when installed
 [tool.pixi.feature.py312.dependencies]
 python = "3.12.*"
-chemprop = ">=2.1.1"
 
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
-
-[tool.pixi.feature.py313.pypi-dependencies]
-chemprop = "==2.2.4"
 
 # Hardware features select the torch build
 # On Apple silicon the cpu environments install the macOS build, which includes the MPS backend

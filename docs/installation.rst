@@ -178,9 +178,7 @@ install the package this way.
 ``mamba env create`` on 3.13.x. Set ``PIP_IGNORE_REQUIRES_PYTHON=1`` for that command, for example
 ``PIP_IGNORE_REQUIRES_PYTHON=1 mamba env create -f devtools/conda-envs/openadmet-models.yaml``.
 
-**pixi on Python 3.13.** chemprop comes from PyPI. It is pinned
-to 2.2.4: chemprop 2.3 imports the cuik_molmaker wheel, which needs the libraries bundled in the PyPI rdkit wheel and fails to load
-next to conda-forge rdkit. conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the
+**pixi: torch version.** conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the
 pixi environments use torch 2.12.
 
 Changing dependencies
