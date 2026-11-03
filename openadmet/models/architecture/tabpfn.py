@@ -17,6 +17,7 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 # these are the two trainer aliases that differ from torch device names
 _ACCELERATOR_ALIASES = {"gpu": "cuda", "tpu": "xla"}
 
+
 def _resolve_device(accelerator: str) -> str:
     """
     Resolve an accelerator spelling to a value TabPFN's ``device`` kwarg accepts.
