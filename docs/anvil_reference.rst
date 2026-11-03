@@ -486,10 +486,6 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - TabPFN classification model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
   * - :doc:`TabPFNRegressorModel </_api/api/model_architectures/tabpfn>`
     - TabPFN regression model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
-  * - :doc:`TabPFNPostHocClassifierModel </_api/api/model_architectures/tabpfn>`
-    - TabPFN classification model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
-  * - :doc:`TabPFNPostHocRegressorModel </_api/api/model_architectures/tabpfn>`
-    - TabPFN regression model using `tabpfn-extensions <https://github.com/priorlabs/tabpfn-extensions>`_ with posthoc ensembling.
   * - :doc:`DummyClassifierModel </_api/api/model_architectures/dummy>`
     - scikit-learn `Dummy Classifier <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html#sklearn.dummy.DummyClassifier>`_ for baseline comparisons.
   * - :doc:`DummyRegressorModel </_api/api/model_architectures/dummy>`
