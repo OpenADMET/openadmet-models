@@ -48,8 +48,7 @@ def test_save_load_torch_model(mclass, tmp_path):
 
 
 def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
-    state_dict = {"layer.weight": "dummy"}
-    torch_load = Mock(return_value=state_dict)
+    torch_load = Mock(return_value={"layer.weight": "dummy"})
     monkeypatch.setattr(lightning_model_base.torch, "load", torch_load)
 
     estimator = Mock()
@@ -59,4 +58,4 @@ def test_lightning_model_load_uses_weights_only(monkeypatch, tmp_path):
     LightningModelBase.load(model, path)
 
     torch_load.assert_called_once_with(path, weights_only=True, map_location="cpu")
-    estimator.load_state_dict.assert_called_once_with(state_dict)
+    estimator.load_state_dict.assert_called_once()

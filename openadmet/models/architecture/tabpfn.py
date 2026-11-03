@@ -3,7 +3,6 @@
 import functools
 from os import PathLike
 from typing import ClassVar
-from unittest import mock
 
 import numpy as np
 import torch
@@ -133,16 +132,16 @@ class TabPFNModelBase(PickleableModelBase):
         Raises
         ------
         ValueError
-            If the model is not trained.
+            If the estimator does not exist.
 
         """
         if not self.estimator:
-            raise ValueError("Model not trained")
+            raise ValueError("The estimator is not instantiated. Please call `build()` or `train()` first.")
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
     def load(self, path: PathLike):
         """
-        Load the model from a pickle file, mapping any torch state to CPU.
+        Load the model from a json, mapping any torch state to CPU.
 
         Parameters
         ----------
