@@ -17,29 +17,6 @@ from openadmet.models.architecture.model_base import PickleableModelBase, models
 # these are the two trainer aliases that differ from torch device names
 _ACCELERATOR_ALIASES = {"gpu": "cuda", "tpu": "xla"}
 
-
-def _load_pickle_mapped_to_cpu(path: PathLike):
-    """
-    Unpickle a joblib-dumped estimator, remapping any embedded torch storage to CPU.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to the joblib-pickled estimator.
-
-    Returns
-    -------
-    Any
-        The unpickled estimator.
-
-    """
-    import joblib
-
-    with mock.patch("torch.load", functools.partial(torch.load, map_location="cpu")):
-        with open(path, "rb") as f:
-            return joblib.load(f)
-
-
 def _resolve_device(accelerator: str) -> str:
     """
     Resolve an accelerator spelling to a value TabPFN's ``device`` kwarg accepts.
@@ -206,7 +183,19 @@ class TabPFNExtensionModelBase(PickleableModelBase):
             Path to load the model from
 
         """
-        self.estimator = _load_pickle_mapped_to_cpu(path)
+        self.estimator = self._get_estimator_class().load_model(path)
+
+    def save(self, path: PathLike):
+        """
+        Save the model to a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        """
+        self.estimator = self._get_estimator_class().save_model(path)
 
 
 @models.register("TabPFNPostHocRegressorModel")
@@ -369,7 +358,19 @@ class TabPFNModelBase(PickleableModelBase):
             Path to load the model from
 
         """
-        self.estimator = _load_pickle_mapped_to_cpu(path)
+        self.estimator = self._get_estimator_class().load_model(path)
+
+    def save(self, path: PathLike):
+        """
+        Save the model to a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        """
+        self.estimator = self._get_estimator_class().save_model(path)
 
 
 @models.register("TabPFNRegressorModel")
