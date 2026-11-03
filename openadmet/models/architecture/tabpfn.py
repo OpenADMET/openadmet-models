@@ -136,7 +136,9 @@ class TabPFNModelBase(PickleableModelBase):
 
         """
         if not self.estimator:
-            raise ValueError("The estimator is not instantiated. Please call `build()` or `train()` first.")
+            raise ValueError(
+                "The estimator is not instantiated. Please call `build()` or `train()` first."
+            )
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
     def load(self, path: PathLike):
