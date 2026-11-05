@@ -81,6 +81,70 @@ class TestTabPFNBasicModels:
         assert models.get_class("TabPFNClassifierModel") is TabPFNClassifierModel
 
 
+class _FakeFittedEstimator:
+    """
+    Stand-in for a fitted TabPFN estimator.
+
+    Mirrors the real ``save_fit_state``/``load_from_fit_state`` contract
+    (tabpfn.TabPFNRegressor/TabPFNClassifier) without downloading license-gated
+    model weights over the network, which the real estimator requires on
+    first fit.
+    """
+
+    def __init__(self, value: float):
+        self.value = value
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return `value` for every row, so a round trip is checkable."""
+        return np.full(len(X), self.value)
+
+    def save_fit_state(self, path) -> None:
+        """Write `value` to `path`, mirroring the real instance-method API."""
+        with open(path, "w") as f:
+            f.write(str(self.value))
+
+    @classmethod
+    def load_from_fit_state(cls, path, *, device: str = "cpu"):
+        """Read `value` back from `path`, mirroring the real classmethod API."""
+        with open(path) as f:
+            return cls(float(f.read()))
+
+
+class TestTabPFNSaveLoad:
+    """Tests for TabPFNModelBase.save/load against the real fit-state API shape."""
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabPFNRegressorModel, TabPFNClassifierModel],
+    )
+    def test_save_load_round_trip(self, monkeypatch, tmp_path, model_cls):
+        """save() must call estimator.save_fit_state and load() must call the class's load_from_fit_state."""
+        monkeypatch.setattr(
+            model_cls,
+            "_get_estimator_class",
+            classmethod(lambda cls: _FakeFittedEstimator),
+        )
+        model = model_cls(accelerator="cpu")
+        model.estimator = _FakeFittedEstimator(3.5)
+        path = tmp_path / "model.tabpfn_fit"
+
+        model.save(path)
+        reloaded = model_cls(accelerator="cpu")
+        reloaded.load(path)
+
+        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabPFNRegressorModel, TabPFNClassifierModel],
+    )
+    def test_save_raises_if_not_trained(self, model_cls):
+        """save() must raise rather than silently writing an empty/invalid file."""
+        model = model_cls()
+        with pytest.raises(ValueError):
+            model.save("unused.tabpfn_fit")
+
+
 class TestResolveDevice:
     """Tests for the private _resolve_device helper."""
 

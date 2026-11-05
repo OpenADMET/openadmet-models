@@ -143,7 +143,7 @@ class TabPFNModelBase(PickleableModelBase):
 
     def load(self, path: PathLike):
         """
-        Load the model from a json, mapping any torch state to CPU.
+        Load a fitted model from a file.
 
         Parameters
         ----------
@@ -151,19 +151,31 @@ class TabPFNModelBase(PickleableModelBase):
             Path to load the model from
 
         """
-        self.estimator = self._get_estimator_class().load_model(path)
+        accelerator = _resolve_device(self.accelerator)
+        self.estimator = self._get_estimator_class().load_from_fit_state(
+            path, device=accelerator
+        )
 
     def save(self, path: PathLike):
         """
-        Save the model to a file.
+        Save the fitted model to a file.
 
         Parameters
         ----------
         path: PathLike
             Path to save the model to
 
+        Raises
+        ------
+        ValueError
+            If the estimator does not exist.
+
         """
-        self.estimator = self._get_estimator_class().save_model(path)
+        if not self.estimator:
+            raise ValueError(
+                "The estimator is not instantiated. Please call `build()` or `train()` first."
+            )
+        self.estimator.save_fit_state(path)
 
 
 @models.register("TabPFNRegressorModel")
