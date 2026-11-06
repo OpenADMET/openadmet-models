@@ -60,7 +60,6 @@ autodoc_mock_imports = [
     "lightning",
     "chemprop",
     "tabpfn",
-    "tabpfn_extensions",
     "MDAnalysis",
     "molfeat",
     "wandb",

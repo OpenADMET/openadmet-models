@@ -149,6 +149,93 @@ def test_classifier_predict_proba(classification_data):
     np.testing.assert_allclose(proba.sum(axis=1), 1.0, rtol=1e-5)
 
 
+class _FakeFittedEstimator:
+    """
+    Stand-in for a fitted TabICL estimator.
+
+    Mirrors the real ``save``/``load`` contract (tabicl.TabICLRegressor/
+    TabICLClassifier) without downloading the TabICL checkpoint from Hugging
+    Face, which the real estimator requires on first fit.
+    """
+
+    def __init__(self, value: float = 0.0, **kwargs):
+        """Accept **kwargs so build()'s constructor call (device, random_state, ...) also works."""
+        self.value = value
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return `value` for every row, so a round trip is checkable."""
+        return np.full(len(X), self.value)
+
+    def save(self, path) -> None:
+        """Write `value` to `path`, mirroring the real instance-method API."""
+        with open(path, "w") as f:
+            f.write(str(self.value))
+
+    @classmethod
+    def load(cls, path, device=None):
+        """Read `value` back from `path`, mirroring the real classmethod API."""
+        with open(path) as f:
+            return cls(float(f.read()))
+
+
+class TestTabICLSaveLoad:
+    """Tests for TabICLModelBase.save/load against the real estimator API shape."""
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabICLRegressorModel, TabICLClassifierModel],
+    )
+    def test_save_load_round_trip(self, monkeypatch, tmp_path, model_cls):
+        """save() must call estimator.save and load() must call the class's load."""
+        monkeypatch.setattr(
+            model_cls,
+            "_get_estimator_class",
+            classmethod(lambda cls: _FakeFittedEstimator),
+        )
+        model = model_cls(accelerator="cpu")
+        model.estimator = _FakeFittedEstimator(3.5)
+        path = tmp_path / "model.pkl"
+
+        model.save(path)
+        reloaded = model_cls(accelerator="cpu")
+        reloaded.load(path)
+
+        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabICLRegressorModel, TabICLClassifierModel],
+    )
+    def test_save_raises_if_not_trained(self, model_cls):
+        """save() must raise rather than silently writing an empty/invalid file."""
+        model = model_cls()
+        with pytest.raises(ValueError):
+            model.save("unused.pkl")
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabICLRegressorModel, TabICLClassifierModel],
+    )
+    def test_serialize_deserialize_round_trip(self, monkeypatch, tmp_path, model_cls):
+        """serialize() must write params and call save(); deserialize() must rebuild and call load()."""
+        monkeypatch.setattr(
+            model_cls,
+            "_get_estimator_class",
+            classmethod(lambda cls: _FakeFittedEstimator),
+        )
+        model = model_cls(accelerator="cpu")
+        model.estimator = _FakeFittedEstimator(3.5)
+        param_path = tmp_path / "model.json"
+        serial_path = tmp_path / model_cls._model_save_name
+
+        model.serialize(param_path, serial_path)
+        reloaded = model_cls.deserialize(param_path, serial_path)
+
+        assert isinstance(reloaded, model_cls)
+        assert reloaded.accelerator == "cpu"
+        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
+
+
 def test_registry_names():
     """Ensure models are registered with correct keys."""
     from openadmet.models.architecture.model_base import models

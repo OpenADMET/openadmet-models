@@ -9,8 +9,6 @@ import torch
 from openadmet.models.architecture.tabpfn import (
     TabPFNClassifierModel,
     TabPFNModelBase,
-    TabPFNPostHocClassifierModel,
-    TabPFNPostHocRegressorModel,
     TabPFNRegressorModel,
     _resolve_device,
 )
@@ -61,61 +59,6 @@ class TestTabPFNModelBase:
             model.predict(np.zeros((1, 2)))
 
 
-class TestTabPFNExtensionModelBase:
-    """Tests for TabPFNExtensionModelBase (tabpfn-extensions)."""
-
-    def test_default_fields(self):
-        """Verify default field values."""
-        model = TabPFNPostHocRegressorModel()
-        assert model.random_seed == 42
-        assert model.accelerator == "auto"
-        assert model.max_time is None
-        assert model.ignore_pretraining_limits is False
-        assert model.phe_init_args is None
-
-    def test_accelerator_validator_rejects_bad_value(self):
-        with pytest.raises(ValueError, match="Invalid accelerator"):
-            TabPFNPostHocRegressorModel(accelerator="bogus")
-
-    @pytest.mark.parametrize("accelerator", ["cpu", "gpu", "auto", "mps", "cuda:0"])
-    def test_accelerator_validator_accepts_known_values(self, accelerator):
-        TabPFNPostHocRegressorModel(accelerator=accelerator)
-
-    @pytest.mark.parametrize(
-        "model_cls",
-        [TabPFNPostHocRegressorModel, TabPFNPostHocClassifierModel],
-    )
-    def test_predict_raises_if_not_trained(self, model_cls):
-        """Predict should raise when model is not built."""
-        model = model_cls()
-        with pytest.raises(ValueError):
-            model.predict(np.zeros((1, 2)))
-
-    def test_registry_names(self):
-        """Ensure extension models are registered with correct keys."""
-        from openadmet.models.architecture.model_base import models
-
-        assert "TabPFNPostHocRegressorModel" in models._registry
-        assert "TabPFNPostHocClassifierModel" in models._registry
-        assert (
-            models.get_class("TabPFNPostHocRegressorModel")
-            is TabPFNPostHocRegressorModel
-        )
-        assert (
-            models.get_class("TabPFNPostHocClassifierModel")
-            is TabPFNPostHocClassifierModel
-        )
-
-    def test_build_license_warning(self):
-        """build() must emit the TabPFN license warning."""
-        model = TabPFNPostHocRegressorModel(accelerator="cpu")
-        with pytest.warns(UserWarning, match="TabPFN 2.5 License"):
-            try:
-                model.build()
-            except (ImportError, ModuleNotFoundError):
-                pass  # tabpfn-extensions not installed — warning should fire before import
-
-
 class TestTabPFNBasicModels:
     """Tests for TabPFNRegressorModel and TabPFNClassifierModel (basic tabpfn)."""
 
@@ -136,6 +79,98 @@ class TestTabPFNBasicModels:
         assert "TabPFNClassifierModel" in models._registry
         assert models.get_class("TabPFNRegressorModel") is TabPFNRegressorModel
         assert models.get_class("TabPFNClassifierModel") is TabPFNClassifierModel
+
+
+class _FakeFittedEstimator:
+    """
+    Stand-in for a fitted TabPFN estimator.
+
+    Mirrors the real ``save_fit_state``/``load_from_fit_state`` contract
+    (tabpfn.TabPFNRegressor/TabPFNClassifier) without downloading license-gated
+    model weights over the network, which the real estimator requires on
+    first fit.
+    """
+
+    def __init__(self, value: float = 0.0, **kwargs):
+        """Accept **kwargs so build()'s constructor call (device, random_state, ...) also works."""
+        self.value = value
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return `value` for every row, so a round trip is checkable."""
+        return np.full(len(X), self.value)
+
+    def save_fit_state(self, path) -> None:
+        """Write `value` to `path`, mirroring the real instance-method API."""
+        from pathlib import Path
+
+        if Path(path).suffix != ".tabpfn_fit":
+            raise ValueError("Path must end with .tabpfn_fit")
+        with open(path, "w") as f:
+            f.write(str(self.value))
+
+    @classmethod
+    def load_from_fit_state(cls, path, *, device: str = "cpu"):
+        """Read `value` back from `path`, mirroring the real classmethod API."""
+        with open(path) as f:
+            return cls(float(f.read()))
+
+
+class TestTabPFNSaveLoad:
+    """Tests for TabPFNModelBase.save/load against the real fit-state API shape."""
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabPFNRegressorModel, TabPFNClassifierModel],
+    )
+    def test_save_load_round_trip(self, monkeypatch, tmp_path, model_cls):
+        """save() must call estimator.save_fit_state and load() must call the class's load_from_fit_state."""
+        monkeypatch.setattr(
+            model_cls,
+            "_get_estimator_class",
+            classmethod(lambda cls: _FakeFittedEstimator),
+        )
+        model = model_cls(accelerator="cpu")
+        model.estimator = _FakeFittedEstimator(3.5)
+        path = tmp_path / "model.tabpfn_fit"
+
+        model.save(path)
+        reloaded = model_cls(accelerator="cpu")
+        reloaded.load(path)
+
+        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabPFNRegressorModel, TabPFNClassifierModel],
+    )
+    def test_save_raises_if_not_trained(self, model_cls):
+        """save() must raise rather than silently writing an empty/invalid file."""
+        model = model_cls()
+        with pytest.raises(ValueError):
+            model.save("unused.tabpfn_fit")
+
+    @pytest.mark.parametrize(
+        "model_cls",
+        [TabPFNRegressorModel, TabPFNClassifierModel],
+    )
+    def test_serialize_deserialize_round_trip(self, monkeypatch, tmp_path, model_cls):
+        """serialize() must write params and call save(); deserialize() must rebuild and call load()."""
+        monkeypatch.setattr(
+            model_cls,
+            "_get_estimator_class",
+            classmethod(lambda cls: _FakeFittedEstimator),
+        )
+        model = model_cls(accelerator="cpu")
+        model.estimator = _FakeFittedEstimator(3.5)
+        param_path = tmp_path / "model.json"
+        serial_path = tmp_path / model_cls._model_save_name
+
+        model.serialize(param_path, serial_path)
+        reloaded = model_cls.deserialize(param_path, serial_path)
+
+        assert isinstance(reloaded, model_cls)
+        assert reloaded.accelerator == "cpu"
+        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
 
 
 class TestResolveDevice:
