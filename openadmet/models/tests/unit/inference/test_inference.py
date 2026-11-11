@@ -1,12 +1,9 @@
-import os
-from pathlib import Path
-from types import SimpleNamespace
-
 """Tests for the inference orchestration pipeline using real, lightweight components."""
 
 import inspect
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import joblib
@@ -15,12 +12,6 @@ import pandas as pd
 import pytest
 import yaml
 
-import openadmet.models.inference.inference as inference_module
-from openadmet.models.tests.unit.datafiles import (
-    pred_test_data_csv,
-    anvil_lgbm_trained_model_dir,
-    anvil_chemprop_trained_model_dir,
-)
 from openadmet.models.architecture.lgbm import LGBMRegressorModel
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.inference import inference as inference_module
@@ -46,33 +37,6 @@ def input_df():
     return pd.DataFrame({"MY_SMILES": ["CCO", "CCN"]})
 
 
-@pytest.fixture
-def anvil_chemprop():
-    return anvil_chemprop_trained_model_dir
-
-
-@pytest.mark.skipif(
-    os.getenv("RUNNER_OS") == "macOS", reason="MacOS runner not enough memory"
-)
-@pytest.mark.parametrize("model_dir", ["anvil_lgbm", "anvil_chemprop"])
-def test_predict(model_dir, request):
-    # Use the fixture to get the model directory
-    model_dir = request.getfixturevalue(model_dir)
-    # Test the predict function with a sample input
-    input_path = pred_test_data_csv
-    input_col = "MY_SMILES"
-    model_dir = [model_dir]
-    write_csv = False
-    output_path = None
-    debug = False
-
-    result = inference_module.predict(
-        input_path,
-        input_col,
-        model_dir,
-        write_csv,
-        output_path,
-        debug=False,
 def test_predict_with_real_single_model(input_df, null_single_model_dir):
     """Test the inference pipeline end-to-end with a real on-disk DummyRegressorModel.
 
@@ -90,6 +54,10 @@ def test_predict_with_real_single_model(input_df, null_single_model_dir):
     )
 
     assert isinstance(result, pd.DataFrame)
+    assert "OADMET_PRED_UNIT_task_0" in result.columns
+    assert "OADMET_STD_UNIT_task_0" in result.columns
+    assert np.allclose(result["OADMET_PRED_UNIT_task_0"].to_numpy(), [1.0, 1.0])
+    assert result["OADMET_STD_UNIT_task_0"].isna().all()
 
 
 def test_generate_pairwise_df_uses_task_idx_column():
@@ -128,6 +96,7 @@ def test_predict_single_task_pairwise_uses_column_zero(mocker):
         return_value=(
             model,
             DummyPairwiseFeaturizer(),
+            None,
             SimpleNamespace(tag="PAIR"),
             SimpleNamespace(target_cols=["task0"]),
         ),
@@ -166,6 +135,7 @@ def test_predict_pairwise_multitask_keeps_original_pairs(mocker):
         return_value=(
             model,
             DummyPairwiseFeaturizer(),
+            None,
             SimpleNamespace(tag="PAIR"),
             SimpleNamespace(target_cols=["task0", "task1"]),
         ),
@@ -211,12 +181,14 @@ def test_predict_pairwise_multimodel_reuses_original_input(mocker):
             (
                 first_model,
                 DummyPairwiseFeaturizer(featurize_spy=featurize_spy),
+                None,
                 SimpleNamespace(tag="PAIRA"),
                 SimpleNamespace(target_cols=["task0"]),
             ),
             (
                 second_model,
                 DummyPairwiseFeaturizer(featurize_spy=featurize_spy),
+                None,
                 SimpleNamespace(tag="PAIRB"),
                 SimpleNamespace(target_cols=["task0"]),
             ),
@@ -242,10 +214,6 @@ def test_predict_pairwise_multimodel_reuses_original_input(mocker):
         mocker.call(["CCO", "CCN"]),
     ]
     assert mock_load.call_count == 2
-    assert "OADMET_PRED_UNIT_task_0" in result.columns
-    assert "OADMET_STD_UNIT_task_0" in result.columns
-    assert np.allclose(result["OADMET_PRED_UNIT_task_0"].to_numpy(), [1.0, 1.0])
-    assert result["OADMET_STD_UNIT_task_0"].isna().all()
 
 
 def test_predict_with_real_ensemble_and_acquisition(input_df, null_ensemble_model_dir):
