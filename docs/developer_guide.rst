@@ -25,14 +25,25 @@ OpenADMET Models is distributed under the **MIT License** — see the
 Installation
 ------------
 
-Follow the steps in the :doc:`installation` guide to set up your development environment.
-Remember to install the package in editable mode using:
-
-.. code-block:: bash
-
-    pip install -e .
-
+Follow the steps in the :doc:`installation` guide to set up your development environment, with pixi (for example
+``pixi install -e cpu-py312``) or with uv (``uv sync --extra test --extra cpu`` on Linux, ``uv sync --extra test`` on macOS, where you
+also run the OpenMP script described under Known issues). Both install the package in editable mode with the test tools.
 This ensures that changes to the source code are reflected immediately.
+
+Dependencies are declared in ``pyproject.toml`` (in ``[project.dependencies]`` for uv and pip, and in the ``[tool.pixi]`` tables
+for pixi) and resolved in two lock files, ``uv.lock`` and ``pixi.lock``. Commit both lock files together with any change to the
+dependencies; CI installs with ``uv sync --locked`` and ``pixi install --locked`` and fails when a lock file is out of date.
+
+* uv: add a dependency with ``uv add <package>``, or ``uv add --optional test <package>`` for a test tool; both update ``uv.lock``
+  (``uv lock --check`` detects drift).
+* pixi: edit the ``[tool.pixi.dependencies]`` table (or ``[tool.pixi.feature.test.dependencies]`` for a test tool) with the same
+  version bounds as ``[project.dependencies]``, then run ``pixi lock``.
+
+The torch build varies by hardware. For uv, the ``cpu`` and ``cuda`` extras route it to the PyTorch package
+indexes on Linux (see ``[tool.uv.sources]`` in ``pyproject.toml``), and ``[tool.uv] conflicts`` prevents installing the ``cpu`` and ``cuda`` extras together.
+To move to another CUDA version, change the URL and index name of ``pytorch-cu126`` (in the index table and in ``[tool.uv.sources]``), then run ``uv lock``,
+and update the CUDA versions in the pixi ``cuda`` feature and in :doc:`installation`.
+For pixi, the ``cpu`` and ``cuda`` features select the torch package.
 
 Testing
 -------
@@ -52,18 +63,22 @@ You can also run the tests locally:
 .. code-block:: bash
 
     # From the root of the repository
+    # With uv, use "uv run --no-sync" so that uv does not change the torch build selected at install time
 
-    # Run integration tests
-    pytest openadmet/models/tests/integration
+    # Run integration tests (pixi runs the cpu tests)
+    pixi run -e cpu-py312 test-integration-cpu
+    uv run --no-sync pytest openadmet/models/tests/integration
 
     # Run unit tests
-    pytest openadmet/models/tests/unit
+    pixi run -e cpu-py312 test-unit
+    uv run --no-sync pytest openadmet/models/tests/unit
 
 To run integration tests using a GPU (if available and properly configured):
 
 .. code-block:: bash
 
-    pytest -v -m gpu openadmet/models/tests/integration
+    pixi run -e cuda-py312 test-integration-gpu
+    uv run --no-sync pytest -v -m gpu openadmet/models/tests/integration
 
 Documentation
 -------------
@@ -72,13 +87,13 @@ The documentation is built using Sphinx and is located in the ``docs/`` director
 
 To build the documentation locally:
 
-1. Create a new conda environment using the dependencies listed in ``docs/environment.yml``.
+1. Create a new conda environment using the dependencies listed in ``docs/requirements.yaml``.
 2. Activate the environment and build the HTML docs.
 
 .. code-block:: bash
 
-    mamba env create -f docs/environment.yml
-    mamba activate openadmet_models_docs
+    mamba env create -f docs/requirements.yaml
+    mamba activate docs_openadmet_models
     cd docs
     make html
 

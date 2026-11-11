@@ -18,11 +18,61 @@ classifiers = [
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Scientific/Engineering :: Chemistry",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.12,<3.14"
+
+# Runtime dependencies for every feature of the library, including the model backends and the training and reporting tools
+dependencies = [
+  "boto3",
+  "catboost",
+  "chemprop>=2.1.1",
+  "click",
+  "datamol",
+  "email-validator",
+  "fsspec",
+  "intake",
+  "intake-parquet",
+  "jinja2",
+  "joblib",
+  "lightgbm",
+  "lightning<=2.6.1",
+  "loguru",
+  "matplotlib",
+  "molfeat @ git+https://github.com/OpenADMET/molfeat.git@cfe2abb4d451e94a7fbe98e7942ad4d5018de8cd",
+  "monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2",
+  "mordredcommunity",
+  "nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed",
+  "numpy",
+  "pandas",
+  "phx-class-registry",
+  "pydantic",
+  "pytorch-lightning<=2.6.1",
+  "pyyaml",
+  "rdkit",
+  "reportlab",
+  "rich",
+  "s3fs>=2021.9",
+  "scikit-learn",
+  "scipy",
+  "seaborn",
+  "setuptools<82.0.0",
+  "splito",
+  "statsmodels",
+  "tabicl",
+  "tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@35e57171f86fee30715d6a25e1fbe3452ea71020",
+  "tabpfn-extensions",
+  "tabulate",
+  "torch",
+  "uncertainty-toolbox",
+  "useful_rdkit_utils @ git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f",
+  "wandb<0.26.0",
+  "xgboost",
+  "zarr>=3.0.0",
+]
 
 [project.urls]
 "Source" = "https://github.com/OpenADMET/openadmet-models"
@@ -31,8 +81,15 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 test = [
   "pytest>=6.1.2",
+  "pytest-cov",
   "pytest-mock",
+  "pytest-xdist",
 ]
+# Torch build selectors for uv on Linux x86_64. The extras add no packages beyond torch; they are labels that
+# [tool.uv.sources] binds to an index (cpu to the PyTorch CPU index, cuda to the CUDA 12.6 index), because PyPI serves
+# Linux only the CUDA 13 build. On macOS, and with pip, both resolve to the PyPI wheel (which includes MPS)
+cpu = ["torch"]
+cuda = ["torch"]
 
 [project.scripts]
 openadmet = "openadmet.models.cli.cli:cli"
@@ -68,6 +125,12 @@ default-tag = "0.0.0"
 [tool.versioningit.write]
 file = "openadmet/models/_version.py"
 
+[tool.pytest.ini_options]
+markers = [
+  "cpu: integration test that runs on CPU only",
+  "gpu: integration test that needs a CUDA device",
+]
+
 [tool.ruff.lint]
 select = ["D", "D213", "D101"]
 ignore = ["D212"]
@@ -75,3 +138,136 @@ ignore = ["D212"]
 [tool.ruff.per-file-ignores]
 "**/__init__.py" = ["D104"] # Ignore D104 (Missing docstring in public package) specifically for __init__.py files
 "**/tests/**.py" = ["D"] # Ignore all D and S101 (Use of assert detected) and S311 (Standard pseudo-random generators are not suitable for security/cryptographic purposes) and D103 (Missing docstring in public function) specifically for test files
+
+# Environments are managed with pixi (https://pixi.sh) and locked in pixi.lock
+# The tables below name the conda-forge build of each dependency; pixi resolves
+# [project.dependencies] from PyPI for everything that conda-forge does not provide
+# (the pinned git dependencies and tabpfn-extensions)
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", { name = "linux-64-cuda-12", platform = "linux-64", cuda = "12" }]
+
+# Conda counterparts of [project.dependencies]; match the version bounds in the PyPI list
+# mordredcommunity is a dependency of the pinned molfeat fork
+# tabpfn-extensions stays on PyPI because the conda-forge build depends on conda-forge tabpfn, which would conflict with the pinned tabpfn commit
+# conda-forge wandb below 0.26 requires protobuf below 7; without the protobuf bound the solver falls back to wandb 0.13.1
+# (broken with numpy 2) and torch 2.14. The bound selects torch 2.12, the newest build that uses libprotobuf 6
+[tool.pixi.dependencies]
+boto3 = "*"
+catboost = "*"
+chemprop = ">=2.1.1"
+click = "*"
+datamol = "*"
+email-validator = "*"
+fsspec = "*"
+intake = "*"
+intake-parquet = "*"
+jinja2 = "*"
+joblib = "*"
+lightgbm = "*"
+lightning = "<=2.6.1"
+loguru = "*"
+matplotlib-base = "*"
+mordredcommunity = "*"
+numpy = "*"
+pandas = "*"
+phx-class-registry = "*"
+protobuf = "<7"
+pydantic = "*"
+pytorch-lightning = "<=2.6.1"
+pyyaml = "*"
+rdkit = "*"
+reportlab = "*"
+rich = "*"
+s3fs = ">=2021.9"
+scikit-learn = "*"
+scipy = "*"
+seaborn = "*"
+setuptools = "<82.0.0"
+splito = "*"
+statsmodels = "*"
+tabicl = "*"
+tabulate = "*"
+uncertainty-toolbox = "*"
+wandb = "<0.26.0"
+xgboost = "*"
+zarr = ">=3.0.0"
+
+[tool.pixi.pypi-dependencies]
+openadmet-models = { path = ".", editable = true }
+
+# Python version features
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+# Hardware features select the torch build
+# On Apple silicon the cpu environments install the macOS build, which includes the MPS backend
+[tool.pixi.feature.cpu]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.cpu.target.linux-64.dependencies]
+pytorch-cpu = "*"
+
+[tool.pixi.feature.cpu.target.osx-arm64.dependencies]
+pytorch = "*"
+
+[tool.pixi.feature.cuda]
+platforms = ["linux-64-cuda-12"]
+
+# Restrict to CUDA 12 builds; the linux-64-cuda-12 platform declares a driver that supports CUDA 12
+[tool.pixi.feature.cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = ">=12,<13"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=6.1.2"
+pytest-cov = "*"
+pytest-mock = "*"
+pytest-xdist = "*"
+
+[tool.pixi.feature.test.tasks]
+test-unit = { cmd = "pytest -v -n auto --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/unit", description = "Run the unit tests" }
+test-integration-cpu = { cmd = "pytest -v -n auto -m cpu --cov=openadmet.models --cov-report=xml --durations=10 --color=yes openadmet/models/tests/integration", description = "Run the CPU integration tests" }
+test-integration-gpu = { cmd = "pytest -v -n auto -m gpu --cov=openadmet.models --cov-report=xml --color=yes openadmet/models/tests/integration", description = "Run the GPU integration tests" }
+
+# Environments are named <hardware>-py<version> and include the test tools
+# cpu environments with the same Python version share a solve group; cuda environments have their own
+# The default environment is cpu with Python 3.12
+[tool.pixi.environments]
+default = { features = ["cpu", "py312", "test"], solve-group = "cpu-py312" }
+cpu-py312 = { features = ["cpu", "py312", "test"], solve-group = "cpu-py312" }
+cuda-py312 = { features = ["cuda", "py312", "test"], solve-group = "cuda-py312" }
+cpu-py313 = { features = ["cpu", "py313", "test"], solve-group = "cpu-py313" }
+cuda-py313 = { features = ["cuda", "py313", "test"], solve-group = "cuda-py313" }
+
+[tool.uv]
+required-version = ">=0.12.7"
+# Lock only the platforms the project supports
+environments = [
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+# A Linux environment has one torch build
+conflicts = [
+  [{ extra = "cpu" }, { extra = "cuda" }],
+]
+
+[tool.uv.sources]
+# PyPI serves the CUDA 13 build to Linux, so Linux installs pick an index through the cpu or cuda extra
+torch = [
+  { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'" },
+  { index = "pytorch-cu126", extra = "cuda", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
