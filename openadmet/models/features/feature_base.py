@@ -1,20 +1,46 @@
 """Base classes and utilities for molecular featurizers."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from molfeat.trans import MoleculeTransformer
-from pydantic import BaseModel
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, Dataset
+from pydantic import BaseModel, Field, StringConstraints
+
+if TYPE_CHECKING:
+    from molfeat.trans import MoleculeTransformer
+    from sklearn.preprocessing import StandardScaler
+    from torch.utils.data import DataLoader, Dataset
 
 featurizers = ClassRegistry(unique=True)
 
 
 def get_featurizer_class(feat_type):
-    """Retrieve a featurizer class from the registry by type."""
+    """
+    Retrieve a featurizer class from the registry by type.
+
+    Parameters
+    ----------
+    feat_type : str
+        The registered key for the featurizer (e.g., ``"MolfeatFeaturizer"``).
+
+    Returns
+    -------
+    type
+        The featurizer class corresponding to the given type.
+
+    Raises
+    ------
+    ValueError
+        If ``feat_type`` is not found in the featurizer registry.
+
+    """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("featurizers")
     try:
         feat_class = featurizers.get_class(feat_type)
     except RegistryKeyError:
@@ -30,7 +56,26 @@ class FeaturizerBase(BaseModel, ABC):
     the `featurize` method to convert a list of SMILES strings into features suitable
     for machine learning models.
 
+    Attributes
+    ----------
+    alias : str or None
+        Name used in place of the featurizer type when keying feature blocks,
+        by default None. Featurizers of the same type in a
+        ``FeatureConcatenator`` need distinct aliases.
+
     """
+
+    # Whether this featurizer can report per-block column layout via
+    # feature_blocks(); the workflow only calls feature_blocks() when this is True
+    provides_feature_blocks: ClassVar[bool] = False
+
+    # Constrain the alias to a stripped, non-blank string
+    alias: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None
+    ) = Field(
+        default=None,
+        description="Name used in place of the featurizer type when keying feature blocks",
+    )
 
     @abstractmethod
     def featurize(self, smiles: Iterable[str], *args, **kwargs):
@@ -64,11 +109,21 @@ class DeepLearningFeaturizer(FeaturizerBase):
     Subclasses should implement the `featurize` method to return a DataLoader, indices,
     a StandardScaler, and a PyTorch Dataset.
 
+    Attributes
+    ----------
+    random_seed : int or None
+        Seed for the training DataLoader's shuffling, by default None. The legacy
+        ``random_state`` name is accepted as a deprecated alias. Only applied when a
+        training loader is built (``train=True``); evaluation and inference loaders
+        are never shuffled and ignore it.
+
     """
+
+    random_seed: int | None = None
 
     @abstractmethod
     def featurize(
-        self, smiles: Iterable[str], y: Iterable[float] = None
+        self, smiles: Iterable[str], y: Iterable[float] = None, train: bool = False
     ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
         Featurize a list of SMILES strings for deep learning models.
@@ -79,6 +134,10 @@ class DeepLearningFeaturizer(FeaturizerBase):
             List or iterable of SMILES strings to featurize.
         y : Iterable[float], optional
             Target values corresponding to the SMILES strings.
+        train : bool, optional
+            Whether this loader feeds model training, by default False. Shuffling and
+            the batch-norm ``drop_last`` guard apply only when True; validation, test,
+            and inference loaders (train=False) always preserve input order and length.
 
         Returns
         -------
@@ -107,7 +166,7 @@ class MolfeatFeaturizer(FeaturizerBase):
 
     """
 
-    _transformer: MoleculeTransformer = None
+    _transformer: Any = None
 
     def __init__(self, *args, **kwargs):
         """

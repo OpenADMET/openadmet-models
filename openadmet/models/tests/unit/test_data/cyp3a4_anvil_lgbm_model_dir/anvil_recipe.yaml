@@ -38,7 +38,7 @@ procedure:
     type: LGBMRegressorModel
   split:
     params:
-      random_state: 42
+      random_seed: 42
       test_size: 0.3
       train_size: 0.7
     type: ShuffleSplitter
@@ -74,6 +74,6 @@ report:
       n_repeats: 5
       n_splits: 5
       pXC50: true
-      random_state: 42
+      random_seed: 42
       title: CYP3A4 True vs Predicted pChEMBL on test set
     type: SKLearnRepeatedKFoldCrossValidation

@@ -1,27 +1,69 @@
 """Regression metrics and plots for model evaluation."""
 
 import json
-from functools import partial
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import wandb
-from matplotlib import pyplot as plt
 from pydantic import Field
-from scipy.stats import kendalltau, spearmanr
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from openadmet.models.eval.eval_base import (
     EvalBase,
     evaluators,
     get_t_true_and_t_pred,
 )
-from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict
+from openadmet.models.eval.utils import _make_stat_caption, _make_stat_dict, ensure_2d
 
-# create partial functions for the scipy stats
-nan_omit_ktau = partial(kendalltau, nan_policy="omit")
-nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
+
+def relative_absolute_error(y_true, y_pred):
+    """
+    Compute Relative Absolute Error (RAE).
+
+    RAE = sum(|y_true - y_pred|) / sum(|y_true - mean(y_true)|).
+    Lower is better; RAE < 1.0 means the model outperforms a naive
+    mean predictor.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values.
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Relative absolute error.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    numerator = np.sum(np.abs(y_true - y_pred))
+    denominator = np.sum(np.abs(y_true - np.mean(y_true)))
+    if denominator == 0:
+        return np.nan
+    return numerator / denominator
+
+
+def pct_within_1_log_unit(y_true, y_pred):
+    """
+    Compute the fraction of predictions within +/-1 log unit of the true value.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True values (assumed to be on a log scale, e.g. pXC50).
+    y_pred : array-like
+        Predicted values.
+
+    Returns
+    -------
+    float
+        Fraction (0-1) of predictions within 1 log unit.
+
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return np.mean(np.abs(y_true - y_pred) <= 1.0)
 
 
 @evaluators.register("RegressionMetrics")
@@ -46,15 +88,51 @@ class RegressionMetrics(EvalBase):
         0.95, description="Confidence level for the bootstrap"
     )
     use_wandb: bool = Field(False, description="Whether to use wandb")
+    pXC50: bool = Field(
+        False,
+        description="Whether targets are in pXC50/log units for log-based metrics",
+    )
     _evaluated: bool = False
 
-    _metrics: dict = {
-        "mse": (mean_squared_error, False, "MSE"),
-        "mae": (mean_absolute_error, False, "MAE"),
-        "r2": (r2_score, False, "$R^2$"),
-        "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
-        "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
-    }
+    @classmethod
+    def _base_metrics(cls) -> dict:
+        """
+        Build the base metrics dictionary with deferred 3rd-party imports.
+
+        Returns
+        -------
+        dict
+            Mapping of metric key to ``(callable, is_scipy_statistic, display_label)``
+            tuples for MSE, MAE, R², Kendall's τ, Spearman's ρ, and RAE.
+
+        """
+        from functools import partial
+
+        from scipy.stats import kendalltau, spearmanr
+        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+        nan_omit_ktau = partial(kendalltau, nan_policy="omit")
+        nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
+        return {
+            "mse": (mean_squared_error, False, "MSE"),
+            "mae": (mean_absolute_error, False, "MAE"),
+            "r2": (r2_score, False, "$R^2$"),
+            "ktau": (nan_omit_ktau, True, "Kendall's $\\tau$"),
+            "spearmanr": (nan_omit_spearmanr, True, "Spearman's $\\rho$"),
+            "rae": (relative_absolute_error, False, "RAE"),
+        }
+
+    @property
+    def active_metrics(self):
+        """Return metrics applicable to the current target scale."""
+        metrics = self._base_metrics()
+        if self.pXC50:
+            metrics["pct_within_1_log"] = (
+                pct_within_1_log_unit,
+                False,
+                "Fraction within ±1 log",
+            )
+        return metrics
 
     def evaluate(
         self,
@@ -96,10 +174,8 @@ class RegressionMetrics(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure y_pred and y_true are 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
 
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
@@ -118,7 +194,7 @@ class RegressionMetrics(EvalBase):
 
             self.data[t_label] = {}
 
-            for metric_tag, (metric, is_scipy, _) in self._metrics.items():
+            for metric_tag, (metric, is_scipy, _) in self.active_metrics.items():
                 value, lower_ci, upper_ci = self.stat_and_bootstrap(
                     metric_tag,
                     t_pred,
@@ -136,6 +212,8 @@ class RegressionMetrics(EvalBase):
                 }
 
         if self.use_wandb:
+            import wandb
+
             for t_label in target_labels:
                 # make a table for the metrics
                 table = wandb.Table(
@@ -172,7 +250,7 @@ class RegressionMetrics(EvalBase):
             List of metric names.
 
         """
-        return list(self._metrics.keys())
+        return list(self.active_metrics.keys())
 
     @property
     def task_names(self):
@@ -225,6 +303,8 @@ class RegressionMetrics(EvalBase):
 
         # also log the json to wandb
         if self.use_wandb:
+            import wandb
+
             artifact = wandb.Artifact(name="metrics_json", type="metric_json")
             # Add a file to the artifact
             artifact.add_file(json_path)
@@ -254,7 +334,7 @@ class RegressionMetrics(EvalBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self.active_metrics,
             confidence_level=self.bootstrap_confidence_level,
             cv=False,
         )
@@ -282,7 +362,7 @@ class RegressionMetrics(EvalBase):
             data=self.data,
             task_name=t_label,
             metric_names=self.metric_names,
-            metrics=self._metrics,
+            metrics=self._base_metrics(),
             confidence_level=self.bootstrap_confidence_level,
             cv=False,
         )
@@ -380,10 +460,8 @@ class RegressionPlots(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure y_pred and y_true are 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
 
         n_tasks = y_true.shape[1]
         if not (n_tasks == y_pred.shape[1]):
@@ -400,7 +478,7 @@ class RegressionPlots(EvalBase):
             t_label = target_labels[task_id]
 
             if self.do_stats:
-                rm = RegressionMetrics()
+                rm = RegressionMetrics(n_resamples=self.n_resamples)
                 rm.evaluate(
                     t_true.reshape(-1, 1),
                     t_pred.reshape(-1, 1),
@@ -505,6 +583,7 @@ class RegressionPlots(EvalBase):
         else:
             max_ax = max_val
         # set the limits to be the same for both axes
+        import seaborn as sns
 
         g = sns.jointplot(
             x=np.ravel(y_true),
@@ -649,6 +728,8 @@ class RegressionPlots(EvalBase):
         }
 
         n_metrics = len(metrics)
+        from matplotlib import pyplot as plt
+
         fig, axes = plt.subplots(1, n_metrics, figsize=(8, n_metrics), sharex=False)
 
         if n_metrics == 1:
@@ -714,4 +795,6 @@ class RegressionPlots(EvalBase):
             plot_path = output_dir / f"{plot_tag}.png"
             plot.savefig(plot_path, dpi=self.dpi)
             if self.use_wandb:
+                import wandb
+
                 wandb.log({plot_tag: wandb.Image(str(plot_path))})

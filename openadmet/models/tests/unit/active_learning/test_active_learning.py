@@ -24,6 +24,22 @@ def toy_data():
         + 0.1 * rng.normal(size=(120, 1))
     )
     return X[:80], X[80:100], X[100:], y[:80], y[80:100], y[100:]
+def toy_data():
+    """
+    Generate synthetic regression data for testing committee models.
+
+    This fixture creates a simple linear relationship with noise to verify that the
+    ensemble can learn and predict reasonable values.
+    """
+    rng = np.random.default_rng(42)
+    X = rng.normal(size=(120, 3))
+    y = (
+        1.2 * X[:, [0]]
+        - 0.8 * X[:, [1]]
+        + 0.3 * X[:, [2]]
+        + 0.1 * rng.normal(size=(120, 1))
+    )
+    return X[:80], X[80:100], X[100:], y[:80], y[80:100], y[100:]
 
 
 @pytest.fixture
@@ -37,6 +53,52 @@ def dummy_models():
 
 
 @pytest.fixture
+def trained_committee(dummy_models, toy_data):
+    """
+    Create a trained CommitteeRegressor using bootstrapped data.
+
+    This fixture trains multiple dummy models on bootstrapped subsets of the training data
+    to simulate a real ensemble training process, allowing for testing of prediction and uncertainty estimation.
+    """
+    X_train, X_val, _, y_train, y_val, _ = toy_data
+    rng = np.random.default_rng(123)
+    for model in dummy_models:
+        bootstrap_idx = rng.choice(
+            X_train.shape[0], size=X_train.shape[0], replace=True
+        )
+        model.train(X_train[bootstrap_idx], y_train[bootstrap_idx])
+    return CommitteeRegressor.from_models(models=dummy_models), X_val, y_val
+
+
+@pytest.mark.parametrize("query_strategy", sorted(_ACQUISITION_FUNCTIONS.keys()))
+def test_committee_query_predict(trained_committee, query_strategy):
+    """
+    Validate that the committee can query samples using all registered acquisition functions.
+
+    This ensures that the query interface works consistent across strategies and that
+    predictions and uncertainty estimates are returned in the correct shape.
+    """
+    committee, X_val, _ = trained_committee
+    y_query = committee.query(X_val, query_strategy=query_strategy)
+    y_pred, y_pred_std = committee.predict(X_val, return_std=True)
+    assert y_query.shape == (X_val.shape[0], 1)
+    assert y_pred.shape == (X_val.shape[0], 1)
+    assert y_pred_std.shape == (X_val.shape[0], 1)
+    assert np.isfinite(y_query).all()
+
+
+def test_invalid_query_strategy_raises(trained_committee):
+    """Ensure ValueError is raised when an invalid query strategy is requested."""
+    committee, X_val, _ = trained_committee
+    with pytest.raises(ValueError):
+        committee.query(X_val, query_strategy="not-a-strategy")
+
+
+def test_invalid_calibration_method_raises(trained_committee):
+    """Ensure ValueError is raised when an invalid uncertainty calibration method is requested."""
+    committee, X_val, y_val = trained_committee
+    with pytest.raises(ValueError):
+        committee.calibrate_uncertainty(X_val, y_val, method="not-a-method")
 def trained_committee(dummy_models, toy_data):
     """
     Create a trained CommitteeRegressor using bootstrapped data.
@@ -142,13 +204,20 @@ def test_save_load_roundtrip(tmp_path, trained_committee, calibration_method):
     ]
     committee.save(save_paths, calibration_path=calibration_model_path)
     models_new = [model.make_new() for model in committee.models]
+    models_new = [model.make_new() for model in committee.models]
     [model.build() for model in models_new]
+    committee = committee.load(
+        save_paths, models=models_new, calibration_path=calibration_model_path
     committee = committee.load(
         save_paths, models=models_new, calibration_path=calibration_model_path
     )
     y_pred_mean2, y_pred_std2 = committee.predict(X_val, return_std=True)
+    y_pred_mean2, y_pred_std2 = committee.predict(X_val, return_std=True)
     assert_allclose(y_pred_mean, y_pred_mean2)
     assert_allclose(y_pred_std, y_pred_std2)
+    assert committee.calibrated is (calibration_method is not None)
+
+
     assert committee.calibrated is (calibration_method is not None)
 
 

@@ -45,7 +45,7 @@ procedure:
   split:
     type: ShuffleSplitter
     params:
-      random_state: 42
+      random_seed: 42
       test_size: 0.3
       train_size: 0.7
 

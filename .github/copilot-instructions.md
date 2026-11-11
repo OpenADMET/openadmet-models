@@ -40,7 +40,7 @@ All registries are populated in `openadmet/models/registries.py` via wildcard im
 
 Every component follows the same pattern: a Pydantic `BaseModel` ABC with `build()`, `save()`, `load()`, and `serialize()` abstract methods. Models fall into two subclasses of `ModelBase`:
 - `PickleableModelBase` — sklearn-style models (XGBoost, CatBoost, RF, SVM, LightGBM)
-- `LightningModelBase` — deep learning models using PyTorch Lightning (ChemProp, MTENN, NEPARE)
+- `LightningModelBase` — deep learning models using PyTorch Lightning (ChemProp, NEPARE)
 
 The CLI entry point is `openadmet` (`openadmet/models/cli/cli.py`), with subcommands `predict`, `compare`, and `anvil`.
 

@@ -5,19 +5,27 @@ import uuid
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
+from typing import Any
 
-from typing import Any, ClassVar, Literal, Optional
-
-
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 import torch
 import zarr
+from lightning import pytorch as pl
 from loguru import logger
 from pydantic import model_validator
 
-from openadmet.models.drivers import DriverType
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
+from openadmet.models.drivers import DriverType
+from openadmet.models.features.feature_base import DeepLearningFeaturizer
+from openadmet.models.features.pairwise import PairwiseFeaturizer
+from openadmet.models.transforms.transform_base import (
+    fit_transforms,
+    to_transform_list,
+    transform_features,
+)
 
 
 def _safe_to_numpy(X):
@@ -59,6 +67,37 @@ class AnvilWorkflow(AnvilWorkflowBase):
         return self
 
     @model_validator(mode="after")
+    def check_featurizer_tabular(self):
+        """
+        Reject featurizers whose output the sklearn driver cannot consume.
+
+        This workflow's trainer, transforms, and model all expect
+        ``feat.featurize()`` to return a numpy feature array (e.g. fingerprints,
+        descriptors). ``DeepLearningFeaturizer`` subclasses (e.g. ChemProp's
+        graph featurizer) return a DataLoader/Dataset pair instead, meant for
+        the lightning workflow. Pairing one with an sklearn-family model (e.g.
+        XGBoost, LightGBM, random forest) previously failed late and
+        cryptically inside the trainer; this catches it at spec-construction
+        time with an actionable message.
+
+        Raises
+        ------
+        ValueError
+            If a deep learning featurizer (DataLoader output) is paired with
+            the sklearn driver.
+
+        """
+        # The sklearn trainer consumes numpy arrays; DataLoader-emitting featurizers
+        # belong to the lightning workflow
+        if isinstance(self.feat, DeepLearningFeaturizer):
+            raise ValueError(
+                "The sklearn workflow requires a featurizer that produces a numpy "
+                "feature array. Deep learning featurizers produce DataLoaders and "
+                "require the lightning workflow."
+            )
+        return self
+
+    @model_validator(mode="after")
     def check_no_finetuning(self):
         """
         Check that no fine-tuning paths are specified.
@@ -72,8 +111,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Ensemble specified
         if self.ensemble:
             # Fine-tuning paths specified
-            if (self.parent_spec.procedure.ensemble.param_paths is not None) or (
-                self.parent_spec.procedure.ensemble.serial_paths is not None
+            if (self.ensemble_kwargs.get("param_paths") is not None) or (
+                self.ensemble_kwargs.get("serial_paths") is not None
             ):
                 raise ValueError(
                     "Finetuning from serialized ensemble models is not supported in this workflow."
@@ -82,8 +121,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # No ensemble
         else:
             # Fine-tuning paths supplied
-            if (self.parent_spec.procedure.model.param_path is not None) or (
-                self.parent_spec.procedure.model.serial_path is not None
+            if (self.model_kwargs.get("param_path") is not None) or (
+                self.model_kwargs.get("serial_path") is not None
             ):
                 raise ValueError(
                     "Finetuning from serialized model is not supported in this workflow."
@@ -115,25 +154,58 @@ class AnvilWorkflow(AnvilWorkflowBase):
         X_train_feat = _safe_to_numpy(X_train_feat)
         y_train = _safe_to_numpy(y_train)
 
+        # Get bagging setting
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
+
         # Bootstrap iterations
         models = []
-        for i in range(self.parent_spec.procedure.ensemble.n_models):
+        for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
 
-            # Bootstrap train data
-            logger.info("Bootstrapping train data")
-            bootstrap_indices = np.random.choice(
-                np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
-            )
-            X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
-            y_train_bootstrap = y_train[bootstrap_indices]
-            logger.info("Data bootstrapped")
+            # Bootstrap data if using bagging, if not specified default False
+            if use_bagging:
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
+                logger.info(
+                    f"Using incremented seed={bootstrap_seed + i} for bootstrapping"
+                )
+                rng = np.random.default_rng(bootstrap_seed + i)
+
+                # Bootstrap train data
+                logger.info("Bootstrapping train data")
+                bootstrap_indices = rng.choice(
+                    np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
+                )
+                X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
+                y_train_bootstrap = y_train[bootstrap_indices]
+                logger.info("Data bootstrapped")
+            else:
+                X_train_feat_bootstrap = X_train_feat
+                y_train_bootstrap = y_train
 
             # Build model from scratch
-            logger.info(f"Building model {i}")
+            logger.info(
+                f"Building model {i} using incremented seed={self.random_seed + i} to vary model initialization"
+            )
             bootstrap_model = self.model.make_new()
+
+            # Increment random_seed (not bootstrap_seed) so weight init varies independently
+            # of how data was resampled; bootstrap_seed only controls the sampling RNG above
+            if hasattr(bootstrap_model, "random_seed"):
+                bootstrap_model.random_seed = self.random_seed + i
+            else:
+                logger.warning(
+                    f"Model {bootstrap_model} does not support random_seed seeding"
+                )
+
             bootstrap_model.build()
             logger.info(f"Model {i} built")
 
@@ -190,8 +262,8 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -210,23 +282,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
         # Create the output directory
         output_dir.mkdir(parents=True, exist_ok=True)
+        self.resolved_output_dir = output_dir
 
         # Create data subdirectory
         data_dir = output_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write recipe to output directory
-        self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
-
-        # Split recipe into components and save
-        recipe_components = Path(output_dir / "recipe_components")
-        recipe_components.mkdir(parents=True, exist_ok=True)
-        self.parent_spec.to_multi_yaml(
-            metadata_yaml=recipe_components / "metadata.yaml",
-            procedure_yaml=recipe_components / "procedure.yaml",
-            data_yaml=recipe_components / "data.yaml",
-            report_yaml=recipe_components / "eval.yaml",
-        )
 
         # Log output directory information
         logger.info(f"Running workflow from directory {output_dir}")
@@ -286,26 +346,40 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # featurize whole dataset also for CV if needed
         X_feat, _ = self.feat.featurize(X)
 
-        # Transform data
+        # Fit on train only
         if self.transform:
-            # Train
-            logger.info("Transforming data")
-            self.transform.fit(X_train_feat)
-            X_train_feat = self.transform.transform(X_train_feat)
+            logger.info("Fitting transforms on train features")
+            feature_blocks = (
+                self.feat.feature_blocks()
+                if getattr(self.feat, "provides_feature_blocks", False)
+                else None
+            )
+            X_train_feat = fit_transforms(
+                self.transform, X_train_feat, feature_blocks=feature_blocks
+            )
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
 
             # Val
             if X_val is not None:
-                X_val_feat = self.transform.transform(X_val_feat)
+                X_val_feat = transform_features(self.transform, X_val_feat)
                 zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
 
             # Test
             if X_test is not None:
-                X_test_feat = self.transform.transform(X_test_feat)
+                X_test_feat = transform_features(self.transform, X_test_feat)
                 zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
 
             # Whole dataset
-            X_feat = self.transform.transform(X_feat)
+            X_feat = transform_features(self.transform, X_feat)
+
+            # Inference needs the fitted state, which the recipe YAML does not have implicitly
+            transform_payload = {
+                "schema": "v1",
+                "transforms": to_transform_list(self.transform),
+                "sklearn_version": sklearn.__version__,
+            }
+            with open(output_dir / "transform.pickle", "wb") as f:
+                joblib.dump(transform_payload, f)
 
             logger.info("Data transformed")
         else:
@@ -322,7 +396,7 @@ class AnvilWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 X_val_feat,
                 y_val,
-                method=self.parent_spec.procedure.ensemble.calibration_method,
+                method=self.ensemble_kwargs.get("calibration_method"),
             )
 
             # Save
@@ -445,18 +519,72 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         return self
 
+    @model_validator(mode="after")
+    def check_finetuning_paths(self):
+        """
+        Check that finetuning path pairs are consistent and exist on disk.
+
+        Both ``param_path`` and ``serial_path`` must be provided together (or
+        neither). When both are provided, both paths must exist before training
+        begins. The same requirement applies to ``param_paths`` / ``serial_paths``
+        for ensemble workflows, which must additionally be equal-length lists.
+
+        Raises
+        ------
+        ValueError
+            If exactly one of the path pair is provided, if provided paths do
+            not exist on disk, or if ensemble path lists have unequal length.
+
+        """
+        if not self.ensemble:
+            param_path = self.model_kwargs.get("param_path")
+            serial_path = self.model_kwargs.get("serial_path")
+            if (param_path is None) != (serial_path is None):
+                raise ValueError(
+                    "Both param_path and serial_path must be provided together for finetuning."
+                )
+            if param_path is not None:
+                if not Path(param_path).exists():
+                    raise ValueError(f"param_path '{param_path}' does not exist.")
+                if not Path(serial_path).exists():
+                    raise ValueError(f"serial_path '{serial_path}' does not exist.")
+        else:
+            param_paths = self.ensemble_kwargs.get("param_paths")
+            serial_paths = self.ensemble_kwargs.get("serial_paths")
+            if (param_paths is None) != (serial_paths is None):
+                raise ValueError(
+                    "Both param_paths and serial_paths must be provided together for ensemble finetuning."
+                )
+            if param_paths is not None:
+                if len(param_paths) != len(serial_paths):
+                    raise ValueError(
+                        "param_paths and serial_paths must have equal length."
+                    )
+                for p in param_paths:
+                    if not Path(p).exists():
+                        raise ValueError(f"param_path '{p}' does not exist.")
+                for s in serial_paths:
+                    if not Path(s).exists():
+                        raise ValueError(f"serial_path '{s}' does not exist.")
+        return self
+
     def _train(
         self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
+        # Seed model initialization (and finetune/deserialize) so single-model runs
+        # are reproducible, not just ensemble members
+        logger.info(f"Seeding model initialization with seed={self.random_seed}")
+        pl.seed_everything(self.random_seed)
+
         # Load model from disk
         if (
-            self.parent_spec.procedure.model.param_path is not None
-            and self.parent_spec.procedure.model.serial_path is not None
+            self.model_kwargs.get("param_path") is not None
+            and self.model_kwargs.get("serial_path") is not None
         ):
             logger.info("Loading model from disk, overrides any specified parameters.")
             self.model = self.model.deserialize(
-                self.parent_spec.procedure.model.param_path,
-                self.parent_spec.procedure.model.serial_path,
+                self.model_kwargs.get("param_path"),
+                self.model_kwargs.get("serial_path"),
                 scaler=train_scaler,
                 **kwargs,
             )
@@ -464,16 +592,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Model loaded")
 
             # Optionally freeze weights
-            if self.parent_spec.procedure.model.freeze_weights is not None:
+            if self.model_kwargs.get("freeze_weights") is not None:
                 logger.info(f"Freezing model weights")
-                self.model.freeze_weights(
-                    **self.parent_spec.procedure.model.freeze_weights
-                )
+                self.model.freeze_weights(**self.model_kwargs.get("freeze_weights"))
                 logger.info(f"Model weights frozen")
 
         # Build model from scratch
         else:
-            logger.info("Building model")
+            logger.info(f"Building model")
             self.model.build(scaler=train_scaler, **kwargs)
             logger.info("Model built")
 
@@ -505,9 +631,19 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         if not self.trainer.output_dir:
             self.trainer.output_dir = output_dir
 
+        # Get bagging setting
+        use_bagging = self.ensemble_kwargs.get("use_bagging")
+
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
+
         # Bootstrap iterations
         models = []
-        for i in range(self.parent_spec.procedure.ensemble.n_models):
+
+        for i in range(self.ensemble_kwargs["n_models"]):
             # Manage bootstrap directory
             bootstrap_dir = output_dir / f"bootstrap_{i}"
             bootstrap_dir.mkdir(parents=True, exist_ok=True)
@@ -516,14 +652,26 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.feat = self.feat.make_new()
             self.trainer = self.trainer.make_new()
 
-            # Bootstrap train data
-            logger.info("Bootstrapping train data")
-            bootstrap_indices = np.random.choice(
-                np.arange(len(X_train)), size=len(X_train), replace=True
-            )
-            X_train_bootstrap = X_train[bootstrap_indices]
-            y_train_bootstrap = y_train[bootstrap_indices]
-            logger.info("Data bootstrapped")
+            # Bootstrap data if using bagging, if not specified default False
+            if use_bagging:
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
+                logger.info(
+                    f"Bootstrapping train data with incremented seed={bootstrap_seed + i}"
+                )
+                rng = np.random.default_rng(bootstrap_seed + i)
+
+                bootstrap_indices = rng.choice(
+                    np.arange(len(X_train)), size=len(X_train), replace=True
+                )
+                X_train_bootstrap = X_train[bootstrap_indices]
+                y_train_bootstrap = y_train[bootstrap_indices]
+                logger.info("Data bootstrapped")
+
+            # Otherwise use full data for each model
+            else:
+                X_train_bootstrap = X_train
+                y_train_bootstrap = y_train
 
             # Featurize splits
             logger.info("Featurizing train data")
@@ -531,8 +679,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.feat.featurize(
                     X_train_bootstrap,
                     y_train_bootstrap,
+                    train=True,
                 )
             )
+
+            # Save dataloader
             torch.save(
                 bootstrap_dataloader,
                 bootstrap_dir / "train_dataloader.pth",
@@ -540,31 +691,35 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             logger.info("Data featurized")
 
             # Load model from disk
-            if (self.parent_spec.procedure.ensemble.param_paths is not None) and (
-                self.parent_spec.procedure.ensemble.serial_paths is not None
+            if (self.ensemble_kwargs.get("param_paths") is not None) and (
+                self.ensemble_kwargs.get("serial_paths") is not None
             ):
                 logger.info(
                     f"Loading model {i} from disk, overrides any specified parameters."
                 )
                 self.model = self.model.deserialize(
-                    self.parent_spec.procedure.ensemble.param_paths[i],
-                    self.parent_spec.procedure.ensemble.serial_paths[i],
+                    self.ensemble_kwargs.get("param_paths")[i],
+                    self.ensemble_kwargs.get("serial_paths")[i],
                     scaler=bootstrap_scaler,
                     **kwargs,
                 )
                 logger.info(f"Model {i} loaded")
 
                 # Optionally freeze weights
-                if self.parent_spec.procedure.model.freeze_weights is not None:
+                if self.model_kwargs.get("freeze_weights") is not None:
                     logger.info(f"Freezing weights for model {i}")
-                    self.model.freeze_weights(
-                        **self.parent_spec.procedure.model.freeze_weights
-                    )
+                    self.model.freeze_weights(**self.model_kwargs.get("freeze_weights"))
                     logger.info(f"Model {i} frozen")
 
             # Build model from scratch
             else:
-                logger.info(f"Building model {i}")
+                # Increment random_seed (not bootstrap_seed) so weight init varies independently
+                # of how data was resampled; bootstrap_seed only controls the sampling RNG above
+                logger.info(
+                    f"Building model {i} with incremented seed={self.random_seed + i} to vary model initialization"
+                )
+                pl.seed_everything(self.random_seed + i)
+
                 self.model = self.model.make_new()
                 self.model.build(scaler=bootstrap_scaler, **kwargs)
                 logger.info(f"Model {i} built")
@@ -629,8 +784,8 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Set debug attribute
         self.debug = debug
 
-        # Cast output directory to string
-        output_dir = str(output_dir)
+        # Cast output directory to string, stripping any trailing separator
+        output_dir = str(Path(output_dir))
 
         # Output directory already exists, create new handle
         if Path(output_dir).exists():
@@ -649,23 +804,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
         # Create the output directory
         output_dir.mkdir(parents=True, exist_ok=True)
+        self.resolved_output_dir = output_dir
 
         # Create data subdirectory
         data_dir = output_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write recipe to output directory
-        self.parent_spec.to_recipe(output_dir / "anvil_recipe.yaml")
-
-        # Split recipe into components and save
-        recipe_components = Path(output_dir / "recipe_components")
-        recipe_components.mkdir(parents=True, exist_ok=True)
-        self.parent_spec.to_multi_yaml(
-            metadata_yaml=recipe_components / "metadata.yaml",
-            procedure_yaml=recipe_components / "procedure.yaml",
-            data_yaml=recipe_components / "data.yaml",
-            report_yaml=recipe_components / "eval.yaml",
-        )
 
         # Log output directory information
         logger.info(f"Running workflow from directory {output_dir}")
@@ -710,6 +853,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
             X_train,
             y_train,
+            train=True,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 
@@ -733,7 +877,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         logger.info("Data featurized")
 
         kwargs = {}
-        if self.parent_spec.procedure.feat.type == "PairwiseFeaturizer":
+        if isinstance(self.feat, PairwiseFeaturizer):
             kwargs["input_dim"] = train_dataset[0][0].shape[
                 -1
             ]  # this is the dimension of # of features, e.g. 1024 for ECFP4, variable for descriptors
@@ -756,7 +900,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
             self.model.calibrate_uncertainty(
                 val_dataloader,
                 y_val,
-                method=self.parent_spec.procedure.ensemble.calibration_method,
+                method=self.ensemble_kwargs.get("calibration_method"),
                 accelerator=self.trainer.accelerator,
                 devices=self.trainer.devices,
             )

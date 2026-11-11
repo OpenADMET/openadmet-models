@@ -2,11 +2,14 @@
 
 from typing import ClassVar
 
-import lightgbm as lgb
 import numpy as np
 from loguru import logger
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
 class LGBMModelBase(PickleableModelBase):
@@ -14,7 +17,11 @@ class LGBMModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the LightGBM estimator class (deferred import)."""
+        raise NotImplementedError
 
     # LGBM parameters
     boosting_type: str = "gbdt"
@@ -33,7 +40,7 @@ class LGBMModelBase(PickleableModelBase):
     colsample_bytree: float = 1.0
     reg_alpha: float = 0.0
     reg_lambda: float = 0.0
-    random_state: int | None = None
+    random_seed: int | None = None
     n_jobs: int | None = None
     importance_type: str = "split"
     verbose: int = -1
@@ -41,7 +48,9 @@ class LGBMModelBase(PickleableModelBase):
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -88,7 +97,12 @@ class LGBMRegressorModel(LGBMModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "LGBMRegressorModel"
-    mod_class: ClassVar[type] = lgb.LGBMRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from lightgbm import LGBMRegressor
+
+        return LGBMRegressor
 
 
 @models.register("LGBMClassifierModel")
@@ -97,7 +111,12 @@ class LGBMClassifierModel(LGBMModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "LGBMClassifierModel"
-    mod_class: ClassVar[type] = lgb.LGBMClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from lightgbm import LGBMClassifier
+
+        return LGBMClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predict using the model."""

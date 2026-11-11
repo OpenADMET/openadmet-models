@@ -4,9 +4,12 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
 class RFModelBase(PickleableModelBase):
@@ -14,12 +17,18 @@ class RFModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the Random Forest estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -66,7 +75,12 @@ class RFRegressorModel(RFModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "RFRegressorModel"
-    mod_class: ClassVar[type] = RandomForestRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.ensemble import RandomForestRegressor
+
+        return RandomForestRegressor
 
     # RF parameters
     n_estimators: int = 100
@@ -81,7 +95,7 @@ class RFRegressorModel(RFModelBase):
     bootstrap: bool = True
     oob_score: bool = False
     n_jobs: int | None = None
-    random_state: int | None = None
+    random_seed: int | None = None
     verbose: int = 0
     warm_start: bool = False
     ccp_alpha: float = 0.0
@@ -95,7 +109,12 @@ class RFClassifierModel(RFModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "RFClassifierModel"
-    mod_class: ClassVar[type] = RandomForestClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.ensemble import RandomForestClassifier
+
+        return RandomForestClassifier
 
     # RF parameters
     n_estimators: int = 100
@@ -110,7 +129,7 @@ class RFClassifierModel(RFModelBase):
     bootstrap: bool = True
     oob_score: bool = False
     n_jobs: int | None = None
-    random_state: int | None = None
+    random_seed: int | None = None
     verbose: int = 0
     warm_start: bool = False
     class_weight: dict | None = None

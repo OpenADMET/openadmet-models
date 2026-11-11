@@ -1,24 +1,261 @@
 """ChemProp and Chemeleon model implementations."""
 
+import json
+import types
+from functools import partial
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 from urllib.request import urlretrieve
 
 import numpy as np
 import torch
 from chemprop import models, nn
+from chemprop.data import MoleculeDatapoint, MoleculeDataset
+from chemprop.data.dataloader import build_dataloader
+from chemprop.models import MPNN
 from lightning import pytorch as pl
+from lightning.fabric.utilities.device_parser import _select_auto_accelerator
 from loguru import logger
-from pydantic import field_validator, model_validator
+from pydantic import Field, PrivateAttr, field_validator, model_validator
 
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.architecture.lightning_model_base import LightningModelBase
 from openadmet.models.architecture.model_base import models as model_registry
 
-_METRIC_TO_LOSS = {
-    "mse": nn.metrics.MSE(),
-    "mae": nn.metrics.MAE(),
-    "rmse": nn.metrics.RMSE(),
+
+# BondMessagePassing arguments matching the CheMeleon checkpoint layout
+# d_v and d_e are fixed by chemprop's default atom and bond featurizers
+_CHEMELEON_MP_HPARAMS: dict[str, Any] = {
+    "d_h": 2048,
+    "depth": 6,
+    "dropout": 0.0,
+    "bias": False,
+    "activation": "relu",
+    "undirected": False,
+    "d_v": 72,
+    "d_e": 14,
+    "d_vd": None,
+    "V_d_transform": None,
+    "graph_transform": None,
 }
+
+
+def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
+    """Return batch size that avoids chemprop's silent single-molecule drop."""
+    effective = min(batch_size, dataset_size)
+    while effective > 1 and dataset_size % effective == 1:
+        effective -= 1
+    return effective
+
+
+def _resolve_noam_steps_per_epoch(trainer: pl.Trainer) -> int:
+    """
+    Resolve the number of batches per epoch for Noam step-based scheduling.
+
+    Raw batch count is the correct unit for interval="step" scheduling;
+    estimated_stepping_batches is in optimizer-step units (divided by grad
+    accumulation) and would shorten warmup when accumulate_grad_batches > 1.
+
+    Parameters
+    ----------
+    trainer : pl.Trainer
+        The Lightning trainer the module is attached to.
+
+    Returns
+    -------
+    int
+        Batches per epoch, or a fallback of 1000 with a warning if the
+        trainer cannot report a usable value.
+
+    """
+    steps_per_epoch = trainer.num_training_batches
+    if steps_per_epoch != float("inf"):
+        return steps_per_epoch
+
+    estimated = trainer.estimated_stepping_batches
+
+    # Convert optimizer steps back to batch steps for gradient accumulation
+    if isinstance(estimated, int) and estimated != float("inf"):
+        return (estimated * trainer.accumulate_grad_batches) // max(
+            1, trainer.max_epochs
+        )
+
+    logger.warning(
+        "Could not determine steps_per_epoch from trainer; falling back to 1000. "
+        "Noam schedule timing will be incorrect unless the dataset has exactly "
+        "1000 batches per epoch."
+    )
+    return 1000
+
+
+def configure_optimizers(self) -> dict:
+    """
+    Configure optimizers and learning rate schedulers.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the optimizer and learning rate scheduler configurations.
+
+    """
+    # Separate parameters into MPNN and FFN groups
+    mpnn_params = []
+    ffn_params = []
+
+    for name, param in self.named_parameters():
+        if "predictor" in name:
+            ffn_params.append(param)
+        else:
+            mpnn_params.append(param)
+
+    # Set the optimizer base learning rates to their peak values
+    param_groups = [
+        {
+            "params": mpnn_params,
+            "lr": self.mpnn_lr,
+            "weight_decay": self.mpnn_weight_decay,
+        },
+        {
+            "params": ffn_params,
+            "lr": self.ffn_lr,
+            "weight_decay": self.ffn_weight_decay,
+        },
+    ]
+
+    opt = torch.optim.AdamW(param_groups)
+
+    # Scales each group against its own peak lr rather than the global max_lr
+    final_lr_ratio = self.final_lr / self.max_lr
+
+    # Plateau needs per-group LR floors
+    if self.scheduler == "plateau":
+        min_lrs = [group["lr"] * final_lr_ratio for group in param_groups]
+
+        # Configure the reduce on plateau scheduler
+        lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            mode=self.monitor_metric_mode,
+            factor=self.reduce_lr_factor,
+            patience=self.reduce_lr_patience,
+            min_lr=min_lrs,
+        )
+
+        lr_sched_config = {
+            "scheduler": lr_sched,
+            "monitor": self.monitor_metric,
+            "interval": "epoch",
+            "frequency": 1,
+        }
+    elif self.scheduler == "noam":
+        steps_per_epoch = _resolve_noam_steps_per_epoch(self.trainer)
+        warmup_steps = self.warmup_epochs * steps_per_epoch
+
+        if self.trainer.max_epochs == -1:
+            # Nothing to calibrate decay against, so hold at max_lr
+            if warmup_steps == 0:
+                logger.warning(
+                    "noam scheduler with max_epochs=-1 and warmup_epochs=0 cannot calibrate "
+                    "decay; LR will be constant at max_lr for the entire run. "
+                    "Set max_epochs or warmup_epochs > 0 to enable a meaningful schedule."
+                )
+                cooldown_steps = 0
+            else:
+                logger.warning(
+                    "Setting cooldown steps to 100 times the warmup steps for infinite training."
+                )
+                cooldown_steps = 100 * warmup_steps
+        else:
+            cooldown_epochs = self.trainer.max_epochs - self.warmup_epochs
+            if cooldown_epochs <= 0:
+                logger.warning(
+                    f"warmup_epochs ({self.warmup_epochs}) >= max_epochs "
+                    f"({self.trainer.max_epochs}); the cooldown phase has zero steps and "
+                    "the LR will drop to final_lr on the first post-warmup step"
+                )
+                cooldown_steps = 0
+            else:
+                cooldown_steps = cooldown_epochs * steps_per_epoch
+
+        # Multiplier, so each group's start is proportional to its own peak lr
+        init_factor = self.init_lr / self.max_lr
+
+        # Hits exactly 1.0 at warmup_steps and final_lr_ratio at the cooldown end
+        def lr_lambda(step: int) -> float:
+            # No schedule configured, so hold at max_lr
+            if warmup_steps == 0 and cooldown_steps == 0:
+                return 1.0
+
+            # Linear ramp from init_lr to max_lr, owning the peak step
+            if warmup_steps > 0 and step <= warmup_steps:
+                return init_factor + (step / warmup_steps) * (1.0 - init_factor)
+
+            # Geometric decay, guarded against zero division by cooldown_steps > 0
+            elif cooldown_steps > 0 and step <= warmup_steps + cooldown_steps:
+                decay_frac = (step - warmup_steps) / cooldown_steps
+                return final_lr_ratio**decay_frac
+
+            else:
+                return final_lr_ratio
+
+        lr_sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda)
+        lr_sched_config = {"scheduler": lr_sched, "interval": "step"}
+
+    return {"optimizer": opt, "lr_scheduler": lr_sched_config}
+
+
+def _warn_if_plateau_missing_val_dataloader(self) -> None:
+    """
+    Emit a warning when plateau scheduler has no validation dataloader.
+
+    Bound to on_train_start so num_val_batches is fully populated by Lightning
+    before this check runs. configure_optimizers fires too early and sees an
+    empty list even when a val split is configured.
+    """
+    if self.scheduler != "plateau":
+        return
+    num_val_batches = getattr(self.trainer, "num_val_batches", None)
+
+    # Attribute missing entirely, so assume val exists rather than warn wrongly
+    if num_val_batches is None:
+        return
+
+    # Lightning reports one entry per dataloader when several are configured
+    if isinstance(num_val_batches, list):
+        has_val = any(n > 0 for n in num_val_batches)
+
+    # Single or no val dataloader, where 0 correctly means no validation
+    else:
+        has_val = num_val_batches > 0
+
+    if not has_val:
+        logger.warning(
+            f"scheduler='plateau' monitors '{self.monitor_metric}' but no validation "
+            "dataloader is configured; the scheduler will never step and training will "
+            "fail when Lightning cannot find the metric. Use scheduler='noam' for "
+            "train-only runs."
+        )
+
+
+# Tagged fields are always persisted by serialize(), set explicitly or not
+ResolvedField = partial(Field, json_schema_extra={"resolved": True})
+
+# Lightning Trainer and torch disagree on two device names, so translate those
+# two and pass everything else through verbatim
+_ACCELERATOR_ALIASES = {
+    "gpu": "cuda",
+    "tpu": "xla",
+}
+
+
+def _resolve_device(accelerator: str) -> str:
+    """
+    Resolve an accelerator spelling to a torch device name.
+
+    "auto" delegates to Lightning so the choice matches what a Trainer would
+    pick on this machine. Everything else is aliased or passed through.
+    """
+    if accelerator == "auto":
+        accelerator = _select_auto_accelerator()
+    return _ACCELERATOR_ALIASES.get(accelerator, accelerator)
 
 
 @model_registry.register("ChemPropModel")
@@ -40,7 +277,8 @@ class ChemPropModel(LightningModelBase):
     messages : str
         Type of message passing ("bond" or "atom").
     aggregation : str
-        Aggregation method ("mean" or "norm").
+        Aggregation method ("mean" or "norm"). Default is "mean", matching the original
+        ChemProp paper baseline. "norm" uses a learned normalization parameter instead.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
@@ -48,7 +286,9 @@ class ChemPropModel(LightningModelBase):
     ffn_hidden_dim : int
         Hidden dimension size for the feed-forward network.
     ffn_num_layers : int
-        Number of layers in the feed-forward network.
+        Number of layers in the feed-forward network. Default is 2 (one hidden layer);
+        setting to 1 reduces the FFN to a single linear readout, making ffn_hidden_dim
+        irrelevant.
     normalized_targets : bool
         Whether targets are normalized.
     batch_norm : bool
@@ -56,45 +296,226 @@ class ChemPropModel(LightningModelBase):
     dropout : float
         Dropout rate.
     from_chemeleon : bool
-        Whether to use the CheMeleon foundation model.
+        Whether to use the CheMeleon foundation model. Deprecated; use
+        ``from_foundation='chemeleon'`` instead.
     monitor_metric : str
-        The metric to monitor during training.
+        The metric to monitor during training. Default is "val_loss".
     metric_list : list
-        List of metrics to use for evaluation.
-    warmup_epochs : int
-        Number of warmup epochs for learning rate scheduling.
-    init_lr : float
-        Initial learning rate.
+        List of metrics to use for evaluation. Default is ["mse", "mae", "rmse"].
+    scheduler : str
+        Learning rate scheduler ("noam" or "plateau"). Default is "noam".
+
+        Selection depends on the training regime:
+
+        - "noam": for fixed-length training where the epoch budget is known in
+          advance. The learning rate follows a preset trajectory, a linear ramp
+          followed by a smooth decay across the configured run. This is the
+          original ChemProp recipe and the appropriate default for standard
+          from-scratch training. It depends on max_epochs being set correctly;
+          an incorrect or open-ended budget distorts the trajectory.
+        - "plateau": for runs whose length is not fixed in advance, such as
+          early-stopped training or fine-tuning from a foundation model. The
+          learning rate is reduced only when the monitored metric stops
+          improving, adapting to observed progress rather than a preset
+          timeline. Requires a validation set.
+
+        For open-ended training (max_epochs=-1) or early stopping, prefer
+        "plateau"; "noam" cannot shape its trajectory without a known budget.
     max_lr : float
-        Maximum learning rate.
-    final_lr : float
-        Final learning rate.
+        Peak learning rate (global reference). Default is 1e-3.
+    final_lr : float, optional
+        Floor LR for each param group. Defaults to max_lr * 0.01. When mpnn_lr or ffn_lr
+        differ from max_lr, the absolute floor for that group is group_lr * (final_lr /
+        max_lr); the ratio is preserved proportionally.
+    weight_decay : float
+        Global weight decay. Default is 0.0.
+    mpnn_lr : float, optional
+        Peak learning rate for the MPNN param group. If None, defaults to max_lr.
+    ffn_lr : float, optional
+        Peak learning rate for the FFN param group. If None, defaults to max_lr.
+    mpnn_weight_decay : float, optional
+        Weight decay for the MPNN param group. If None, defaults to weight_decay.
+    ffn_weight_decay : float, optional
+        Weight decay for the FFN param group. If None, defaults to weight_decay.
+    warmup_epochs : int, optional
+        [Noam only] Number of linear-ramp epochs before geometric decay. If None (default),
+        resolves to 2 (matching the original ChemProp paper default). Setting this field
+        with scheduler="plateau" raises ValueError. The schedule shape depends on max_epochs
+        being set correctly in the Lightning Trainer; leaving it at the Lightning default
+        (1000) when actual training runs shorter will under-decay the LR.
+    init_lr : float, optional
+        [Noam only] Starting LR at the beginning of the warmup ramp. Defaults to
+        max_lr * 0.1. When mpnn_lr or ffn_lr differ from max_lr, the absolute starting LR
+        for that group is group_lr * (init_lr / max_lr); the schedule shape is preserved
+        proportionally around each group's peak.
+    reduce_lr_factor : float, optional
+        [Plateau only] Multiplicative factor applied when a plateau is detected. If None
+        (default), resolves to 0.5. Must be < 1.0. Setting with scheduler="noam" raises
+        ValueError.
+    reduce_lr_patience : int, optional
+        [Plateau only] Epochs with no improvement before LR is reduced. If None (default),
+        resolves to 5. Setting with scheduler="noam" raises ValueError.
+    monitor_metric_mode : str
+        Direction for metric monitoring: "min" for loss-style metrics, "max" for score-style
+        metrics. Default is "min". Currently consumed by the plateau scheduler; must also
+        match any early-stopping callback monitoring the same metric.
 
     """
 
     # Meta parameters for this class
     type: ClassVar[str] = "ChemPropModel"
 
-    # ChemProp parameters
-    n_tasks: int = 1
-    messages: str = "bond"
-    aggregation: str = "norm"
-    depth: int = 3
-    message_hidden_dim: int = 300
-    ffn_hidden_dim: int = 300
-    ffn_num_layers: int = 1
-    normalized_targets: bool = True
-    batch_norm: bool = False
-    dropout: float = 0.0
+    # ChemProp parameters, resolved because they fix the graph shape
+    n_tasks: int = ResolvedField(1)
+    messages: str = ResolvedField("bond")
+    aggregation: str = ResolvedField("mean")
+    depth: int = ResolvedField(3)
+    message_hidden_dim: int = ResolvedField(300)
+    ffn_hidden_dim: int = ResolvedField(300)
+    ffn_num_layers: int = ResolvedField(2)
+    normalized_targets: bool = ResolvedField(True)
+    batch_norm: bool = ResolvedField(False)
+    dropout: float = ResolvedField(0.0)
+    from_foundation: str | None = None
     from_chemeleon: bool = False
     monitor_metric: str = "val_loss"
     metric_list: list = ["mse", "mae", "rmse"]
-    warmup_epochs: int = 2
-    init_lr: float = 1e-4
+
+    # Select scheduler among "noam" or "plateau"; structural (resolved=True)
+    scheduler: str = ResolvedField("noam")
+
+    # Global defaults (master values)
     max_lr: float = 1e-3
-    final_lr: float = 1e-4
+    weight_decay: float = 0.0
+
+    # Component overrides (inherit from max_lr / weight_decay if None), resolved for reload
+    mpnn_lr: float | None = ResolvedField(None)
+    ffn_lr: float | None = ResolvedField(None)
+    mpnn_weight_decay: float | None = ResolvedField(None)
+    ffn_weight_decay: float | None = ResolvedField(None)
+
+    # Scheduler specifics (optional - inherit from max_lr if None)
+    init_lr: float | None = ResolvedField(None)
+    final_lr: float | None = ResolvedField(None)
+
+    # Noam-only (None = no warmup), left None under plateau so serialize() drops it
+    warmup_epochs: int | None = ResolvedField(None)
+
+    # Plateau-only parameters (None = use scheduler defaults)
+    reduce_lr_factor: float | None = ResolvedField(None)
+    reduce_lr_patience: int | None = ResolvedField(None)
+
+    # Direction for plateau scheduler; must match any early-stopping callback on the same metric
+    monitor_metric_mode: str = "min"
 
     _n_tasks: int = 1
+    _explicit_init_fields: set[str] = PrivateAttr(default_factory=set)
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_from_chemeleon_compat(cls, data: dict) -> dict:
+        """Translate deprecated ``from_chemeleon`` flag into ``from_foundation``."""
+        if not isinstance(data, dict):
+            return data
+        from_chemeleon = data.get("from_chemeleon", False)
+        from_foundation = data.get("from_foundation")
+        if from_chemeleon:
+            import warnings
+
+            warnings.warn(
+                "from_chemeleon is deprecated; use from_foundation='chemeleon' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if from_foundation is not None and from_foundation != "chemeleon":
+                raise ValueError(
+                    f"Cannot specify both from_chemeleon and user-specified from_foundation: {from_foundation}"
+                )
+            data["from_foundation"] = "chemeleon"
+        return data
+
+    def __init__(self, **data):
+        """Initialize the model and track explicitly provided fields."""
+        explicit_init_fields = set(data)
+        super().__init__(**data)
+        self._explicit_init_fields = explicit_init_fields.intersection(
+            type(self).model_fields.keys()
+        )
+
+    @model_validator(mode="after")
+    def resolve_hyperparameters(self) -> "ChemPropModel":
+        """
+        Resolve hyperparameters using global defaults and component overrides pattern.
+
+        Logic:
+        - Resolve learning rates:
+            - init_lr -> max_lr * 0.1
+            - final_lr -> max_lr * 0.01
+            - mpnn_lr -> max_lr
+            - ffn_lr -> max_lr
+        - Resolve weight decays:
+            - mpnn_weight_decay -> weight_decay
+            - ffn_weight_decay -> weight_decay
+        - Fill scheduler-specific defaults (only for the active scheduler):
+            - noam: warmup_epochs -> 2
+            - plateau: reduce_lr_factor -> 0.5, reduce_lr_patience -> 5
+        """
+        # Resolve LRs
+        if self.init_lr is None:
+            self.init_lr = self.max_lr * 0.1
+        if self.final_lr is None:
+            self.final_lr = self.max_lr * 0.01
+        if self.mpnn_lr is None:
+            self.mpnn_lr = self.max_lr
+        if self.ffn_lr is None:
+            self.ffn_lr = self.max_lr
+
+        # Resolve weight decays
+        if self.mpnn_weight_decay is None:
+            self.mpnn_weight_decay = self.weight_decay
+        if self.ffn_weight_decay is None:
+            self.ffn_weight_decay = self.weight_decay
+
+        # Defaults land here rather than on Field so validate_scheduler_params
+        # can still see None and tell an unset field from a wrong-scheduler one
+        if self.scheduler == "noam":
+            if self.warmup_epochs is None:
+                self.warmup_epochs = 2
+        elif self.scheduler == "plateau":
+            if self.reduce_lr_factor is None:
+                self.reduce_lr_factor = 0.5
+            if self.reduce_lr_patience is None:
+                self.reduce_lr_patience = 5
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_scheduler_params(self) -> "ChemPropModel":
+        """
+        Ensure scheduler-specific parameters are valid for the chosen scheduler.
+
+        Cross-scheduler params use None as the "not set" sentinel so this validator
+        can distinguish user-supplied values from unset fields without relying on
+        model_fields_set (which only tracks explicitly provided keys).
+        """
+        if self.scheduler == "noam":
+            if self.reduce_lr_factor is not None:
+                raise ValueError(
+                    "reduce_lr_factor is not compatible with noam scheduler"
+                )
+            if self.reduce_lr_patience is not None:
+                raise ValueError(
+                    "reduce_lr_patience is not compatible with noam scheduler"
+                )
+        elif self.scheduler == "plateau":
+            if self.warmup_epochs is not None:
+                raise ValueError(
+                    "warmup_epochs is not compatible with plateau scheduler"
+                )
+            # reduce_lr_factor is filled by resolve_hyperparameters before this runs
+            if self.reduce_lr_factor is not None and self.reduce_lr_factor >= 1.0:
+                raise ValueError("reduce_lr_factor must be < 1.0 for plateau scheduler")
+        return self
 
     @model_validator(mode="after")
     def set_n_tasks(self) -> "ChemPropModel":
@@ -152,6 +573,48 @@ class ChemPropModel(LightningModelBase):
             raise ValueError("Aggregation must be either 'mean' or 'norm'")
         return value
 
+    @field_validator("scheduler")
+    @classmethod
+    def validate_scheduler(cls, value):
+        """
+        Validate the scheduler parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        """
+        if value not in ["noam", "plateau"]:
+            raise ValueError("Scheduler must be either 'noam' or 'plateau'")
+        return value
+
+    @field_validator("monitor_metric_mode")
+    @classmethod
+    def validate_monitor_metric_mode(cls, value):
+        """
+        Validate the monitor_metric_mode parameter.
+
+        Parameters
+        ----------
+        value : str
+            The value to validate.
+
+        Returns
+        -------
+        str
+            The validated value.
+
+        """
+        if value not in ["min", "max"]:
+            raise ValueError("monitor_metric_mode must be either 'min' or 'max'")
+        return value
+
     def _get_output_transform(self, scaler):
         """
         Convert scaler to the output transform needed for predictions.
@@ -169,11 +632,13 @@ class ChemPropModel(LightningModelBase):
         """
         if scaler is not None:
             output_transform = nn.UnscaleTransform.from_standard_scaler(scaler)
+
+        # Identity placeholder, since the real parameters arrive from the checkpoint
         elif self.normalized_targets:
-            # Expects the targets to be normalized, likely to be loaded from state dict
             output_transform = nn.UnscaleTransform(
-                [1] * self.n_tasks, [0] * self.n_tasks
+                [0] * self.n_tasks, [1] * self.n_tasks
             )
+
         else:
             output_transform = None
         return output_transform
@@ -197,32 +662,37 @@ class ChemPropModel(LightningModelBase):
 
         """
         if not self.estimator:
+            _METRIC_TO_LOSS = {
+                "mse": nn.metrics.MSE(),
+                "mae": nn.metrics.MAE(),
+                "rmse": nn.metrics.RMSE(),
+            }
             metric_list = [_METRIC_TO_LOSS[metric] for metric in self.metric_list]
-
-            if self.from_chemeleon:
-                logger.info(
-                    "Please cite DOI: 10.48550/arXiv.2506.15792 when using CheMeleon in published work"
-                )
-                ckpt_dir = Path().home() / ".chemprop"
-                ckpt_dir.mkdir(exist_ok=True)
-                model_path = ckpt_dir / "chemeleon_mp.pt"
-                if not model_path.exists():
-                    logger.info(
-                        f"Downloading CheMeleon Foundation model from Zenodo (https://zenodo.org/records/15460715) to {model_path}"
-                    )
-                    urlretrieve(
-                        r"https://zenodo.org/records/15460715/files/chemeleon_mp.pt",
-                        model_path,
+            if self.from_foundation:
+                if self.from_foundation == "chemeleon":
+                    foundation_mp = self._download_chemeleon(save_dir=Path.home())
+                    logger.warning(
+                        "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
                     )
                 else:
-                    logger.info(f"Loading cached CheMeleon from {model_path}")
+                    logger.info(f"Loading foundation model from {self.from_foundation}")
+                    foundation_mp = self._load_foundation_model(
+                        Path(self.from_foundation)
+                    )
                 aggr = nn.MeanAggregation()
-                chemeleon_mp = torch.load(model_path, weights_only=True)
-                mp = nn.BondMessagePassing(**chemeleon_mp["hyper_parameters"])
-                mp.load_state_dict(chemeleon_mp["state_dict"])
+                mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
+
+                # Check for foundation weights
+                if not foundation_mp.get("state_dict"):
+                    raise RuntimeError(
+                        f"Foundation model at {self.from_foundation} has a "
+                        "missing or empty state_dict; refusing to build a "
+                        "randomly initialized model"
+                    )
+                mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
                 logger.warning(
-                    "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
+                    "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
                 )
             else:
                 aggregation_cls = (
@@ -251,6 +721,13 @@ class ChemPropModel(LightningModelBase):
                 dropout=self.dropout,
             )
 
+            # Constructor args land in hparams.yaml, so pass only what the scheduler uses
+            mpnn_kwargs = dict(max_lr=self.max_lr, final_lr=self.final_lr)
+            if self.scheduler == "noam":
+                mpnn_kwargs.update(
+                    warmup_epochs=self.warmup_epochs, init_lr=self.init_lr
+                )
+
             # Create the MPNN model
             mpnn = models.MPNN(
                 message_passing=mp,
@@ -258,22 +735,92 @@ class ChemPropModel(LightningModelBase):
                 predictor=ffn,
                 batch_norm=self.batch_norm,
                 metrics=metric_list,
-                warmup_epochs=self.warmup_epochs,
-                init_lr=self.init_lr,
-                max_lr=self.max_lr,
-                final_lr=self.final_lr,
+                **mpnn_kwargs,
             )
 
-            # Pass monitor metric from "model" to "module"
-            # This is necessary to support subclasses of LightningModuleBase, as `monitor_metric`
-            # is needed at the "module" level for use in both `configure_optimizers` and `LightningTrainer`
+            # MPNN has no scheduler constructor arg, so record it on hparams directly
+            mpnn.hparams.update({"scheduler": self.scheduler})
+
+            # MPNN records its own defaults for omitted args, so drop the noam-only ones
+            if self.scheduler == "plateau":
+                mpnn.hparams.pop("warmup_epochs", None)
+                mpnn.hparams.pop("init_lr", None)
+
+            # The functions bound below see mpnn as self, not this wrapper, so
+            # everything they read has to be copied across first
             mpnn.monitor_metric = self.monitor_metric
+            mpnn.mpnn_weight_decay = self.mpnn_weight_decay
+            mpnn.ffn_weight_decay = self.ffn_weight_decay
+            mpnn.mpnn_lr = self.mpnn_lr
+            mpnn.ffn_lr = self.ffn_lr
+            mpnn.reduce_lr_factor = self.reduce_lr_factor
+            mpnn.reduce_lr_patience = self.reduce_lr_patience
+            mpnn.scheduler = self.scheduler
+            mpnn.monitor_metric_mode = self.monitor_metric_mode
+
+            # Bind the custom configure_optimizers method
+            mpnn.configure_optimizers = types.MethodType(configure_optimizers, mpnn)
+
+            # Bind the val-split check to on_train_start where num_val_batches is reliable
+            mpnn.on_train_start = types.MethodType(
+                _warn_if_plateau_missing_val_dataloader, mpnn
+            )
+
             self.estimator = mpnn
 
         else:
             logger.warning("Model already exists, skipping build")
 
         return self
+
+    def _download_chemeleon(self, save_dir: Path) -> Path:
+        """
+        Download the CheMeleon foundation model.
+
+        Parameters
+        ----------
+        save_dir : Path
+            Directory to save the downloaded model.
+
+        Returns
+        -------
+        Path
+            Path to the downloaded model file.
+
+        """
+        ckpt_dir = save_dir / ".chemprop"
+        ckpt_dir.mkdir(exist_ok=True)
+        model_path = ckpt_dir / "chemeleon_mp.pt"
+        if not model_path.exists():
+            logger.info(
+                f"Downloading CheMeleon Foundation model from Zenodo (https://zenodo.org/records/15460715) to {model_path}"
+            )
+            urlretrieve(
+                r"https://zenodo.org/records/15460715/files/chemeleon_mp.pt",
+                model_path,
+            )
+        else:
+            logger.info(f"Loading cached CheMeleon from {model_path}")
+        return torch.load(model_path, weights_only=True)
+
+    def _load_foundation_model(self, model_path: Path) -> dict:
+        """
+        Load a foundation model from the specified path.
+
+        Parameters
+        ----------
+        model_path : Path
+            Path to the foundation model file.
+
+        Returns
+        -------
+        dict
+            The loaded foundation model state.
+
+        """
+        if not model_path.exists():
+            raise FileNotFoundError(f"Foundation model not found at {model_path}")
+        return torch.load(model_path, weights_only=True)
 
     def train(self, dataloader, scaler=None):
         """
@@ -291,8 +838,130 @@ class ChemPropModel(LightningModelBase):
             "Training not implemented in model class, use a trainer"
         )
 
+    @classmethod
+    def _resolved_fields(cls) -> frozenset[str]:
+        """
+        Fields always included in the serialized artifact, per-field metadata.
+
+        Returns
+        -------
+        frozenset[str]
+            Names of fields declared with ``Field(..., json_schema_extra={"resolved": True})``.
+            See each field's declaration above for why it is tagged.
+
+        """
+        return frozenset(
+            name
+            for name, info in cls.model_fields.items()
+            if (info.json_schema_extra or {}).get("resolved")
+        )
+
+    def serialize(self, param_path="model.json", serial_path="model.pth"):
+        """
+        Save the model with explicitly provided fields plus resolved LR hyperparameters.
+
+        Parameters
+        ----------
+        param_path: PathLike
+            Path to save the model parameters to
+        serial_path: PathLike
+            Path to save the serialized model to
+
+        """
+        # Exclude None entries so inactive-scheduler fields don't appear in the artifact
+        non_none_resolved = {
+            k for k in self._resolved_fields() if getattr(self, k, None) is not None
+        }
+        explicit_params = self.model_dump(
+            include=self._explicit_init_fields | non_none_resolved
+        )
+        with open(param_path, "w") as f:
+            json.dump(explicit_params, f, indent=2)
+        self.save(serial_path)
+
+    def make_new(self) -> "ChemPropModel":
+        """Copy parameters to a new model instance without copying the estimator."""
+        explict_params = self.model_dump(
+            include=self._explicit_init_fields, exclude={"estimator"}
+        )
+        return self.__class__(**explict_params)
+
+    def predict_embedding(
+        self,
+        smiles_list: list[str],
+        batch_size: int = 256,
+        accelerator: str = "auto",
+    ) -> np.ndarray:
+        """
+        Return pooled structural embeddings (pre-predictor) for a list of SMILES.
+
+        A built ChemPropModel acts as a featurizer through this method. It returns
+        encoder output without running the predictor head, so no trained predictor
+        is required.
+
+        Parameters
+        ----------
+        smiles_list : list[str]
+            Must be RDKit-canonical, salt-stripped SMILES.
+        batch_size : int, optional
+            Number of molecules processed per forward pass. Default is 256.
+        accelerator : str, optional
+            Device to run inference on. "auto" (the default) resolves like
+            Lightning's auto accelerator: TPU, MPS, or CUDA when available,
+            otherwise CPU. "gpu" maps to CUDA, and other values are used
+            as torch device names.
+
+        Returns
+        -------
+        np.ndarray
+            Array of shape (N, embedding_dim) aligned with smiles_list.
+
+        Raises
+        ------
+        ValueError
+            If the model estimator has not been built.
+
+        See Also
+        --------
+        openadmet.models.features.chemeleon_embedding.CheMeleonEmbeddingFeaturizer
+
+        """
+        if not self.estimator:
+            raise ValueError(
+                "Model has not been built. Call build() before predict_embedding."
+            )
+
+        # Width off the built model, so non-CheMeleon foundations stay correct
+        if not smiles_list:
+            return np.empty((0, self.message_hidden_dim), dtype=np.float32)
+
+        dataset = MoleculeDataset([MoleculeDatapoint.from_smi(s) for s in smiles_list])
+        n = len(dataset)
+        effective_batch = _safe_inference_batch_size(n, batch_size)
+
+        dataloader = build_dataloader(
+            dataset, batch_size=effective_batch, shuffle=False
+        )
+
+        # Place explicitly so the device comes from the argument, not from
+        # wherever the params happen to sit
+        device = torch.device(_resolve_device(accelerator))
+        self.estimator.to(device)
+
+        # Fingerprint runs through batch norm, so use running stats like predict does
+        self.estimator.eval()
+
+        all_embeddings = []
+        with torch.inference_mode():
+            for batch in dataloader:
+                batch.bmg.to(device)
+                embedding = cast(MPNN, self.estimator).fingerprint(batch.bmg)
+                all_embeddings.append(embedding.cpu().numpy())
+
+        return np.concatenate(all_embeddings, axis=0).astype(np.float32)
+
     def predict(
-        self, X: np.ndarray, accelerator="gpu", devices=1, **kwargs
+        self, X: np.ndarray, accelerator="auto", devices=1, **kwargs
     ) -> np.ndarray:
         """
         Predict using the trained model.
@@ -302,7 +971,8 @@ class ChemPropModel(LightningModelBase):
         X : np.ndarray
             Input data for prediction.
         accelerator : str, optional
-            Accelerator type to use ("gpu" or "cpu").
+            Accelerator passed to the Lightning Trainer. "auto" (the default)
+            picks TPU, MPS, CUDA, or CPU, whichever is available.
         devices : int, optional
             Number of devices to use for prediction.
         **kwargs
@@ -321,7 +991,7 @@ class ChemPropModel(LightningModelBase):
 
         with torch.inference_mode():
             trainer = pl.Trainer(
-                logger=None,
+                logger=False,
                 enable_progress_bar=False,
                 accelerator=accelerator,
                 devices=devices,
@@ -358,36 +1028,26 @@ class ChemPropModel(LightningModelBase):
                 f"but only {self.ffn_num_layers} available."
             )
 
-        # Freeze message passing
+        # Freeze message passing, dropping gradients and pinning eval mode
         if message_passing:
-            # No gradient updates
             self.estimator.message_passing.apply(
                 lambda module: module.requires_grad_(False)
             )
-            # Set to evaluation mode
             self.estimator.message_passing.eval()
-
-            # Log for message passing
             logger.info(f"Model weights for message passing frozen.")
 
-        # Freeze batch norm
+        # Freeze batch norm, so running stats stop updating too
         if batch_norm:
-            # No gradient updates
             self.estimator.bn.apply(lambda module: module.requires_grad_(False))
-            # Evaluation mode
             self.estimator.bn.eval()
-            # Log for batch normalization
             logger.info(f"Model weights for batch normalization frozen.")
 
-        # Freeze feedforward network
+        # Freeze the first ffn_layers of the predictor, counting from the input
         if ffn_layers > 0:
             for idx in range(ffn_layers):
-                # No gradient updates
                 self.estimator.predictor.ffn[idx].requires_grad_(False)
-                # Evaluation mode
-                self.estimator.predictor.ffn[idx + 1].eval()
+                self.estimator.predictor.ffn[idx].eval()
 
-            # Log for feedforward network
             logger.info(
                 f"Model weights for {ffn_layers} feedforward network layer(s) frozen."
             )

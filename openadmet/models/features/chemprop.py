@@ -1,38 +1,27 @@
 """ChemProp featurizer implementation."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
 from typing import Any, Union
+
 import numpy as np
 import pandas as pd
-from chemprop.data import (
-    MoleculeDatapoint,
-    MoleculeDataset,
-    MulticomponentDataset,
-    ReactionDataset,
-)
-from chemprop.data.collate import collate_batch, collate_multicomponent
-from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader
 
-from openadmet.models.features.chemprop import (
-    MoleculeDataset,
-    MulticomponentDataset,
-    ReactionDataset,
-)
 from openadmet.models.features.feature_base import DeepLearningFeaturizer, featurizers
 
 
 # we vendor this from chemprop so that we can pass custom samplers
 # taken directly from https://github.com/chemprop/chemprop/blob/main/chemprop/data/dataloader.py
 def _vendor_build_dataloader(
-    dataset: MoleculeDataset | ReactionDataset | MulticomponentDataset,
+    dataset,
     batch_size: int = 64,
     num_workers: int = 0,
     class_balance: bool = False,
     sampler: Any = None,
     seed: int | None = None,
     shuffle: bool = True,
+    drop_last_on_singleton: bool = True,
     **kwargs,
 ):
     r"""
@@ -59,6 +48,9 @@ def _vendor_build_dataloader(
         Whether to shuffle the data at every epoch. If a sampler is specified, this is ignored
         (i.e., the sampler determines the shuffling). If class_balance is True, this is also ignored
         (i.e., class balancing determines the shuffling).
+    drop_last_on_singleton : bool, default=True
+        Whether to drop a size-1 final batch (when ``len(dataset) % batch_size == 1``) to avoid
+        batch-norm errors. Set False for evaluation and inference loaders so every row is returned.
     **kwargs
         Additional keyword arguments passed to the DataLoader.
 
@@ -68,7 +60,12 @@ def _vendor_build_dataloader(
         A PyTorch DataLoader for the given MoleculeDataset, ReactionDataset, or MulticomponentDataset.
 
     """
-    if sampler is not None:
+    from chemprop.data import MulticomponentDataset
+    from chemprop.data.collate import collate_batch, collate_multicomponent
+    from chemprop.data.samplers import ClassBalanceSampler, SeededSampler
+    from torch.utils.data import DataLoader
+
+    if sampler is None:
         if class_balance:
             sampler = ClassBalanceSampler(dataset.Y, seed, shuffle)
         elif shuffle and seed is not None:
@@ -81,11 +78,8 @@ def _vendor_build_dataloader(
     else:
         collate_fn = collate_batch
 
-    # Drop last batch of size 1 to avoid issues with batch normalization
-    if len(dataset) % batch_size == 1:
-        drop_last = True
-    else:
-        drop_last = False
+    # Drop a size-1 final batch only when requested (training), to avoid batch-norm errors
+    drop_last = drop_last_on_singleton and len(dataset) % batch_size == 1
 
     return DataLoader(
         dataset,
@@ -95,6 +89,9 @@ def _vendor_build_dataloader(
         num_workers=num_workers,
         collate_fn=collate_fn,
         drop_last=drop_last,
+        # keep workers alive across epochs to avoid re-spawning pipes each epoch,
+        # which exhausts file descriptors on long runs
+        persistent_workers=num_workers > 0,
         **kwargs,
     )
 
@@ -126,12 +123,12 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
         """Prepare the featurizer."""
 
     def featurize(
-        self, smiles: Iterable[str], y: Iterable[Any] = None
+        self, smiles: Iterable[str], y: Iterable[Any] = None, train: bool = False
     ) -> tuple[
         DataLoader,
         np.ndarray,
         StandardScaler,
-        Union[MoleculeDataset, ReactionDataset, MulticomponentDataset],
+        MoleculeDataset | ReactionDataset | MulticomponentDataset,
     ]:
         """
         Featurize a list of SMILES strings.
@@ -142,6 +139,10 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             List or iterable of SMILES strings to featurize.
         y : Iterable[Any], optional
             Target values corresponding to the SMILES strings.
+        train : bool, optional
+            Whether this loader feeds model training, by default False. Shuffling and the
+            batch-norm ``drop_last`` guard apply only when True; otherwise the loader
+            preserves input order and returns every row.
 
         Returns
         -------
@@ -153,6 +154,8 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             - Union[MoleculeDataset, ReactionDataset, MulticomponentDataset]: PyTorch Dataset containing the features and targets.
 
         """
+        from chemprop.data import MoleculeDatapoint, MoleculeDataset
+
         if y is not None:
             # if a pandas dataframe or series
             if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series):
@@ -172,11 +175,16 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             )
             scaler = None
 
+        # Shuffle and the size-1 drop_last guard are training-only; evaluation and
+        # inference loaders preserve input order and length for correct y_true/y_pred pairing.
+        # Passing the seed makes the training shuffle reproducible via SeededSampler
         dataloader = self.dataset_to_dataloader(
             dataset,
             num_workers=self.n_jobs,
-            shuffle=self.shuffle,
+            shuffle=self.shuffle and train,
             batch_size=self.batch_size,
+            drop_last_on_singleton=train,
+            seed=self.random_seed if train else None,
         )
 
         # Need to also return an index of the original input for which the features were computed
@@ -222,6 +230,6 @@ class ChemPropFeaturizer(DeepLearningFeaturizer):
             **kwargs,
         )
 
-    def make_new(self) -> "ChemPropFeaturizer":
+    def make_new(self) -> ChemPropFeaturizer:
         """Copy parameters to a new ChemPropFeaturizer instance."""
         return self.__class__(**self.dict())

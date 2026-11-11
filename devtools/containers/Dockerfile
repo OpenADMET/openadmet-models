@@ -1,5 +1,5 @@
 # Use the conda-forge base image with Python
-FROM mambaorg/micromamba:jammy
+FROM mambaorg/micromamba:2-ubuntu24.04
 
 LABEL org.opencontainers.image.source=https://github.com/OpenADMET/openadmet-models
 LABEL org.opencontainers.image.description="OpenADMET models"
@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.licenses=MIT
 
 # set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV CONDA_OVERRIDE_CUDA="11.8"
+ENV CONDA_OVERRIDE_CUDA="12.4"
 
 RUN micromamba config append channels conda-forge
 

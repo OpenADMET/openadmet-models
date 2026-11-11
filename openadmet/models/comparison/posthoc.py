@@ -216,11 +216,14 @@ class PostHocComparison(ComparisonBase):
             self.stats_to_json(stats_dfs, output_dir=output_dir)
 
         plot_data = {}
-        plot_data["normality"] = self.normality_plots(df, output_dir)
-        plot_data["anova"] = self.anova(df, labels, output_dir)
-        plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
-        plot_data["mean_diff"] = self.mean_diff_plots(df, labels, self.cl, output_dir)
-        plot_data["paired"] = self.paired_plots(df, labels, output_dir)
+        if output_dir:
+            plot_data["normality"] = self.normality_plots(df, output_dir)
+            plot_data["anova"] = self.anova(df, labels, output_dir)
+            plot_data["mcs"] = self.mcs_plots(df, labels, output_dir)
+            plot_data["mean_diff"] = self.mean_diff_plots(
+                df, labels, self.cl, output_dir
+            )
+            plot_data["paired"] = self.paired_plots(df, labels, output_dir)
 
         self.print_table(stats_dfs[0], stats_dfs[1])
         self.report(stats_dfs, report, output_dir)
@@ -369,27 +372,31 @@ class PostHocComparison(ComparisonBase):
                         if label == "FingerprintFeaturizer":
                             label = anvil["procedure"]["feat"]["params"]["fp_type"]
                         if label == "FeatureConcatenator":
+                            featurizers = anvil["procedure"]["feat"]["params"][
+                                "featurizers"
+                            ]
+
+                            # featurizers is a dict (legacy) or ordered list; normalize both to (type, params) pairs
+                            # See #595: this whole if/else collapses to just the list comprehension once the dict form is deprecated
+                            if isinstance(featurizers, dict):
+                                feat_items = list(featurizers.items())
+                            else:
+                                feat_items = [
+                                    (entry["type"], entry.get("params") or {})
+                                    for entry in featurizers
+                                ]
                             label = ""
-                            for ind, f in enumerate(
-                                anvil["procedure"]["feat"]["params"]["featurizers"]
-                            ):
-                                if f == "DescriptorFeaturizer":
-                                    label += anvil["procedure"]["feat"]["params"][
-                                        "featurizers"
-                                    ]["DescriptorFeaturizer"]["descr_type"]
-                                if f == "FingerprintFeaturizer":
-                                    label += anvil["procedure"]["feat"]["params"][
-                                        "featurizers"
-                                    ]["FingerprintFeaturizer"]["fp_type"]
-                                if (
-                                    ind
-                                    < len(
-                                        anvil["procedure"]["feat"]["params"][
-                                            "featurizers"
-                                        ]
-                                    )
-                                    - 1
-                                ):
+                            for ind, (f, fparams) in enumerate(feat_items):
+                                # Label by alias so same-type entries stay distinct
+                                if fparams.get("alias"):
+                                    label += fparams["alias"]
+                                elif f == "DescriptorFeaturizer":
+                                    label += fparams.get("descr_type", f)
+                                elif f == "FingerprintFeaturizer":
+                                    label += fparams.get("fp_type", f)
+                                else:
+                                    label += f
+                                if ind < len(feat_items) - 1:
                                     label += "+"
                         for r in to_remove:
                             label = label.replace(r, "")
@@ -755,7 +762,7 @@ class PostHocComparison(ComparisonBase):
             if reverse_cmap:
                 cmap = cmap + "_r"
 
-            significance = pd.DataFrame(hsd.pvalue)
+            significance = pd.DataFrame(hsd.pvalue).astype(object)
             significance[(hsd.pvalue < self.sig_levels[2]) & (hsd.pvalue >= 0)] = "***"
             significance[
                 (hsd.pvalue < self.sig_levels[1]) & (hsd.pvalue >= self.sig_levels[2])
@@ -780,8 +787,8 @@ class PostHocComparison(ComparisonBase):
                 vmax=None,
             )
 
-            x_label_list = [x for x in labels]
-            y_label_list = [x for x in labels]
+            x_label_list = [*labels]
+            y_label_list = [*labels]
             hax.set_xticklabels(
                 x_label_list, ha="center", va="top", rotation=0, rotation_mode="anchor"
             )
@@ -848,7 +855,7 @@ class PostHocComparison(ComparisonBase):
 
         for metric in self.metrics:
             tukey_metric_df = tukeys_df[tukeys_df["metric_name"] == metric]
-            errorbars = [i for i in np.transpose(tukey_metric_df["errorbars"])]
+            errorbars = [*np.transpose(tukey_metric_df["errorbars"])]
             to_plot_df = pd.DataFrame(
                 {
                     "method": tukey_metric_df["method"],

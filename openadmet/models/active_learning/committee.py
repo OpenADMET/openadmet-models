@@ -259,6 +259,7 @@ class CommitteeRegressor(EnsembleBase):
         mod_class: ModelBase = None,
         mod_params: dict = {},
         n_models: int = 1,
+        use_bagging: bool = True,
     ):
         """
         Train committee regressor members on bootstrapped data subsets.
@@ -275,6 +276,9 @@ class CommitteeRegressor(EnsembleBase):
             The parameters to pass to the model.
         n_models : int
             The number of models in the committee, by default 1.
+        use_bagging : bool
+            Whether to use bagging (bootstrap aggregation) for training models.
+            If False, models are trained on the full dataset.
 
         Returns
         -------
@@ -289,15 +293,27 @@ class CommitteeRegressor(EnsembleBase):
         # Initialize set of models
         models = []
         for i in range(n_models):
+            # Vary each member's seed so the ensemble is not a set of identical models
+            current_mod_params = mod_params.copy()
+            if current_mod_params.get("random_seed") is not None:
+                current_mod_params["random_seed"] += i
+
             # Initialize model
-            model = mod_class(**mod_params)
+            model = mod_class(**current_mod_params)
             model.build()
 
-            # Bootstrap the data
-            bootstrap_idx = np.random.choice(X.shape[0], size=X.shape[0], replace=True)
+            if use_bagging:
+                # Bootstrap the data
+                bootstrap_idx = np.random.choice(
+                    X.shape[0], size=X.shape[0], replace=True
+                )
 
-            # Train the model on the bootstrapped data
-            model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
+                # Train the model on the bootstrapped data
+                model.train(X[bootstrap_idx, :], y[bootstrap_idx, :])
+
+            else:
+                # Train the model on the full data
+                model.train(X, y)
 
             # Add to list
             models.append(model)
@@ -334,7 +350,7 @@ class CommitteeRegressor(EnsembleBase):
 
         return _ACQUISITION_FUNCTIONS[query_strategy](mean, std, **kwargs)
 
-    def _predict(self, X, return_std=False, **kwargs):
+    def _predict(self, X, return_std=False, return_all=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -344,35 +360,46 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to predict.
         return_std : bool, optional
             Whether to return the standard deviation of the predictions.
+            Mutually exclusive with ``return_all``.
+        return_all : bool, optional
+            Whether to return the raw per-member predictions of shape
+            (n_samples, n_tasks, n_members) instead of the mean (and std).
+            Mutually exclusive with ``return_std``.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
         Returns
         -------
-        array-like
-            Predicted values or probabilities, depending on the committee's implementation.
+        array-like or tuple
+            mean, or (mean, std), or ndarray of shape (n_samples, n_tasks, n_members)
+            depending on the values of return_std and return_all.
 
         """
-        # Make predictions
+        if return_std and return_all:
+            raise ValueError(
+                "return_std and return_all are mutually exclusive. "
+                "When return_all=True, compute mean and std from the returned array as needed."
+            )
+
+        # Make predictions: (n_samples, n_tasks, n_members)
         preds = np.stack([model.predict(X, **kwargs) for model in self.models], axis=-1)
+
+        if return_all:
+            return preds
 
         # Compute mean
         mean = np.mean(preds, axis=-1)
 
-        # Skip std if not requested
-        if return_std is False:
+        if not return_std:
             return mean
 
-        # Compute standard deviation
-        std = np.std(preds, axis=-1)
-
-        # Calibrate std if calibration model is available
+        # Compute standard deviation, guard against zero std
+        std = np.maximum(np.std(preds, axis=-1), 1e-8)
         if self.calibrated:
             std = self._get_calibration_function()(std)
-
         return mean, std
 
-    def predict(self, X, return_std=False, **kwargs):
+    def predict(self, X, return_std=False, return_all=False, **kwargs):
         """
         Make predictions using the committee model.
 
@@ -382,13 +409,19 @@ class CommitteeRegressor(EnsembleBase):
             The input samples to predict.
         return_std : bool, optional
             Whether to return the standard deviation of the predictions.
+            Mutually exclusive with ``return_all``.
+        return_all : bool, optional
+            Whether to return the raw per-member predictions of shape
+            (n_samples, n_tasks, n_members) instead of the mean (and std).
+            Mutually exclusive with ``return_std``.
         **kwargs : dict
             Additional keyword arguments to pass to the committee's predict method.
 
         Returns
         -------
-        array-like
-            Predicted values or probabilities, depending on the committee's implementation.
+        array-like or tuple
+            mean, or (mean, std), or ndarray of shape (n_samples, n_tasks, n_members)
+            depending on the values of return_std and return_all.
 
         """
         if return_std is True and not self.calibrated:
@@ -396,7 +429,7 @@ class CommitteeRegressor(EnsembleBase):
                 "Standard deviation not calibrated: consider calling `calibrate_uncertainty`."
             )
 
-        return self._predict(X, return_std=return_std, **kwargs)
+        return self._predict(X, return_std=return_std, return_all=return_all, **kwargs)
 
     def _save_calibration_model(self, path: PathLike = "calibration_model.pkl"):
         # Save calibration model

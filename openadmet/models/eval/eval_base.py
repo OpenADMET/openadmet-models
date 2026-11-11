@@ -3,10 +3,10 @@
 from abc import abstractmethod
 from typing import Callable, ClassVar
 
-from loguru import logger
 import numpy as np
 from class_registry import ClassRegistry, RegistryKeyError
-from pydantic import BaseModel
+from loguru import logger
+from pydantic import BaseModel, Field
 from scipy.stats import bootstrap
 
 evaluators = ClassRegistry(unique=True)
@@ -32,6 +32,9 @@ def get_eval_class(eval_type):
         If the evaluation type is not found in the registry.
 
     """
+    from openadmet.models._registry_loader import load_group
+
+    load_group("evaluators")
     try:
         eval_class = evaluators.get_class(eval_type)
     except RegistryKeyError:
@@ -145,9 +148,25 @@ def get_t_true_and_t_pred(task_id, y_true, y_pred, y_val=None, y_pred_fold=None)
 
 
 class EvalBase(BaseModel):
-    """Abstract base class for evaluation modules."""
+    """
+    Abstract base class for evaluation modules.
+
+    Attributes
+    ----------
+    n_resamples : int
+        Number of bootstrap resamples used to estimate confidence intervals.
+        Defaults to 9999 (scipy default). Lower values (e.g. 100) are appropriate
+        for unit tests where CI precision is not required.
+
+    """
 
     is_cross_val: ClassVar[bool] = False
+
+    n_resamples: int = Field(
+        default=9999,
+        ge=1,
+        description="Number of bootstrap resamples for confidence interval estimation",
+    )
 
     class Config:
         """Pydantic configuration for the EvalBase class."""
@@ -237,6 +256,8 @@ class EvalBase(BaseModel):
 
         """
         # calculate the metric and confidence intervals
+        from scipy.stats import bootstrap
+
         if is_scipy_statistic:
             metric = statistic(y_true, y_pred).statistic
             conf_interval = bootstrap(
@@ -244,6 +265,7 @@ class EvalBase(BaseModel):
                 statistic=lambda y_true, y_pred: statistic(y_true, y_pred).statistic,
                 method="basic",
                 confidence_level=confidence_level,
+                n_resamples=self.n_resamples,
                 paired=True,
             ).confidence_interval
 
@@ -254,6 +276,7 @@ class EvalBase(BaseModel):
                 statistic=statistic,
                 method="basic",
                 confidence_level=confidence_level,
+                n_resamples=self.n_resamples,
                 paired=True,
             ).confidence_interval
 

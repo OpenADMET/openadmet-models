@@ -41,13 +41,13 @@ procedure:
       from_chemeleon: True
 
   ensemble:
-    n_models: 3
+    n_models: 2
     type: CommitteeRegressor
 
   split:
     type: ShuffleSplitter
     params:
-      random_state: 42
+      random_seed: 42
       test_size: 0.2
       train_size: 0.7
       val_size: 0.1

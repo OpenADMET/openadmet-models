@@ -3,12 +3,14 @@
 import json
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import uncertainty_toolbox as uct
 import wandb
 from pydantic import Field
 
 from openadmet.models.eval.eval_base import EvalBase, evaluators, mask_nans_std
+from openadmet.models.eval.utils import ensure_2d
 
 
 @evaluators.register("UncertaintyMetrics")
@@ -122,12 +124,9 @@ class UncertaintyMetrics(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
-        if y_std.ndim == 1:
-            y_std = y_std.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
+        y_std = ensure_2d(y_std)
 
         # Verify number of tasks
         n_tasks = y_true.shape[1]
@@ -158,7 +157,6 @@ class UncertaintyMetrics(EvalBase):
                 t_pred, t_true, False
             )
 
-            # Calibration
             calibration_metrics = uct.metrics.get_all_average_calibration(
                 t_pred, t_std, t_true, bins, False
             )
@@ -230,7 +228,12 @@ class UncertaintyMetrics(EvalBase):
         # Write to JSON
         json_path = output_dir / "uncertainty_calibration_metrics.json"
         with open(json_path, "w") as f:
-            json.dump(self._data, f, indent=2)
+            json.dump(
+                self._data,
+                f,
+                indent=2,
+                default=lambda o: o.item() if isinstance(o, np.generic) else o,
+            )
 
         # Also log the JSON to wandb
         if self.use_wandb:
@@ -322,12 +325,9 @@ class UncertaintyPlots(EvalBase):
             y_true = y_true.to_numpy()
 
         # Ensure 2D arrays for consistency
-        if y_pred.ndim == 1:
-            y_pred = y_pred.reshape(-1, 1)
-        if y_true.ndim == 1:
-            y_true = y_true.reshape(-1, 1)
-        if y_std.ndim == 1:
-            y_std = y_std.reshape(-1, 1)
+        y_pred = ensure_2d(y_pred)
+        y_true = ensure_2d(y_true)
+        y_std = ensure_2d(y_std)
 
         # Verify number of tasks
         n_tasks = y_true.shape[1]

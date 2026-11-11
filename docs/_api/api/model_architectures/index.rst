@@ -11,8 +11,8 @@ Anvil implemenations of various architectures.
    dummy
    lgbm
    model_base
-   mtenn
    random_forest
    svm
+   tabicl
    tabpfn
    xgboost

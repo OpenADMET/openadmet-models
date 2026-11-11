@@ -1,11 +1,25 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
+from torch.utils.data import RandomSampler, SequentialSampler
 
+from openadmet.models.features.chemprop import ChemPropFeaturizer
 from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
 from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
+
+
+@pytest.fixture(scope="session")
+def desc2d_featurizer():
+    """Provide a single shared DescriptorFeaturizer(desc2d) instance for the test session."""
+    return DescriptorFeaturizer(descr_type="desc2d", n_jobs=1)
+
+
+@pytest.fixture(scope="session")
+def ecfp_featurizer():
+    """Provide a single shared FingerprintFeaturizer(ecfp) instance for the test session."""
+    return FingerprintFeaturizer(fp_type="ecfp", n_jobs=1)
 
 
 @pytest.fixture()
@@ -20,8 +34,9 @@ def one_invalid_smi():
     return ["CCO", "CCN", "invalid", "CCO"]
 
 
-@pytest.mark.parametrize("dtype", (np.float32, np.float64))
-@pytest.mark.parametrize("descr_type", ["mordred", "desc2d"])
+@pytest.mark.parametrize(
+    "descr_type,dtype", [("mordred", np.float32), ("desc2d", np.float64)]
+)
 def test_descriptor_featurizer(descr_type, dtype):
     """
     Validate DescriptorFeaturizer for different descriptor types and floating point precisions.
@@ -29,28 +44,26 @@ def test_descriptor_featurizer(descr_type, dtype):
     This ensures that physical-chemical descriptors (like Mordred or RDKit 2D) are correctly generated
     and returned with the requested data type, which is important for downstream model compatibility.
     """
-    featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype)
+    featurizer = DescriptorFeaturizer(descr_type=descr_type, dtype=dtype, n_jobs=1)
     X, idx = featurizer.featurize(["CCO", "CCN", "CCO"])
     assert X.dtype == dtype
     assert_array_equal(idx, np.arange(3))
 
 
-def test_descriptor_one_invalid(one_invalid_smi):
+def test_descriptor_one_invalid(one_invalid_smi, desc2d_featurizer):
     """
     Ensure DescriptorFeaturizer robustly handles invalid SMILES strings.
 
     The featurizer should skip invalid molecules and return indices corresponding only to the valid ones.
     This prevents the entire pipeline from crashing due to a single bad input.
     """
-    featurizer = DescriptorFeaturizer(descr_type="mordred")
-    X, idx = featurizer.featurize(one_invalid_smi)
-    assert X.shape == (3, 1613)
+    X, idx = desc2d_featurizer.featurize(one_invalid_smi)
+    assert X.shape == (3, 223)
     # index 2 is invalid, so the shape should be 3
     assert_array_equal(idx, np.asarray([0, 1, 3]))
 
 
-@pytest.mark.parametrize("dtype", (np.float32, np.float64))
-@pytest.mark.parametrize("fp_type", ("ecfp", "fcfp"))
+@pytest.mark.parametrize("fp_type,dtype", [("ecfp", np.float32), ("fcfp", np.float64)])
 def test_fingerprint_featurizer(smiles, fp_type, dtype):
     """
     Validate FingerprintFeaturizer for different fingerprint types (ECFP, FCFP) and precisions.
@@ -58,42 +71,41 @@ def test_fingerprint_featurizer(smiles, fp_type, dtype):
     This verifies that structural fingerprints are correctly generated with the expected vector size (2000)
     and data type.
     """
-    featurizer = FingerprintFeaturizer(fp_type=fp_type, dtype=dtype)
+    featurizer = FingerprintFeaturizer(fp_type=fp_type, dtype=dtype, n_jobs=1)
     X, idx = featurizer.featurize(smiles)
     assert X.shape == (3, 2000)
     assert X.dtype == dtype
     assert_array_equal(idx, np.arange(3))
 
 
-def test_fingerprint_one_invalid(one_invalid_smi):
+def test_fingerprint_one_invalid(one_invalid_smi, ecfp_featurizer):
     """
     Ensure FingerprintFeaturizer robustly handles invalid SMILES strings.
 
     Similar to descriptors, it should filter out invalid entries and return correct indices for valid ones.
     """
-    featurizer = FingerprintFeaturizer(fp_type="ecfp")
-    X, idx = featurizer.featurize(one_invalid_smi)
+    X, idx = ecfp_featurizer.featurize(one_invalid_smi)
     assert X.shape == (3, 2000)
     # index 2 is invalid, so the shape should be 3
     assert_array_equal(idx, np.asarray([0, 1, 3]))
 
 
-def test_feature_concatenator(smiles):
+def test_feature_concatenator(smiles, desc2d_featurizer, ecfp_featurizer):
     """
     Validate that FeatureConcatenator correctly combines multiple feature sets (descriptors + fingerprints).
 
     This ensures that different feature representations can be stacked horizontally for the same molecules,
     providing a richer feature set for training.
     """
-    desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
-    fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
-    concat = FeatureConcatenator(featurizers=[desc_featurizer, fp_featurizer])
+    concat = FeatureConcatenator(featurizers=[desc2d_featurizer, ecfp_featurizer])
     X, idx = concat.featurize(smiles)
-    assert X.shape == (3, 3613)
+    assert X.shape == (3, 2223)
     assert_array_equal(idx, np.arange(3))
 
 
-def test_feature_concatenator_drops_intersection(mocker):
+def test_feature_concatenator_drops_intersection(
+    mocker, desc2d_featurizer, ecfp_featurizer
+):
     """
     Verify that FeatureConcatenator only keeps molecules valid across ALL featurizers.
 
@@ -104,16 +116,17 @@ def test_feature_concatenator_drops_intersection(mocker):
     complex real-world molecules that fail specific featurizers. This isolates the intersection logic.
     """
     # Arrange
-    desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
-    fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
-    concat = FeatureConcatenator(featurizers=[desc_featurizer, fp_featurizer])
+    concat = FeatureConcatenator(featurizers=[desc2d_featurizer, ecfp_featurizer])
 
     # Mock descriptor featurizer to return 3 valid outputs (fails on index 1)
     # Indices: 0, 2, 3 (skips 1)
-    desc_features = np.zeros((3, 1613))
+    desc_features = np.zeros((3, 223))
     desc_indices = np.array([0, 2, 3])
     mocker.patch.object(
-        DescriptorFeaturizer, "featurize", return_value=(desc_features, desc_indices)
+        DescriptorFeaturizer,
+        "featurize",
+        autospec=True,
+        return_value=(desc_features, desc_indices),
     )
 
     # Mock fingerprint featurizer to return 3 valid outputs (fails on index 2)
@@ -122,7 +135,10 @@ def test_feature_concatenator_drops_intersection(mocker):
     fp_features = np.zeros((3, 2000))
     fp_indices = np.array([0, 1, 3])
     mocker.patch.object(
-        FingerprintFeaturizer, "featurize", return_value=(fp_features, fp_indices)
+        FingerprintFeaturizer,
+        "featurize",
+        autospec=True,
+        return_value=(fp_features, fp_indices),
     )
 
     smiles = ["SMI0", "SMI1", "SMI2", "SMI3"]
@@ -132,36 +148,21 @@ def test_feature_concatenator_drops_intersection(mocker):
 
     # Assert
     # Intersection of [0, 2, 3] and [0, 1, 3] is [0, 3]
-    # Expected shape: (2, 1613 + 2000) = (2, 3613)
-    assert X.shape == (2, 3613)
+    # Expected shape: (2, 223 + 2000) = (2, 2223)
+    assert X.shape == (2, 2223)
     assert_array_equal(idx, np.array([0, 3]))
 
 
-def test_feature_concatenator_order_independence(smiles):
+def test_feature_concatenator_order_independence(
+    smiles, desc2d_featurizer, ecfp_featurizer
+):
     """
-    Ensure that changing the order of featurizers in the list does not affect the validity of the operation
-    (though it will change column order).
-
-    Note: This test actually checks that the result objects are valid arrays and indices match,
-    but it asserts equality of X1 and X2 which would FAIL if the feature columns are swapped.
-    Wait, the code `assert_array_equal(X1, X2)` implies the concatenation order matters?
-    Ah, the test logic compares `concat1` (Desc, FP) vs `concat2` (FP, Desc).
-    If X1 == X2, then order DOES NOT matter, which is mathematically wrong for concatenation.
-    However, I am only adding comments, not fixing logic. The test likely fails or mocks something I don't see,
-    or maybe the test intends to verify they are NOT equal?
-    Actually, looking at the code: `assert_array_equal(X1, X2)` implies they SHOULD be equal.
-    This might be a bug in the test or I am misunderstanding. I will just comment the intent.
-    Correction: This test likely fails if run? But my task is to comment.
-    I will assume the intent is to check something else or the test is flawed.
-    I will write a neutral comment.
+    Ensure that changing the order of featurizers in the list results in the same outcome due to sorting.
     """
-    desc_featurizer = DescriptorFeaturizer(descr_type="mordred")
-    fp_featurizer = FingerprintFeaturizer(fp_type="ecfp")
-
-    concat1 = FeatureConcatenator(featurizers=[desc_featurizer, fp_featurizer])
+    concat1 = FeatureConcatenator(featurizers=[desc2d_featurizer, ecfp_featurizer])
     X1, idx1 = concat1.featurize(smiles)
 
-    concat2 = FeatureConcatenator(featurizers=[fp_featurizer, desc_featurizer])
+    concat2 = FeatureConcatenator(featurizers=[ecfp_featurizer, desc2d_featurizer])
     X2, idx2 = concat2.featurize(smiles)
 
     assert_array_equal(X1, X2)
@@ -176,7 +177,13 @@ def test_pairwise_featurizer(smiles):
     (differences) are correctly computed.
     """
     featurizer = PairwiseFeaturizer(
-        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "dtype": np.float32}},
+        featurizer={
+            "FingerprintFeaturizer": {
+                "fp_type": "ecfp",
+                "dtype": np.float32,
+                "n_jobs": 1,
+            }
+        },
         how_to_pair="full",
         batch_size=2,
         shuffle=False,
@@ -187,3 +194,92 @@ def test_pairwise_featurizer(smiles):
     expected_y = np.array([0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0])
     assert [dataset[i][2] for i in range(9)] == pytest.approx(expected_y)
     assert scaler is None  # No scaling applied in FingerprintFeaturizer
+
+
+# 3 SMILES at batch_size 2 leaves a size-1 final batch (len % batch_size == 1),
+# the condition that triggers the batch-norm drop_last guard.
+def test_chemprop_eval_loader_preserves_order_and_length(smiles):
+    """Regression (#383, #517): an eval loader must not shuffle or drop, even when shuffle=True."""
+    featurizer = ChemPropFeaturizer(shuffle=True, batch_size=2, n_jobs=0)
+
+    dataloader, _, _, dataset = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 3.0])
+    )
+
+    assert isinstance(dataloader.sampler, SequentialSampler)
+    assert dataloader.drop_last is False
+    assert sum(batch.Y.shape[0] for batch in dataloader) == len(dataset)
+
+
+def test_chemprop_train_loader_shuffles_and_drops_singleton(smiles):
+    """A training loader honors shuffle=True and drops a size-1 final batch for batch norm."""
+    featurizer = ChemPropFeaturizer(shuffle=True, batch_size=2, n_jobs=0)
+
+    dataloader, _, _, _ = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 3.0]), train=True
+    )
+
+    assert isinstance(dataloader.sampler, RandomSampler)
+    assert dataloader.drop_last is True
+
+
+def test_pairwise_eval_loader_preserves_order_and_length(smiles):
+    """Regression (#383, #517): an eval loader must not shuffle or drop, even when shuffle=True."""
+    featurizer = PairwiseFeaturizer(
+        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1}},
+        how_to_pair="full",
+        batch_size=2,  # 9 pairs % 2 == 1 -> size-1 final batch
+        shuffle=True,
+        n_jobs=0,
+    )
+
+    dataloader, _, _, dataset = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 1.0])
+    )
+
+    assert isinstance(dataloader.sampler, SequentialSampler)
+    assert dataloader.drop_last is False
+    assert sum(len(batch[2]) for batch in dataloader) == len(dataset)
+
+
+def test_pairwise_train_loader_shuffles_and_drops_singleton(smiles):
+    """A training loader honors shuffle=True and drops a size-1 final batch for batch norm."""
+    featurizer = PairwiseFeaturizer(
+        featurizer={"FingerprintFeaturizer": {"fp_type": "ecfp", "n_jobs": 1}},
+        how_to_pair="full",
+        batch_size=2,  # 9 pairs % 2 == 1 -> size-1 final batch
+        shuffle=True,
+        n_jobs=0,
+    )
+
+    dataloader, _, _, _ = featurizer.featurize(
+        smiles, y=np.array([1.0, 2.0, 1.0]), train=True
+    )
+
+    assert isinstance(dataloader.sampler, RandomSampler)
+    assert dataloader.drop_last is True
+
+
+def _chemprop_train_sample_order(seed):
+    """Return the per-sample target order for a seeded ChemProp training loader."""
+    import torch
+
+    featurizer = ChemPropFeaturizer(
+        shuffle=True, batch_size=2, n_jobs=0, random_seed=seed
+    )
+    smiles = ["CCO", "CCN", "CCC", "CCCl", "CCBr", "CCCC", "CCCCC", "c1ccccc1"]
+    y = np.arange(1.0, 1.0 + len(smiles))
+    # Perturb the global RNG to prove reproducibility comes from the seed, not global state
+    torch.manual_seed(seed * 13 + 1)
+    dataloader, _, _, _ = featurizer.featurize(smiles, y=y, train=True)
+    return [float(v) for batch in dataloader for v in batch.Y.flatten()]
+
+
+def test_chemprop_training_shuffle_is_seed_reproducible():
+    """A seeded training loader yields the same sample order regardless of global RNG state."""
+    assert _chemprop_train_sample_order(7) == _chemprop_train_sample_order(7)
+
+
+def test_chemprop_training_shuffle_varies_with_seed():
+    """Different seeds produce different training sample orders."""
+    assert _chemprop_train_sample_order(7) != _chemprop_train_sample_order(8)

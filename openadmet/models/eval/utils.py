@@ -1,5 +1,27 @@
 """Utility functions for evaluation modules."""
 
+import numpy as np
+
+
+def ensure_2d(arr: np.ndarray) -> np.ndarray:
+    """
+    Coerce a 1D array to column-vector shape (N, 1); leave 2D arrays unchanged.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of shape (N,) or (N, M).
+
+    Returns
+    -------
+    np.ndarray
+        Array of shape (N, 1) if input was 1D, otherwise the original array.
+
+    """
+    if arr.ndim == 1:
+        return arr.reshape(-1, 1)
+    return arr
+
 
 def _make_stat_caption(
     data: dict,

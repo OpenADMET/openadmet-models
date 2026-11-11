@@ -3,10 +3,6 @@
 from pathlib import Path  # it is used in the main therefore i do not remove it
 from typing import Any
 
-import torch
-from lightning import pytorch as pl
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from loguru import logger
 from openadmet.models.drivers import DriverType
 from openadmet.models.trainer.trainer_base import TrainerBase, trainers
@@ -22,7 +18,8 @@ class LightningTrainer(TrainerBase):
     max_epochs : int
         The maximum number of epochs to train for.
     accelerator : str
-        The accelerator to use, e.g. 'cpu', 'gpu'.
+        The accelerator to use, passed to the Lightning Trainer. "auto" (the
+        default) picks TPU, MPS, CUDA, or CPU, whichever is available.
     devices : int
         The number of devices to use, e.g. 1 for single GPU, -1
         for all available GPUs.
@@ -70,7 +67,7 @@ class LightningTrainer(TrainerBase):
     """
 
     max_epochs: int = 20
-    accelerator: str = "gpu"
+    accelerator: str = "auto"
     devices: int = 1
     use_wandb: bool = False
     output_dir: Path = None
@@ -105,6 +102,10 @@ class LightningTrainer(TrainerBase):
         """
         # Initialize logging container
         self._logger = []
+
+        from lightning import pytorch as pl
+        from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+        from lightning.pytorch.loggers import CSVLogger, WandbLogger
 
         # Initialize the callbacks dict
         self._callbacks = {}
@@ -190,6 +191,8 @@ class LightningTrainer(TrainerBase):
         """
         # Indicate that the model is being trained
         logger.debug(f"Training model {self.model.estimator}")
+
+        import torch
 
         # Fit model
         self._trainer.fit(self.model.estimator, train_dataloader, val_dataloader)

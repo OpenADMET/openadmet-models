@@ -72,7 +72,7 @@ class PairwiseAugmentedDataset(torch.utils.data.Dataset):
 
 
 @featurizers.register("PairwiseFeaturizer")
-class PairwiseFeaturizer(FeaturizerBase):
+class PairwiseFeaturizer(DeepLearningFeaturizer):
     """
     PairFeaturizedData is a featurizer that pairs features according to a specified method.
 
@@ -133,6 +133,7 @@ class PairwiseFeaturizer(FeaturizerBase):
         self,
         smiles: ArrayLike,
         y: ArrayLike = None,
+        train: bool = False,
     ) -> tuple[DataLoader, np.ndarray, StandardScaler, Dataset]:
         """
         Featurize a list of SMILES strings.
@@ -145,6 +146,10 @@ class PairwiseFeaturizer(FeaturizerBase):
             A list or array of SMILES strings to featurize
         y: ArrayLike, optional
             A list or array of target values to pair with the features
+        train: bool, optional
+            Whether this loader feeds model training, by default False. Shuffling and the
+            size-1 ``drop_last`` guard apply only when True; otherwise the loader preserves
+            input order and returns every row.
 
         Returns
         -------
@@ -172,11 +177,20 @@ class PairwiseFeaturizer(FeaturizerBase):
 
         paired_dataset = PairwiseAugmentedDataset(X_feat, y, how=self.how_to_pair)
 
+        # Shuffle and the size-1 drop_last guard are training-only; evaluation and
+        # inference loaders preserve input order and length for correct y_true/y_pred pairing.
+        # A seeded generator makes the training shuffle reproducible
+        shuffle = self.shuffle and train
+        generator = None
+        if shuffle and self.random_seed is not None:
+            generator = torch.Generator().manual_seed(self.random_seed)
         dataloader = DataLoader(
             paired_dataset,
             batch_size=self.batch_size,
-            shuffle=self.shuffle,
+            shuffle=shuffle,
             num_workers=self.n_jobs,
+            drop_last=(train and len(paired_dataset) % self.batch_size == 1),
+            generator=generator,
         )
 
         indices = np.arange(len(paired_dataset.X))
@@ -200,5 +214,6 @@ class PairwiseFeaturizer(FeaturizerBase):
             n_jobs=self.n_jobs,
             batch_size=self.batch_size,
             shuffle=self.shuffle,
+            random_seed=self.random_seed,
         )
         return ft
