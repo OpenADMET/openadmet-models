@@ -19,7 +19,7 @@ dependencies:
   - mdanalysis
   - modal
   - mordredcommunity
-  - numpy
+  - numpy >= 2.0
   - pandas
   - pip
   - python >= 3.12,<3.14
