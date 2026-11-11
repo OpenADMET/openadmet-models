@@ -4,9 +4,12 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
-from sklearn.svm import SVC, SVR
 
-from openadmet.models.architecture.model_base import PickleableModelBase, models
+from openadmet.models.architecture.model_base import (
+    PickleableModelBase,
+    models,
+    seed_to_sklearn_kwargs,
+)
 
 
 class SVMModelBase(PickleableModelBase):
@@ -14,12 +17,18 @@ class SVMModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the SVM estimator class (deferred import)."""
+        raise NotImplementedError
 
     def build(self):
         """Prepare the model."""
         if not self.estimator:
-            self.estimator = self.mod_class(**self.model_dump())
+            self.estimator = self._get_estimator_class()(
+                **seed_to_sklearn_kwargs(self.model_dump())
+            )
         else:
             logger.warning("Model already exists, skipping build")
 
@@ -80,7 +89,12 @@ class SVMRegressorModel(SVMModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "SVMRegressorModel"
-    mod_class: ClassVar[type] = SVR
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.svm import SVR
+
+        return SVR
 
     # SVR parameters
     kernel: str = "rbf"
@@ -115,7 +129,12 @@ class SVMClassifierModel(SVMModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "SVMClassifierModel"
-    mod_class: ClassVar[type] = SVC
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from sklearn.svm import SVC
+
+        return SVC
 
     # SVC parameters
     C: float = 1.0
@@ -132,7 +151,7 @@ class SVMClassifierModel(SVMModelBase):
     max_iter: int = -1
     decision_function_shape: str = "ovr"
     break_ties: bool = False
-    random_state: int | None = None
+    random_seed: int | None = None
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

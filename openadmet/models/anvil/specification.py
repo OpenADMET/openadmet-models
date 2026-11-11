@@ -2,7 +2,7 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import ClassVar, Literal, Optional, Union
+from typing import ClassVar, Literal, Optional
 
 import fsspec
 import intake
@@ -15,11 +15,12 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from openadmet.models.active_learning.ensemble_base import (
     get_ensemble_class,
 )
+from openadmet.models.anvil.utils import ensure_list
 from openadmet.models.architecture.model_base import get_mod_class
 from openadmet.models.drivers import DriverType
 from openadmet.models.eval.eval_base import get_eval_class
 from openadmet.models.features.feature_base import get_featurizer_class
-from openadmet.models.registries import *  # noqa: F401, F403
+from openadmet.models.registries import load_all  # noqa: F401
 from openadmet.models.split.split_base import get_splitter_class
 from openadmet.models.trainer.trainer_base import get_trainer_class
 from openadmet.models.transforms.transform_base import (
@@ -38,6 +39,18 @@ _SECTION_CLASS_GETTERS = {
 }
 
 
+def _section_sets_seed(section_spec) -> bool:
+    """Return whether a section explicitly sets a seed in its params."""
+    params = getattr(section_spec, "params", {}) or {}
+    return "random_seed" in params
+
+
+def _resolve_model_init_seed(model_spec, global_seed: int) -> int:
+    """Resolve the model-initialization seed: per-section if set, else the global."""
+    params = model_spec.params or {}
+    return params.get("random_seed", global_seed)
+
+
 class DataSpec(BaseModel):
     """
     Data specification for the workflow.
@@ -50,8 +63,9 @@ class DataSpec(BaseModel):
         The path or URL to the data resource.
     cat_entry : Optional[str]
         The catalog entry name if the resource is a YAML catalog.
-    target_cols : Union[str, list[str]]
-        The target column(s) in the dataset.
+    target_cols : list[str]
+        The target column(s) in the dataset. A bare string is accepted and
+        wrapped into a one-element list.
     input_col : str
         The input column in the dataset.
     anvil_dir : Optional[str]
@@ -75,7 +89,7 @@ class DataSpec(BaseModel):
     resource: Optional[str] = None
 
     cat_entry: Optional[str] = None
-    target_cols: Union[str, list[str]]
+    target_cols: list[str]
     input_col: str
     anvil_dir: Optional[str] = None
     dropna: Optional[bool] = False
@@ -198,12 +212,7 @@ class DataSpec(BaseModel):
             [read_split(resource, split) for resource, split in splits_to_read]
         )
 
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = combined[[self.input_col] + target_cols + ["_split"]]
+        combined = combined[[self.input_col] + self.target_cols + ["_split"]]
 
         # Handle NaN values
         n_before = len(combined)
@@ -251,12 +260,7 @@ class DataSpec(BaseModel):
             data = self._read_csv_or_parquet(self.resource)
 
         # Select and clean columns
-        target_cols = (
-            self.target_cols
-            if isinstance(self.target_cols, list)
-            else [self.target_cols]
-        )
-        combined = data[[self.input_col] + target_cols]
+        combined = data[[self.input_col] + self.target_cols]
 
         n_before = len(combined)
         if self.dropna:
@@ -429,6 +433,26 @@ class AnvilSection(SpecBase):
     params: dict = {}
     section_name: ClassVar[str] = "INVALID"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _map_deprecated_random_state(cls, data):
+        """Map a deprecated ``random_state`` param onto ``random_seed`` once, with a warning."""
+        if not isinstance(data, dict):
+            return data
+        params = data.get("params")
+        if isinstance(params, dict) and "random_state" in params:
+            import warnings
+
+            warnings.warn(
+                "`random_state` is deprecated in section params; use `random_seed` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            params = dict(params)
+            params.setdefault("random_seed", params.pop("random_state"))
+            data = {**data, "params": params}
+        return data
+
     def to_class(self):
         """
         Convert the specification to the corresponding class instance.
@@ -464,6 +488,8 @@ class FeatureSpec(AnvilSection):
     """
 
     section_name: ClassVar[str] = "feat"
+    type: str | None = None
+    params: dict = Field(default_factory=dict)
 
 
 class ModelSpec(AnvilSection):
@@ -536,6 +562,13 @@ class ModelSpec(AnvilSection):
 
         return self
 
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template param_path and serial_path with ANVIL_DIR."""
+        for attr in ["param_path", "serial_path"]:
+            value = getattr(self, attr, None)
+            if value:
+                setattr(self, attr, jinja2.Template(value).render(ANVIL_DIR=anvil_dir))
+
 
 class EnsembleSpec(AnvilSection):
     """
@@ -560,6 +593,7 @@ class EnsembleSpec(AnvilSection):
     n_models: int
     calibration_method: str | None = None
     use_bagging: bool = False
+    bootstrap_seed: int | None = None
     param_paths: list[str] | None = None
     serial_paths: list[str] | None = None
 
@@ -608,6 +642,17 @@ class EnsembleSpec(AnvilSection):
             "Both `param_paths` and `serial_paths` must be provided together."
         )
 
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template param_paths and serial_paths with ANVIL_DIR."""
+        for attr in ["param_paths", "serial_paths"]:
+            values = getattr(self, attr, None)
+            if values:
+                setattr(
+                    self,
+                    attr,
+                    [jinja2.Template(v).render(ANVIL_DIR=anvil_dir) for v in values],
+                )
+
 
 class TrainerSpec(AnvilSection):
     """Trainer specification."""
@@ -628,16 +673,43 @@ class TransformSpec(AnvilSection):
 
 
 class ProcedureSpec(SpecBase):
-    """Procedure specification."""
+    """
+    Procedure specification.
+
+    Attributes
+    ----------
+    random_seed : int
+        Global seed applied to any section that does not set its own seed. A
+        per-section seed (in that section's ``params``) takes precedence.
+
+    """
 
     section_name: ClassVar[str] = "procedure"
 
+    random_seed: int = 42
     split: SplitSpec
     feat: FeatureSpec
     model: ModelSpec
     ensemble: EnsembleSpec | None = None
     train: TrainerSpec
-    transform: Optional[TransformSpec] = None  # Optional transform step
+    transform: list[TransformSpec] | None = None  # Optional transform sequence
+
+    @field_validator("transform", mode="before")
+    @classmethod
+    def _wrap_single_transform(cls, value):
+        """Wrap a bare single-transform mapping or spec into a one-element list."""
+        return ensure_list(value)
+
+    def template_anvil_dir(self, anvil_dir: Path):
+        """Template ANVIL_DIR in model and ensemble path fields."""
+        # Model paths are consumed by plain open(), not fsspec — use url_to_fs to
+        # strip any protocol prefix (e.g. file://) so the stored strings are valid
+        # local filesystem paths.
+        _, local_path = fsspec.url_to_fs(str(anvil_dir))
+        anvil_dir = Path(local_path)
+        self.model.template_anvil_dir(anvil_dir)
+        if self.ensemble is not None:
+            self.ensemble.template_anvil_dir(anvil_dir)
 
 
 class ReportSpec(SpecBase):
@@ -671,6 +743,7 @@ class AnvilSpecification(BaseModel):
 
         # Set the anvil_dir
         instance.data.template_anvil_dir(parent)
+        instance.procedure.template_anvil_dir(parent)
 
         return instance
 
@@ -753,27 +826,54 @@ class AnvilSpecification(BaseModel):
                 "param_paths": self.procedure.ensemble.param_paths,
                 "serial_paths": self.procedure.ensemble.serial_paths,
                 "use_bagging": self.procedure.ensemble.use_bagging,
+                "bootstrap_seed": self.procedure.ensemble.bootstrap_seed,
             }
             if self.procedure.ensemble
             else {}
         )
 
+        # Build components, then resolve seeds: a per-section seed wins, else the
+        # procedure-level global seed fills any section that did not set its own.
+        model = self.procedure.model.to_class()
+        split = self.procedure.split.to_class()
+        feat = self.procedure.feat.to_class()
+        transform_spec = self.procedure.transform
+        transform = [t.to_class() for t in transform_spec] if transform_spec else None
+        evals = [eval.to_class() for eval in self.report.eval]
+
+        global_seed = self.procedure.random_seed
+        transform_specs = transform_spec or []
+        transform_components = transform or []
+        seeded_sections = [
+            (self.procedure.split, split),
+            (self.procedure.feat, feat),
+            (self.procedure.model, model),
+            *zip(transform_specs, transform_components),
+            *zip(self.report.eval, evals),
+        ]
+        # Fill any section that did not set its own seed with the global; an
+        # explicit per-section seed always wins.
+        for section_spec, component in seeded_sections:
+            if not _section_sets_seed(section_spec) and hasattr(
+                component, "random_seed"
+            ):
+                component.random_seed = global_seed
+
         return driver(
             metadata=self.metadata,
             data_spec=self.data,
-            model=self.procedure.model.to_class(),
+            model=model,
             ensemble=self.procedure.ensemble.to_class()
             if self.procedure.ensemble
             else None,
-            transform=self.procedure.transform.to_class()
-            if self.procedure.transform
-            else None,
-            split=self.procedure.split.to_class(),
-            feat=self.procedure.feat.to_class(),
+            transform=transform,
+            split=split,
+            feat=feat,
             trainer=self.procedure.train.to_class(),
-            evals=[eval.to_class() for eval in self.report.eval],
+            evals=evals,
             model_kwargs=model_kwargs,
             ensemble_kwargs=ensemble_kwargs,
+            random_seed=_resolve_model_init_seed(self.procedure.model, global_seed),
         )
 
     def run(

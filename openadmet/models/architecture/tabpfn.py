@@ -1,18 +1,47 @@
 """TabPFN model implementations."""
 
-from typing import ClassVar, Literal, Optional, Union
+import warnings
+from typing import ClassVar, Optional
 
 import numpy as np
+import torch
 from loguru import logger
 from pydantic import Field, field_validator
-from tabpfn import TabPFNClassifier, TabPFNRegressor
-from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
-    AutoTabPFNClassifier,
-    AutoTabPFNRegressor,
-)
-import warnings
 
 from openadmet.models.architecture.model_base import PickleableModelBase, models
+
+# TabPFN's device kwarg accepts "auto" natively (DevicesSpecification = "auto");
+# these are the two trainer aliases that differ from torch device names
+_ACCELERATOR_ALIASES = {"gpu": "cuda", "tpu": "xla"}
+
+
+def _resolve_device(accelerator: str) -> str:
+    """
+    Resolve an accelerator spelling to a value TabPFN's ``device`` kwarg accepts.
+
+    ``"auto"`` passes through verbatim since TabPFN accepts it natively;
+    trainer aliases map to torch device names, and every other value passes
+    through verbatim.
+
+    .. note::
+
+        Unlike ``tabicl`` where ``"auto"`` maps to ``None`` (so TabICL runs its
+        own device detection), TabPFN's ``DevicesSpecification`` resolves
+        ``"auto"`` natively.  The two helpers share the same name and shape but
+        have different semantics — take care when porting between them.
+
+    Parameters
+    ----------
+    accelerator : str
+        The accelerator spelling to resolve.
+
+    Returns
+    -------
+    str
+        A value accepted by TabPFN's ``device`` parameter.
+
+    """
+    return _ACCELERATOR_ALIASES.get(accelerator, accelerator)
 
 
 class TabPFNExtensionModelBase(PickleableModelBase):
@@ -26,14 +55,13 @@ class TabPFNExtensionModelBase(PickleableModelBase):
     ----------
     type : ClassVar[str]
         Model type identifier.
-    mod_class : ClassVar[type]
-        The TabPFN model class (e.g., AutoTabPFNRegressor or AutoTabPFNClassifier).
     max_time : Optional[int]
         Maximum time to spend on fitting the post hoc ensemble.
-    accelerator : Literal["cpu", "gpu", "auto"]
-        Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    accelerator : str
+        Device to use for training and prediction. Mapped to ``device`` for TabPFN.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
     phe_init_args : Optional[dict]
@@ -43,17 +71,21 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the TabPFN extension estimator class (deferred import)."""
+        raise NotImplementedError
 
     # TabPFN parameters
     max_time: Optional[int] = Field(
         default=None,
         description="The maximum time to spend on fitting the post hoc ensemble.",
     )
-    accelerator: Literal["cpu", "gpu", "auto"] = Field(
+    accelerator: str = Field(
         default="auto", description="The device to use for training and prediction."
     )
-    random_state: int = Field(
+    random_seed: int = Field(
         default=42,
         description="Controls both the randomness of base models and the post hoc ensembling method.",
     )
@@ -69,37 +101,34 @@ class TabPFNExtensionModelBase(PickleableModelBase):
 
     @field_validator("accelerator")
     @classmethod
-    def validate_accelerator(cls, value):
+    def validate_accelerator(cls, value: str) -> str:
         """
         Validate the accelerator parameter.
 
-        Parameters
-        ----------
-        value : str
-            The accelerator value to validate.
-
-        Returns
-        -------
-        str
-            The validated accelerator value.
-
+        TabPFN's ``device`` kwarg uses ``DevicesSpecification`` which accepts
+        any torch device name or ``"auto"``.  This validator reuses the same
+        resolution path so a bad accelerator is caught eagerly at construction
+        time rather than many calls later at ``fit()``.
         """
-        if value not in ["cpu", "gpu", "auto"]:
-            raise ValueError("Accelerator must be either 'cpu' or 'gpu' or 'auto'")
-
+        resolved = _resolve_device(value)
+        if resolved != "auto":
+            try:
+                torch.device(resolved)
+            except RuntimeError as e:
+                raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
         return value
 
     def build(self):
         """Prepare and build the model instance."""
-        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
+        accelerator = _resolve_device(self.accelerator)
         warnings.warn(
             "TabPFN 2.5 is distributed under the TabPFN 2.5 License: https://priorlabs.ai/tabpfn-license which prohibits commercial use. Review the license and ensure you are compliant before using this model. A commercial license can be obtained from the TabPFN team."
         )
         if not self.estimator:
-            self.estimator = self.mod_class(
+            self.estimator = self._get_estimator_class()(
                 max_time=self.max_time,
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
                 phe_init_args=self.phe_init_args,
             )
@@ -149,7 +178,14 @@ class TabPFNPostHocRegressorModel(TabPFNExtensionModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocRegressorModel"
-    mod_class: ClassVar[type] = AutoTabPFNRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
+            AutoTabPFNRegressor,
+        )
+
+        return AutoTabPFNRegressor
 
 
 @models.register("TabPFNPostHocClassifierModel")
@@ -158,7 +194,14 @@ class TabPFNPostHocClassifierModel(TabPFNExtensionModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNPostHocClassifierModel"
-    mod_class: ClassVar[type] = AutoTabPFNClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
+            AutoTabPFNClassifier,
+        )
+
+        return AutoTabPFNClassifier
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -186,10 +229,11 @@ class TabPFNModelBase(PickleableModelBase):
 
     Attributes
     ----------
-    accelerator : Literal["cpu", "cuda", "auto"]
-        Device to use for training and prediction.
-    random_state : int
-        Random seed for reproducibility.
+    accelerator : str
+        Device to use for training and prediction. Mapped to ``device`` for TabPFN.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     ignore_pretraining_limits : bool
         Whether to ignore pretraining limits of TabPFN base models.
 
@@ -197,20 +241,41 @@ class TabPFNModelBase(PickleableModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str]
-    mod_class: ClassVar[type]
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        """Return the basic TabPFN estimator class (deferred import)."""
+        raise NotImplementedError
 
     # TabPFN parameters
-    accelerator: Literal["cpu", "cuda", "auto"] = Field(default="auto")
-    random_state: int = Field(default=42)
+    accelerator: str = Field(default="auto")
+    random_seed: int = Field(default=42)
     ignore_pretraining_limits: bool = Field(default=False)
+
+    @field_validator("accelerator")
+    @classmethod
+    def validate_accelerator(cls, value: str) -> str:
+        """
+        Reject accelerator spellings ``torch.device()`` cannot parse.
+
+        Mirrors ``TabPFNExtensionModelBase.validate_accelerator`` so both the
+        basic and extension model families fail eagerly on a bad accelerator.
+        """
+        resolved = _resolve_device(value)
+        if resolved != "auto":
+            try:
+                torch.device(resolved)
+            except RuntimeError as e:
+                raise ValueError(f"Invalid accelerator {value!r}: {e}") from e
+        return value
 
     def build(self):
         """Prepare and build the model instance."""
-        accelerator = self.accelerator if self.accelerator != "gpu" else "cuda"
+        accelerator = _resolve_device(self.accelerator)
         if not self.estimator:
-            self.estimator = self.mod_class(
+            self.estimator = self._get_estimator_class()(
                 device=accelerator,
-                random_state=self.random_state,
+                random_state=self.random_seed,
                 ignore_pretraining_limits=self.ignore_pretraining_limits,
             )
         else:
@@ -264,7 +329,12 @@ class TabPFNRegressorModel(TabPFNModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNRegressorModel"
-    mod_class: ClassVar[type] = TabPFNRegressor
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn import TabPFNRegressor
+
+        return TabPFNRegressor
 
 
 @models.register("TabPFNClassifierModel")
@@ -273,4 +343,9 @@ class TabPFNClassifierModel(TabPFNModelBase):
 
     # Meta parameters for this class
     type: ClassVar[str] = "TabPFNClassifierModel"
-    mod_class: ClassVar[type] = TabPFNClassifier
+
+    @classmethod
+    def _get_estimator_class(cls) -> type:
+        from tabpfn import TabPFNClassifier
+
+        return TabPFNClassifier

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,7 +21,10 @@ from openadmet.models.anvil.specification import (
     TransformSpec,
 )
 from openadmet.models.anvil.workflow import AnvilDeepLearningWorkflow, AnvilWorkflow
-from openadmet.models.architecture.model_base import LightningModelBase
+from openadmet.models.architecture.dummy import DummyRegressorModel
+from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
+from openadmet.models.inference import inference as inference_module
+from openadmet.models.tests.unit import datafiles
 
 # --- DataSpec Tests ---
 
@@ -445,19 +449,12 @@ def test_anvilspecification_to_workflow_returns_correct_driver_type():
     }
 
 
-def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
-    tmp_path, mocker
-):
+def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(tmp_path):
     """Test that run() writes provenance YAML files to the resolved output directory.
 
-    The system under test is the provenance-writing logic that executes *after*
-    workflow.run() returns — i.e. to_recipe() and to_multi_yaml(). Patching
-    to_workflow() is appropriate: it is the boundary between specification and
-    training, and real workflow execution requires data, featurizers, and a trained
-    model, all orthogonal to provenance writing. create_autospec is used (rather
-    than a plain Mock) so that any rename of resolved_output_dir or run() on
-    AnvilWorkflow will cause this test to fail, keeping the mock honest to the
-    real interface.
+    Uses a NullFeaturizer + DummyRegressorModel spec for a real end-to-end run,
+    verifying both the provenance-writing logic and the to_workflow() path that
+    resolves the output directory.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -471,38 +468,34 @@ def test_anvilspecification_run_writes_provenance_to_resolved_output_dir(
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
-    )
-
-    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mock_workflow.run.return_value = None
-
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
     )
 
     spec.run(output_dir=tmp_path / "out")
 
     # Check that provenance files were written
-    assert (tmp_path / "resolved" / "anvil_recipe.yaml").exists()
-    assert (tmp_path / "resolved" / "recipe_components" / "metadata.yaml").exists()
+    assert (tmp_path / "out" / "anvil_recipe.yaml").exists()
+    assert (tmp_path / "out" / "recipe_components" / "metadata.yaml").exists()
 
 
-def test_anvilspecification_run_tag_override(tmp_path, mocker):
+def test_anvilspecification_run_tag_override(tmp_path):
     """Test that providing a tag to run() overrides the metadata tag in provenance.
 
-    Same mocking rationale as
-    test_anvilspecification_run_writes_provenance_to_resolved_output_dir:
-    to_workflow() is patched with a create_autospec mock to skip training while
-    keeping the mock interface-honest to AnvilWorkflow.
+    Uses a NullFeaturizer + DummyRegressorModel spec so the full run() executes
+    end-to-end, verifying both the tag-override logic and that the original spec
+    object is not mutated.
     """
     spec = AnvilSpecification(
         metadata=Metadata(
@@ -516,26 +509,25 @@ def test_anvilspecification_run_tag_override(tmp_path, mocker):
             biotargets=[],
             tags=[],
         ),
-        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
         procedure=ProcedureSpec(
-            split=SplitSpec(type="S"),
-            feat=FeatureSpec(type="F"),
-            model=ModelSpec(type="M"),
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(type="NullFeaturizer"),
+            model=ModelSpec(type="DummyRegressorModel"),
             train=TrainerSpec(type="SKLearnBasicTrainer"),
         ),
         report=ReportSpec(eval=[]),
     )
 
-    mock_workflow = mocker.create_autospec(AnvilWorkflow, instance=True)
-    mock_workflow.resolved_output_dir = tmp_path / "resolved"
-    mocker.patch.object(
-        AnvilSpecification, "to_workflow", autospec=True, return_value=mock_workflow
-    )
-
     spec.run(output_dir=tmp_path / "out", tag="new_tag")
 
     # Check the saved yaml has the new tag
-    saved_yaml = tmp_path / "resolved" / "anvil_recipe.yaml"
+    saved_yaml = tmp_path / "out" / "anvil_recipe.yaml"
     with open(saved_yaml) as f:
         saved_data = yaml.safe_load(f)
     assert saved_data["metadata"]["tag"] == "new_tag"
@@ -616,42 +608,206 @@ def test_dataspec_read_train_test_yaml_raises():
 # --- ModelSpec freeze_weights tests (Refinement 6) ---
 
 
-def test_modelspec_freeze_weights_succeeds_when_supported(mocker):
-    """Test ModelSpec instantiates without error when freeze_weights is supported.
+@pytest.mark.parametrize(
+    "freeze_config",
+    [
+        {"message_passing": True},
+        {"batch_norm": True},
+        {"message_passing": True, "batch_norm": True},
+        {"message_passing": True, "batch_norm": True, "ffn_layers": 1},
+    ],
+)
+def test_modelspec_freeze_weights_succeeds_when_supported(freeze_config):
+    """Test ModelSpec instantiates without error for each valid ChemPropModel freeze configuration.
 
-    create_autospec(LightningModelBase) is used rather than a real model because
-    the validator calls build() and freeze_weights() as a side-effect probe during
-    construction. A real ChemPropModel.build() constructs a full MPNN, which is
-    heavyweight and orthogonal to what is being tested. The mock enforces the
-    LightningModelBase interface while keeping the test fast and focused on the
-    validator logic in ModelSpec.
+    Parametrizes over all supported freeze_weights combinations. The validator calls
+    build() + freeze_weights() (with no args) as a side-effect probe during construction;
+    passing means the model supports weight freezing. ChemPropModel.build() takes ~6ms
+    and freeze_weights() is instantaneous.
     """
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.return_value = None
-
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
-    spec = ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+    spec = ModelSpec(type="ChemPropModel", freeze_weights=freeze_config)
     assert spec is not None
-    mock_model.build.assert_called_once()
-    mock_model.freeze_weights.assert_called_once()
 
 
-def test_modelspec_freeze_weights_raises_when_not_implemented(mocker):
+def test_modelspec_freeze_weights_raises_when_not_implemented():
     """Test ModelSpec raises ValueError when freeze_weights is not implemented.
 
-    Same rationale as test_modelspec_freeze_weights_succeeds_when_supported:
-    create_autospec enforces the LightningModelBase interface. freeze_weights
-    raising NotImplementedError is a base-class contract; no concrete model
-    needs to be instantiated to test that ModelSpec translates it into a
-    ValueError.
+    NeuralPairwiseRegressorModel inherits LightningModelBase.freeze_weights() which
+    raises NotImplementedError. The validator translates this to ValueError so that
+    misconfigured recipes fail at parse time rather than at training time.
     """
-    mock_model = mocker.create_autospec(LightningModelBase, instance=True)
-    mock_model.build.return_value = None
-    mock_model.freeze_weights.side_effect = NotImplementedError("not implemented")
-
-    mocker.patch.object(ModelSpec, "to_class", autospec=True, return_value=mock_model)
-
     with pytest.raises(ValueError, match="Weight freezing not implemented"):
-        ModelSpec(type="SomeModel", freeze_weights={"layer": "encoder"})
+        ModelSpec(
+            type="NeuralPairwiseRegressorModel",
+            freeze_weights={"message_passing": True},
+        )
+
+
+# --- Transform section tests ---
+
+
+def _make_transform_spec(transform, global_seed=99):
+    """Build a minimal AnvilSpecification wrapping the given transform section."""
+    return AnvilSpecification(
+        metadata=Metadata(
+            version="v1",
+            name="t",
+            build_number=0,
+            description="d",
+            tag="t",
+            authors="a",
+            email="a@b.com",
+            biotargets=[],
+            tags=[],
+        ),
+        data=DataSpec(type="csv", resource="d.csv", input_col="s", target_cols="t"),
+        procedure=ProcedureSpec(
+            random_seed=global_seed,
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(
+                type="FingerprintFeaturizer", params={"fp_type": "ecfp:4"}
+            ),
+            model=ModelSpec(type="LGBMRegressorModel"),
+            train=TrainerSpec(type="SKLearnBasicTrainer"),
+            transform=transform,
+        ),
+        report=ReportSpec(eval=[]),
+    )
+
+
+@pytest.mark.parametrize(
+    "section, expected_names",
+    [
+        pytest.param(
+            TransformSpec(type="PCATransform", params={"n_components": 32}),
+            ["PCATransform"],
+            id="single",
+        ),
+        pytest.param(
+            [
+                TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+                TransformSpec(
+                    type="PCATransform",
+                    params={"n_components": {"FingerprintFeaturizer": 32}},
+                ),
+            ],
+            ["ImputeTransform", "PCATransform"],
+            id="sequence",
+        ),
+    ],
+)
+def test_procedurespec_transform_section_parses(section, expected_names):
+    """The transform section accepts a single spec or an ordered sequence of them."""
+    spec = _make_transform_spec(transform=section).procedure
+    assert isinstance(spec.transform, list)
+    names = [t.to_class().__class__.__name__ for t in spec.transform]
+    assert names == expected_names
+
+
+@pytest.mark.parametrize(
+    "section, expected_seeds",
+    [
+        pytest.param(
+            TransformSpec(type="PCATransform", params={"n_components": 32}),
+            [99],
+            id="single_fills_global",
+        ),
+        pytest.param(
+            TransformSpec(
+                type="PCATransform", params={"n_components": 32, "random_seed": 13}
+            ),
+            [13],
+            id="single_explicit_wins",
+        ),
+        pytest.param(
+            [
+                TransformSpec(type="ImputeTransform", params={"strategy": "median"}),
+                TransformSpec(
+                    type="PCATransform",
+                    params={"n_components": 32, "random_seed": 7},
+                ),
+            ],
+            [99, 7],
+            id="sequence_mixed",
+        ),
+    ],
+)
+def test_to_workflow_transform_seeding(section, expected_seeds):
+    """The global seed must fill transform entries that set none, with explicit seeds winning."""
+    workflow = _make_transform_spec(transform=section).to_workflow()
+    assert isinstance(workflow.transform, list)
+    assert [t.random_seed for t in workflow.transform] == expected_seeds
+
+
+def test_anvilspecification_run_with_transform_fits_on_train_and_saves_artifact(
+    tmp_path,
+):
+    """A run with a transform must save the fitted artifact and train the model in the reduced space."""
+    spec = AnvilSpecification(
+        metadata=Metadata(
+            version="v1",
+            name="t",
+            build_number=0,
+            description="d",
+            tag="pca_run",
+            authors="a",
+            email="a@b.com",
+            biotargets=[],
+            tags=[],
+        ),
+        data=DataSpec(
+            type="csv",
+            resource=datafiles.test_csv,
+            input_col="SMILES",
+            target_cols=["data1"],
+        ),
+        procedure=ProcedureSpec(
+            random_seed=42,
+            split=SplitSpec(type="ShuffleSplitter"),
+            feat=FeatureSpec(
+                type="FingerprintFeaturizer", params={"fp_type": "ecfp", "n_jobs": 1}
+            ),
+            model=ModelSpec(type="DummyRegressorModel"),
+            train=TrainerSpec(type="SKLearnBasicTrainer"),
+            transform=TransformSpec(type="PCATransform", params={"n_components": 2}),
+        ),
+        report=ReportSpec(eval=[]),
+    )
+
+    out = tmp_path / "out"
+    spec.run(output_dir=out)
+
+    # the fitted transform artifact is saved alongside the model
+    artifact = out / "transform.pickle"
+    assert artifact.exists()
+    with open(artifact, "rb") as f:
+        payload = joblib.load(f)
+    assert payload["schema"] == "v1"
+    saved_pca = payload["transforms"][0]
+
+    # the model was trained in the reduced space, not on raw fingerprints
+    with open(out / DummyRegressorModel()._model_save_name, "rb") as f:
+        estimator = joblib.load(f)
+    assert estimator.n_features_in_ == 2
+
+    # the saved transform can project new raw fingerprints
+    probe, _ = FingerprintFeaturizer(fp_type="ecfp", n_jobs=1).featurize(["CCO"])
+    projected = saved_pca.transform(np.atleast_2d(probe))
+    assert projected.shape == (1, 2)
+
+    # the saved recipe keeps the transform section so inference requires the artifact
+    with open(out / "recipe_components" / "procedure.yaml") as f:
+        procedure = yaml.safe_load(f)
+    assert procedure["transform"][0]["type"] == "PCATransform"
+
+    # inference from the run's model dir applies the saved fitted transform
+    sample = pd.DataFrame({"SMILES": ["CCO"]})
+    result = inference_module.predict(
+        input_path=sample,
+        input_col="SMILES",
+        model_dir=[out],
+        accelerator="cpu",
+        log=False,
+    )
+    assert "OADMET_PRED_pca_run_data1" in result.columns
+    assert not result["OADMET_PRED_pca_run_data1"].isna().any()

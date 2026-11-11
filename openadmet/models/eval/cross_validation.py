@@ -20,8 +20,6 @@ from sklearn.model_selection import GroupKFold, RepeatedKFold, cross_validate
 from openadmet.models.eval.eval_base import EvalBase, evaluators, get_t_true_and_t_pred
 from openadmet.models.eval.regression import (
     RegressionPlots,
-    nan_omit_ktau,
-    nan_omit_spearmanr,
     pct_within_1_log_unit,
     relative_absolute_error,
 )
@@ -32,11 +30,21 @@ from openadmet.models.drivers import DriverType
 
 def wrap_ktau(y_true, y_pred):
     """Wrap ktau nan omission."""
+    from functools import partial
+
+    from scipy.stats import kendalltau
+
+    nan_omit_ktau = partial(kendalltau, nan_policy="omit")
     return nan_omit_ktau(y_true, y_pred).statistic
 
 
 def wrap_spearmanr(y_true, y_pred):
     """Wrap spearmanR nan omission."""
+    from functools import partial
+
+    from scipy.stats import spearmanr
+
+    nan_omit_spearmanr = partial(spearmanr, nan_policy="omit")
     return nan_omit_spearmanr(y_true, y_pred).correlation
 
 
@@ -57,7 +65,7 @@ def repeated_group_k_fold(X, y, groups, n_splits, n_repeats, random_state):
     n_repeats : int
         Number of repeats for cross-validation.
     random_state : int
-        Random state for reproducibility.
+        Random seed for reproducibility.
 
     Returns
     -------
@@ -182,14 +190,15 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         Number of splits for cross-validation.
     n_repeats : int
         Number of repeats for cross-validation.
-    random_state : int
-        Random state for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
 
     """
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
-    random_state: int = Field(42, description="Random state for reproducibility")
+    random_seed: int = Field(42, description="Random seed for reproducibility")
 
     _driver_type: DriverType = DriverType.SKLEARN
 
@@ -273,10 +282,10 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
 
         # run CV
         if groups is None:
-            groups = np.array([i for i in range(X_all.shape[0])])
+            groups = np.array([*range(X_all.shape[0])])
 
         train_inds, test_inds = repeated_group_k_fold(
-            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_state
+            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_seed
         )
 
         cv = iter(zip(train_inds, test_inds))
@@ -458,8 +467,9 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         Number of splits for cross-validation.
     n_repeats : int
         Number of repeats for cross-validation.
-    random_state : int
-        Random state for reproducibility.
+    random_seed : int
+        Random seed for reproducibility. The legacy ``random_state`` name is
+        accepted as a deprecated alias.
     _evaluated : bool
         Whether the evaluator has been run.
     axes_labels : list[str]
@@ -483,7 +493,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
 
     n_splits: int = Field(5, description="Number of splits for cross-validation")
     n_repeats: int = Field(1, description="Number of repeats for cross-validation")
-    random_state: int = Field(42, description="Random state for reproducibility")
+    random_seed: int = Field(42, description="Random seed for reproducibility")
     _evaluated: bool = False
     _driver_type: DriverType = DriverType.LIGHTNING
     axes_labels: list[str] = Field(
@@ -609,10 +619,10 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
         self.sklearn_metrics = {k: v[0] for k, v in self.active_metrics.items()}
 
         if groups is None:
-            groups = np.array([i for i in range(X_all.shape[0])])
+            groups = np.array([*range(X_all.shape[0])])
 
         train_inds, test_inds = repeated_group_k_fold(
-            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_state
+            X_all, y_all, groups, self.n_splits, self.n_repeats, self.random_seed
         )
 
         cv = iter(zip(train_inds, test_inds))
@@ -655,7 +665,7 @@ class PytorchLightningRepeatedKFoldCrossValidation(CrossValidationBase):
             fold_featurizer = featurizer.make_new()
 
             fold_train_dataloader, _, fold_train_scaler, _ = fold_featurizer.featurize(
-                X_train, y_train
+                X_train, y_train, train=True
             )
 
             fold_val_dataloader, _, _, _ = fold_featurizer.featurize(X_val, y_val)

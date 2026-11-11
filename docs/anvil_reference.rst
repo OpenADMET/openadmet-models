@@ -36,6 +36,7 @@ This section ensures that workflows are well-documented and easily identifiable.
 Many of these fields are purely descriptive and do not affect the workflow's execution.
 
 .. code-block:: yaml
+
    metadata:
      authors: Author Name
      email: author@email.org
@@ -49,6 +50,7 @@ Many of these fields are purely descriptive and do not affect the workflow's exe
      version: v1
 
 **Parameters**
+
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -102,6 +104,7 @@ Alternatively, you can also provide separate files for training, validation, and
 ``val_resource``, and ``test_resource`` fields, respectively.
 
 .. code-block:: yaml
+
    data:
      type: intake
      resource: PATH_TO_DATASET.parquet
@@ -116,6 +119,7 @@ This is done by specifying a YAML file in the ``resource`` field and the catalog
 This allows for more flexible dataset management, especially when dealing with multiple datasets or complex data sources.
 
 .. code-block:: yaml
+
    data:
      type: intake
      resource: PATH_TO_CATALOG.yaml
@@ -129,6 +133,7 @@ This allows for more flexible dataset management, especially when dealing with m
 Pulling data from a remote location is also possible by specifying a URL in the ``resource`` field.
 
 .. code-block:: yaml
+
    data:
      type: intake
      resource: https://path_to_your_data/dataset.parquet
@@ -141,6 +146,7 @@ Pulling data from a remote location is also possible by specifying a URL in the 
 An example of using train, validation, and test resources:
 
 .. code-block:: yaml
+
    data:
      type: intake
      train_resource: PATH_TO_TRAIN_DATASET.parquet
@@ -153,6 +159,7 @@ An example of using train, validation, and test resources:
      dropna: false
 
 **Parameters**
+
 .. list-table::
    :header-rows: 1
    :widths: 20 25 55
@@ -163,19 +170,19 @@ An example of using train, validation, and test resources:
    * - resource
      - str
      - Path to dataset file. Allowed filetypes: YAML, CSV, parquet.
-        Can also be a URL to a remote file.
-    * - train_resource
-      - Optional[str]
-      - Path to training dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
-    * - val_resource
-      - Optional[str]
-      - Path to validation dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
-    * - test_resource
-      - Optional[str]
-      - Path to test dataset file. Allowed filetypes: CSV, parquet.
-         Can also be a URL to a remote file.
+       Can also be a URL to a remote file.
+   * - train_resource
+     - Optional[str]
+     - Path to training dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
+   * - val_resource
+     - Optional[str]
+     - Path to validation dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
+   * - test_resource
+     - Optional[str]
+     - Path to test dataset file. Allowed filetypes: CSV, parquet.
+       Can also be a URL to a remote file.
    * - type
      - str, default: ``intake``
      - Loader type. Must be ``intake``. Uses the `Intake`_ data catalog
@@ -208,6 +215,8 @@ are configured, and training parameters are set.
 
 - **Featurization**: Defines how molecular data is transformed into numerical representations using various available
   featurizers, specified in the `feat` subsection.
+- **Transform**: Optional post-featurization transforms applied to the featurized matrices, specified in the `transform`
+  subsection.
 - **Model**: Specifies the model to be used, including loading from saved model weights, under the `model` subsection.
 - **Splitting**: Configures how the dataset is divided into training, validation, and test sets using assigned splitter,
   defined in the `split` subsection.
@@ -234,16 +243,23 @@ while traditional machine learning models return a a 2D ``NumPy`` array or ``pan
     - Description
   * - :doc:`ChemPropFeaturizer </_api/api/featurization/chemprop>`
     - Converts SMILES strings into a ChemProp compatible PyTorch DataLoader.
+  * - :doc:`CheMeleonEmbeddingFeaturizer </_api/api/featurization/chemeleon_embedding>`
+    - Extracts pooled MPNN embeddings from the pretrained `CheMeleon <https://github.com/JacksonBurns/chemeleon>`_ foundation model as a 2D NumPy array.
+  * - :doc:`MonroeFeaturizer </_api/api/featurization/monroe>`
+    - Extracts graph-level embeddings from the pretrained `Monroe <https://github.com/blazejba/monroe>`_ foundation model as a 2D NumPy array. Requires the ``monroe`` package, which installs from GitHub rather than PyPI. Embeddings are stochastic across runs, so features must be materialized once and reused.
   * - :doc:`DescriptorFeaturizer </_api/api/featurization/descriptors>`
     - Uses the  `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular descriptors.
   * - :doc:`FingerprintFeaturizer </_api/api/featurization/fingerprints>`
     - Uses the `molfeat <https://github.com/datamol-io/molfeat>`_ library to compute molecular fingerprints.
   * - :doc:`FeatureConcatenator </_api/api/featurization/feature_combiner>`
     - Combines multiple featurizers into a single feature array.
+  * - :doc:`TrainedModelFeaturizer </_api/api/featurization/trained_model>`
+    - Emits the predictions of an already-trained Anvil model as features.
 
 For example, featurization for a traditional machine learning model using fingerprints is easily done by specifying the ``FingerprintFeaturizer``.
 
 .. code-block:: yaml
+
    feat:
      type: FingerprintFeaturizer
      params:
@@ -251,27 +267,185 @@ For example, featurization for a traditional machine learning model using finger
        radius: 2
 
 You can also combine multiple traditional ML featurizers using the ``FeatureConcatenator``. Here we combine  ``RDKit``
-2D descriptors and ECFP4 fingerprints.
+2D descriptors and ECFP4 fingerprints. Each entry in ``featurizers`` takes the same ``type``/``params`` shape as the
+``feat`` section itself. At least two are required. Featurizers of the same type must be disambiguated by specifying
+``alias`` (e.g. two ``FingerprintFeaturizer`` entries with aliases "ecfp4" and "rdkit").
 
 .. code-block:: yaml
+
    feat:
      type: FeatureConcatenator
      params:
        featurizers:
-         DescriptorFeaturizer:
-           descr_type: desc2d
-         FingerprintFeaturizer:
-           fp_type: ecfp:4
-           radius: 2
-           n_bits: 2048
+         - type: DescriptorFeaturizer
+           params:
+             descr_type: desc2d
+         - type: FingerprintFeaturizer
+           params:
+             fp_type: ecfp:4
+             radius: 2
+             n_bits: 2048
+
+An already-trained model can itself be a featurizer, via the ``TrainedModelFeaturizer``. The referenced model is
+frozen: it is loaded from disk, run in inference mode, and never refitted, so its predictions become feature columns
+for a downstream model. This lets a model trained on an abundant low-fidelity endpoint, such as primary-screen log2
+fold change, inform a model trained on a scarce high-fidelity one, such as dose-response pEC50.
+
+.. code-block:: yaml
+
+   feat:
+     type: TrainedModelFeaturizer
+     params:
+       model_dir: /path/to/pxr_log2fc_model
+
+The pretrained model brings its own featurizer, so the ``TrainedModelFeaturizer`` takes SMILES rather than features.
+Molecules that the pretrained featurizer cannot parse are reported through the returned index array, the same as any
+other featurizer.
+
+The featurizer emits one column per target column of the pretrained model. Setting ``return_std`` appends a second
+block holding the standard deviation across ensemble members, doubling the width. Only an ensemble has a standard
+deviation, so setting it against a single model raises when the recipe is parsed.
+
+For example, to combine pretrained models for different endpoints, set an ``alias`` in each entry's ``params``.
+
+.. code-block:: yaml
+
+   feat:
+     type: FeatureConcatenator
+     params:
+       featurizers:
+         - type: CheMeleonEmbeddingFeaturizer
+         - type: TrainedModelFeaturizer
+           params:
+             alias: log2fc
+             model_dir: models/chemprop_log2fc
+         - type: TrainedModelFeaturizer
+           params:
+             alias: htchem
+             model_dir: models/chemprop_htchem
+
+A per-block transform is configured against the aliases:
+
+.. code-block:: yaml
+
+   n_components:
+     CheMeleonEmbeddingFeaturizer: 256
+     log2fc: null
+     htchem: null
+
+Block names must be unique across the whole concatenator, including blocks from a nested ``FeatureConcatenator``.
+Duplicates are reported when the recipe is parsed.
 
 For deep learning models, architectures require specific featurizers to prepare the data in the correct format.
 As an example, the ``ChemPropFeaturizer`` is selected for ``ChemProp``-family models.
 
 .. code-block:: yaml
+
   feat:
     type: ChemPropFeaturizer
     params: {}
+
+Transform
+~~~~~~~~~
+The optional ``transform`` section applies specified transformations to the feature matrices, after
+featurization and before training. Transforms are fitted on the train partition only, then applied to the
+validation, test, and inference features, so learned statistics (imputer means, PCA loadings) never see held-out
+data. The fitted transforms are saved next to the model and re-applied automatically at inference time.
+
+A single transform is given as a mapping, and a sequence of transforms is given as a list applied in order.
+Transforms are supported by the scikit-learn workflow (tabular-input models such as LGBM, XGBoost, and TabPFN); the
+deep learning workflow rejects them because its featurizer emits DataLoaders rather than feature matrices.
+
+Available transforms:
+
+.. list-table::
+  :header-rows: 1
+  :widths: 30 70
+
+  * - Transform
+    - Description
+  * - :doc:`ImputeTransform </_api/api/transforms/impute>`
+    - Imputes missing values with the fitted imputer mean, median, most frequent, or constant value.
+  * - :doc:`PCATransform </_api/api/transforms/pca>`
+    - Reduces feature dimensionality with principal component analysis, over the whole matrix or per feature block.
+
+Example: reduce a fingerprint featurizer to 256 PCA components before training.
+
+.. code-block:: yaml
+
+  procedure:
+    feat:
+      type: FingerprintFeaturizer
+      params:
+        fp_type: "ecfp:4"
+    transform:
+      type: PCATransform
+      params:
+        n_components: 256
+        random_seed: 42
+
+Per-block PCA: give ``n_components`` as a mapping from featurizer name (or ``alias``) to component count. A shared
+imputation step runs first, then each block is reduced by a separate PCA to the count given for it.
+
+.. code-block:: yaml
+
+  procedure:
+    feat:
+      type: FeatureConcatenator
+      params:
+        featurizers:
+          - type: FingerprintFeaturizer
+            params:
+              fp_type: "ecfp:4"
+          - type: DescriptorFeaturizer
+            params:
+              descr_type: desc2d
+    transform:
+      - type: ImputeTransform
+        params:
+          strategy: median
+      - type: PCATransform
+        params:
+          n_components:
+            FingerprintFeaturizer: 256
+            DescriptorFeaturizer: 32
+          random_seed: 42
+
+That recipe featurizes to 2223 columns: 223 from ``DescriptorFeaturizer`` and 2000 from ``FingerprintFeaturizer`` at
+its default bit count. The median imputer fills missing descriptor values, then each block is reduced separately, and
+the model sees 32 + 256 = 288 columns.
+
+Blocks are ordered by block name, not by the order the recipe lists them, so the descriptor block comes first here
+even though ``FingerprintFeaturizer`` is written above it.
+
+Give a block ``null`` instead of a count to pass it through unreduced, which reduces the wide block while the other
+reaches the model as it was featurized. That suits a block whose columns carry meaning one by one, where a PCA would
+rotate them into linear combinations and a full-rank entry would do so without reducing the width at all. Passthrough is
+stated rather than obtained by omitting the key, so the exact-match check still catches a mistyped block name.
+
+.. code-block:: yaml
+
+  procedure:
+    feat:
+      type: FeatureConcatenator
+      params:
+        featurizers:
+          - type: FingerprintFeaturizer
+            params:
+              fp_type: "ecfp:4"
+          - type: DescriptorFeaturizer
+            params:
+              descr_type: desc2d
+    transform:
+      - type: ImputeTransform
+        params:
+          strategy: median
+      - type: PCATransform
+        params:
+          n_components:
+            FingerprintFeaturizer: 256
+            DescriptorFeaturizer: null
+          random_seed: 42
 
 Model
 ~~~~~
@@ -304,6 +478,10 @@ Refer to the linked OpenADMET API documentation for detailed information on each
     - scikit-learn `Random Forest classifier <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html>`_ .
   * - :doc:`RFRegressorModel </_api/api/model_architectures/random_forest>`
     - scikit-learn `Random Forest regressor <https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html>`_ .
+  * - :doc:`TabICLClassifierModel </_api/api/model_architectures/tabicl>`
+    - TabICL v2 classification model using the `tabicl <https://pypi.org/project/tabicl/>`_ package.
+  * - :doc:`TabICLRegressorModel </_api/api/model_architectures/tabicl>`
+    - TabICL v2 regression model using the `tabicl <https://pypi.org/project/tabicl/>`_ package.
   * - :doc:`TabPFNClassifierModel </_api/api/model_architectures/tabpfn>`
     - TabPFN classification model using the basic `tabpfn <https://github.com/PriorLabs/TabPFN>`_ implementation.
   * - :doc:`TabPFNRegressorModel </_api/api/model_architectures/tabpfn>`
@@ -324,6 +502,7 @@ Refer to the linked OpenADMET API documentation for detailed information on each
 Example
 """""""
 .. code-block:: yaml
+
   model:
     type: ChemPropModel
     params:
@@ -343,6 +522,7 @@ Paths to a saved model are specified with the ``serial_path`` and ``param_path``
 Note that any model parameters defined in the ``params`` field will be overridden by those loaded from the saved model.
 
 .. code-block:: yaml
+
   model:
     type: ChemPropModel
     serial_path: PATH_TO_SAVED_MODEL/model.pth
@@ -353,6 +533,7 @@ This is done by specifying the ``freeze_weights`` field in the ``model`` section
 Here, the message passing layers are frozen, while batch normalization and feedforward network layers remain trainable.
 
 .. code-block:: yaml
+
   model:
     type: ChemPropModel
     serial_path: PATH_TO_SAVED_MODEL/model.pth
@@ -388,6 +569,7 @@ You can choose from different splitter types, each with its own parameters to co
 Example
 """""""
 .. code-block:: yaml
+
    split:
      type: ShuffleSplitter
      params:
@@ -419,6 +601,7 @@ It allows you to specify the trainer type and various training parameters to con
 Example
 """""""
 .. code-block:: yaml
+
   train:
     type: LightningTrainer
     params:
@@ -446,6 +629,7 @@ package. See :doc:`UncertaintyMetrics </_api/api/model_evaluation/uncertainty>` 
 Example
 """""""
 .. code-block:: yaml
+
   ensemble:
     type: CommitteeRegressor
     n_models: 10
@@ -455,6 +639,7 @@ For deep learning ensembles, each model in the ensemble can load its own pretrai
 in the ``serial_paths`` and ``param_paths`` fields in the ``ensemble`` section.
 
 .. code-block:: yaml
+
   ensemble:
     type: CommitteeRegressor
     n_models: 10
@@ -503,8 +688,9 @@ Note that cross-validation can be computationally expensive, especially for deep
     - Generates uncertainty plots.
 
 Example
-"""""""
+~~~~~~~
 .. code-block:: yaml
+
   report:
     eval:
     - type: RegressionMetrics

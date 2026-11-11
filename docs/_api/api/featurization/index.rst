@@ -7,7 +7,10 @@ Featurizers for input data for anvil models.
    :maxdepth: 1
 
    chemprop
+   chemeleon_embedding
+   monroe
    feature_combiner
    fingerprints
    descriptors
+   trained_model
    feature_base

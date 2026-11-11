@@ -19,11 +19,15 @@ from openadmet.models.anvil.workflow import (
 from openadmet.models.architecture.chemprop import ChemPropModel
 from openadmet.models.architecture.dummy import DummyRegressorModel
 from openadmet.models.drivers import DriverType
+from openadmet.models.features.combine import FeatureConcatenator
 from openadmet.models.features.molfeat_fingerprint import FingerprintFeaturizer
+from openadmet.models.features.molfeat_properties import DescriptorFeaturizer
+from openadmet.models.features.pairwise import PairwiseFeaturizer
 from openadmet.models.split.sklearn import ShuffleSplitter
 from openadmet.models.trainer.lightning import LightningTrainer
 from openadmet.models.trainer.sklearn import SKlearnBasicTrainer
 from openadmet.models.transforms.impute import ImputeTransform
+from openadmet.models.transforms.pca import PCATransform
 
 # ---------------------------------------------------------------------------
 # Module-scoped fixtures — constructed once per test session for performance
@@ -553,3 +557,137 @@ def test_dl_workflow_ensemble_finetuning_path_succeeds_both_exist(
     )
     assert isinstance(wf, AnvilDeepLearningWorkflow)
     assert wf.ensemble_kwargs == ensemble_kwargs
+
+
+# ---------------------------------------------------------------------------
+# Transform handling in workflow construction
+# ---------------------------------------------------------------------------
+
+
+def test_sklearn_workflow_accepts_transform_sequence(metadata, data_spec, sklearn_feat):
+    """A list of transforms must construct into the sklearn workflow in given order."""
+    transform = [ImputeTransform(strategy="mean"), PCATransform(n_components=2)]
+    wf = _make_anvil_workflow(metadata, data_spec, sklearn_feat, transform=transform)
+    assert wf.transform == transform
+
+
+def test_sklearn_workflow_rejects_deep_learning_featurizer(metadata, data_spec):
+    """The sklearn workflow must reject DataLoader-emitting featurizers with a clear message."""
+    with pytest.raises(ValueError, match="numpy feature array"):
+        _make_anvil_workflow(metadata, data_spec, PairwiseFeaturizer())
+
+
+def test_dl_workflow_rejects_transform_sequence(metadata, data_spec, sklearn_feat):
+    """The lightning workflow must reject any transform, whether single or a sequence."""
+    transform = [ImputeTransform(strategy="mean"), PCATransform(n_components=2)]
+    with pytest.raises(ValueError, match="Transform step is not supported"):
+        _make_dl_workflow(metadata, data_spec, sklearn_feat, transform=transform)
+
+
+# ---------------------------------------------------------------------------
+# Per-block transform keys checked against the featurizer's block layout
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def concat_feat():
+    """Return a two-block concatenator, the layout per-block transforms key against."""
+    return FeatureConcatenator(
+        featurizers=[
+            FingerprintFeaturizer(fp_type="ecfp:4"),
+            DescriptorFeaturizer(descr_type="desc2d"),
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "n_components",
+    [
+        pytest.param(
+            {"FingerprintFeaturizer": 8, "DescriptorFeaturizer": 4}, id="per_block"
+        ),
+        pytest.param(2, id="whole_matrix"),
+    ],
+)
+def test_workflow_accepts_valid_block_config(
+    metadata, data_spec, concat_feat, n_components
+):
+    """Keys matching the concatenator's blocks must construct, as must an int that imposes no layout."""
+    transform = [PCATransform(n_components=n_components)]
+    wf = _make_anvil_workflow(metadata, data_spec, concat_feat, transform=transform)
+    assert wf.transform == transform
+
+
+@pytest.fixture(scope="module")
+def aliased_concat_feat():
+    """Return a concatenator whose two same-class blocks are told apart by alias."""
+    return FeatureConcatenator(
+        featurizers=[
+            FingerprintFeaturizer(fp_type="ecfp:4", alias="ecfp"),
+            FingerprintFeaturizer(fp_type="maccs", alias="maccs"),
+        ]
+    )
+
+
+def test_workflow_accepts_alias_keyed_block_config(
+    metadata, data_spec, aliased_concat_feat
+):
+    """Same-class featurizers must be addressable per block by their aliases."""
+    transform = [PCATransform(n_components={"ecfp": 8, "maccs": 4})]
+    wf = _make_anvil_workflow(
+        metadata, data_spec, aliased_concat_feat, transform=transform
+    )
+    assert wf.feat.feature_block_keys() == ["ecfp", "maccs"]
+    assert wf.transform == transform
+
+
+def test_workflow_rejects_type_keys_for_aliased_blocks(
+    metadata, data_spec, aliased_concat_feat
+):
+    """An alias replaces the type as the block key, so the type must no longer resolve."""
+    with pytest.raises(ValueError, match="PCATransform block keys must exactly match"):
+        _make_anvil_workflow(
+            metadata,
+            data_spec,
+            aliased_concat_feat,
+            transform=[PCATransform(n_components={"FingerprintFeaturizer": 8})],
+        )
+
+
+@pytest.mark.parametrize(
+    "n_components",
+    [
+        pytest.param(
+            {"FingerprintFeaturizer": 8, "DescriptorFeatureizer": 4}, id="typo"
+        ),
+        pytest.param({"FingerprintFeaturizer": 8}, id="omitted"),
+        pytest.param(
+            {"FingerprintFeaturizer": 8, "DescriptorFeaturizer": 4, "Extra": 2},
+            id="extra",
+        ),
+    ],
+)
+def test_workflow_rejects_block_key_mismatch(
+    metadata, data_spec, concat_feat, n_components
+):
+    """A mistyped, omitted, or extra block key must fail at construction, before any featurization."""
+    with pytest.raises(ValueError, match="PCATransform block keys must exactly match"):
+        _make_anvil_workflow(
+            metadata,
+            data_spec,
+            concat_feat,
+            transform=[PCATransform(n_components=n_components)],
+        )
+
+
+def test_workflow_rejects_per_block_transform_without_blocks(
+    metadata, data_spec, sklearn_feat
+):
+    """A per-block transform paired with a featurizer that emits no blocks must be rejected."""
+    with pytest.raises(ValueError, match="does not emit feature blocks"):
+        _make_anvil_workflow(
+            metadata,
+            data_spec,
+            sklearn_feat,
+            transform=[PCATransform(n_components={"FingerprintFeaturizer": 8})],
+        )

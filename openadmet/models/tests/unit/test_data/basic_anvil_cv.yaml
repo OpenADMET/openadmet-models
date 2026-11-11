@@ -27,7 +27,7 @@ procedure:
     params:
       train_size: 0.8
       test_size: 0.2
-      random_state: 42
+      random_seed: 42
 
   feat:
     type: FingerprintFeaturizer
@@ -54,4 +54,4 @@ report:
       params:
         n_splits: 5
         n_repeats: 2
-        random_state: 42
+        random_seed: 42

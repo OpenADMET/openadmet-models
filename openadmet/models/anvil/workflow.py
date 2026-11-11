@@ -7,8 +7,10 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 import torch
 import zarr
 from lightning import pytorch as pl
@@ -17,7 +19,13 @@ from pydantic import model_validator
 
 from openadmet.models.anvil.workflow_base import AnvilWorkflowBase
 from openadmet.models.drivers import DriverType
+from openadmet.models.features.feature_base import DeepLearningFeaturizer
 from openadmet.models.features.pairwise import PairwiseFeaturizer
+from openadmet.models.transforms.transform_base import (
+    fit_transforms,
+    to_transform_list,
+    transform_features,
+)
 
 
 def _safe_to_numpy(X):
@@ -56,6 +64,37 @@ class AnvilWorkflow(AnvilWorkflowBase):
                 "Validation set requested, but not used in this workflow configuration."
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def check_featurizer_tabular(self):
+        """
+        Reject featurizers whose output the sklearn driver cannot consume.
+
+        This workflow's trainer, transforms, and model all expect
+        ``feat.featurize()`` to return a numpy feature array (e.g. fingerprints,
+        descriptors). ``DeepLearningFeaturizer`` subclasses (e.g. ChemProp's
+        graph featurizer) return a DataLoader/Dataset pair instead, meant for
+        the lightning workflow. Pairing one with an sklearn-family model (e.g.
+        XGBoost, LightGBM, random forest) previously failed late and
+        cryptically inside the trainer; this catches it at spec-construction
+        time with an actionable message.
+
+        Raises
+        ------
+        ValueError
+            If a deep learning featurizer (DataLoader output) is paired with
+            the sklearn driver.
+
+        """
+        # The sklearn trainer consumes numpy arrays; DataLoader-emitting featurizers
+        # belong to the lightning workflow
+        if isinstance(self.feat, DeepLearningFeaturizer):
+            raise ValueError(
+                "The sklearn workflow requires a featurizer that produces a numpy "
+                "feature array. Deep learning featurizers produce DataLoaders and "
+                "require the lightning workflow."
+            )
         return self
 
     @model_validator(mode="after")
@@ -118,9 +157,11 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -131,15 +172,16 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
-                    f"Using incremented seed={global_seed + i} for bootstrapping"
+                    f"Using incremented seed={bootstrap_seed + i} for bootstrapping"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(bootstrap_seed + i)
 
                 # Bootstrap train data
                 logger.info("Bootstrapping train data")
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train_feat)), size=len(X_train_feat), replace=True
                 )
                 X_train_feat_bootstrap = X_train_feat[bootstrap_indices]
@@ -151,16 +193,17 @@ class AnvilWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             logger.info(
-                f"Building model {i} using incremented seed={global_seed + i} to vary model initialization"
+                f"Building model {i} using incremented seed={self.random_seed + i} to vary model initialization"
             )
             bootstrap_model = self.model.make_new()
 
-            # Set seed for model
-            if hasattr(bootstrap_model, "random_state"):
-                bootstrap_model.random_state = global_seed + i
+            # Increment random_seed (not bootstrap_seed) so weight init varies independently
+            # of how data was resampled; bootstrap_seed only controls the sampling RNG above
+            if hasattr(bootstrap_model, "random_seed"):
+                bootstrap_model.random_seed = self.random_seed + i
             else:
                 logger.warning(
-                    f"Model {bootstrap_model} does not support random_state seeding"
+                    f"Model {bootstrap_model} does not support random_seed seeding"
                 )
 
             bootstrap_model.build()
@@ -303,26 +346,40 @@ class AnvilWorkflow(AnvilWorkflowBase):
         # featurize whole dataset also for CV if needed
         X_feat, _ = self.feat.featurize(X)
 
-        # Transform data
+        # Fit on train only
         if self.transform:
-            # Train
-            logger.info("Transforming data")
-            self.transform.fit(X_train_feat)
-            X_train_feat = self.transform.transform(X_train_feat)
+            logger.info("Fitting transforms on train features")
+            feature_blocks = (
+                self.feat.feature_blocks()
+                if getattr(self.feat, "provides_feature_blocks", False)
+                else None
+            )
+            X_train_feat = fit_transforms(
+                self.transform, X_train_feat, feature_blocks=feature_blocks
+            )
             zarr.save(data_dir / "X_train_feat_transformed.zarr", X_train_feat)
 
             # Val
             if X_val is not None:
-                X_val_feat = self.transform.transform(X_val_feat)
+                X_val_feat = transform_features(self.transform, X_val_feat)
                 zarr.save(data_dir / "X_val_feat_transformed.zarr", X_val_feat)
 
             # Test
             if X_test is not None:
-                X_test_feat = self.transform.transform(X_test_feat)
+                X_test_feat = transform_features(self.transform, X_test_feat)
                 zarr.save(data_dir / "X_test_feat_transformed.zarr", X_test_feat)
 
             # Whole dataset
-            X_feat = self.transform.transform(X_feat)
+            X_feat = transform_features(self.transform, X_feat)
+
+            # Inference needs the fitted state, which the recipe YAML does not have implicitly
+            transform_payload = {
+                "schema": "v1",
+                "transforms": to_transform_list(self.transform),
+                "sklearn_version": sklearn.__version__,
+            }
+            with open(output_dir / "transform.pickle", "wb") as f:
+                joblib.dump(transform_payload, f)
 
             logger.info("Data transformed")
         else:
@@ -514,6 +571,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
     def _train(
         self, train_dataloader, val_dataloader, train_scaler, output_dir, **kwargs
     ):
+        # Seed model initialization (and finetune/deserialize) so single-model runs
+        # are reproducible, not just ensemble members
+        logger.info(f"Seeding model initialization with seed={self.random_seed}")
+        pl.seed_everything(self.random_seed)
+
         # Load model from disk
         if (
             self.model_kwargs.get("param_path") is not None
@@ -572,9 +634,11 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         # Get bagging setting
         use_bagging = self.ensemble_kwargs.get("use_bagging")
 
-        # Get global seed
-        # Currently grabbing from `split`, should this be set separately?
-        global_seed = self.split.random_state
+        # Bootstrap resampling uses its own seed when supplied, else falls back to
+        # the model-init seed; data resampling and model init stay otherwise independent
+        bootstrap_seed = self.ensemble_kwargs.get("bootstrap_seed")
+        if bootstrap_seed is None:
+            bootstrap_seed = self.random_seed
 
         # Bootstrap iterations
         models = []
@@ -590,13 +654,14 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Bootstrap data if using bagging, if not specified default False
             if use_bagging:
-                # Set seed for bootstrapping
+                # Use a local generator so bootstrap sampling never mutates global NumPy state;
+                # increment by i so each member draws a distinct sample while staying reproducible
                 logger.info(
-                    f"Bootstrapping train data with incremented seed={global_seed + i}"
+                    f"Bootstrapping train data with incremented seed={bootstrap_seed + i}"
                 )
-                np.random.seed(global_seed + i)
+                rng = np.random.default_rng(bootstrap_seed + i)
 
-                bootstrap_indices = np.random.choice(
+                bootstrap_indices = rng.choice(
                     np.arange(len(X_train)), size=len(X_train), replace=True
                 )
                 X_train_bootstrap = X_train[bootstrap_indices]
@@ -614,6 +679,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
                 self.feat.featurize(
                     X_train_bootstrap,
                     y_train_bootstrap,
+                    train=True,
                 )
             )
 
@@ -647,11 +713,12 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
 
             # Build model from scratch
             else:
-                # Set seed for bootstrap model
+                # Increment random_seed (not bootstrap_seed) so weight init varies independently
+                # of how data was resampled; bootstrap_seed only controls the sampling RNG above
                 logger.info(
-                    f"Building model {i} with incremented seed={global_seed + i} to vary model initialization"
+                    f"Building model {i} with incremented seed={self.random_seed + i} to vary model initialization"
                 )
-                pl.seed_everything(global_seed + i)
+                pl.seed_everything(self.random_seed + i)
 
                 self.model = self.model.make_new()
                 self.model.build(scaler=bootstrap_scaler, **kwargs)
@@ -786,6 +853,7 @@ class AnvilDeepLearningWorkflow(AnvilWorkflowBase):
         train_dataloader, _, train_scaler, train_dataset = self.feat.featurize(
             X_train,
             y_train,
+            train=True,
         )
         torch.save(train_dataloader, output_dir / "train_dataloader.pth")
 

@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - ase
-  - boto3
   - catboost
   - chemprop >= 2.1.1
   - codecov
@@ -43,11 +42,14 @@ dependencies:
   - xgboost
   - zarr >=3.0.0
   - pip:
+    - boto3
     - email-validator
     - phx-class-registry
+    - tabicl
     - tabpfn-extensions
     - git+https://github.com/PriorLabs/TabPFN.git@main
     - git+https://github.com/JacksonBurns/neural-pairwise-regression.git
+    - git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2
     - git+https://github.com/OpenADMET/molfeat.git@main
     - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
     - setuptools <82.0.0
