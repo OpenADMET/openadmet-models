@@ -1,5 +1,6 @@
 """TabICL model implementations."""
 
+from os import PathLike
 from typing import ClassVar
 
 import numpy as np
@@ -177,6 +178,38 @@ class TabICLModelBase(PickleableModelBase):
         if not self.estimator:
             raise ValueError("Model not trained")
         return np.expand_dims(self.estimator.predict(X), axis=1)
+
+    def save(self, path: PathLike):
+        """
+        Save the fitted model to a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to save the model to
+
+        Raises
+        ------
+        ValueError
+            If the model is not trained.
+
+        """
+        if not self.estimator:
+            raise ValueError("Model not trained")
+        self.estimator.save(path)
+
+    def load(self, path: PathLike):
+        """
+        Load a fitted model from a file.
+
+        Parameters
+        ----------
+        path: PathLike
+            Path to load the model from
+
+        """
+        device = _resolve_device(self.accelerator)
+        self.estimator = self._get_estimator_class().load(path, device=device)
 
 
 @models.register("TabICLRegressorModel")
