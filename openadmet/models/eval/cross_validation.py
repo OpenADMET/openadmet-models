@@ -314,7 +314,9 @@ class SKLearnRepeatedKFoldCrossValidation(CrossValidationBase):
         for task_id in range(n_tasks):
             t_label = target_labels[task_id]
             self.data[t_label] = {}
-            for k, v in clean_scores.items() if k not in exclude else {}:
+            for k, v in clean_scores.items():
+                if k in exclude:
+                    continue
                 # calculate the confidence interval, assuming normal distribution
                 mean = v.mean()
                 sigma = v.std(ddof=1)
