@@ -865,6 +865,7 @@ def test_chemeleon_defaults_to_mean_aggregation(tmp_path, monkeypatch):
     assert model.aggregation == "mean"
     assert isinstance(model.estimator.agg, nn.MeanAggregation)
 
+
 def _write_foundation_checkpoint(tmp_path):
     """Write a CheMeleon-layout checkpoint with random weights and return its path."""
     message_passing = nn.BondMessagePassing(**_CHEMELEON_MP_HPARAMS)
