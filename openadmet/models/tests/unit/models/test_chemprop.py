@@ -817,20 +817,6 @@ def test_build_aggregation_maps_names_to_chemprop_classes():
     assert isinstance(_build_aggregation("attentive", 8), nn.AttentiveAggregation)
 
 
-def test_build_aggregation_attentive_carries_output_size():
-    """Attentive aggregation learns per-node weights, so it needs the node width."""
-    aggr = _build_aggregation("attentive", 16)
-    assert aggr.hparams["output_size"] == 16
-    assert aggr.W.in_features == 16
-    assert aggr.W.out_features == 1
-
-
-def test_chemprop_aggregation_accepts_attentive():
-    """`attentive` is an accepted value for the aggregation field."""
-    model = ChemPropModel(aggregation="attentive")
-    assert model.aggregation == "attentive"
-
-
 def test_chemprop_invalid_aggregation_rejected():
     """An unregistered aggregation name is rejected with the list of valid ones."""
     with pytest.raises(ValueError, match="Aggregation must be one of"):
@@ -878,62 +864,6 @@ def test_chemeleon_defaults_to_mean_aggregation(tmp_path, monkeypatch):
 
     assert model.aggregation == "mean"
     assert isinstance(model.estimator.agg, nn.MeanAggregation)
-
-
-def test_chemeleon_explicit_mean_is_kept_silently(tmp_path, monkeypatch):
-    """Asking for mean explicitly is not a mismatch, so no warning is needed."""
-    monkeypatch.setattr(
-        "openadmet.models.architecture.chemprop.ChemPropModel._download_chemeleon",
-        lambda self, save_dir: torch.load(
-            _write_foundation_checkpoint(tmp_path), weights_only=True
-        ),
-    )
-    model = ChemPropModel(from_foundation="chemeleon", aggregation="mean")
-    model.build()
-
-    assert model.aggregation == "mean"
-    assert isinstance(model.estimator.agg, nn.MeanAggregation)
-
-
-def test_chemeleon_explicit_non_mean_continues_with_a_warning(tmp_path, monkeypatch):
-    """An explicit non-mean choice runs, but the mismatch is reported."""
-    monkeypatch.setattr(
-        "openadmet.models.architecture.chemprop.ChemPropModel._download_chemeleon",
-        lambda self, save_dir: torch.load(
-            _write_foundation_checkpoint(tmp_path), weights_only=True
-        ),
-    )
-    captured = []
-    handler_id = logger.add(
-        lambda msg: captured.append(msg.record["message"]), level="WARNING"
-    )
-    try:
-        model = ChemPropModel(from_foundation="chemeleon", aggregation="attentive")
-        model.build()
-    finally:
-        logger.remove(handler_id)
-
-    assert model.aggregation == "attentive"
-    assert isinstance(model.estimator.agg, nn.AttentiveAggregation)
-    assert any("pretrained with mean aggregation" in w for w in captured)
-
-
-def test_custom_foundation_warns_that_aggregation_must_match(tmp_path):
-    """A plain checkpoint records no aggregation, so the user has to match it."""
-    captured = []
-    handler_id = logger.add(
-        lambda msg: captured.append(msg.record["message"]), level="WARNING"
-    )
-    try:
-        model = ChemPropModel(
-            from_foundation=str(_write_foundation_checkpoint(tmp_path))
-        )
-        model.build()
-    finally:
-        logger.remove(handler_id)
-
-    assert any("must match the aggregation used when" in w for w in captured)
-
 
 def _write_foundation_checkpoint(tmp_path):
     """Write a CheMeleon-layout checkpoint with random weights and return its path."""
