@@ -251,8 +251,6 @@ class PickleableModelBase(ModelBase):
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)
-        # load() constructs its own estimator from serial_path, so build() here
-        # would just be discarded work
         instance.load(serial_path)
         return instance
 
