@@ -65,8 +65,6 @@ class TabPFNModelBase(PickleableModelBase):
     type: ClassVar[str]
     # TabPFN's own save_fit_state requires this exact suffix
     _model_save_name: ClassVar[str] = "model.tabpfn_fit"
-    # save_fit_state() requires a fitted estimator, not just a built one
-    _requires_fit_before_save: ClassVar[bool] = True
 
     @classmethod
     def _get_estimator_class(cls) -> type:

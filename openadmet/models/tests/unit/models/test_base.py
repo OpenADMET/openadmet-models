@@ -9,6 +9,14 @@ from openadmet.models.architecture.model_base import (
     PickleableModelBase,
     models,
 )
+from openadmet.models.architecture.tabicl import TabICLModelBase
+from openadmet.models.architecture.tabpfn import TabPFNModelBase
+
+# TabPFN and TabICL save()/load() persist a fitted estimator's state, not a
+# plain pickle of self.estimator, so they cannot round-trip right after
+# build() (before train()). Their own save/load round-trip tests in
+# test_tabpfn.py / test_tabicl.py cover the fitted-state contract instead.
+_REQUIRES_FIT_BEFORE_SAVE = (TabPFNModelBase, TabICLModelBase)
 
 
 @pytest.mark.parametrize("mclass", models.classes())
@@ -22,7 +30,7 @@ def test_save_load_pickleable(mclass, tmp_path):
     """
     if not issubclass(mclass, PickleableModelBase):
         pytest.skip(f"Skipping non-pickleable model {mclass.__name__}")
-    if mclass._requires_fit_before_save:
+    if issubclass(mclass, _REQUIRES_FIT_BEFORE_SAVE):
         pytest.skip(
             f"{mclass.__name__} requires a fitted estimator before save(); "
             "covered by its own save/load round-trip tests"

@@ -184,11 +184,6 @@ class PickleableModelBase(ModelBase):
     _model_save_name: ClassVar[str] = "model.pkl"
     _driver_type: DriverType = DriverType.SKLEARN
 
-    # True for subclasses (e.g. TabPFN, TabICL) whose save()/load() persist a
-    # fitted state rather than a plain pickle of self.estimator; an unfitted
-    # estimator from build() alone cannot be round-tripped through them.
-    _requires_fit_before_save: ClassVar[bool] = False
-
     def save(self, path: PathLike):
         """
         Save the model to a pickle file.
