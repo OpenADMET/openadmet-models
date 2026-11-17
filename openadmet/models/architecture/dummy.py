@@ -4,6 +4,7 @@ from typing import ClassVar
 
 import numpy as np
 from loguru import logger
+from sklearn.dummy import DummyClassifier, DummyRegressor
 
 from openadmet.models.architecture.model_base import (
     PickleableModelBase,
@@ -119,5 +120,5 @@ class DummyClassifierModel(DummyModelBase):
 
     # DummyClassifier parameters
     strategy: str = "most_frequent"  # Default strategy for dummy models
-    random_seed: int | None = None  # Default random seed for dummy models
-    constant: int | str | None = None  # Default constant value for dummy models
+    random_state: int | None = None  # Default random state for dummy models
+    constant: int | str = None  # Default constant value for dummy models
