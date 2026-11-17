@@ -184,6 +184,11 @@ class PickleableModelBase(ModelBase):
     _model_save_name: ClassVar[str] = "model.pkl"
     _driver_type: DriverType = DriverType.SKLEARN
 
+    # True for subclasses (e.g. TabPFN, TabICL) whose save()/load() persist a
+    # fitted state rather than a plain pickle of self.estimator; an unfitted
+    # estimator from build() alone cannot be round-tripped through them.
+    _requires_fit_before_save: ClassVar[bool] = False
+
     def save(self, path: PathLike):
         """
         Save the model to a pickle file.
@@ -223,7 +228,7 @@ class PickleableModelBase(ModelBase):
 
     @classmethod
     def deserialize(
-        cls, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
+        cls, param_path: PathLike = "model.json", serial_path: PathLike | None = None
     ):
         """
         Create a model from parameters and a pickled model.
@@ -232,8 +237,8 @@ class PickleableModelBase(ModelBase):
         ----------
         param_path: PathLike
             Path to load the model parameters from
-        serial_path: PathLike
-            Path to load the pickled model from
+        serial_path: PathLike, optional
+            Path to load the pickled model from. Defaults to ``cls._model_save_name``.
 
         Returns
         -------
@@ -241,15 +246,18 @@ class PickleableModelBase(ModelBase):
             An instance of the PickleableModelBase class
 
         """
+        if serial_path is None:
+            serial_path = cls._model_save_name
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)
-        instance.build()
+        # load() constructs its own estimator from serial_path, so build() here
+        # would just be discarded work
         instance.load(serial_path)
         return instance
 
     def serialize(
-        self, param_path: PathLike = "model.json", serial_path: PathLike = "model.pkl"
+        self, param_path: PathLike = "model.json", serial_path: PathLike | None = None
     ):
         """
         Save the model to a json file and a pickled file.
@@ -258,10 +266,12 @@ class PickleableModelBase(ModelBase):
         ----------
         param_path: PathLike
             Path to save the model parameters to
-        serial_path: PathLike
-            Path to save the pickled model to
+        serial_path: PathLike, optional
+            Path to save the pickled model to. Defaults to ``self._model_save_name``.
 
         """
+        if serial_path is None:
+            serial_path = self._model_save_name
         with open(param_path, "w") as f:
             f.write(self.model_dump_json(indent=2))
         self.save(serial_path)

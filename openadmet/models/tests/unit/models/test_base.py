@@ -22,6 +22,11 @@ def test_save_load_pickleable(mclass, tmp_path):
     """
     if not issubclass(mclass, PickleableModelBase):
         pytest.skip(f"Skipping non-pickleable model {mclass.__name__}")
+    if mclass._requires_fit_before_save:
+        pytest.skip(
+            f"{mclass.__name__} requires a fitted estimator before save(); "
+            "covered by its own save/load round-trip tests"
+        )
     model = mclass()
     model.build()
     model.save(tmp_path / "test_model.pkl")

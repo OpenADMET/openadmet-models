@@ -70,6 +70,12 @@ class TabICLModelBase(PickleableModelBase):
 
     model_config = ConfigDict(extra="allow")
     type: ClassVar[str]
+    # TabICL.save() persists a fitted estimator's checkpoint, not a plain
+    # pickle of an unfitted one, so give it a distinct name from the generic
+    # PickleableModelBase default
+    _model_save_name: ClassVar[str] = "model.tabicl_fit"
+    # save() requires a fitted estimator, not just a built one
+    _requires_fit_before_save: ClassVar[bool] = True
 
     accelerator: str = Field(
         default="auto", description="The device to use for training and prediction."

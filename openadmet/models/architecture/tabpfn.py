@@ -65,6 +65,8 @@ class TabPFNModelBase(PickleableModelBase):
     type: ClassVar[str]
     # TabPFN's own save_fit_state requires this exact suffix
     _model_save_name: ClassVar[str] = "model.tabpfn_fit"
+    # save_fit_state() requires a fitted estimator, not just a built one
+    _requires_fit_before_save: ClassVar[bool] = True
 
     @classmethod
     def _get_estimator_class(cls) -> type:
@@ -139,7 +141,7 @@ class TabPFNModelBase(PickleableModelBase):
         """
         if not self.estimator:
             raise ValueError(
-                "The estimator is not instantiated. Please call `build()` or `train()` first."
+                "The estimator is not instantiated. Please call `train()` first."
             )
         return np.expand_dims(self.estimator.predict(X), axis=1)
 
@@ -175,7 +177,7 @@ class TabPFNModelBase(PickleableModelBase):
         """
         if not self.estimator:
             raise ValueError(
-                "The estimator is not instantiated. Please call `build()` or `train()` first."
+                "The estimator is not instantiated. Please call `train()` first."
             )
         self.estimator.save_fit_state(path)
 
