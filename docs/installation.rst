@@ -43,13 +43,12 @@ Four install routes are supported:
      - none
 
 Pixi installs everything from conda-forge (with PyPI for the few packages that conda-forge does not provide). uv installs from
-PyPI and is the fastest route on Linux. On macOS, use pixi or conda (see `Known issues`_). The lock files make a clone of the
-repository install the same packages on every machine.
+PyPI and is the fastest route on Linux. On macOS, use pixi or conda (for uv and pip, see `Known issues`_).
 
 Hardware
 --------
 
-The pixi and uv routes offer two hardware targets, which differ in the torch build. pip installs the PyPI build of torch, and the
+The pixi and uv routes offer two hardware targets, which differ in their torch build. pip installs the PyPI build of torch, and the
 conda files select the CPU or GPU build by file:
 
 .. list-table::
@@ -65,7 +64,8 @@ conda files select the CPU or GPU build by file:
      - Linux x86_64 with an NVIDIA driver that supports CUDA 12
      - CUDA 12 build (CUDA 12.6 wheels with uv)
 
-ROCm (AMD) is not tested.
+ROCm (AMD) is not tested by CI, but we have a `guide to set this up
+<https://openadmet.ghost.io/running-the-openadmet-stack-on-amd-gpus-with-rocm/>`__.
 
 Installing
 ----------
@@ -76,7 +76,7 @@ Choose a route. The commands for each hardware target are in the tab.
 
    .. tab-item:: pixi (recommended)
 
-      Install pixi first (see the pixi documentation), then install an environment:
+      Install pixi first (see the `pixi documentation <https://pixi.sh>`__), then install an environment:
 
       .. code-block:: bash
 
@@ -101,7 +101,8 @@ Choose a route. The commands for each hardware target are in the tab.
 
    .. tab-item:: uv
 
-      uv downloads the Python interpreter when none is installed. Pick the command for your hardware. Each one installs the package in
+      Install uv first (see the `uv documentation <https://docs.astral.sh/uv/>`__). uv downloads the Python interpreter when none
+      is installed. Pick the command for your hardware. Each one installs the package in
       editable mode with the test tools:
 
       .. code-block:: bash
