@@ -80,7 +80,7 @@ This documentation provides an overview of the package's features, as well as de
    :hidden:
    :titlesonly:
 
-   getting_started
+   installation
    user_guide
    api
    developer_guide
