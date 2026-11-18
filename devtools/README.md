@@ -22,7 +22,7 @@ a merge. The scheduled GPU workflow tests the pixi and uv CUDA environments on o
 This directory contains the files to setup the Conda environment for testing purposes
 
 * `conda-envs`: directory containing the YAML file(s) which fully describe Conda Environments, their dependencies, and those dependency provenance's
-  * `openadmet-models.yaml`: unlocked environment file for Python 3.12 (best effort)
+  * `openadmet-models.yaml`: unlocked environment file for Python 3.12 and 3.13 (best effort)
   * `openadmet-models-gpu.yaml`: the same environment with the GPU build of PyTorch
 
 ### Lock files

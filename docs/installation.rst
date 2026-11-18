@@ -37,9 +37,9 @@ Four install routes are supported:
      - 3.12, 3.13
      - none
    * - conda
-     - Best effort; Python 3.12 only
+     - Best effort
      - Linux x86_64, macOS Apple silicon
-     - 3.12
+     - 3.12, 3.13
      - none
 
 Pixi installs everything from conda-forge (with PyPI for the few packages that conda-forge does not provide). uv installs from
