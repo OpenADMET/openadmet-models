@@ -43,7 +43,7 @@ Four install routes are supported:
      - none
 
 Pixi installs everything from conda-forge (with PyPI for the few packages that conda-forge does not provide). uv installs from
-PyPI and is the fastest route on Linux. On macOS, use pixi or conda (for uv and pip, see `Known issues`_).
+PyPI and is the fastest route on Linux. On macOS, use pixi or conda (for uv and pip on macOS, see `Known issues`_).
 
 Hardware
 --------
