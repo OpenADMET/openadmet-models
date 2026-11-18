@@ -64,6 +64,9 @@ conda files select the CPU or GPU build by file:
      - Linux x86_64 with an NVIDIA driver that supports CUDA 12
      - CUDA 12 build (CUDA 12.6 wheels with uv)
 
+To choose, run ``nvidia-smi``. If it prints a ``CUDA Version`` of 12.0 or newer, use the CUDA target. Otherwise, or if the
+command is not found, use the CPU target.
+
 ROCm (AMD) is not tested by CI, but we have a `guide to set this up
 <https://openadmet.ghost.io/running-the-openadmet-stack-on-amd-gpus-with-rocm/>`__.
 
@@ -113,7 +116,9 @@ Choose a route. The commands for each hardware target are in the tab.
           # Linux, NVIDIA GPU (CUDA 12.6 wheels)
           uv sync --extra test --extra cuda
 
-      Always pass ``--extra cpu`` or ``--extra cuda``. Add ``--python 3.13`` to use Python 3.13.
+      Always pass ``--extra cpu`` or ``--extra cuda`` (see `Hardware`_ to choose). Without one, uv installs the PyPI build of
+      torch, which on Linux is the CUDA 13 build: about 3.4 GB, and it needs a newer NVIDIA driver than the CUDA 12.6 wheels.
+      Add ``--python 3.13`` to use Python 3.13.
 
       Run commands inside the environment with ``uv run --no-sync``, or activate it with ``source .venv/bin/activate``.
       A plain ``uv run`` syncs again using only the flags passed to it, and that replaces the torch build you selected.
@@ -133,7 +138,14 @@ Choose a route. The commands for each hardware target are in the tab.
           source .venv/bin/activate
           pip install -e ".[test]"          # Python 3.13: add --ignore-requires-python (see Known issues)
 
-      Torch comes from PyPI, so the install downloads the CUDA 13 build (see `Known issues`_).
+      pip installs torch from PyPI, which on Linux is the CUDA 13 build (about 3.4 GB). To choose the build (see `Hardware`_),
+      install torch from the PyTorch index first. pip then keeps it when it installs the package:
+
+      .. code-block:: bash
+
+          pip install torch --index-url https://download.pytorch.org/whl/cpu      # CPU
+          pip install torch --index-url https://download.pytorch.org/whl/cu126    # NVIDIA GPU
+          pip install -e ".[test]"
 
    .. tab-item:: conda
 
@@ -146,7 +158,7 @@ Choose a route. The commands for each hardware target are in the tab.
           mamba activate openadmet-models
           pip install -e . --no-deps
 
-      ``devtools/conda-envs/openadmet-models-gpu.yaml`` is the variant for NVIDIA GPUs. To solve it on a machine without a GPU,
+      ``devtools/conda-envs/openadmet-models-gpu.yaml`` is the variant for NVIDIA GPUs (see `Hardware`_ to choose). To solve it on a machine without a GPU,
       export ``CONDA_OVERRIDE_CUDA=12`` first, as for the pixi ``cuda`` environments.
 
 Known issues
@@ -157,21 +169,14 @@ the LightGBM and XGBoost wheels search for a Homebrew one. A process that loads 
 and XGBoost. Pixi and conda install one shared runtime, so use one of them on macOS. Support for uv and pip on macOS is tracked in
 `#625 <https://github.com/OpenADMET/openadmet-models/issues/625>`_.
 
-**uv and pip on Linux: torch build.** Without ``--extra cpu`` or ``--extra cuda``, PyPI supplies the CUDA 13 build of torch,
-which downloads about 3.4 GB of wheels including the NVIDIA libraries. The CUDA 12.6 wheels need an NVIDIA driver that supports
-CUDA 12.x (525 or newer, following NVIDIA's minor-version compatibility rule). The LightGBM wheel needs the system ``libgomp``
-(package ``libgomp1`` on Debian and Ubuntu).
+**uv and pip on Linux: LightGBM does not import.** The LightGBM wheel uses the system OpenMP library. If importing LightGBM fails
+with an error about ``libgomp.so.1``, install it: ``sudo apt install libgomp1`` on Debian and Ubuntu. Pixi and conda install it
+for you.
 
-**pip on Python 3.13: molfeat.** The molfeat fork declares ``requires-python "<=3.13"``, which pip rejects on every 3.13.x patch
-release. Add ``--ignore-requires-python`` to the ``pip install -e ".[test]"`` command. uv does not enforce the bound, and pixi does not
-install the package this way.
-
-**conda files on Python 3.13: molfeat.** The pip section of the conda files installs the same molfeat fork, so the same bound stops
-``mamba env create`` on 3.13.x. Set ``PIP_IGNORE_REQUIRES_PYTHON=1`` for that command, for example
-``PIP_IGNORE_REQUIRES_PYTHON=1 mamba env create -f devtools/conda-envs/openadmet-models.yaml``.
-
-**pixi: torch version.** conda-forge wandb below 0.26 requires protobuf below 7, so ``pyproject.toml`` bounds protobuf and the
-pixi environments use torch 2.12.
+**pip and conda on Python 3.13: molfeat.** The molfeat fork declares ``requires-python "<=3.13"``, which pip rejects on every
+3.13.x release. With pip, add ``--ignore-requires-python`` to the ``pip install -e ".[test]"`` command. With the conda files, set
+the variable for the create command:
+``PIP_IGNORE_REQUIRES_PYTHON=1 mamba env create -f devtools/conda-envs/openadmet-models.yaml``. uv and pixi are not affected.
 
 Changing dependencies
 ---------------------
