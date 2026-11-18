@@ -26,8 +26,7 @@ Installation
 ------------
 
 Follow the steps in the :doc:`installation` guide to set up your development environment, with pixi (for example
-``pixi install -e cpu-py312``) or with uv (``uv sync --extra test --extra cpu`` on Linux, ``uv sync --extra test`` on macOS, where you
-also run the OpenMP script described under Known issues). Both install the package in editable mode with the test tools.
+``pixi install -e cpu-py312``) or with uv on Linux (``uv sync --extra test --extra cpu``). Both install the package in editable mode with the test tools.
 This ensures that changes to the source code are reflected immediately.
 
 Dependencies are declared in ``pyproject.toml`` (in ``[project.dependencies]`` for uv and pip, and in the ``[tool.pixi]`` tables

@@ -28,12 +28,12 @@ Four install routes are supported:
      - ``pixi.lock``
    * - `uv <https://docs.astral.sh/uv/>`_
      - Supported; tested in CI
-     - Linux x86_64, macOS Apple silicon
+     - Linux x86_64
      - 3.12, 3.13
      - ``uv.lock``
    * - pip
      - Best effort; not locked
-     - Any platform with the dependency wheels
+     - Linux x86_64
      - 3.12, 3.13
      - none
    * - conda
@@ -42,9 +42,9 @@ Four install routes are supported:
      - 3.12
      - none
 
-Pixi installs everything from conda-forge (with PyPI for the few packages that conda-forge does not provide), so it needs no
-extra steps on any platform. uv installs from PyPI, is the fastest route, and needs one extra step on macOS (see
-`Known issues`_). The lock files make a clone of the repository install the same packages on every machine.
+Pixi installs everything from conda-forge (with PyPI for the few packages that conda-forge does not provide). uv installs from
+PyPI and is the fastest route on Linux. On macOS, use pixi or conda (see `Known issues`_). The lock files make a clone of the
+repository install the same packages on every machine.
 
 Hardware
 --------
@@ -60,7 +60,7 @@ conda files select the CPU or GPU build by file:
      - Torch build
    * - CPU
      - Linux x86_64, macOS Apple silicon
-     - CPU build on Linux; standard macOS build on Apple silicon, which includes the Metal Performance Shaders (MPS) backend and uses it automatically
+     - CPU build on Linux; with pixi on Apple silicon, the standard macOS build, which includes the Metal Performance Shaders (MPS) backend and uses it automatically
    * - CUDA
      - Linux x86_64 with an NVIDIA driver that supports CUDA 12
      - CUDA 12 build (CUDA 12.6 wheels with uv)
@@ -106,20 +106,16 @@ Choose a route. The commands for each hardware target are in the tab.
 
       .. code-block:: bash
 
-          # macOS, Apple silicon (uses MPS)
-          uv sync --extra test
-
           # Linux, CPU only
           uv sync --extra test --extra cpu
 
           # Linux, NVIDIA GPU (CUDA 12.6 wheels)
           uv sync --extra test --extra cuda
 
-      On macOS, run ``sh devtools/scripts/share_libomp_macos.sh`` after every ``uv sync`` (see `Known issues`_). On Linux, always pass
-      ``--extra cpu`` or ``--extra cuda``. Add ``--python 3.13`` to use Python 3.13.
+      Always pass ``--extra cpu`` or ``--extra cuda``. Add ``--python 3.13`` to use Python 3.13.
 
       Run commands inside the environment with ``uv run --no-sync``, or activate it with ``source .venv/bin/activate``.
-      A plain ``uv run`` syncs again using only the flags passed to it, and on Linux that replaces the torch build you selected.
+      A plain ``uv run`` syncs again using only the flags passed to it, and that replaces the torch build you selected.
 
       .. code-block:: bash
 
@@ -136,8 +132,7 @@ Choose a route. The commands for each hardware target are in the tab.
           source .venv/bin/activate
           pip install -e ".[test]"          # Python 3.13: add --ignore-requires-python (see Known issues)
 
-      Torch comes from PyPI, so a Linux install downloads the CUDA 13 build (see `Known issues`_). On macOS, run
-      ``sh devtools/scripts/share_libomp_macos.sh .venv`` after the install (see `Known issues`_).
+      Torch comes from PyPI, so the install downloads the CUDA 13 build (see `Known issues`_).
 
    .. tab-item:: conda
 
@@ -156,14 +151,10 @@ Choose a route. The commands for each hardware target are in the tab.
 Known issues
 ------------
 
-**uv on macOS: several OpenMP runtimes.** The torch and scikit-learn wheels bundle an OpenMP runtime (``libomp``), while the
-LightGBM and XGBoost wheels search for a Homebrew one. A process that loads several runtimes crashes or stalls inside LightGBM and
-XGBoost. After ``uv sync``, run ``sh devtools/scripts/share_libomp_macos.sh`` to point all four libraries at the runtime in the torch
-wheel. No Homebrew ``libomp`` is needed; the script uses ``install_name_tool`` and ``codesign`` from the Xcode command line tools.
-Repeat it whenever ``uv sync`` reinstalls torch, scikit-learn, LightGBM, or XGBoost, and do not use ``UV_LINK_MODE=symlink``, which
-makes the script edit uv's shared cache.
-Pixi and conda use one shared runtime and need no step. pip installs the same wheels as uv and shows the same problem, so run the
-script there too, passing the path of the virtual environment as an argument.
+**uv and pip on macOS: not supported.** The macOS wheels of torch and scikit-learn bundle an OpenMP runtime (``libomp``), while
+the LightGBM and XGBoost wheels search for a Homebrew one. A process that loads several runtimes crashes or stalls inside LightGBM
+and XGBoost. Pixi and conda install one shared runtime, so use one of them on macOS. Support for uv and pip on macOS is tracked in
+`#625 <https://github.com/OpenADMET/openadmet-models/issues/625>`_.
 
 **uv and pip on Linux: torch build.** Without ``--extra cpu`` or ``--extra cuda``, PyPI supplies the CUDA 13 build of torch,
 which downloads about 3.4 GB of wheels including the NVIDIA libraries. The CUDA 12.6 wheels need an NVIDIA driver that supports

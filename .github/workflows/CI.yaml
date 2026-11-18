@@ -68,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: ["3.12", "3.13"]
 
     steps:
@@ -89,17 +89,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
-      # Linux installs pick CPU-only torch; macOS uses the PyPI wheel
       - name: Install package
-        run: uv sync --locked --extra test ${{ runner.os == 'Linux' && '--extra cpu' || '' }}
+        run: uv sync --locked --extra test --extra cpu
 
       - name: Show installed packages
         run: uv pip list
-
-      # The macOS wheels of torch and scikit-learn each bundle an OpenMP runtime, and loading several stalls LightGBM
-      - name: Share one OpenMP runtime
-        if: runner.os == 'macOS'
-        run: sh devtools/scripts/share_libomp_macos.sh
 
       - name: Run unit tests
         run: |
@@ -119,7 +113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: ["3.12", "3.13"]
 
     steps:
@@ -135,11 +129,6 @@ jobs:
           .venv/bin/python -m pip install --upgrade pip
           # The molfeat fork declares requires-python "<=3.13", which pip rejects on 3.13.x patch releases
           .venv/bin/python -m pip install -e ".[test]" ${{ matrix.python-version == '3.13' && '--ignore-requires-python' || '' }}
-
-      # The macOS wheels of torch and scikit-learn each bundle an OpenMP runtime, and loading several stalls LightGBM
-      - name: Share one OpenMP runtime
-        if: runner.os == 'macOS'
-        run: sh devtools/scripts/share_libomp_macos.sh .venv
 
       - name: Show installed packages
         run: .venv/bin/python -m pip list

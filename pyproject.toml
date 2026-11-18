@@ -86,7 +86,7 @@ test = [
 ]
 # Torch build selectors for uv on Linux x86_64. The extras add no packages beyond torch; they are labels that
 # [tool.uv.sources] binds to an index (cpu to the PyTorch CPU index, cuda to the CUDA 12.6 index), because PyPI serves
-# Linux only the CUDA 13 build. On macOS, and with pip, both resolve to the PyPI wheel (which includes MPS)
+# Linux only the CUDA 13 build. With pip, both resolve to the PyPI wheel
 cpu = ["torch"]
 cuda = ["torch"]
 
@@ -243,9 +243,8 @@ cuda-py313 = { features = ["cuda", "py313", "test"], solve-group = "cuda-py313" 
 
 [tool.uv]
 required-version = ">=0.12.7"
-# Lock only the platforms the project supports
+# Lock Linux x86_64 only; on macOS the OpenMP runtimes in the PyPI wheels conflict, so macOS installs use pixi (see #625)
 environments = [
-  "sys_platform == 'darwin' and platform_machine == 'arm64'",
   "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 # A Linux environment has one torch build

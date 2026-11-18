@@ -31,7 +31,7 @@ Dependencies are declared once in `pyproject.toml` at the repository root, and t
 
 * `pyproject.toml`: dependencies, the `test` extra, the `cpu` and `cuda` torch selectors, the `[tool.uv]` settings (locked platforms, PyTorch indexes), and the `[tool.pixi]` tables (conda-forge dependencies and environments)
 * `pixi.lock`: the resolved pixi environments for osx-arm64 and linux-64 on Python 3.12 and 3.13; after changing dependencies, run `pixi lock`
-* `uv.lock`: the resolved uv environment for macOS arm64 and Linux x86_64 on Python 3.12 and 3.13; after changing dependencies, run `uv lock`
+* `uv.lock`: the resolved uv environment for Linux x86_64 on Python 3.12 and 3.13; after changing dependencies, run `uv lock`
 
 See `docs/installation.rst` for the commands.
 
@@ -40,7 +40,6 @@ See `docs/installation.rst` for the commands.
 This directory contains helper scripts which don't fall in any of the previous categories
 * `scripts`
   * `create_conda_env.py`: Helper program for spinning up new conda environments based on a starter file with Python Version and Env. Name command-line options
-  * `share_libomp_macos.sh`: macOS only; points scikit-learn, LightGBM, and XGBoost at the OpenMP runtime bundled in the torch wheel, so one runtime is loaded per process and Homebrew libomp is not needed. Run it in uv and pip environments, not in pixi or conda
 
 ### Containers
 

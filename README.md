@@ -33,7 +33,7 @@ git clone git@github.com:OpenADMET/openadmet-models.git
 cd openadmet-models
 ```
 
-Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](https://docs.astral.sh/uv/) is the fastest.
+Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](https://docs.astral.sh/uv/) is the fastest on Linux. On macOS, use pixi or conda.
 
 | Route | Status | Python | Lock file |
 |---|---|---|---|
@@ -69,21 +69,20 @@ Pick the command for your hardware. It installs the package in editable mode wit
 
 | Hardware | Command |
 |---|---|
-| macOS, Apple silicon (uses MPS) | `uv sync --extra test` |
 | Linux, CPU only | `uv sync --extra test --extra cpu` |
 | Linux, NVIDIA GPU (CUDA 12.6 wheels) | `uv sync --extra test --extra cuda` |
 
-On macOS, run `sh devtools/scripts/share_libomp_macos.sh` after every `uv sync` (see Known issues below). On Linux, always pass `--extra cpu` or `--extra cuda`; without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB. Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and on Linux replaces the torch build you selected.
+Always pass `--extra cpu` or `--extra cuda`; without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB. Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and replaces the torch build you selected.
 
 #### pip and conda
 
-Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI (on Linux, the CUDA 13 build, which downloads about 3.4 GB; use pixi or uv with `--extra cpu` for a CPU-only install). On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases. On macOS, run the OpenMP script described under Known issues with the path of the virtual environment, for example `sh devtools/scripts/share_libomp_macos.sh .venv`.
+Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI (on Linux, the CUDA 13 build, which downloads about 3.4 GB; use pixi or uv with `--extra cpu` for a CPU-only install). On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases.
 
 For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` (or `devtools/conda-envs/openadmet-models-gpu.yaml` for a GPU compatible version), `mamba activate openadmet-models`, and `pip install -e . --no-deps` works on Python 3.12 and 3.13. On Python 3.13, prefix the first command with `PIP_IGNORE_REQUIRES_PYTHON=1`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases.
 
 #### Known issues
 
-* **uv on macOS:** the torch and scikit-learn wheels bundle an OpenMP runtime, while the LightGBM and XGBoost wheels search for a Homebrew one. A process that loads several runtimes crashes or stalls inside LightGBM and XGBoost. After `uv sync`, run `sh devtools/scripts/share_libomp_macos.sh` to point all four libraries at the runtime in the torch wheel (no Homebrew `libomp` is needed; the script uses `install_name_tool` and `codesign` from the Xcode command line tools), and repeat it whenever `uv sync` reinstalls torch, scikit-learn, LightGBM, or XGBoost. pip installs show the same problem; pixi and conda are not affected.
+* **uv and pip on macOS:** not supported, because the OpenMP runtimes in the torch, scikit-learn, LightGBM, and XGBoost wheels conflict. Use pixi or conda. Tracked in [#625](https://github.com/OpenADMET/openadmet-models/issues/625).
 * **Linux:** the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
 * **Python 3.13 with conda files:** set `PIP_IGNORE_REQUIRES_PYTHON=1` when creating the environment (the molfeat fork's `requires-python` bound rejects 3.13.x releases).
 
