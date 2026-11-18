@@ -107,7 +107,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: codecov-uv-${{ matrix.os }}-py${{ matrix.python-version }}
 
-  # The conda environment file is a best-effort route
+  # The conda environment file is not locked, so a failure here can come from a new upstream release; it reports without blocking merges
   test-conda:
     name: Test with conda on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}

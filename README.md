@@ -39,8 +39,8 @@ Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](
 |---|---|---|---|
 | pixi | Recommended; tested in CI | 3.12, 3.13 | `pixi.lock` |
 | uv | Supported; tested in CI | 3.12, 3.13 | `uv.lock` |
-| pip | Best effort; not locked | 3.12, 3.13 | none |
-| conda | Best effort | 3.12, 3.13 | none |
+| pip | Tested in CI | 3.12, 3.13 | none |
+| conda | Tested in CI | 3.12, 3.13 | none |
 
 #### pixi
 

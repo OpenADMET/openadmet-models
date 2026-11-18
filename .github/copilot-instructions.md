@@ -14,7 +14,7 @@ uv sync --locked --extra test --extra cuda   # uv, Linux, NVIDIA GPU
 
 Pass exactly one of `--extra cpu` or `--extra cuda` to uv. They conflict, and without one uv installs the PyPI default (the CUDA 13 build).
 
-Both pixi and uv are supported and are tested in CI; `pip install -e ".[test]"` and the conda file `devtools/conda-envs/openadmet-models.yaml` are best-effort routes. pixi environments are named `<hardware>-py<version>` (hardware `cpu`, `cuda`, where `cpu` is also the Apple silicon environment; Python `312`, `313`) and are defined in `pyproject.toml` and `pixi.lock`; prefix commands with `pixi run -e cpu-py312`. uv environments are defined by `pyproject.toml` and `uv.lock`; run commands with `uv run --no-sync`. uv and pip are not supported on macOS; use pixi or conda there.
+pixi, uv, pip (`pip install -e ".[test]"`), and the conda file `devtools/conda-envs/openadmet-models.yaml` are tested in CI; only pixi and uv are locked. pixi environments are named `<hardware>-py<version>` (hardware `cpu`, `cuda`, where `cpu` is also the Apple silicon environment; Python `312`, `313`) and are defined in `pyproject.toml` and `pixi.lock`; prefix commands with `pixi run -e cpu-py312`. uv environments are defined by `pyproject.toml` and `uv.lock`; run commands with `uv run --no-sync`. uv and pip are not supported on macOS; use pixi or conda there.
 
 ## Commands
 

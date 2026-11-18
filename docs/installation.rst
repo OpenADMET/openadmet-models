@@ -32,12 +32,12 @@ Four install routes are supported:
      - 3.12, 3.13
      - ``uv.lock``
    * - pip
-     - Best effort; not locked
+     - Tested in CI
      - Linux x86_64
      - 3.12, 3.13
      - none
    * - conda
-     - Best effort
+     - Tested in CI
      - Linux x86_64, macOS Apple silicon
      - 3.12, 3.13
      - none
