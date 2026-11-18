@@ -42,6 +42,8 @@ Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](
 | pip | Tested in CI | 3.12, 3.13 | none |
 | conda | Tested in CI | 3.12, 3.13 | none |
 
+To choose between the CPU and CUDA commands below, run `nvidia-smi`. If it prints a `CUDA Version` of 12.0 or newer, use CUDA. Otherwise, or if the command is not found, use CPU.
+
 #### pixi
 
 ```bash
@@ -72,17 +74,19 @@ Pick the command for your hardware. It installs the package in editable mode wit
 | Linux, CPU only | `uv sync --extra test --extra cpu` |
 | Linux, NVIDIA GPU (CUDA 12.6 wheels) | `uv sync --extra test --extra cuda` |
 
-Always pass `--extra cpu` or `--extra cuda`; without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB. Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and replaces the torch build you selected.
+Always pass `--extra cpu` or `--extra cuda`; without one, uv installs the CUDA 13 build of torch from PyPI (about 3.4 GB). Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and replaces the torch build you selected.
 
 #### pip
 
-Inside a virtual environment:
+Inside a virtual environment, install torch for your hardware first, then the package:
 
 ```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu      # CPU
+pip install torch --index-url https://download.pytorch.org/whl/cu126    # NVIDIA GPU
 pip install -e ".[test]"
 ```
 
-pip installs the CUDA 13 build of torch from PyPI (about 3.4 GB). For a CPU-only install, use pixi or uv.
+Without the first step, pip installs the CUDA 13 build of torch from PyPI (about 3.4 GB).
 
 #### conda
 
@@ -97,7 +101,7 @@ For NVIDIA GPUs, use `devtools/conda-envs/openadmet-models-gpu.yaml`.
 #### Known issues
 
 * **uv and pip on macOS:** not supported, because the OpenMP runtimes in the torch, scikit-learn, LightGBM, and XGBoost wheels conflict. Use pixi or conda. Tracked in [#625](https://github.com/OpenADMET/openadmet-models/issues/625).
-* **Linux:** the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
+* **uv and pip on Linux:** if importing LightGBM fails with an error about `libgomp.so.1`, run `sudo apt install libgomp1` (Debian and Ubuntu).
 * **Python 3.13 with pip or conda:** the molfeat fork's `requires-python` bound rejects 3.13.x. Add `--ignore-requires-python` to the pip install, or set `PIP_IGNORE_REQUIRES_PYTHON=1` for `mamba env create`.
 
 See the [installation guide](docs/installation.rst) for details.
