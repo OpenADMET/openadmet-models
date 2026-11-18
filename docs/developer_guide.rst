@@ -29,14 +29,8 @@ Follow the steps in the :doc:`installation` guide to set up your development env
 ``pixi install -e cpu-py312``) or with uv on Linux (``uv sync --extra test --extra cpu``). Both install the package in editable mode with the test tools.
 This ensures that changes to the source code are reflected immediately.
 
-Dependencies are declared in ``pyproject.toml`` (in ``[project.dependencies]`` for uv and pip, and in the ``[tool.pixi]`` tables
-for pixi) and resolved in two lock files, ``uv.lock`` and ``pixi.lock``. Commit both lock files together with any change to the
-dependencies; CI installs with ``uv sync --locked`` and ``pixi install --locked`` and fails when a lock file is out of date.
-
-* uv: add a dependency with ``uv add <package>``, or ``uv add --optional test <package>`` for a test tool; both update ``uv.lock``
-  (``uv lock --check`` detects drift).
-* pixi: edit the ``[tool.pixi.dependencies]`` table (or ``[tool.pixi.feature.test.dependencies]`` for a test tool) with the same
-  version bounds as ``[project.dependencies]``, then run ``pixi lock``.
+To add or change a dependency, follow "Changing dependencies" in the :doc:`installation` guide. It covers the lock files and the
+conda files that must change with ``pyproject.toml``.
 
 The torch build varies by hardware. For uv, the ``cpu`` and ``cuda`` extras route it to the PyTorch package
 indexes on Linux (see ``[tool.uv.sources]`` in ``pyproject.toml``), and ``[tool.uv] conflicts`` prevents installing the ``cpu`` and ``cuda`` extras together.

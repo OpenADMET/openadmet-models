@@ -193,6 +193,9 @@ files with ``pyproject.toml``. CI installs with ``--locked``, so a stale lock fi
 * conda: add the package to both files in ``devtools/conda-envs/``, under ``pip:`` if conda-forge does not provide it, then run
   ``mamba install <package>`` in your environment.
 
+For a test tool, use the ``test`` lists instead: ``[project.optional-dependencies]`` for uv and pip, and
+``[tool.pixi.feature.test.dependencies]`` for pixi.
+
 Container image
 ---------------
 
