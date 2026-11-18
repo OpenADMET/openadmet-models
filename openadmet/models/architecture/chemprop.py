@@ -604,7 +604,7 @@ class ChemPropModel(LightningModelBase):
         if value not in AGGREGATION_CLASSES:
             raise ValueError(
                 "Aggregation must be one of: " + ", ".join(sorted(AGGREGATION_CLASSES))
-            ) 
+            )
         return value
 
     @model_validator(mode="after")

@@ -803,6 +803,7 @@ def test_chemprop_predict_accelerator_defaults_to_auto():
         == "auto"
     )
 
+
 def test_chemprop_invalid_aggregation_rejected():
     """An unregistered aggregation name is rejected with the list of valid ones."""
     with pytest.raises(ValueError, match="Aggregation must be one of"):
@@ -833,4 +834,3 @@ def test_foundation_build_honors_configured_aggregation(
     assert isinstance(model.estimator.agg, expected)
     if expected is nn.AttentiveAggregation:
         assert model.estimator.agg.hparams["output_size"] == model.message_hidden_dim
-
