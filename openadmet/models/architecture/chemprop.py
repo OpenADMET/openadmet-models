@@ -133,7 +133,6 @@ def configure_optimizers(self) -> dict:
     ffn_params = []
 
     for name, param in self.named_parameters():
-        # Aggregation weights (e.g. attentive) are considered part of FFN and not frozen
         if "predictor" in name or name.startswith("agg."):
             ffn_params.append(param)
         else:
