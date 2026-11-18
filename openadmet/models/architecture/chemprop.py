@@ -128,7 +128,7 @@ def configure_optimizers(self) -> dict:
         A dictionary containing the optimizer and learning rate scheduler configurations.
 
     """
-    # # Separate parameters into MPNN and FFN (+aggregation) groups
+    # Separate parameters into MPNN and FFN (+aggregation) groups
     mpnn_params = []
     ffn_params = []
 
