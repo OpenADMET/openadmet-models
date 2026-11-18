@@ -802,6 +802,7 @@ def test_chemprop_predict_accelerator_defaults_to_auto():
         == "auto"
     )
 
+
 @pytest.mark.parametrize("aggregation", ["norm", "attentive"])
 def test_chemeleon_rejects_non_mean_aggregation(aggregation):
     """CheMeleon's weights were trained with mean aggregation, so any other choice
