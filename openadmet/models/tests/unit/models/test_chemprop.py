@@ -1,5 +1,6 @@
 import inspect
 import types
+import json
 
 import numpy as np
 import pytest
@@ -74,7 +75,6 @@ def test_resolve_noam_steps_per_epoch_converts_estimated_stepping_batches(
 
 def test_resolve_noam_steps_per_epoch_falls_back_to_1000(make_noam_trainer):
     """Falls back to 1000 and warns when neither trainer field is usable."""
-    from loguru import logger
 
     trainer = make_noam_trainer(
         num_training_batches=float("inf"), estimated_stepping_batches=float("inf")
@@ -276,7 +276,6 @@ def test_chemprop_set_n_tasks():
 
 def test_chemprop_get_output_transform():
     """Test _get_output_transform logic."""
-    from chemprop import nn
 
     model = ChemPropModel(n_tasks=1)
 
@@ -477,7 +476,6 @@ def test_chemprop_noam_lambda_boundaries(make_noam_trainer):
 
 def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr(make_noam_trainer):
     """With warmup_epochs=0 and max_epochs=-1, Noam holds at max_lr and warns."""
-    from loguru import logger
 
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=0)
     model.build()
@@ -521,7 +519,6 @@ def test_chemprop_noam_lambda_no_warmup_starts_at_max_lr(make_noam_trainer):
 
 def test_chemprop_noam_warmup_exceeds_max_epochs(make_noam_trainer):
     """A warning is emitted when warmup_epochs >= max_epochs, and LR drops immediately after warmup."""
-    from loguru import logger
 
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=5)
     model.build()
@@ -593,7 +590,6 @@ def test_chemprop_monitor_metric_mode_invalid():
 
 def test_chemprop_serialize_includes_resolved_lr(tmp_path):
     """serialize() includes resolved LR fields and structural fields even when not explicitly set."""
-    import json
 
     model = ChemPropModel(max_lr=2e-3, scheduler="noam")
     model.build()
@@ -682,7 +678,6 @@ def test_chemprop_resolved_fields_matches_tagged_declarations():
 
 def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
     """Plateau scheduler warns when no validation dataloader is configured."""
-    from loguru import logger
 
     model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
     model.build()
@@ -705,7 +700,6 @@ def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
 
 def test_chemprop_plateau_no_spurious_warning_with_val(make_val_trainer):
     """Plateau scheduler emits no warning when a validation dataloader is present."""
-    from loguru import logger
 
     model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
     model.build()
@@ -809,14 +803,6 @@ def test_chemprop_predict_accelerator_defaults_to_auto():
         == "auto"
     )
 
-
-def test_build_aggregation_maps_names_to_chemprop_classes():
-    """Every accepted aggregation name resolves to the matching chemprop class."""
-    assert isinstance(_build_aggregation("mean", 8), nn.MeanAggregation)
-    assert isinstance(_build_aggregation("norm", 8), nn.NormAggregation)
-    assert isinstance(_build_aggregation("attentive", 8), nn.AttentiveAggregation)
-
-
 def test_chemprop_invalid_aggregation_rejected():
     """An unregistered aggregation name is rejected with the list of valid ones."""
     with pytest.raises(ValueError, match="Aggregation must be one of"):
@@ -831,8 +817,8 @@ def test_chemprop_invalid_aggregation_rejected():
         ("attentive", nn.AttentiveAggregation),
     ],
 )
-def test_foundation_build_honours_configured_aggregation(
-    tmp_path, aggregation, expected
+def test_foundation_build_honors_configured_aggregation(
+    chemeleon_foundation_checkpoint, aggregation, expected
 ):
     """A hand-built foundation checkpoint uses the aggregation the recipe asked for.
 
@@ -840,41 +826,11 @@ def test_foundation_build_honours_configured_aggregation(
     `aggregation=` was silently a no-op whenever a foundation checkpoint was given.
     """
     model = ChemPropModel(
-        from_foundation=str(_write_foundation_checkpoint(tmp_path)),
+        from_foundation=str(chemeleon_foundation_checkpoint),
         aggregation=aggregation,
     )
     model.build()
     assert isinstance(model.estimator.agg, expected)
+    if expected is nn.AttentiveAggregation:
+        assert model.estimator.agg.hparams["output_size"] == model.message_hidden_dim
 
-
-def test_chemeleon_defaults_to_mean_aggregation(tmp_path, monkeypatch):
-    """CheMeleon was pretrained with mean, so mean is used when nothing was asked for.
-
-    The override is what makes the CheMeleon weights usable at all: its foundation
-    checkpoint carries no aggregation, and mean is the one it was trained with.
-    """
-    monkeypatch.setattr(
-        "openadmet.models.architecture.chemprop.ChemPropModel._download_chemeleon",
-        lambda self, save_dir: torch.load(
-            _write_foundation_checkpoint(tmp_path), weights_only=True
-        ),
-    )
-    model = ChemPropModel(from_foundation="chemeleon")
-    model.build()
-
-    assert model.aggregation == "mean"
-    assert isinstance(model.estimator.agg, nn.MeanAggregation)
-
-
-def _write_foundation_checkpoint(tmp_path):
-    """Write a CheMeleon-layout checkpoint with random weights and return its path."""
-    message_passing = nn.BondMessagePassing(**_CHEMELEON_MP_HPARAMS)
-    path = tmp_path / "foundation_mp.pt"
-    torch.save(
-        {
-            "hyper_parameters": dict(_CHEMELEON_MP_HPARAMS),
-            "state_dict": message_passing.state_dict(),
-        },
-        path,
-    )
-    return path

@@ -38,10 +38,8 @@ _CHEMELEON_MP_HPARAMS: dict[str, Any] = {
     "graph_transform": None,
 }
 
-# Aggregation strategies accepted by the ``aggregation`` field, mapped to the
-# chemprop implementations. "attentive" learns per-node attention weights, so it
-# needs the width of the node representations produced by message passing.
-AGGREGATION_CLASSES: dict[str, Any] = {
+# Aggregation strategies accepted by the ``aggregation`` field
+AGGREGATION_CLASSES: dict[str, type[nn.Aggregation]] = {
     "mean": nn.MeanAggregation,
     "norm": nn.NormAggregation,
     "attentive": nn.AttentiveAggregation,
@@ -66,11 +64,6 @@ def _build_aggregation(name: str, output_size: int) -> nn.Aggregation:
         The aggregation module to hand to ``chemprop.models.MPNN``.
 
     """
-    if name not in AGGREGATION_CLASSES:
-        raise ValueError(
-            f"Unknown aggregation: {name!r}. Must be one of: "
-            f"{', '.join(sorted(AGGREGATION_CLASSES))}"
-        )
     aggregation_cls = AGGREGATION_CLASSES[name]
     if aggregation_cls is nn.AttentiveAggregation:
         return aggregation_cls(output_size=output_size)
@@ -140,7 +133,7 @@ def configure_optimizers(self) -> dict:
     ffn_params = []
 
     for name, param in self.named_parameters():
-        if "predictor" in name:
+        if "predictor" in name or name.startswith("agg."):
             ffn_params.append(param)
         else:
             mpnn_params.append(param)
@@ -317,7 +310,7 @@ class ChemPropModel(LightningModelBase):
     aggregation : str
         Aggregation method ("mean", "norm" or "attentive"). When loading
         from a foundation checkpoint the aggregation must match the one those weights were
-        trained with; ``from_foundation="chemeleon"`` therefore defaults to "mean".
+        trained with.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
@@ -611,8 +604,31 @@ class ChemPropModel(LightningModelBase):
         if value not in AGGREGATION_CLASSES:
             raise ValueError(
                 "Aggregation must be one of: " + ", ".join(sorted(AGGREGATION_CLASSES))
-            )
+            ) 
         return value
+
+    @model_validator(mode="after")
+    def validate_chemeleon_aggregation(self) -> "ChemPropModel":
+        """
+        Validate that the aggregation method matches the CheMeleon foundation model if used.
+
+        Returns
+        -------
+        ChemPropModel
+            The updated model instance.
+
+        Raises
+        ------
+        ValueError
+            If the aggregation method does not match the CheMeleon foundation model.
+
+        """
+        if self.from_foundation == "chemeleon" and self.aggregation != "mean":
+            raise ValueError(
+                f"CheMeleon foundation model was trained with mean aggregation, "
+                f"but aggregation={self.aggregation} was specified"
+            )
+        return self
 
     @field_validator("scheduler")
     @classmethod
@@ -712,14 +728,6 @@ class ChemPropModel(LightningModelBase):
             if self.from_foundation:
                 if self.from_foundation == "chemeleon":
                     foundation_mp = self._download_chemeleon(save_dir=Path.home())
-                    # CheMeleon was pretrained with mean aggregation
-                    if self.aggregation != "mean":
-                        logger.warning(
-                            f"CheMeleon was pretrained with mean aggregation, but "
-                            f"{self.aggregation} was requested. The run continues, but "
-                            "the foundation weights were not pretrained with that "
-                            "aggregation."
-                        )
                     logger.warning(
                         "Using CheMeleon overrides settings for depth, message_hidden_dim, and messages"
                     )
@@ -751,9 +759,6 @@ class ChemPropModel(LightningModelBase):
                     d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout
                 )
 
-            # Built once, after the message passing module: the width of the node
-            # representations has to be known first (attentive aggregation needs it),
-            # and the foundation path may have just changed it via mp.output_dim.
             aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
 
             ffn = nn.RegressionFFN(
