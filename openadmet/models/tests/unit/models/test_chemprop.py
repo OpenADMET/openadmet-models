@@ -1,6 +1,6 @@
 import inspect
-import types
 import json
+import types
 
 import numpy as np
 import pytest
@@ -11,7 +11,6 @@ from loguru import logger
 from openadmet.models.architecture.chemprop import (
     _CHEMELEON_MP_HPARAMS,
     ChemPropModel,
-    _build_aggregation,
     _resolve_device,
     _resolve_noam_steps_per_epoch,
 )
@@ -803,11 +802,12 @@ def test_chemprop_predict_accelerator_defaults_to_auto():
         == "auto"
     )
 
-
-def test_chemprop_invalid_aggregation_rejected():
-    """An unregistered aggregation name is rejected with the list of valid ones."""
-    with pytest.raises(ValueError, match="Aggregation must be one of"):
-        ChemPropModel(aggregation="max")
+@pytest.mark.parametrize("aggregation", ["norm", "attentive"])
+def test_chemeleon_rejects_non_mean_aggregation(aggregation):
+    """CheMeleon's weights were trained with mean aggregation, so any other choice
+    must raise at construction time, before the checkpoint is ever downloaded."""
+    with pytest.raises(ValueError, match="trained with mean aggregation"):
+        ChemPropModel(from_foundation="chemeleon", aggregation=aggregation)
 
 
 @pytest.mark.parametrize(

@@ -128,11 +128,12 @@ def configure_optimizers(self) -> dict:
         A dictionary containing the optimizer and learning rate scheduler configurations.
 
     """
-    # Separate parameters into MPNN and FFN groups
+    # # Separate parameters into MPNN and FFN (+aggregation) groups
     mpnn_params = []
     ffn_params = []
 
     for name, param in self.named_parameters():
+        # Aggregation weights (e.g. attentive) are considered part of FFN and not frozen
         if "predictor" in name or name.startswith("agg."):
             ffn_params.append(param)
         else:
@@ -308,9 +309,8 @@ class ChemPropModel(LightningModelBase):
     messages : str
         Type of message passing ("bond" or "atom").
     aggregation : str
-        Aggregation method ("mean", "norm" or "attentive"). When loading
-        from a foundation checkpoint the aggregation must match the one those weights were
-        trained with.
+        Aggregation method ("mean", "norm" or "attentive"). When loading from a foundation checkpoint, 
+        the aggregation must match the one those weights were trained with. Default it "mean", which CheMeleon requires.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
