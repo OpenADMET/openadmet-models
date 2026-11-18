@@ -63,6 +63,33 @@ def test_regression_metrics_and_cv_include_rae_and_pct_within_1_log_for_pxc50():
     assert "pct_within_1_log" in cv_pxc50.metric_names
 
 
+def test_sklearn_cv_excludes_timing_keys_from_metrics():
+    """Check that fit_time and score_time are not reported as model metrics."""
+    from types import SimpleNamespace
+
+    from sklearn.linear_model import LinearRegression
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(40, 3))
+    y = X @ np.array([1.0, -2.0, 0.5]) + rng.normal(scale=0.1, size=40)
+    model = SimpleNamespace(estimator=LinearRegression())
+
+    cv = SKLearnRepeatedKFoldCrossValidation(n_splits=3, n_repeats=1)
+    data = cv.evaluate(
+        model=model,
+        X_train=X,
+        y_train=y,
+        y_pred=y,
+        y_true=y,
+        X_all=X,
+        y_all=y,
+    )
+
+    assert "fit_time" not in data["task_0"]
+    assert "score_time" not in data["task_0"]
+    assert set(data["task_0"]) == set(cv.metric_names)
+
+
 def test_relative_absolute_error_formula():
     y_true = np.array([1.0, 2.0, 3.0])
     y_pred = np.array([1.0, 2.0, 4.0])

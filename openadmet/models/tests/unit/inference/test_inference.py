@@ -3,6 +3,7 @@
 import inspect
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import joblib
@@ -46,6 +47,27 @@ def test_predict_with_real_single_model(input_df, null_single_model_dir):
     assert "OADMET_STD_UNIT_task_0" in result.columns
     assert np.allclose(result["OADMET_PRED_UNIT_task_0"].to_numpy(), [1.0, 1.0])
     assert result["OADMET_STD_UNIT_task_0"].isna().all()
+
+
+def test_generate_pairwise_df_uses_task_idx_column():
+    data = pd.DataFrame({"SMILES": ["CCO", "CCN"]})
+    predictions = np.array([[1.0, 11.0], [2.0, 12.0], [3.0, 13.0]])
+    std = np.array([[0.1, 1.1], [0.2, 1.2], [0.3, 1.3]])
+    feat = SimpleNamespace(how_to_pair="ut")
+
+    pairwise_df = inference_module._generate_pairwise_df(
+        data=data,
+        input_col="SMILES",
+        feat=feat,
+        predictions=predictions,
+        std=std,
+        predictions_tag="pred",
+        std_tag="std",
+        task_idx=1,
+    )
+
+    assert pairwise_df["pred"].tolist() == [11.0, 12.0, 13.0]
+    assert pairwise_df["std"].tolist() == [1.1, 1.2, 1.3]
 
 
 def test_predict_with_real_ensemble_and_acquisition(input_df, null_ensemble_model_dir):
