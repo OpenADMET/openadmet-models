@@ -181,14 +181,17 @@ the variable for the create command:
 Changing dependencies
 ---------------------
 
-Add a dependency to ``[project.dependencies]`` in ``pyproject.toml``, then update both lock files and commit them with
-``pyproject.toml``. CI installs with ``--locked``, so a stale lock file fails the build.
+Add a dependency to ``[project.dependencies]`` in ``pyproject.toml``, then update the files for each route below. Commit both lock
+files with ``pyproject.toml``. CI installs with ``--locked``, so a stale lock file fails the build.
 
 * uv: run ``uv lock`` (``uv lock --check`` verifies that the lock file agrees with ``pyproject.toml``).
 * pixi: if conda-forge provides the package, add it with the same version bounds to the matching
   ``[tool.pixi.dependencies]`` table; otherwise pixi installs it from PyPI. Then run
   ``pixi lock``. For git dependencies, ``pixi lock`` installs the conda part of one environment under ``.pixi/`` to build package
   metadata.
+* pip: run ``pip install <package>`` in your environment. The ``pyproject.toml`` entry records it for everyone else.
+* conda: add the package to both files in ``devtools/conda-envs/``, under ``pip:`` if conda-forge does not provide it, then run
+  ``mamba install <package>`` in your environment.
 
 Container image
 ---------------
