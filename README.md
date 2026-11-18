@@ -74,17 +74,31 @@ Pick the command for your hardware. It installs the package in editable mode wit
 
 Always pass `--extra cpu` or `--extra cuda`; without one, PyPI supplies the CUDA 13 build of torch, which downloads about 3.4 GB. Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and replaces the torch build you selected.
 
-#### pip and conda
+#### pip
 
-Inside a virtual environment, `pip install -e ".[test]"` resolves the dependencies from `pyproject.toml` without a lock file, and torch comes from PyPI (on Linux, the CUDA 13 build, which downloads about 3.4 GB; use pixi or uv with `--extra cpu` for a CPU-only install). On Python 3.13, add `--ignore-requires-python`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases.
+Inside a virtual environment:
 
-For conda, `mamba env create -f devtools/conda-envs/openadmet-models.yaml` (or `devtools/conda-envs/openadmet-models-gpu.yaml` for a GPU compatible version), `mamba activate openadmet-models`, and `pip install -e . --no-deps` works on Python 3.12 and 3.13. On Python 3.13, prefix the first command with `PIP_IGNORE_REQUIRES_PYTHON=1`, because the molfeat fork's `requires-python` bound rejects 3.13.x releases.
+```bash
+pip install -e ".[test]"
+```
+
+pip installs the CUDA 13 build of torch from PyPI (about 3.4 GB). For a CPU-only install, use pixi or uv.
+
+#### conda
+
+```bash
+mamba env create -f devtools/conda-envs/openadmet-models.yaml
+mamba activate openadmet-models
+pip install -e . --no-deps
+```
+
+For NVIDIA GPUs, use `devtools/conda-envs/openadmet-models-gpu.yaml`.
 
 #### Known issues
 
 * **uv and pip on macOS:** not supported, because the OpenMP runtimes in the torch, scikit-learn, LightGBM, and XGBoost wheels conflict. Use pixi or conda. Tracked in [#625](https://github.com/OpenADMET/openadmet-models/issues/625).
 * **Linux:** the LightGBM wheel needs the system `libgomp` (package `libgomp1` on Debian and Ubuntu).
-* **Python 3.13 with conda files:** set `PIP_IGNORE_REQUIRES_PYTHON=1` when creating the environment (the molfeat fork's `requires-python` bound rejects 3.13.x releases).
+* **Python 3.13 with pip or conda:** the molfeat fork's `requires-python` bound rejects 3.13.x. Add `--ignore-requires-python` to the pip install, or set `PIP_IGNORE_REQUIRES_PYTHON=1` for `mamba env create`.
 
 See the [installation guide](docs/installation.rst) for details.
 
