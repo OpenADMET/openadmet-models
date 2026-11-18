@@ -8,14 +8,13 @@ conda installation, and other development tools not directly related to the codi
 
 ### Continuous Integration
 
-You should test your code, but do not feel compelled to use these specific programs. You also may not need Unix and
-Windows testing if you only plan to deploy on specific platforms. These are just to help you get started.
+The workflows in `.github/workflows` test each install route in a separate job, on Python 3.12 and 3.13:
 
-The workflows in `.github/workflows` test each supported install route in its own job: [pixi](https://pixi.sh) from `pixi.lock`
-(`pixi run --locked`) and [uv](https://docs.astral.sh/uv/) from `uv.lock` (`uv sync --locked`, tests with `uv run --no-sync`) on
-Python 3.12 and 3.13, pip (`pip install -e ".[test]"`, unlocked) on Python 3.12 and 3.13, and the conda file
-`conda-envs/openadmet-models.yaml` on Python 3.12 and 3.13. The pip and conda jobs report a failure without blocking
-a merge. The scheduled GPU workflow tests the pixi and uv CUDA environments on one instance.
+* [pixi](https://pixi.sh): installs from `pixi.lock` with `pixi run --locked`, on Ubuntu and macOS
+* [uv](https://docs.astral.sh/uv/): installs from `uv.lock` with `uv sync --locked` and runs tests with `uv run --no-sync`, on Ubuntu
+* pip: installs with `pip install -e ".[test]"` (unlocked), on Ubuntu; a failure does not block a merge
+* conda: installs from `conda-envs/openadmet-models.yaml` (unlocked), on Ubuntu and macOS; a failure does not block a merge
+* GPU: the scheduled GPU workflow tests the pixi and uv CUDA environments on one instance, on Python 3.12 only
 
 ### Conda Environment:
 
