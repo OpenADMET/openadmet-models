@@ -309,7 +309,7 @@ class ChemPropModel(LightningModelBase):
         Type of message passing ("bond" or "atom").
     aggregation : str
         Aggregation method ("mean", "norm" or "attentive"). When loading from a foundation checkpoint,
-        the aggregation must match the one those weights were trained with. Default it "mean", which CheMeleon requires.
+        the aggregation must match the one those weights were trained with. Default is "mean", which CheMeleon requires.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
