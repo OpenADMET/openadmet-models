@@ -97,7 +97,7 @@ Choose a route. The commands for each hardware target are in the tab.
       package. Export ``CONDA_OVERRIDE_CUDA=12`` to install one on a machine without a GPU, as the Dockerfile does.
 
       Packages come from conda-forge unless it does not provide them. The pinned git dependencies (molfeat, neural-pairwise-regression,
-      TabPFN, monroe, useful_rdkit_utils), tabpfn-extensions, and their dependencies come from PyPI.
+      TabPFN, monroe, useful_rdkit_utils) and their dependencies come from PyPI.
 
    .. tab-item:: uv
 

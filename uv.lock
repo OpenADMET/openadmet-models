@@ -3,8 +3,8 @@ revision = 3
 requires-python = ">=3.12, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 supported-markers = [
@@ -241,15 +241,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/b2/51899539b6ceeeb420d40ed3cd4b7a40519404f9baf3d4ac99dc413a834b/babel-2.18.0.tar.gz", hash = "sha256:b80b99a14bd085fcacfa15c9165f651fbb3406e66cc603abf11c5750937c992d", size = 9959554, upload-time = "2026-02-01T12:30:56.078Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/f5/21d2de20e8b8b0408f0681956ca2c69f1320a3848ac50e6e7f39c6159675/babel-2.18.0-py3-none-any.whl", hash = "sha256:e2b422b277c2b9a9630c1d7903c2a00d0830c409c59ac8cae9081c92f1aeba35", size = 10196845, upload-time = "2026-02-01T12:30:53.445Z" },
-]
-
-[[package]]
-name = "backoff"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001, upload-time = "2022-10-05T19:19:32.061Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148, upload-time = "2022-10-05T19:19:30.546Z" },
 ]
 
 [[package]]
@@ -764,15 +755,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/81/e1/56027a71e31b02ddc53c7d65b01e68edf64dea2932122fe7746a516f75d5/dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa", size = 187315, upload-time = "2026-01-19T02:36:56.85Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d", size = 120019, upload-time = "2026-01-19T02:36:55.663Z" },
-]
-
-[[package]]
-name = "distro"
-version = "1.9.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
 ]
 
 [[package]]
@@ -2466,15 +2448,6 @@ wheels = [
 ]
 
 [[package]]
-name = "nvidia-ml-py"
-version = "13.615.71"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fd/30/b25216758be3d3e2834825d8193609e2d71c770a8bd7984438c058c90268/nvidia_ml_py-13.615.71.tar.gz", hash = "sha256:bebe4e48f51b1dc75028c0815cb7bfa14a31a5bb80be70c9d980c6036953fc3d", size = 57485, upload-time = "2026-09-25T15:15:28.226Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl", hash = "sha256:959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6", size = 58132, upload-time = "2026-09-25T15:15:26.54Z" },
-]
-
-[[package]]
 name = "nvidia-nccl-cu12"
 version = "2.29.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2608,7 +2581,6 @@ dependencies = [
     { name = "statsmodels" },
     { name = "tabicl" },
     { name = "tabpfn" },
-    { name = "tabpfn-extensions" },
     { name = "tabulate" },
     { name = "torch", version = "2.14.1+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform == 'linux' and extra == 'extra-16-openadmet-models-cuda') or (extra == 'extra-16-openadmet-models-cpu' and extra == 'extra-16-openadmet-models-cuda')" },
     { name = "torch", version = "2.15.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-16-openadmet-models-cpu' and extra == 'extra-16-openadmet-models-cuda') or (extra != 'extra-16-openadmet-models-cpu' and extra != 'extra-16-openadmet-models-cuda')" },
@@ -2657,7 +2629,7 @@ requires-dist = [
     { name = "monroe", git = "https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2" },
     { name = "mordredcommunity" },
     { name = "nepare", git = "https://github.com/JacksonBurns/neural-pairwise-regression.git?rev=590dd04411111c18f4246623d9707afce2c2b8ed" },
-    { name = "numpy" },
+    { name = "numpy", specifier = ">=2" },
     { name = "pandas" },
     { name = "phx-class-registry" },
     { name = "pydantic" },
@@ -2679,7 +2651,6 @@ requires-dist = [
     { name = "statsmodels" },
     { name = "tabicl" },
     { name = "tabpfn", git = "https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020" },
-    { name = "tabpfn-extensions" },
     { name = "tabulate" },
     { name = "torch" },
     { name = "torch", marker = "sys_platform == 'linux' and extra == 'cpu'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "openadmet-models", extra = "cpu" } },
@@ -2880,21 +2851,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3c/f7/2a019cdb08bb30d422f64cec94fdcdd1bcaca06ef3c5d560d4cde4220bb8/pmapper-1.1.3.tar.gz", hash = "sha256:d35734c365b37e06c8246e5efd071b4a314aa978190dce30a147123475e7234f", size = 570879, upload-time = "2025-05-08T11:01:28.37Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl", hash = "sha256:f0cf550d66baba2719d6707aa2cc0bd1b5b99842dadd9b8076077bcd919aafde", size = 567541, upload-time = "2025-05-08T11:01:26.547Z" },
-]
-
-[[package]]
-name = "posthog"
-version = "7.81.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "backoff" },
-    { name = "distro" },
-    { name = "requests" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/f5/21477c4d7868129ce839a4a768a51225da9df3b54c4775d73d04d769c1d8/posthog-7.81.1.tar.gz", hash = "sha256:6d1d7846c4be791d8e91b474a6dd6b73ba994ef52f9ad86ad78e42d8d07ee085", size = 880022, upload-time = "2026-10-30T13:57:25.763Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl", hash = "sha256:7ed2346e8c527b254b01b3fc89d3f4dae59c36962385ce71ffa7dd69a3d9d62d", size = 1020959, upload-time = "2026-10-30T13:57:23.377Z" },
 ]
 
 [[package]]
@@ -3699,45 +3655,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tabpfn-common-utils"
-version = "0.2.23"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "filelock" },
-    { name = "numpy" },
-    { name = "nvidia-ml-py" },
-    { name = "pandas" },
-    { name = "platformdirs" },
-    { name = "posthog" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/8c/d1d8e744ade10490d56f653bb0cdba180ff8726c78202a66302ab2578b58/tabpfn_common_utils-0.2.23.tar.gz", hash = "sha256:4267831070efbcf1baae77e48e28a78a11e87ecda5dcb60744f81c69e7163258", size = 1984212, upload-time = "2026-06-22T11:21:56.955Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl", hash = "sha256:e456e917cf2fbe44c3a44352c737ed3194ff572f2ee5141294a59dae053b8af2", size = 40319, upload-time = "2026-06-22T11:21:55.388Z" },
-]
-
-[[package]]
-name = "tabpfn-extensions"
-version = "0.6.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pandas" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "tabpfn" },
-    { name = "tabpfn-common-utils" },
-    { name = "torch", version = "2.14.1+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform == 'linux' and extra == 'extra-16-openadmet-models-cuda') or (extra == 'extra-16-openadmet-models-cpu' and extra == 'extra-16-openadmet-models-cuda')" },
-    { name = "torch", version = "2.15.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-16-openadmet-models-cpu' and extra == 'extra-16-openadmet-models-cuda') or (extra != 'extra-16-openadmet-models-cpu' and extra != 'extra-16-openadmet-models-cuda')" },
-    { name = "torch", version = "2.15.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'extra-16-openadmet-models-cpu') or (extra == 'extra-16-openadmet-models-cpu' and extra == 'extra-16-openadmet-models-cuda')" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/76/e6/bf599982b235116a061ef7681433d897a1c4070c7b3c8f0a60130a936c77/tabpfn_extensions-0.6.3.tar.gz", hash = "sha256:ff8756d2ae9146920165c0138b21dbb8e86a2d3e0cc106ce1d76324adb68211d", size = 154444, upload-time = "2026-09-21T14:23:43.905Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl", hash = "sha256:9305e495cd1c7b572db63b301ccd149e4b0e7769c70a1058f76a1430caacbf63", size = 123160, upload-time = "2026-09-21T14:23:42.118Z" },
-]
-
-[[package]]
 name = "tabulate"
 version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3816,8 +3733,8 @@ version = "2.15.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 dependencies = [

@@ -46,7 +46,7 @@ dependencies = [
   "monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2",
   "mordredcommunity",
   "nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed",
-  "numpy",
+  "numpy>=2",
   "pandas",
   "phx-class-registry",
   "pydantic",
@@ -64,7 +64,6 @@ dependencies = [
   "statsmodels",
   "tabicl",
   "tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@35e57171f86fee30715d6a25e1fbe3452ea71020",
-  "tabpfn-extensions",
   "tabulate",
   "torch",
   "uncertainty-toolbox",
@@ -142,14 +141,13 @@ ignore = ["D212"]
 # Environments are managed with pixi (https://pixi.sh) and locked in pixi.lock
 # The tables below name the conda-forge build of each dependency; pixi resolves
 # [project.dependencies] from PyPI for everything that conda-forge does not provide
-# (the pinned git dependencies and tabpfn-extensions)
+# (the pinned git dependencies)
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", { name = "linux-64-cuda-12", platform = "linux-64", cuda = "12" }]
 
 # Conda counterparts of [project.dependencies]; match the version bounds in the PyPI list
 # mordredcommunity is a dependency of the pinned molfeat fork
-# tabpfn-extensions stays on PyPI because the conda-forge build depends on conda-forge tabpfn, which would conflict with the pinned tabpfn commit
 # conda-forge wandb below 0.26 requires protobuf below 7; without the protobuf bound the solver falls back to wandb 0.13.1
 # (broken with numpy 2) and torch 2.14. The bound selects torch 2.12, the newest build that uses libprotobuf 6
 [tool.pixi.dependencies]
@@ -169,7 +167,7 @@ lightning = "<=2.6.1"
 loguru = "*"
 matplotlib-base = "*"
 mordredcommunity = "*"
-numpy = "*"
+numpy = ">=2"
 pandas = "*"
 phx-class-registry = "*"
 protobuf = "<7"

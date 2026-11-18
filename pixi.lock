@@ -555,12 +555,8 @@ environments:
       - pypi: git+https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020#35e57171f86fee30715d6a25e1fbe3452ea71020
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
@@ -568,8 +564,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b2/c6/3a85fc0b821ed2dfcf6fb7cfdf07e0b261ada40374583a50abb3480f2863/xxhash-4.0.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/adwaita-icon-theme-51.0-unix_0.conda
@@ -1058,13 +1052,9 @@ environments:
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/07/f5/14e12e219a2715296150d35f930dc3a6ff319cd60126408e563f03100113/mlx-0.29.3-cp312-cp312-macosx_13_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/41/95/a00054a006df82bb1b5b8f666ae44a676b259146fadbff90fe654309fefc/mlx_metal-0.29.3-py3-none-macosx_13_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
@@ -1072,8 +1062,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/42/c84efcc1d4caebafb1ecd8be4643f39c85c47a80fe254d92b8b43b1eadaf/h5py-3.16.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/bf/79/0ad1d456bbfb30761f6fc174dca610dcd46ef1280a708ce1bdb5de8b5368/xxhash-4.0.2-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
   cpu-py313:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1608,12 +1596,8 @@ environments:
       - pypi: git+https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020#35e57171f86fee30715d6a25e1fbe3452ea71020
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/0b/223e8d9da7c857f6f906202f3d15337a2dee8db530b88aeec6ae45cc9665/xxhash-4.0.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -1621,8 +1605,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/98/ef2b6fe2903e377cbe870c3b2800d62552f1e3dbe81ce49e1923c53d1c5c/h5py-3.16.0-cp313-cp313-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/adwaita-icon-theme-51.0-unix_0.conda
@@ -2111,21 +2093,15 @@ environments:
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0c/4a/ad4ffa5a8189a809abee76b8541b71b26402e9d84dfe49090082edd3f919/xxhash-4.0.2-cp313-cp313-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/41/95/a00054a006df82bb1b5b8f666ae44a676b259146fadbff90fe654309fefc/mlx_metal-0.29.3-py3-none-macosx_13_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fe/a2/078152b45aa8a23949a1b09601d0044f8bb4ab85e909e4475a440c21aaea/mlx-0.29.3-cp313-cp313-macosx_13_0_arm64.whl
   cuda-py312:
     channels:
@@ -2687,12 +2663,8 @@ environments:
       - pypi: git+https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020#35e57171f86fee30715d6a25e1fbe3452ea71020
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
@@ -2700,8 +2672,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b2/c6/3a85fc0b821ed2dfcf6fb7cfdf07e0b261ada40374583a50abb3480f2863/xxhash-4.0.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
   cuda-py313:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -3261,12 +3231,8 @@ environments:
       - pypi: git+https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020#35e57171f86fee30715d6a25e1fbe3452ea71020
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/0b/223e8d9da7c857f6f906202f3d15337a2dee8db530b88aeec6ae45cc9665/xxhash-4.0.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -3274,8 +3240,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/98/ef2b6fe2903e377cbe870c3b2800d62552f1e3dbe81ce49e1923c53d1c5c/h5py-3.16.0-cp313-cp313-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -3811,12 +3775,8 @@ environments:
       - pypi: git+https://github.com/PriorLabs/TabPFN.git?rev=35e57171f86fee30715d6a25e1fbe3452ea71020#35e57171f86fee30715d6a25e1fbe3452ea71020
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
@@ -3824,8 +3784,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b2/c6/3a85fc0b821ed2dfcf6fb7cfdf07e0b261ada40374583a50abb3480f2863/xxhash-4.0.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/adwaita-icon-theme-51.0-unix_0.conda
@@ -4314,13 +4272,9 @@ environments:
       - pypi: git+https://github.com/blazejba/monroe.git?rev=3e138d9bb947e89c9f8faf7db86210385d6657c2#3e138d9bb947e89c9f8faf7db86210385d6657c2
       - pypi: https://files.pythonhosted.org/packages/07/f5/14e12e219a2715296150d35f930dc3a6ff319cd60126408e563f03100113/mlx-0.29.3-cp312-cp312-macosx_13_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/41/95/a00054a006df82bb1b5b8f666ae44a676b259146fadbff90fe654309fefc/mlx_metal-0.29.3-py3-none-macosx_13_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/24/486ae77b41d129b6a5035dd9f028141ec8d520c210a0c3fb803434f18b5f/torch_geometric-2.8.1-py3-none-any.whl
@@ -4328,8 +4282,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8e/5a/7fd1b784a87e96e0078f49a0a13a98b4c5f644ba5597a4a3b70a2ba3e613/py3dmol-2.5.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/42/c84efcc1d4caebafb1ecd8be4643f39c85c47a80fe254d92b8b43b1eadaf/h5py-3.16.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/bf/79/0ad1d456bbfb30761f6fc174dca610dcd46ef1280a708ce1bdb5de8b5368/xxhash-4.0.2-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-8_kmp_llvm.conda
   build_number: 8
@@ -20158,7 +20110,7 @@ packages:
   - monroe @ git+https://github.com/blazejba/monroe.git@3e138d9bb947e89c9f8faf7db86210385d6657c2
   - mordredcommunity
   - nepare @ git+https://github.com/JacksonBurns/neural-pairwise-regression.git@590dd04411111c18f4246623d9707afce2c2b8ed
-  - numpy
+  - numpy>=2
   - pandas
   - phx-class-registry
   - pydantic
@@ -20176,7 +20128,6 @@ packages:
   - statsmodels
   - tabicl
   - tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@35e57171f86fee30715d6a25e1fbe3452ea71020
-  - tabpfn-extensions
   - tabulate
   - torch
   - uncertainty-toolbox
@@ -20416,11 +20367,6 @@ packages:
   - optuna ; extra == 'dev'
   - sentence-transformers ; extra == 'transformers'
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
-  name: distro
-  version: 1.9.0
-  sha256: 7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2
-  requires_python: '>=3.6'
 - pypi: https://files.pythonhosted.org/packages/13/54/78fa28997809952daf0c4da45a21647344f877d5a98cd5cd2107181573e1/pmapper-1.1.3-py3-none-any.whl
   name: pmapper
   version: 1.1.3
@@ -20429,29 +20375,6 @@ packages:
   - networkx>=2
   - rdkit>=2017.9 ; extra == 'rdkit'
   requires_python: '>=3.6'
-- pypi: https://files.pythonhosted.org/packages/35/b2/5c15d56b777a96bab66d81a2db959da8c24b3b6d755c8604184527a21b4e/tabpfn_extensions-0.6.3-py3-none-any.whl
-  name: tabpfn-extensions
-  version: 0.6.3
-  sha256: 9305e495cd1c7b572db63b301ccd149e4b0e7769c70a1058f76a1430caacbf63
-  requires_dist:
-  - torch>=2.1
-  - pandas>=2.2.2
-  - scikit-learn>=1.6.0
-  - scipy>=1.11.1
-  - tabpfn>=8.4.0
-  - tabpfn-common-utils[telemetry-interactive]>=0.2.13
-  - shapiq>=1.6.0 ; python_full_version >= '3.12' and extra == 'interpretability'
-  - shapiq>=1.4.0 ; python_full_version < '3.12' and extra == 'interpretability'
-  - xgboost>=2.1.0 ; python_full_version >= '3.12' and extra == 'interpretability'
-  - lightgbm>=4.3.0,<4.8.0 ; python_full_version >= '3.12' and extra == 'interpretability'
-  - seaborn>=0.12.2 ; extra == 'interpretability'
-  - matplotlib>=3.8.4 ; extra == 'interpretability'
-  - botorch>=0.12.0 ; extra == 'bayesian-optimization'
-  - transformers>=4.57.1 ; extra == 'image'
-  - torchvision>=0.20 ; extra == 'image'
-  - pillow>=10.4 ; extra == 'image'
-  - tabpfn-extensions[bayesian-optimization,image,interpretability,survival] ; extra == 'all'
-  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl
   name: pydantic-settings
   version: 2.16.2
@@ -20473,25 +20396,6 @@ packages:
   version: 0.29.3
   sha256: 27b5a4d905202a71e84d9fd559ea0236813f6f960ef494e5cafe9c45df4c9d7c
   requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/4f/5f/03498070cb10d3998888395cee67016cc6e937138a2e89d9a44ae177dbd7/tabpfn_common_utils-0.2.23-py3-none-any.whl
-  name: tabpfn-common-utils
-  version: 0.2.23
-  sha256: e456e917cf2fbe44c3a44352c737ed3194ff572f2ee5141294a59dae053b8af2
-  requires_dist:
-  - filelock>=3.19.1
-  - numpy>=1.21.6
-  - nvidia-ml-py>=13.590.48
-  - pandas>=1.4.0
-  - platformdirs>=4
-  - posthog>=6.7
-  - requests>=2.32.5
-  - scikit-learn>=1.2.0
-  - typing-extensions>=4.12
-  requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl
-  name: nvidia-ml-py
-  version: 13.615.71
-  sha256: 959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6
 - pypi: https://files.pythonhosted.org/packages/60/90/399349845ee1f84c182cb3f7e02ee0e89c6881ee6296571d19ee63989c7a/pystow-0.10.3-py3-none-any.whl
   name: pystow
   version: 0.10.3
@@ -20657,90 +20561,6 @@ packages:
   version: 4.0.2
   sha256: aeda53dfb6bcae94adb1f5df4246fe13b9c4202f531dd9d39e0d55b36ba8db0e
   requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/ce/b0/2439291ea8d5a881d6effe893d3ef609c2207225af7075a5c87c803275fb/posthog-7.81.1-py3-none-any.whl
-  name: posthog
-  version: 7.81.1
-  sha256: 7ed2346e8c527b254b01b3fc89d3f4dae59c36962385ce71ffa7dd69a3d9d62d
-  requires_dist:
-  - requests>=2.7,<3.0
-  - backoff>=1.10.0
-  - distro>=1.5.0
-  - typing-extensions>=4.2.0
-  - langchain>=1.3.9 ; extra == 'langchain'
-  - httpx>=0.27.0,<1.0 ; extra == 'async'
-  - zstandard>=0.23.0 ; extra == 'zstd'
-  - opentelemetry-sdk>=1.20.0 ; extra == 'otel'
-  - opentelemetry-exporter-otlp-proto-http>=1.20.0 ; extra == 'otel'
-  - opentelemetry-sdk>=1.39.0 ; extra == 'metrics'
-  - opentelemetry-exporter-otlp-proto-http>=1.39.0 ; extra == 'metrics'
-  - opentelemetry-instrumentation>=0.60b0 ; extra == 'metrics'
-  - opentelemetry-instrumentation-system-metrics>=0.60b0 ; extra == 'metrics'
-  - django-stubs ; extra == 'dev'
-  - griffe ; extra == 'dev'
-  - lxml ; extra == 'dev'
-  - mypy ; extra == 'dev'
-  - mypy-baseline ; extra == 'dev'
-  - types-requests ; extra == 'dev'
-  - types-setuptools ; extra == 'dev'
-  - pre-commit ; extra == 'dev'
-  - pydantic>=2.12.0 ; extra == 'dev'
-  - ruff ; extra == 'dev'
-  - setuptools ; extra == 'dev'
-  - packaging ; extra == 'dev'
-  - wheel ; extra == 'dev'
-  - twine ; extra == 'dev'
-  - tomli ; extra == 'dev'
-  - tomli-w ; extra == 'dev'
-  - freezegun==1.5.1 ; extra == 'test'
-  - flask>=2.2 ; extra == 'test'
-  - celery>=5.3,<6 ; extra == 'test'
-  - opentelemetry-instrumentation-celery>=0.41b0 ; extra == 'test'
-  - fastapi>=0.115,<1 ; extra == 'test'
-  - python-dateutil>=2.9.0.post0 ; extra == 'test'
-  - tzdata ; extra == 'test'
-  - coverage ; extra == 'test'
-  - pytest ; extra == 'test'
-  - pytest-timeout ; extra == 'test'
-  - pytest-asyncio ; extra == 'test'
-  - jsonschema>=4.0 ; extra == 'test'
-  - django>=5.2.15,<6.0 ; extra == 'test'
-  - djangorestframework>=3.15,<4 ; extra == 'test'
-  - openai-agents>=0.18 ; extra == 'test'
-  - anthropic>=0.72 ; extra == 'test'
-  - langgraph>=1.0 ; extra == 'test'
-  - langgraph-checkpoint>=4.1.1 ; extra == 'test'
-  - tiktoken>=0.12.0 ; extra == 'test'
-  - langchain-core>=1.0 ; extra == 'test'
-  - langchain>=1.3.9 ; extra == 'test'
-  - langchain-community>=0.4 ; extra == 'test'
-  - langchain-openai>=1.1.14 ; extra == 'test'
-  - langchain-anthropic>=1.0 ; extra == 'test'
-  - google-genai ; extra == 'test'
-  - pydantic>=2.12.0 ; extra == 'test'
-  - parameterized>=0.8.1 ; extra == 'test'
-  - claude-agent-sdk ; extra == 'test'
-  - mcp>=1.28.1,<2 ; extra == 'test'
-  - fastmcp>=2.0 ; extra == 'test'
-  - opentelemetry-sdk>=1.20.0 ; extra == 'test'
-  - opentelemetry-exporter-otlp-proto-http>=1.20.0 ; extra == 'test'
-  - opentelemetry-instrumentation>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-system-metrics>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-requests>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-sqlite3>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-wsgi>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-flask>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-httpx>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-aiohttp-client>=0.60b0 ; extra == 'test'
-  - opentelemetry-instrumentation-django>=0.60b0 ; extra == 'test'
-  - pytest-bdd>=8.1.0 ; extra == 'test'
-  - zstandard>=0.23.0 ; extra == 'test'
-  - gevent>=25.4.1 ; implementation_name == 'cpython' and extra == 'test'
-  requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl
-  name: backoff
-  version: 2.2.1
-  sha256: 63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8
-  requires_python: '>=3.7,<4.0'
 - pypi: https://files.pythonhosted.org/packages/fe/a2/078152b45aa8a23949a1b09601d0044f8bb4ab85e909e4475a440c21aaea/mlx-0.29.3-cp313-cp313-macosx_13_0_arm64.whl
   name: mlx
   version: 0.29.3
