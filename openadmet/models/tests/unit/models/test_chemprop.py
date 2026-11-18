@@ -1,9 +1,12 @@
 import inspect
+import json
 import types
 
 import numpy as np
 import pytest
 import torch
+from chemprop import nn
+from loguru import logger
 
 from openadmet.models.architecture.chemprop import (
     _CHEMELEON_MP_HPARAMS,
@@ -71,7 +74,6 @@ def test_resolve_noam_steps_per_epoch_converts_estimated_stepping_batches(
 
 def test_resolve_noam_steps_per_epoch_falls_back_to_1000(make_noam_trainer):
     """Falls back to 1000 and warns when neither trainer field is usable."""
-    from loguru import logger
 
     trainer = make_noam_trainer(
         num_training_batches=float("inf"), estimated_stepping_batches=float("inf")
@@ -258,7 +260,7 @@ def test_chemprop_validation():
         ChemPropModel(messages="invalid")
 
     # Test invalid aggregation
-    with pytest.raises(ValueError, match="Aggregation must be either 'mean' or 'norm'"):
+    with pytest.raises(ValueError, match="Aggregation must be one of"):
         ChemPropModel(aggregation="invalid")
 
 
@@ -273,7 +275,6 @@ def test_chemprop_set_n_tasks():
 
 def test_chemprop_get_output_transform():
     """Test _get_output_transform logic."""
-    from chemprop import nn
 
     model = ChemPropModel(n_tasks=1)
 
@@ -474,7 +475,6 @@ def test_chemprop_noam_lambda_boundaries(make_noam_trainer):
 
 def test_chemprop_noam_no_warmup_infinite_training_holds_max_lr(make_noam_trainer):
     """With warmup_epochs=0 and max_epochs=-1, Noam holds at max_lr and warns."""
-    from loguru import logger
 
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=0)
     model.build()
@@ -518,7 +518,6 @@ def test_chemprop_noam_lambda_no_warmup_starts_at_max_lr(make_noam_trainer):
 
 def test_chemprop_noam_warmup_exceeds_max_epochs(make_noam_trainer):
     """A warning is emitted when warmup_epochs >= max_epochs, and LR drops immediately after warmup."""
-    from loguru import logger
 
     model = ChemPropModel(max_lr=1e-3, scheduler="noam", warmup_epochs=5)
     model.build()
@@ -590,7 +589,6 @@ def test_chemprop_monitor_metric_mode_invalid():
 
 def test_chemprop_serialize_includes_resolved_lr(tmp_path):
     """serialize() includes resolved LR fields and structural fields even when not explicitly set."""
-    import json
 
     model = ChemPropModel(max_lr=2e-3, scheduler="noam")
     model.build()
@@ -679,7 +677,6 @@ def test_chemprop_resolved_fields_matches_tagged_declarations():
 
 def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
     """Plateau scheduler warns when no validation dataloader is configured."""
-    from loguru import logger
 
     model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
     model.build()
@@ -702,7 +699,6 @@ def test_chemprop_plateau_warns_without_val_dataloader(make_val_trainer):
 
 def test_chemprop_plateau_no_spurious_warning_with_val(make_val_trainer):
     """Plateau scheduler emits no warning when a validation dataloader is present."""
-    from loguru import logger
 
     model = ChemPropModel(scheduler="plateau", reduce_lr_factor=0.5)
     model.build()
@@ -805,3 +801,37 @@ def test_chemprop_predict_accelerator_defaults_to_auto():
         inspect.signature(ChemPropModel.predict).parameters["accelerator"].default
         == "auto"
     )
+
+
+@pytest.mark.parametrize("aggregation", ["norm", "attentive"])
+def test_chemeleon_rejects_non_mean_aggregation(aggregation):
+    """CheMeleon's weights were trained with mean aggregation, so any other choice
+    must raise at construction time, before the checkpoint is ever downloaded."""
+    with pytest.raises(ValueError, match="trained with mean aggregation"):
+        ChemPropModel(from_foundation="chemeleon", aggregation=aggregation)
+
+
+@pytest.mark.parametrize(
+    "aggregation,expected",
+    [
+        ("mean", nn.MeanAggregation),
+        ("norm", nn.NormAggregation),
+        ("attentive", nn.AttentiveAggregation),
+    ],
+)
+def test_foundation_build_honors_configured_aggregation(
+    chemeleon_foundation_checkpoint, aggregation, expected
+):
+    """A hand-built foundation checkpoint uses the aggregation the recipe asked for.
+
+    Regression test: the from_foundation path used to hardcode MeanAggregation, so
+    `aggregation=` was silently a no-op whenever a foundation checkpoint was given.
+    """
+    model = ChemPropModel(
+        from_foundation=str(chemeleon_foundation_checkpoint),
+        aggregation=aggregation,
+    )
+    model.build()
+    assert isinstance(model.estimator.agg, expected)
+    if expected is nn.AttentiveAggregation:
+        assert model.estimator.agg.hparams["output_size"] == model.message_hidden_dim

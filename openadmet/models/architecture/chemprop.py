@@ -38,6 +38,37 @@ _CHEMELEON_MP_HPARAMS: dict[str, Any] = {
     "graph_transform": None,
 }
 
+# Aggregation strategies accepted by the ``aggregation`` field
+AGGREGATION_CLASSES: dict[str, type[nn.Aggregation]] = {
+    "mean": nn.MeanAggregation,
+    "norm": nn.NormAggregation,
+    "attentive": nn.AttentiveAggregation,
+}
+
+
+def _build_aggregation(name: str, output_size: int) -> nn.Aggregation:
+    """
+    Build the chemprop aggregation module for an aggregation name.
+
+    Parameters
+    ----------
+    name : str
+        Name of the aggregation strategy, a key of ``AGGREGATION_CLASSES``.
+    output_size : int
+        Width of the node representations the aggregation is applied to. Only
+        used by strategies that carry learnable parameters (``"attentive"``).
+
+    Returns
+    -------
+    chemprop.nn.Aggregation
+        The aggregation module to hand to ``chemprop.models.MPNN``.
+
+    """
+    aggregation_cls = AGGREGATION_CLASSES[name]
+    if aggregation_cls is nn.AttentiveAggregation:
+        return aggregation_cls(output_size=output_size)
+    return aggregation_cls()
+
 
 def _safe_inference_batch_size(dataset_size: int, batch_size: int) -> int:
     """Return batch size that avoids chemprop's silent single-molecule drop."""
@@ -97,12 +128,12 @@ def configure_optimizers(self) -> dict:
         A dictionary containing the optimizer and learning rate scheduler configurations.
 
     """
-    # Separate parameters into MPNN and FFN groups
+    # Separate parameters into MPNN and FFN (+aggregation) groups
     mpnn_params = []
     ffn_params = []
 
     for name, param in self.named_parameters():
-        if "predictor" in name:
+        if "predictor" in name or name.startswith("agg."):
             ffn_params.append(param)
         else:
             mpnn_params.append(param)
@@ -266,7 +297,7 @@ class ChemPropModel(LightningModelBase):
     This class implements a ChemProp-based regression model using message passing neural networks (MPNNs)
     for molecular property prediction. It supports various configurations for message passing, aggregation,
     and feed-forward network (FFN) layers. Can be initialized from the CheMeleon foundation model [REF], overriding
-    settings for depth, message hidden dim, messages, and aggregation.
+    settings for depth, message hidden dim, and messages.
 
     Attributes
     ----------
@@ -277,8 +308,8 @@ class ChemPropModel(LightningModelBase):
     messages : str
         Type of message passing ("bond" or "atom").
     aggregation : str
-        Aggregation method ("mean" or "norm"). Default is "mean", matching the original
-        ChemProp paper baseline. "norm" uses a learned normalization parameter instead.
+        Aggregation method ("mean", "norm" or "attentive"). When loading from a foundation checkpoint,
+        the aggregation must match the one those weights were trained with. Default is "mean", which CheMeleon requires.
     depth : int
         Number of message passing steps.
     message_hidden_dim : int
@@ -569,9 +600,34 @@ class ChemPropModel(LightningModelBase):
             The validated value.
 
         """
-        if value not in ["mean", "norm"]:
-            raise ValueError("Aggregation must be either 'mean' or 'norm'")
+        if value not in AGGREGATION_CLASSES:
+            raise ValueError(
+                "Aggregation must be one of: " + ", ".join(sorted(AGGREGATION_CLASSES))
+            )
         return value
+
+    @model_validator(mode="after")
+    def validate_chemeleon_aggregation(self) -> "ChemPropModel":
+        """
+        Validate that the aggregation method matches the CheMeleon foundation model if used.
+
+        Returns
+        -------
+        ChemPropModel
+            The updated model instance.
+
+        Raises
+        ------
+        ValueError
+            If the aggregation method does not match the CheMeleon foundation model.
+
+        """
+        if self.from_foundation == "chemeleon" and self.aggregation != "mean":
+            raise ValueError(
+                f"CheMeleon foundation model was trained with mean aggregation, "
+                f"but aggregation={self.aggregation} was specified"
+            )
+        return self
 
     @field_validator("scheduler")
     @classmethod
@@ -672,14 +728,13 @@ class ChemPropModel(LightningModelBase):
                 if self.from_foundation == "chemeleon":
                     foundation_mp = self._download_chemeleon(save_dir=Path.home())
                     logger.warning(
-                        "Using CheMeleon overrides settings for depth, message_hidden_dim, messages, and aggregation"
+                        "Using CheMeleon overrides settings for depth, message_hidden_dim, and messages"
                     )
                 else:
                     logger.info(f"Loading foundation model from {self.from_foundation}")
                     foundation_mp = self._load_foundation_model(
                         Path(self.from_foundation)
                     )
-                aggr = nn.MeanAggregation()
                 mp = nn.BondMessagePassing(**foundation_mp["hyper_parameters"])
 
                 # Check for foundation weights
@@ -691,15 +746,7 @@ class ChemPropModel(LightningModelBase):
                     )
                 mp.load_state_dict(foundation_mp["state_dict"])
                 self.message_hidden_dim = mp.output_dim
-                logger.warning(
-                    "Using a foundation model overrides settings for depth, message_hidden_dim, messages, and aggregation"
-                )
             else:
-                aggregation_cls = (
-                    nn.MeanAggregation
-                    if self.aggregation == "mean"
-                    else nn.NormAggregation
-                )
                 message_cls = (
                     nn.BondMessagePassing
                     if self.messages == "bond"
@@ -710,7 +757,8 @@ class ChemPropModel(LightningModelBase):
                 mp = message_cls(
                     d_h=self.message_hidden_dim, depth=self.depth, dropout=self.dropout
                 )
-                aggr = aggregation_cls()
+
+            aggr = _build_aggregation(self.aggregation, self.message_hidden_dim)
 
             ffn = nn.RegressionFFN(
                 n_tasks=self.n_tasks,
