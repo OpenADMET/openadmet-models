@@ -8,28 +8,48 @@ conda installation, and other development tools not directly related to the codi
 
 ### Continuous Integration
 
-You should test your code, but do not feel compelled to use these specific programs. You also may not need Unix and
-Windows testing if you only plan to deploy on specific platforms. These are just to help you get started.
+The workflows in `.github/workflows` test each install route in a separate job, on Python 3.12 and 3.13:
+
+* [pixi](https://pixi.sh): installs from `pixi.lock` with `pixi run --locked`, on Ubuntu and macOS
+* [uv](https://docs.astral.sh/uv/): installs from `uv.lock` with `uv sync --locked` and runs tests with `uv run --no-sync`, on Ubuntu
+* pip: installs with `pip install -e ".[test]"` (unlocked), on Ubuntu; a failure does not block a merge
+* conda: installs from `conda-envs/openadmet-models.yaml` (unlocked), on Ubuntu and macOS; a failure does not block a merge
+* GPU: the scheduled GPU workflow tests the pixi and uv CUDA environments on one instance, on Python 3.12 only
 
 ### Conda Environment:
 
 This directory contains the files to setup the Conda environment for testing purposes
 
 * `conda-envs`: directory containing the YAML file(s) which fully describe Conda Environments, their dependencies, and those dependency provenance's
-  * `test_env.yaml`: Simple test environment file with base dependencies. Channels are not specified here and therefore respect global Conda configuration
+  * `openadmet-models.yaml`: unlocked environment file for Python 3.12 and 3.13
+  * `openadmet-models-gpu.yaml`: the same environment with the GPU build of PyTorch
+
+### Lock files
+
+Dependencies are declared once in `pyproject.toml` at the repository root, and the pixi and uv routes each have a lock file:
+
+* `pyproject.toml`: dependencies, the `test` extra, the `cpu` and `cuda` torch selectors, the `[tool.uv]` settings (locked platforms, PyTorch indexes), and the `[tool.pixi]` tables (conda-forge dependencies and environments)
+* `pixi.lock`: the resolved pixi environments for osx-arm64 and linux-64 on Python 3.12 and 3.13; after changing dependencies, run `pixi lock`
+* `uv.lock`: the resolved uv environment for Linux x86_64 on Python 3.12 and 3.13; after changing dependencies, run `uv lock`
+
+See `docs/installation.rst` for the commands.
 
 ### Additional Scripts:
 
-This directory contains OS agnostic helper scripts which don't fall in any of the previous categories
+This directory contains helper scripts which don't fall in any of the previous categories
 * `scripts`
   * `create_conda_env.py`: Helper program for spinning up new conda environments based on a starter file with Python Version and Env. Name command-line options
+
+### Containers
+
+* `containers/Dockerfile`: image that installs the `cuda-py312` environment from `pixi.lock`; choose another with `--build-arg PIXI_ENV=<name>`
 
 
 ## How to contribute changes
 - Clone the repository if you have write access to the main repo, fork the repository if you are a collaborator.
 - Make a new branch with `git checkout -b {your branch name}`
 - Make changes and test your code
-- Ensure that the test environment dependencies (`conda-envs`) line up with the build and deploy dependencies (`conda-recipe/meta.yaml`)
+- Ensure that `pixi.lock` and `uv.lock` are up to date with `pyproject.toml` (`pixi lock` and `uv lock --check`)
 - Push the branch to the repo (either the main or your fork) with `git push -u origin {your branch name}`
   * Note that `origin` is the default name assigned to the remote, yours may be different
 - Make a PR on GitHub with your changes

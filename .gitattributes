@@ -1,1 +1,3 @@
 openadmet_models/_version.py export-subst
+pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+uv.lock merge=binary linguist-generated=true

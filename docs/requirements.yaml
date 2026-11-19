@@ -17,7 +17,7 @@ dependencies:
   - numpy
   - pandas
   - pip
-  - python >= 3.12,<3.14
+  - python >= 3.12,<3.13
   - rdkit
   - rich
   - scikit-learn
@@ -38,6 +38,6 @@ dependencies:
     - email-validator
     - phx-class-registry
     - tabicl
-    - git+https://github.com/PatWalters/useful_rdkit_utils.git@master
+    - git+https://github.com/PatWalters/useful_rdkit_utils.git@1057ec09a6d55768ecbfa0bfe4f0d3ef3f20163f
     - -e ../
     - git+https://github.com/openforcefield/openff-sphinx-theme/@main

@@ -26,19 +26,85 @@ This library is made available under the [MIT](https://opensource.org/licenses/M
 
 The development version of `openadmet-models` can be installed directly from the `main` branch of this repository.
 
-First install the package dependencies using `mamba`:
+First clone the repository:
+
+```bash
+git clone git@github.com:OpenADMET/openadmet-models.git
+cd openadmet-models
+```
+
+Four install routes are supported. [pixi](https://pixi.sh) is recommended; [uv](https://docs.astral.sh/uv/) is the fastest on Linux. On macOS, use pixi or conda.
+
+| Route | Status | Python | Lock file |
+|---|---|---|---|
+| pixi | Recommended; tested in CI | 3.12, 3.13 | `pixi.lock` |
+| uv | Supported; tested in CI | 3.12, 3.13 | `uv.lock` |
+| pip | Tested in CI | 3.12, 3.13 | none |
+| conda | Tested in CI | 3.12, 3.13 | none |
+
+To choose between the CPU and CUDA commands below, run `nvidia-smi`. If it prints a `CUDA Version` of 12.0 or newer, use CUDA. Otherwise, or if the command is not found, use CPU.
+
+#### pixi
+
+```bash
+pixi install
+pixi run openadmet --help
+```
+
+`pixi install` creates the `default` environment: CPU with Python 3.12 and the test tools, with the package installed in editable mode. Other environments are called `<hardware>-py<version>`:
+
+| Hardware | Platform | Torch build |
+|---|---|---|
+| `cpu` | linux-64, osx-arm64 | CPU build on Linux; the macOS build on Apple silicon, which includes the Metal Performance Shaders (MPS) backend |
+| `cuda` | linux-64 | CUDA 12 |
+
+The version suffix is `py312` or `py313`. For example, install the environment for a CUDA machine with:
+
+```bash
+pixi install -e cuda-py312
+pixi run -e cuda-py312 test-unit
+```
+
+#### uv
+
+Pick the command for your hardware. It installs the package in editable mode with the test tools.
+
+| Hardware | Command |
+|---|---|
+| Linux, CPU only | `uv sync --extra test --extra cpu` |
+| Linux, NVIDIA GPU (CUDA 12.6 wheels) | `uv sync --extra test --extra cuda` |
+
+Always pass `--extra cpu` or `--extra cuda`; without one, uv installs the CUDA 13 build of torch from PyPI (about 3.4 GB). Add `--python 3.13` to use Python 3.13. Run commands inside the environment with `uv run --no-sync`, for example `uv run --no-sync openadmet --help`, because a plain `uv run` syncs again and replaces the torch build you selected.
+
+#### pip
+
+Inside a virtual environment, install torch for your hardware first, then the package:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu      # CPU
+pip install torch --index-url https://download.pytorch.org/whl/cu126    # NVIDIA GPU
+pip install -e ".[test]"
+```
+
+Without the first step, pip installs the CUDA 13 build of torch from PyPI (about 3.4 GB).
+
+#### conda
 
 ```bash
 mamba env create -f devtools/conda-envs/openadmet-models.yaml
-# or if you want a GPU compatible version devtools/conda-envs/openadmet-models-gpu.yaml
+mamba activate openadmet-models
+pip install -e . --no-deps
 ```
 
-The `openadmet-models` library can then be installed via:
+For NVIDIA GPUs, use `devtools/conda-envs/openadmet-models-gpu.yaml`.
 
-```
-python -m pip install -e --no-deps .
-```
+#### Known issues
 
+* **uv and pip on macOS:** not supported, because the OpenMP runtimes in the torch, scikit-learn, LightGBM, and XGBoost wheels conflict. Use pixi or conda. Tracked in [#625](https://github.com/OpenADMET/openadmet-models/issues/625).
+* **uv and pip on Linux:** if importing LightGBM fails with an error about `libgomp.so.1`, run `sudo apt install libgomp1` (Debian and Ubuntu).
+* **Python 3.13 with pip or conda:** the molfeat fork's `requires-python` bound rejects 3.13.x. Add `--ignore-requires-python` to the pip install, or set `PIP_IGNORE_REQUIRES_PYTHON=1` for `mamba env create`.
+
+See the [installation guide](docs/installation.rst) for details.
 
 ## Authors
 
