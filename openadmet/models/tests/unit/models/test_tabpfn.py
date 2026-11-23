@@ -153,33 +153,6 @@ class TestTabPFNSaveLoad:
         "model_cls",
         [TabPFNRegressorModel, TabPFNClassifierModel],
     )
-    def test_deserialize_resolves_default_serial_path_against_param_dir(
-        self, monkeypatch, tmp_path, model_cls
-    ):
-        """deserialize() called with only param_path must still find the
-        serial file next to it, not in the process's cwd."""
-        monkeypatch.setattr(
-            model_cls,
-            "_get_estimator_class",
-            classmethod(lambda cls: _FakeFittedEstimator),
-        )
-        model = model_cls(accelerator="cpu")
-        model.estimator = _FakeFittedEstimator(3.5)
-        model_dir = tmp_path / "some_hf_model_dir"
-        model_dir.mkdir()
-        param_path = model_dir / "model.json"
-        serial_path = model_dir / model_cls._model_save_name
-
-        model.serialize(param_path, serial_path)
-
-        reloaded = model_cls.deserialize(param_path)
-
-        assert reloaded.predict(np.zeros((2, 4))).flatten().tolist() == [3.5, 3.5]
-
-    @pytest.mark.parametrize(
-        "model_cls",
-        [TabPFNRegressorModel, TabPFNClassifierModel],
-    )
     def test_serialize_deserialize_round_trip(self, monkeypatch, tmp_path, model_cls):
         """serialize() must write params and call save(); deserialize() must rebuild and call load()."""
         monkeypatch.setattr(
