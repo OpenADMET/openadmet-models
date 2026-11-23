@@ -3,6 +3,7 @@
 import json
 from abc import ABC, abstractmethod
 from os import PathLike
+from pathlib import Path
 from typing import Any, ClassVar
 
 from class_registry import ClassRegistry, RegistryKeyError
@@ -233,7 +234,8 @@ class PickleableModelBase(ModelBase):
         param_path: PathLike
             Path to load the model parameters from
         serial_path: PathLike, optional
-            Path to load the pickled model from. Defaults to ``cls._model_save_name``.
+            Path to load the pickled model from. Defaults to ``cls._model_save_name``
+            resolved against ``param_path``'s directory.
 
         Returns
         -------
@@ -242,7 +244,7 @@ class PickleableModelBase(ModelBase):
 
         """
         if serial_path is None:
-            serial_path = cls._model_save_name
+            serial_path = Path(param_path).parent / cls._model_save_name
         with open(param_path) as f:
             mod_params = json.load(f)
         instance = cls(**mod_params)
