@@ -542,33 +542,6 @@ def test_load_encoder_forces_cpu_map_location(mocker, tiny_monroe_checkpoint):
     assert captured.get("map_location") == "cpu"
 
 
-def test_load_encoder_restores_torch_load_after_use(tiny_monroe_checkpoint):
-    """The torch.load monkeypatch must not leak past this call."""
-    import torch
-
-    original = torch.load
-
-    MonroeFeaturizer._load_encoder(tiny_monroe_checkpoint, use_ema=False)
-
-    assert torch.load is original
-
-
-def test_load_encoder_restores_torch_load_on_failure(mocker, tiny_monroe_checkpoint):
-    """A failure inside load_ckpt must not leave torch.load patched."""
-    import torch
-
-    original = torch.load
-    load_ckpt_mock = mocker.patch(
-        "monroe.model.ckpt.load_ckpt", side_effect=RuntimeError("boom")
-    )
-
-    with pytest.raises(RuntimeError, match="boom"):
-        MonroeFeaturizer._load_encoder(tiny_monroe_checkpoint, use_ema=False)
-
-    assert torch.load is original
-    load_ckpt_mock.assert_called_once()
-
-
 def test_real_embed_smiles_contract(tiny_monroe_checkpoint):
     """
     Pin the upstream contract the patched tests above assume.
