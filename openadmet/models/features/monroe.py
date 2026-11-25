@@ -311,11 +311,6 @@ class MonroeFeaturizer(FeaturizerBase):
 
         """
         load_ckpt, _ = cls._import_monroe()
-        # monroe's load_ckpt() exposes no device/map_location parameter, so
-        # torch.load restores each tensor to the device it was saved from. The
-        # published checkpoint was saved from CUDA, so this fails outright on a
-        # CPU-only host; force CPU restoration here, then embed_smiles later
-        # moves the encoder to the configured accelerator for the forward pass.
         original_torch_load = torch.load
 
         def _load_to_cpu(*args, **kwargs):
