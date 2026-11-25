@@ -311,7 +311,17 @@ class MonroeFeaturizer(FeaturizerBase):
 
         """
         load_ckpt, _ = cls._import_monroe()
-        return load_ckpt(str(checkpoint_dir), use_ema=use_ema)
+        original_torch_load = torch.load
+
+        def _load_to_cpu(*args, **kwargs):
+            kwargs.setdefault("map_location", "cpu")
+            return original_torch_load(*args, **kwargs)
+
+        torch.load = _load_to_cpu
+        try:
+            return load_ckpt(str(checkpoint_dir), use_ema=use_ema)
+        finally:
+            torch.load = original_torch_load
 
     @classmethod
     def _embed_smiles(
